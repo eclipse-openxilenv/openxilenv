@@ -110,7 +110,7 @@ Install
 Running the electric car sample
 ```
   > cd xxx\openxilenv\install_win
-  > .\XilEnvGui.exe -ini ..\openxilenv\Samples\Configurations\ElectricCarSample.ini
+  > .\XilEnvGui.exe -ini ..\Samples\Configurations\ElectricCarSample.ini
 ```
 
 ## <a name='linux'></a> Linux
@@ -139,7 +139,7 @@ Install
 Running the electric car sample
 ```
   > cd xxx\openxilenv\install_linux
-  > ./XilEnvGui -ini ../openxilenv/Samples/Configurations/ElectricCarSample.ini
+  > ./XilEnvGui -ini ../Samples/Configurations/ElectricCarSample.ini
 ```
 
 #### <a name='build-options-linux'></a> Build options
