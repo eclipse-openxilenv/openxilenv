@@ -1,0 +1,1879 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>800</width>
+    <height>600</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>XilEnv GUI</string>
+  </property>
+  <property name="windowIcon">
+   <iconset resource="Icons.qrc">
+    <normaloff>:/Icons/XiL.png</normaloff>:/Icons/XiL.png</iconset>
+  </property>
+  <widget class="QTabWidget" name="centralwidget">
+   <property name="tabPosition">
+    <enum>QTabWidget::South</enum>
+   </property>
+   <property name="tabShape">
+    <enum>QTabWidget::Triangular</enum>
+   </property>
+   <property name="currentIndex">
+    <number>-1</number>
+   </property>
+   <property name="iconSize">
+    <size>
+     <width>16</width>
+     <height>16</height>
+    </size>
+   </property>
+   <property name="tabsClosable">
+    <bool>true</bool>
+   </property>
+  </widget>
+  <widget class="StatusBar" name="statusbar"/>
+  <widget class="QToolBar" name="toolBar">
+   <property name="windowTitle">
+    <string>toolBar</string>
+   </property>
+   <property name="iconSize">
+    <size>
+     <width>18</width>
+     <height>18</height>
+    </size>
+   </property>
+   <attribute name="toolBarArea">
+    <enum>TopToolBarArea</enum>
+   </attribute>
+   <attribute name="toolBarBreak">
+    <bool>false</bool>
+   </attribute>
+  </widget>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>800</width>
+     <height>25</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="menuDatei">
+    <property name="title">
+     <string>File</string>
+    </property>
+    <addaction name="actionSave_INI"/>
+    <addaction name="actionSave_INI_as"/>
+    <addaction name="separator"/>
+    <addaction name="actionLoad_Desktop"/>
+    <addaction name="actionSave_Desktop_as"/>
+    <addaction name="actionClear_Desktop"/>
+    <addaction name="separator"/>
+    <addaction name="actionExport_Sheets"/>
+    <addaction name="actionImport_Sheets"/>
+    <addaction name="separator"/>
+    <addaction name="actionExport_A2L_File"/>
+    <addaction name="separator"/>
+    <addaction name="actionExport_Variable_property"/>
+    <addaction name="actionImport_Variable_property"/>
+    <addaction name="separator"/>
+    <addaction name="actionUser_defined_environment_variables"/>
+    <addaction name="actionUser_defined_blackboard_variables"/>
+    <addaction name="separator"/>
+    <addaction name="actionExit_without_save_INI"/>
+    <addaction name="actionExit"/>
+    <addaction name="separator"/>
+   </widget>
+   <widget class="QMenu" name="menuAnsicht">
+    <property name="title">
+     <string>Display</string>
+    </property>
+    <widget class="QMenu" name="menuFenster_Style">
+     <property name="title">
+      <string>Fenster Style</string>
+     </property>
+    </widget>
+    <widget class="QMenu" name="menuNew">
+     <property name="title">
+      <string>New</string>
+     </property>
+    </widget>
+    <widget class="QMenu" name="menuOpen">
+     <property name="title">
+      <string>Open</string>
+     </property>
+    </widget>
+    <addaction name="menuNew"/>
+    <addaction name="menuOpen"/>
+    <addaction name="separator"/>
+    <addaction name="actionSearch_window_inclluded_variable"/>
+    <addaction name="separator"/>
+    <addaction name="actionTab_Schlie_en"/>
+    <addaction name="actionSubwindow_Schlie_en"/>
+    <addaction name="actionSubwindows_Verbergen"/>
+    <addaction name="separator"/>
+    <addaction name="menuFenster_Style"/>
+    <addaction name="actionVollbild"/>
+   </widget>
+   <widget class="QMenu" name="menuSettings">
+    <property name="title">
+     <string>Settings</string>
+    </property>
+    <widget class="QMenu" name="menuINI_file">
+     <property name="title">
+      <string>INI file</string>
+     </property>
+     <addaction name="actionRemove_not_used_blackboard_variables"/>
+    </widget>
+    <addaction name="actionBasic_Settings"/>
+    <addaction name="separator"/>
+    <addaction name="actionFunction_hotkeys"/>
+    <addaction name="separator"/>
+    <addaction name="actionImport_hotkeys"/>
+    <addaction name="actionExport_hotkeys"/>
+    <addaction name="menuINI_file"/>
+    <addaction name="separator"/>
+    <addaction name="actionLoad_Plugins"/>
+    <addaction name="separator"/>
+    <addaction name="actionBlackboard_List"/>
+   </widget>
+   <widget class="QMenu" name="menuWindow">
+    <property name="title">
+     <string>Window</string>
+    </property>
+    <addaction name="actionCascade"/>
+    <addaction name="actionTile"/>
+    <addaction name="actionArrange_Icons"/>
+    <addaction name="actionClose_all"/>
+    <addaction name="separator"/>
+   </widget>
+   <widget class="QMenu" name="menuCalibration">
+    <property name="title">
+     <string>Calibration</string>
+    </property>
+    <addaction name="actionLoad_SVL_file"/>
+    <addaction name="actionSave_process_to_binary_SVL_SAL_file"/>
+    <addaction name="separator"/>
+    <addaction name="actionExport_reference_list"/>
+    <addaction name="actionImport_reference_list"/>
+    <addaction name="separator"/>
+    <addaction name="actionGlobal_Section_Filter"/>
+    <addaction name="actionWrite_section_to_EXE"/>
+    <addaction name="actionConfigure_XCP_over_ethernet_links"/>
+   </widget>
+   <widget class="QMenu" name="menuCAN">
+    <property name="title">
+     <string>CAN</string>
+    </property>
+    <addaction name="actionConfig"/>
+    <addaction name="actionImport"/>
+    <addaction name="actionInsert_can_error"/>
+    <addaction name="separator"/>
+    <addaction name="actionCCP_Config"/>
+    <addaction name="actionStart_Stop_CCP"/>
+    <addaction name="actionStart_Stop_CCP_Calibration"/>
+    <addaction name="actionLoad_CCP_Config"/>
+    <addaction name="actionSave_CCP_Config"/>
+    <addaction name="separator"/>
+    <addaction name="actionXCP_Config"/>
+    <addaction name="actionStart_Stop_XCP"/>
+    <addaction name="actionStart_Stop_XCP_Calibration"/>
+    <addaction name="actionLoad_XCP_Config"/>
+    <addaction name="actionSave_XCP_Config"/>
+    <addaction name="separator"/>
+   </widget>
+   <widget class="QMenu" name="menuAbout">
+    <property name="title">
+     <string>About</string>
+    </property>
+    <widget class="QMenu" name="menuInternals">
+     <property name="title">
+      <string>Internals...</string>
+     </property>
+     <addaction name="actionInternals_2"/>
+     <addaction name="actionActive_Equations"/>
+     <addaction name="actionBlackboard"/>
+     <addaction name="actionBarrier_logging"/>
+     <addaction name="actionExtern_processes_copy_lists"/>
+     <addaction name="actionLoaded_debug_infos"/>
+     <addaction name="actionRemote_master_call_statistics"/>
+    </widget>
+    <addaction name="actionHelp"/>
+    <addaction name="actionAbout"/>
+    <addaction name="actionHomepage"/>
+    <addaction name="menuInternals"/>
+   </widget>
+   <addaction name="menuDatei"/>
+   <addaction name="menuAnsicht"/>
+   <addaction name="menuSettings"/>
+   <addaction name="menuWindow"/>
+   <addaction name="menuCalibration"/>
+   <addaction name="menuCAN"/>
+   <addaction name="menuAbout"/>
+  </widget>
+  <widget class="QDockWidget" name="blackboardDockWidget">
+   <property name="allowedAreas">
+    <set>Qt::LeftDockWidgetArea|Qt::RightDockWidgetArea</set>
+   </property>
+   <property name="windowTitle">
+    <string>Blackboard Variables</string>
+   </property>
+   <attribute name="dockWidgetArea">
+    <number>1</number>
+   </attribute>
+   <widget class="QWidget" name="dockWidgetContents">
+    <layout class="QVBoxLayout" name="verticalLayout">
+     <property name="spacing">
+      <number>3</number>
+     </property>
+     <property name="leftMargin">
+      <number>4</number>
+     </property>
+     <property name="topMargin">
+      <number>4</number>
+     </property>
+     <property name="rightMargin">
+      <number>4</number>
+     </property>
+     <property name="bottomMargin">
+      <number>4</number>
+     </property>
+     <item>
+      <widget class="QLineEdit" name="lineEdit"/>
+     </item>
+     <item>
+      <widget class="QListView" name="listView">
+       <property name="uniformItemSizes">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </widget>
+  </widget>
+  <action name="actionTab_Schlie_en">
+   <property name="text">
+    <string>Tab Schließen</string>
+   </property>
+  </action>
+  <action name="actionSubwindow_Schlie_en">
+   <property name="text">
+    <string>Subwindow Schließen</string>
+   </property>
+  </action>
+  <action name="actionSubwindows_Verbergen">
+   <property name="text">
+    <string>Subwindows Verbergen</string>
+   </property>
+  </action>
+  <action name="actionPlastique">
+   <property name="text">
+    <string>Plastique</string>
+   </property>
+  </action>
+  <action name="actionCleanlooks">
+   <property name="text">
+    <string>Cleanlooks</string>
+   </property>
+  </action>
+  <action name="actionWindowsXP">
+   <property name="text">
+    <string>WindowsXP</string>
+   </property>
+  </action>
+  <action name="actionWindowsVista">
+   <property name="text">
+    <string>WindowsVista</string>
+   </property>
+  </action>
+  <action name="actionWindowsClassic">
+   <property name="text">
+    <string>WindowsClassic</string>
+   </property>
+  </action>
+  <action name="actionCDE">
+   <property name="text">
+    <string>CDE</string>
+   </property>
+  </action>
+  <action name="actionMotif">
+   <property name="text">
+    <string>Motif</string>
+   </property>
+  </action>
+  <action name="actionHelp">
+   <property name="text">
+    <string>Help</string>
+   </property>
+  </action>
+  <action name="actionAbout">
+   <property name="icon">
+    <iconset resource="Icons.qrc">
+     <normaloff>:/Icons/Help.png</normaloff>:/Icons/Help.png</iconset>
+   </property>
+   <property name="text">
+    <string>About</string>
+   </property>
+  </action>
+  <action name="actionHomepage">
+   <property name="text">
+    <string>Homepage</string>
+   </property>
+  </action>
+  <action name="actionWorkers">
+   <property name="text">
+    <string>Workers</string>
+   </property>
+  </action>
+  <action name="actionInternals_2">
+   <property name="text">
+    <string>Internals</string>
+   </property>
+  </action>
+  <action name="actionActive_Equations">
+   <property name="text">
+    <string>Active Equations</string>
+   </property>
+  </action>
+  <action name="actionBlackboard">
+   <property name="text">
+    <string>Blackboard</string>
+   </property>
+  </action>
+  <action name="actionConfig">
+   <property name="text">
+    <string>Config</string>
+   </property>
+  </action>
+  <action name="actionImport">
+   <property name="text">
+    <string>DBC Import</string>
+   </property>
+  </action>
+  <action name="actionInsert_can_error">
+   <property name="text">
+    <string>Insert CAN error</string>
+   </property>
+  </action>
+  <action name="actionCCP_Config">
+   <property name="text">
+    <string>CCP Config</string>
+   </property>
+  </action>
+  <action name="actionStart_Stop_CCP">
+   <property name="text">
+    <string>Start/Stop CCP</string>
+   </property>
+  </action>
+  <action name="actionStart_Stop_CCP_Calibration">
+   <property name="text">
+    <string>Start/Stop CCP Calibration</string>
+   </property>
+  </action>
+  <action name="actionLoad_CCP_Config">
+   <property name="text">
+    <string>Load CCP Config</string>
+   </property>
+  </action>
+  <action name="actionSave_CCP_Config">
+   <property name="text">
+    <string>Save CCP Config</string>
+   </property>
+  </action>
+  <action name="actionXCP_Config">
+   <property name="text">
+    <string>XCP Config</string>
+   </property>
+  </action>
+  <action name="actionStart_Stop_XCP">
+   <property name="text">
+    <string>Start/Stop XCP</string>
+   </property>
+  </action>
+  <action name="actionStart_Stop_XCP_Calibration">
+   <property name="text">
+    <string>Start/Stop XCP Calibration</string>
+   </property>
+  </action>
+  <action name="actionLoad_XCP_Config">
+   <property name="text">
+    <string>Load XCP Config</string>
+   </property>
+  </action>
+  <action name="actionSave_XCP_Config">
+   <property name="text">
+    <string>Save XCP Config</string>
+   </property>
+  </action>
+  <action name="actionLoad_SVL_file">
+   <property name="text">
+    <string>Load SVL file</string>
+   </property>
+  </action>
+  <action name="actionSave_process_to_binary_SVL_SAL_file">
+   <property name="text">
+    <string>Save process to SVL/SAL/SATVL file</string>
+   </property>
+  </action>
+  <action name="actionExport_reference_list">
+   <property name="text">
+    <string>Export reference list</string>
+   </property>
+  </action>
+  <action name="actionImport_reference_list">
+   <property name="text">
+    <string>Import reference list</string>
+   </property>
+  </action>
+  <action name="actionGlobal_Section_Filter">
+   <property name="text">
+    <string>Global Section Filter</string>
+   </property>
+  </action>
+  <action name="actionCascade">
+   <property name="text">
+    <string>Cascade</string>
+   </property>
+  </action>
+  <action name="actionTile">
+   <property name="text">
+    <string>Tile</string>
+   </property>
+  </action>
+  <action name="actionArrange_Icons">
+   <property name="text">
+    <string>Arrange Icons</string>
+   </property>
+  </action>
+  <action name="actionClose_all">
+   <property name="text">
+    <string>Close all</string>
+   </property>
+  </action>
+  <action name="actionBasic_Settings">
+   <property name="text">
+    <string>Basic Settings</string>
+   </property>
+  </action>
+  <action name="actionFunction_hotkeys">
+   <property name="text">
+    <string>Function hotkeys</string>
+   </property>
+  </action>
+  <action name="actionOther_hotkeys">
+   <property name="text">
+    <string>Other hotkeys</string>
+   </property>
+  </action>
+  <action name="actionImport_hotkeys">
+   <property name="text">
+    <string>Import hotkeys</string>
+   </property>
+  </action>
+  <action name="actionExport_hotkeys">
+   <property name="text">
+    <string>Export hotkeys</string>
+   </property>
+  </action>
+  <action name="actionRemove_not_used_blackboard_variables">
+   <property name="text">
+    <string>Remove not used blackboard variable description</string>
+   </property>
+  </action>
+  <action name="actionSearch_window_inclluded_variable">
+   <property name="text">
+    <string>Search window included variable</string>
+   </property>
+  </action>
+  <action name="actionSave_INI">
+   <property name="icon">
+    <iconset resource="Icons.qrc">
+     <normaloff>:/Icons/save.png</normaloff>:/Icons/save.png</iconset>
+   </property>
+   <property name="text">
+    <string>Save INI</string>
+   </property>
+  </action>
+  <action name="actionSave_INI_as">
+   <property name="text">
+    <string>Save INI as</string>
+   </property>
+  </action>
+  <action name="actionLoad_Desktop">
+   <property name="text">
+    <string>Load Desktop</string>
+   </property>
+  </action>
+  <action name="actionSave_Desktop_as">
+   <property name="text">
+    <string>Save Desktop as</string>
+   </property>
+  </action>
+  <action name="actionClear_Desktop">
+   <property name="text">
+    <string>Clear Desktop</string>
+   </property>
+  </action>
+  <action name="actionExport_Sheets">
+   <property name="text">
+    <string>Export Sheets</string>
+   </property>
+  </action>
+  <action name="actionImport_Sheets">
+   <property name="text">
+    <string>Import Sheets</string>
+   </property>
+  </action>
+  <action name="actionExport_A2L_File">
+   <property name="text">
+    <string>Export A2L-File</string>
+   </property>
+  </action>
+  <action name="actionExport_Variable_property">
+   <property name="text">
+    <string>Export Variable property</string>
+   </property>
+  </action>
+  <action name="actionImport_Variable_property">
+   <property name="text">
+    <string>Import Variable property</string>
+   </property>
+  </action>
+  <action name="actionUser_defined_environment_variables">
+   <property name="text">
+    <string>user defined environment variables</string>
+   </property>
+  </action>
+  <action name="actionExit_without_save_INI">
+   <property name="text">
+    <string>Exit without save INI</string>
+   </property>
+  </action>
+  <action name="actionExit">
+   <property name="text">
+    <string>Exit</string>
+   </property>
+  </action>
+  <action name="actionContinue">
+   <property name="icon">
+    <iconset>
+     <normaloff>:/Icons/Continue.png</normaloff>:/Icons/Continue.png</iconset>
+   </property>
+   <property name="text">
+    <string>Continue</string>
+   </property>
+   <property name="toolTip">
+    <string>Continue</string>
+   </property>
+  </action>
+  <action name="actionStop">
+   <property name="icon">
+    <iconset resource="Icons.qrc">
+     <normaloff>:/Icons/stop.png</normaloff>:/Icons/stop.png</iconset>
+   </property>
+   <property name="text">
+    <string>Stop</string>
+   </property>
+   <property name="toolTip">
+    <string>Stop</string>
+   </property>
+  </action>
+  <action name="actionNextOne">
+   <property name="icon">
+    <iconset resource="Icons.qrc">
+     <normaloff>:/Icons/ContinueOne.png</normaloff>:/Icons/ContinueOne.png</iconset>
+   </property>
+   <property name="text">
+    <string>nextOne</string>
+   </property>
+   <property name="toolTip">
+    <string>Next one</string>
+   </property>
+  </action>
+  <action name="actionRealtime">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>false</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="Icons.qrc">
+     <normaloff>:/Icons/realtime.png</normaloff>:/Icons/realtime.png</iconset>
+   </property>
+   <property name="text">
+    <string>realtime</string>
+   </property>
+   <property name="toolTip">
+    <string>Not faster than realtime</string>
+   </property>
+  </action>
+  <action name="actionControlPnl">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="Icons.qrc">
+     <normaloff>:/Icons/ControlPanel.png</normaloff>:/Icons/ControlPanel.png</iconset>
+   </property>
+   <property name="text">
+    <string>ControlPnl</string>
+   </property>
+   <property name="toolTip">
+    <string>Control Panel on/off</string>
+   </property>
+  </action>
+  <action name="actionEditDebug">
+   <property name="icon">
+    <iconset resource="Icons.qrc">
+     <normaloff>:/Icons/MagnifierDebugFile.png</normaloff>:/Icons/MagnifierDebugFile.png</iconset>
+   </property>
+   <property name="text">
+    <string>EditDebug</string>
+   </property>
+   <property name="toolTip">
+    <string>Edit Debug File</string>
+   </property>
+  </action>
+  <action name="actionEditError">
+   <property name="icon">
+    <iconset resource="Icons.qrc">
+     <normaloff>:/Icons/ErrorFile.png</normaloff>:/Icons/ErrorFile.png</iconset>
+   </property>
+   <property name="text">
+    <string>EditError</string>
+   </property>
+   <property name="toolTip">
+    <string>Edit Error File</string>
+   </property>
+  </action>
+  <action name="actionEditMessage">
+   <property name="icon">
+    <iconset resource="Icons.qrc">
+     <normaloff>:/Icons/Text.png</normaloff>:/Icons/Text.png</iconset>
+   </property>
+   <property name="text">
+    <string>EditMessage</string>
+   </property>
+   <property name="toolTip">
+    <string>Edit Message File</string>
+   </property>
+  </action>
+  <action name="actionHTMLreport">
+   <property name="icon">
+    <iconset resource="Icons.qrc">
+     <normaloff>:/Icons/Html.png</normaloff>:/Icons/Html.png</iconset>
+   </property>
+   <property name="text">
+    <string>HTMLreport</string>
+   </property>
+   <property name="toolTip">
+    <string>Open HTML Report</string>
+   </property>
+  </action>
+  <action name="actionAddSheet">
+   <property name="icon">
+    <iconset resource="Icons.qrc">
+     <normaloff>:/Icons/SheetPlus.png</normaloff>:/Icons/SheetPlus.png</iconset>
+   </property>
+   <property name="text">
+    <string>AddSheet</string>
+   </property>
+   <property name="toolTip">
+    <string>Add new sheet</string>
+   </property>
+  </action>
+  <action name="actionRemoveSheet">
+   <property name="icon">
+    <iconset resource="Icons.qrc">
+     <normaloff>:/Icons/SheetMinus.png</normaloff>:/Icons/SheetMinus.png</iconset>
+   </property>
+   <property name="text">
+    <string>RemoveSheet</string>
+   </property>
+   <property name="toolTip">
+    <string>Remove selected sheet</string>
+   </property>
+  </action>
+  <action name="actionVollbild">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Vollbild</string>
+   </property>
+  </action>
+  <action name="actionWrite_section_to_EXE">
+   <property name="text">
+    <string>Write section to EXE</string>
+   </property>
+  </action>
+  <action name="actionSuppress_display_non_existing_values">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="Icons.qrc">
+     <normaloff>:/Icons/Filter.png</normaloff>:/Icons/Filter.png</iconset>
+   </property>
+   <property name="text">
+    <string>suppress the display of non existing values</string>
+   </property>
+  </action>
+  <action name="actionLoad_Plugins">
+   <property name="text">
+    <string>Load Plugins</string>
+   </property>
+  </action>
+  <action name="actionBarrier_logging">
+   <property name="text">
+    <string>Barrier logging</string>
+   </property>
+  </action>
+  <action name="actionConfigure_XCP_over_ethernet_links">
+   <property name="text">
+    <string>Configure XCP over ethernet links</string>
+   </property>
+  </action>
+  <action name="actionUser_defined_blackboard_variables">
+   <property name="text">
+    <string>user defined blackboard variables</string>
+   </property>
+  </action>
+  <action name="actionBlackboard_List">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="Icons.qrc">
+     <normaloff>:/Icons/List.png</normaloff>:/Icons/List.png</iconset>
+   </property>
+   <property name="text">
+    <string>Blackboard List</string>
+   </property>
+  </action>
+  <action name="actionExtern_processes_copy_lists">
+   <property name="text">
+    <string>Extern processes copy lists</string>
+   </property>
+  </action>
+  <action name="actionLoaded_debug_infos">
+   <property name="text">
+    <string>Loaded debug infos</string>
+   </property>
+  </action>
+  <action name="actionRemote_master_call_statistics">
+   <property name="text">
+    <string>Remote master call statistics</string>
+   </property>
+  </action>
+  <action name="actionmove_control_panel_to_top_left_position">
+   <property name="icon">
+    <iconset resource="Icons.qrc">
+     <normaloff>:/Icons/ControlPanelFetch.png</normaloff>:/Icons/ControlPanelFetch.png</iconset>
+   </property>
+   <property name="text">
+    <string>move control panel to this position</string>
+   </property>
+   <property name="toolTip">
+    <string>move control panel to top left position</string>
+   </property>
+  </action>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>StatusBar</class>
+   <extends>QStatusBar</extends>
+   <header>StatusBar.h</header>
+  </customwidget>
+ </customwidgets>
+ <resources>
+  <include location="Icons.qrc"/>
+ </resources>
+ <connections>
+  <connection>
+   <sender>actionRemoveSheet</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>closeCurrentTab()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionAddSheet</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>addNewTab()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>centralwidget</sender>
+   <signal>tabCloseRequested(int)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>closeTab(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>399</x>
+     <y>306</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionVollbild</sender>
+   <signal>triggered(bool)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>makeFullScreen(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionExit</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>close()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionGlobal_Section_Filter</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>openGlobalSectionFilterDialog()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionSave_process_to_binary_SVL_SAL_file</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>openSaveValueDialog()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionExport_Variable_property</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>openExportVariablePropertiesDialog()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionImport_Variable_property</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>openImportVariablePropertiesDialog()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionUser_defined_environment_variables</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>openUserDefinedEnvVarsDialog()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionCCP_Config</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>openCcpConfigDialog()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionStart_Stop_CCP</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>openCcpStartStopDialog()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionStart_Stop_CCP_Calibration</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>openCcpStartStopCalibrationDialog()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionLoad_CCP_Config</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>openCcpImportConfigDialog()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionSave_CCP_Config</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>openCcpExportConfigDialog()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionXCP_Config</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>openXcpConfigDialog()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionStart_Stop_XCP</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>openXcpStartStopDialog()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionStart_Stop_XCP_Calibration</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>openXcpStartStopCalibrationDialog()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionLoad_XCP_Config</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>openXcpImportConfigDialog()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionSave_XCP_Config</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>openXcpExportConfigDialog()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionInsert_can_error</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>openCanInsertErrorDialog()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionWrite_section_to_EXE</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>openWriteSectionToExeDialog()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionExport_reference_list</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>openExportVariableReferenceListDialog()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionImport_reference_list</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>openImportVariableReferenceListDialog()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionSearch_window_inclluded_variable</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>openSearchWindowWithVariableDialog()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionLoad_SVL_file</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>openLoadSvlDialog()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionExport_Sheets</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>openExportSheetDialog()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionImport_Sheets</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>openImportSheetDialog()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionRemove_not_used_blackboard_variables</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>openCleanAllBlackboardVariablesDialog()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionActive_Equations</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>openActiveEquationWindowDialog()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionHelp</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>toolbarHelp()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionSave_INI</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>toolbarSaveIniFile()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionSave_INI</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>writeSheetsToIni()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionBasic_Settings</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>openBasicSettingsDialog()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionSave_Desktop_as</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>openSaveDesktopDialog()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionLoad_Desktop</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>openLoadDesktopDialog()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionClear_Desktop</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>menuClearDesktop()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionExport_A2L_File</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>menuExportA2L()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionRemove_not_used_blackboard_variables</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>menuCleanBBIniSection()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionExport_hotkeys</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>menuExportHotKeys()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionImport_hotkeys</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>menuImportHotKeys()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionFunction_hotkeys</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>menuFunctionHotKeys()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionAbout</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>openAboutDialog()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionInternals_2</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>openInternalsDialog()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionBlackboard</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>menuBlackboardInternalInfos()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionConfig</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>openCanConfigDialog()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionImport</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>openCanImportDialog()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionHomepage</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>menuHomepage()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionTab_Schlie_en</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>closeCurrentTab()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionSubwindow_Schlie_en</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>closeSubwindows()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionSubwindows_Verbergen</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>hideSubwindows()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionClose_all</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>closeSubwindows()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionLoad_Plugins</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>loadPlugin()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionExit_without_save_INI</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>ExitWithoutSaveIni()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionBarrier_logging</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>BarrierLogging()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionSave_INI_as</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>menuSaveIniAs()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionConfigure_XCP_over_ethernet_links</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>openConfigureXCPOverEthernetDialog()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionUser_defined_blackboard_variables</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>openUserDefinedBBVarsDialog()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionBlackboard_List</sender>
+   <signal>triggered(bool)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>showBlackboardList(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>blackboardDockWidget</sender>
+   <signal>visibilityChanged(bool)</signal>
+   <receiver>actionBlackboard_List</receiver>
+   <slot>setChecked(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>75</x>
+     <y>307</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionExtern_processes_copy_lists</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>ExternProcessCopyLists()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionLoaded_debug_infos</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>openLoadedDebugInfosDialog()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionRemote_master_call_statistics</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>OpenRemoteMasterCallStatisticsDialog()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+ <slots>
+  <slot>closeTab(int)</slot>
+  <slot>closeCurrentTab()</slot>
+  <slot>hideSubwindows()</slot>
+  <slot>closeSubwindows()</slot>
+  <slot>addNewTab()</slot>
+  <slot>makeFullScreen(bool)</slot>
+  <slot>openGlobalSectionFilterDialog()</slot>
+  <slot>openSaveValueDialog()</slot>
+  <slot>openLoadValueDialog()</slot>
+  <slot>openWriteSectionToExeDialog()</slot>
+  <slot>openExportVariablePropertiesDialog()</slot>
+  <slot>openImportVariablePropertiesDialog()</slot>
+  <slot>openUserDefinedEnvVarsDialog()</slot>
+  <slot>openCcpConfigDialog()</slot>
+  <slot>openCcpStartStopDialog()</slot>
+  <slot>openCcpStartStopCalibrationDialog()</slot>
+  <slot>openCcpImportConfigDialog()</slot>
+  <slot>openCcpExportConfigDialog()</slot>
+  <slot>openXcpConfigDialog()</slot>
+  <slot>openXcpStartStopDialog()</slot>
+  <slot>openXcpStartStopCalibrationDialog()</slot>
+  <slot>openXcpImportConfigDialog()</slot>
+  <slot>openXcpExportConfigDialog()</slot>
+  <slot>openCanInsertErrorDialog()</slot>
+  <slot>openExportVariableReferenceListDialog()</slot>
+  <slot>openImportVariableReferenceListDialog()</slot>
+  <slot>openSearchWindowWithVariableDialog()</slot>
+  <slot>openLoadSvlDialog()</slot>
+  <slot>openClearDesktopDialog()</slot>
+  <slot>openImportSheetDialog()</slot>
+  <slot>openExportSheetDialog()</slot>
+  <slot>openCleanAllBlackboardVariablesDialog()</slot>
+  <slot>openActiveEquationWindowDialog()</slot>
+  <slot>toolbarHelp()</slot>
+  <slot>toolbarSaveIniFile()</slot>
+  <slot>writeSheetsToIni()</slot>
+  <slot>openBasicSettingsDialog()</slot>
+  <slot>openCanMessageWindowDialog()</slot>
+  <slot>openSaveDesktopDialog()</slot>
+  <slot>openLoadDesktopDialog()</slot>
+  <slot>menuClearDesktop()</slot>
+  <slot>menuExportRob()</slot>
+  <slot>menuExportA2L()</slot>
+  <slot>menuCleanBBIniSection()</slot>
+  <slot>menuExportHotKeys()</slot>
+  <slot>menuImportHotKeys()</slot>
+  <slot>menuShowHotKeys()</slot>
+  <slot>menuFunctionHotKeys()</slot>
+  <slot>openAboutDialog()</slot>
+  <slot>openWorkersDialog()</slot>
+  <slot>openInternalsDialog()</slot>
+  <slot>menuBlackboardInternalInfos()</slot>
+  <slot>openCanConfigDialog()</slot>
+  <slot>openCanImportDialog()</slot>
+  <slot>menuHomepage()</slot>
+  <slot>loadPlugin()</slot>
+  <slot>ExitWithoutSaveIni()</slot>
+  <slot>BarrierLogging()</slot>
+  <slot>menuSaveIniAs()</slot>
+  <slot>openConfigureXCPOverEthernetDialog()</slot>
+  <slot>openUserDefinedBBVarsDialog()</slot>
+  <slot>showBlackboardList(bool)</slot>
+  <slot>ExternProcessCopyLists()</slot>
+  <slot>openLoadedDebugInfosDialog()</slot>
+  <slot>openBinaryCompareDialog()</slot>
+  <slot>OpenImportAnalogConfig()</slot>
+  <slot>OpenExportAnalogConfig()</slot>
+  <slot>OpenRemoteMasterCallStatisticsDialog()</slot>
+ </slots>
+</ui>

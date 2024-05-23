@@ -1,0 +1,130 @@
+EXPORTS
+    get_scheduler_cycle_count
+    get_cycle_period
+
+    reference_double_var
+    reference_float_var
+    reference_qword_var
+    reference_uqword_var
+    reference_dword_var
+    reference_udword_var
+    reference_word_var
+    reference_uword_var
+    reference_byte_var
+    reference_ubyte_var
+    reference_xxx_var
+
+    reference_double_var_unit 
+    reference_float_var_unit 
+    reference_qword_var_unit
+    reference_uqword_var_unit 
+    reference_dword_var_unit
+    reference_udword_var_unit 
+    reference_word_var_unit 
+    reference_uword_var_unit 
+    reference_byte_var_unit
+    reference_ubyte_var_unit 
+    reference_xxx_var_unit
+
+    reference_double_var_flags 
+    reference_float_var_flags
+    reference_qword_var_flags 
+    reference_uqword_var_flags
+    reference_dword_var_flags 
+    reference_udword_var_flags
+    reference_word_var_flags 
+    reference_uword_var_flags 
+    reference_byte_var_flags 
+    reference_ubyte_var_flags
+    reference_xxx_var_flags
+
+    reference_double_var_all_infos
+    reference_float_var_all_infos 
+    reference_qword_var_all_infos
+    reference_uqword_var_all_infos
+    reference_dword_var_all_infos
+    reference_udword_var_all_infos
+    reference_word_var_all_infos
+    reference_uword_var_all_infos 
+    reference_byte_var_all_infos
+    reference_ubyte_var_all_infos
+    reference_xxx_var_all_infos
+
+    reference_double_var_all_infos_flags
+    reference_float_var_all_infos_flags
+    reference_qword_var_all_infos_flags
+    reference_uqword_var_all_infos_flags
+    reference_dword_var_all_infos_flags
+    reference_udword_var_all_infos_flags
+    reference_word_var_all_infos_flags
+    reference_uword_var_all_infos_flags 
+    reference_byte_var_all_infos_flags 
+    reference_ubyte_var_all_infos_flags
+    reference_xxx_var_all_infos_flags
+
+    dereference_var
+
+    get_labelname_by_address
+    get_not_referenced_labelname_by_address
+    get_vid_by_reference_address
+
+    get_section_addresse_size
+
+    add_bbvari
+    attach_bbvari
+    remove_bbvari
+
+    write_bbvari_byte
+    write_bbvari_ubyte
+    write_bbvari_word
+    write_bbvari_uword
+    write_bbvari_dword
+    write_bbvari_udword
+    write_bbvari_qword
+    write_bbvari_uqword
+    write_bbvari_float
+    write_bbvari_double
+    write_bbvari_minmax_check
+
+    read_bbvari_byte
+    read_bbvari_ubyte
+    read_bbvari_word
+    read_bbvari_uword
+    read_bbvari_dword
+    read_bbvari_udword
+    read_bbvari_qword
+    read_bbvari_uqword
+    read_bbvari_float
+    read_bbvari_double
+    read_bbvari_convert_double
+
+    ThrowError
+    ThrowErrorNoVariableArguments
+    ThrowErrorVariableArguments
+    init_message_output_stream
+    message_output_stream
+    message_output_stream_no_variable_arguments
+    message_output_stream_va_list
+
+    CheckIfConnectedTo
+    LoopOutAndWaitForBarriers
+
+    DisconnectFrom
+    BuildNewProcessAndConnectTo
+    WaitUntilFunctionCallRequest
+    AcknowledgmentOfFunctionCallRequest
+    SetHwndMainWindow
+
+    ExternalProcessMain
+
+    sc_open_virt_can
+    sc_open_virt_can_fd
+    sc_close_virt_can
+    sc_fifo_write_virt_can
+    sc_fifo_read_virt_can
+    sc_get_fifo_fill_level
+    sc_cfg_virt_can_msg_buff
+    sc_read_virt_can_msg_buff
+    sc_peek_virt_can_msg_buff
+    sc_write_virt_can_msg_buff
+

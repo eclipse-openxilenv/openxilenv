@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>StartStopXCPCalDialog</class>
+ <widget class="QDialog" name="StartStopXCPCalDialog">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>614</width>
+    <height>404</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Start/Stop XCP Calibration</string>
+  </property>
+  <property name="windowIcon">
+   <iconset resource="../Icons.qrc">
+    <normaloff>:/Icons/car.png</normaloff>:/Icons/car.png</iconset>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <widget class="QTabWidget" name="tabWidget">
+     <property name="currentIndex">
+      <number>0</number>
+     </property>
+     <widget class="StartStopXCPCalWidget" name="tab">
+      <attribute name="title">
+       <string>Connection (0)</string>
+      </attribute>
+     </widget>
+     <widget class="StartStopXCPCalWidget" name="tab_3">
+      <attribute name="title">
+       <string>Connection(1)</string>
+      </attribute>
+     </widget>
+     <widget class="StartStopXCPCalWidget" name="tab_4">
+      <attribute name="title">
+       <string>Connection (2)</string>
+      </attribute>
+     </widget>
+     <widget class="StartStopXCPCalWidget" name="tab_2">
+      <attribute name="title">
+       <string>Connection (3)</string>
+      </attribute>
+     </widget>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout">
+     <item>
+      <spacer name="horizontalSpacer">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="QPushButton" name="pushButtonClose">
+       <property name="text">
+        <string>Close</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>StartStopXCPCalWidget</class>
+   <extends>QWidget</extends>
+   <header>StartStopXcpCalWidget.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
+ <resources>
+  <include location="../Icons.qrc"/>
+ </resources>
+ <connections>
+  <connection>
+   <sender>pushButtonClose</sender>
+   <signal>clicked()</signal>
+   <receiver>StartStopXCPCalDialog</receiver>
+   <slot>reject()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>566</x>
+     <y>382</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>306</x>
+     <y>201</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+</ui>

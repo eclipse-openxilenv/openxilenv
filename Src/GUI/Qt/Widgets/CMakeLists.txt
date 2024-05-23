@@ -1,0 +1,42 @@
+target_sources(XilEnvGui PRIVATE
+    BlackboardSignalSelectionWidget.cpp
+    ControlPanel.cpp
+    ErrorDialog.cpp
+    MdiWindowType.cpp
+    MessageWindow.cpp
+    StartStopCppWidget.cpp
+    StartStopXcpWidget.cpp
+    ConfigureXcpOverEthernetWidget.cpp
+    DragAndDrop.cpp
+    MdiSubWindow.cpp
+    MdiWindowWidget.cpp
+    StartStopCcpCalWidget.cpp
+    StartStopXcpCalWidget.cpp
+    XcpConfigWidget.cpp
+    CcpConfigWidget.cpp
+
+    ConfigureXcpOverEthernetWidget.ui
+    MessageWindow.ui
+    StartStopCppWidget.ui
+    StartStopXcpWidget.ui
+    ControlPanel.ui
+    StartStopCcpCalWidget.ui
+    StartStopXcpCalWidget.ui
+    XcpConfigWidget.ui
+    CcpConfigWidget.ui
+)
+
+add_subdirectory(A2LCalMap)
+add_subdirectory(A2LCalSingle)
+add_subdirectory(Bargraph)
+add_subdirectory(Tacho)
+add_subdirectory(Text)
+add_subdirectory(Knob)
+add_subdirectory(UserControl)
+add_subdirectory(Lamps)
+add_subdirectory(UserDraw)
+add_subdirectory(CalibrationTree)
+add_subdirectory(Oscilloscope)
+add_subdirectory(CanMessage)
+add_subdirectory(Slider)
+add_subdirectory(Enum)

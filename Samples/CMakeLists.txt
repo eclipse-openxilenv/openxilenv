@@ -1,0 +1,6 @@
+add_subdirectory("ExternalProcesses")
+if(UNIX)
+    if(${MY_CMAKE_SIZEOF_VOID_P} GREATER 4)
+        add_subdirectory("LinuxRemoteMaster")
+    endif()
+endif()

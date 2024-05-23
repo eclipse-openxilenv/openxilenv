@@ -1,0 +1,161 @@
+#ifndef USERDRAWELEMENT_H
+#define USERDRAWELEMENT_H
+
+#include <math.h>
+#include <QString>
+#include <QColor>
+#include <QPainter>
+#include <QMouseEvent>
+
+#include "UserDrawImageItem.h"
+#include "UserDrawPropertiesList.h"
+
+extern "C" {
+#include "exec_st.h"
+}
+
+class BaseValue {
+public:
+    BaseValue(QString &par_Value, bool par_OneTimeCalc = false);
+    BaseValue();
+    BaseValue(const BaseValue &par);
+    ~BaseValue();
+    int Parse(QString &par_Value, bool par_OneTimeCalc = false);
+    void SetFixed(double par_Value);
+    double Get();
+    //QString m_ValueString;
+    bool m_IsFixedValue;
+    union {
+        struct EXEC_STACK_ELEM *m_ExecStack;
+        double m_Fixed;
+    } m_Value;
+    int m_AtachCounterIdx;
+private:
+    static int GetNewAttachCounter();
+    static int m_NumOfAttachCounter;
+    static int *m_AttachCounters;
+};
+
+class ColorValue {
+public:
+    ColorValue(QString &par_Value, bool par_OneTimeCalc = false);
+    ColorValue();
+    int Parse(QString &par_Value, bool par_OneTimeCalc = false);
+    void SetFixed(double par_Red, double par_Green, double par_Blue);
+    int GetInt();
+    BaseValue m_Red;
+    BaseValue m_Green;
+    BaseValue m_Blue;
+};
+
+class DrawParameter {
+public:
+    enum UpdateType {UpdateTypeInit, UpdateTypeCyclic};
+    DrawParameter(double par_ParentX,
+                  double par_ParentY,
+                  double par_ParentScale,
+                  double par_ParentRot,
+                  double par_XScale,
+                  double par_YScale,
+                  enum UpdateType par_UpdateType) :
+        m_ParentX(par_ParentX),
+        m_ParentY(par_ParentY),
+        m_ParentScale(par_ParentScale),
+        m_ParentRot(par_ParentRot),
+        m_ParentRotSin(sin(par_ParentRot)),
+        m_ParentRotCos(cos(par_ParentRot)),
+        m_XScale(par_XScale),
+        m_YScale(par_YScale),
+        m_UpdateType(par_UpdateType) {}
+    double m_ParentX;
+    double m_ParentY;
+    double m_ParentScale;
+    double m_ParentRot;
+    double m_ParentRotSin;
+    double m_ParentRotCos;
+    double m_XScale;
+    double m_YScale;
+    enum UpdateType m_UpdateType;
+};
+
+class TranslateParameter {
+public:
+    TranslateParameter(double par_PosX,
+                       double par_PosY,
+                       double par_Scale,
+                       double par_Rot,
+                       DrawParameter par_Draw) :
+        m_PosX(par_PosX),
+        m_PosY(par_PosY),
+        m_Scale(par_Scale),
+        m_Sin(sin(par_Rot)),
+        m_Cos(cos(par_Rot)),
+        m_Draw(par_Draw) {}
+    double m_PosX;
+    double m_PosY;
+    double m_Scale;
+    double m_Sin;
+    double m_Cos;
+    DrawParameter m_Draw;
+};
+
+
+class UserDrawElement {
+public:
+    UserDrawElement(UserDrawElement *par_Parent = nullptr);
+    virtual ~UserDrawElement();
+    virtual bool Init();
+    virtual void ResetToDefault();
+    virtual void SetDefaultParameterString();
+
+    virtual bool AddChild(UserDrawElement* par_Child, int par_Pos = -1);
+    virtual void DeleteChild(int par_Pos);
+    int ChildNumber();
+    virtual int ChildNumber(UserDrawElement *par_Child);
+
+    virtual bool IsGroup();
+    virtual void Paint (QPainter *par_Painter, QList<UserDrawImageItem*> *par_Images, DrawParameter &par_Draw) = 0;
+
+    virtual bool MousePressEvent(QMouseEvent *event, DrawParameter &par_Draw);
+
+    virtual bool ParseOneParameter(QString &par_Value) = 0;
+    //virtual QString ParameterLine() = 0;
+    //void AppendBaseParameterToLine(QString &par_Line);
+    bool ParseOneBaseParameter(QString& Key, QString &ValueString);
+    void SetColor(QPainter *par_Painter);
+    void SetFillColor(QPainter *par_Painter);
+    enum TranslateType {NoTranlation = 0x0, TranslateOnlyItself = 0x1, TranslateOnlyParent = 0x2, TranslateParentAndItself = 0x3, TranslateOnyToScreen = 0x4, TranslateItselfToScreen = 0x5, TranslateParentToScreen = 0x6, TranslateAllToScreen = 0x7};
+    void Translate(double *px, double *py, TranslateParameter &Parameter, enum TranslateType par_Type = TranslateAllToScreen); //bool par_Scale = true);
+
+    virtual QString GetTypeString() = 0;
+    virtual int GetChildCount();
+    UserDrawElement *GetParent() {return m_Parent;}
+    virtual UserDrawElement *GetChild(int par_Index);
+
+    void WriteToINI(QString &par_WindowName, QString& par_Entry, QString &par_IniFile);
+
+//private:
+    bool ParseParameterString();
+    bool InitParameter(int par_Pos, QString &par_ParameterString);
+    UserDrawElement *m_Parent;
+
+    BaseValue m_Visible;
+
+    ColorValue m_LineColor;
+    BaseValue m_LineThickness;
+    bool m_FillColorIsSet;
+    ColorValue m_FillColor;
+
+    BaseValue m_X;
+    BaseValue m_Y;
+
+    BaseValue m_Scale;
+    BaseValue m_Rot;
+
+    QString m_ParameterLine;
+
+    UserDrawPropertiesList m_Properties;
+};
+
+
+#endif // USERDRAWELEMENT_H

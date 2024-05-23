@@ -1,0 +1,192 @@
+EXPORTS
+    XilEnv_ConnectTo
+    XilEnv_ConnectToInstance
+    XilEnv_DisconnectFrom
+    XilEnv_DisconnectAndClose
+    XilEnv_IsConnectedTo
+    XilEnv_GetVersion
+    XilEnv_GetAPIVersion
+
+    XilEnv_CreateFileWithContent
+    XilEnv_GetEnvironVar
+    XilEnv_SetEnvironVar
+    XilEnv_ChangeSettings
+    XilEnv_TextOut
+    XilEnv_ErrorTextOut
+
+    XilEnv_StopScheduler
+    XilEnv_ContinueScheduler
+    XilEnv_IsSchedulerRunning
+    XilEnv_StartProcess
+    XilEnv_StartProcessAndLoadSvl
+    XilEnv_StopProcess
+    XilEnv_GetNextProcess
+    XilEnv_GetProcessState
+    XilEnv_DoNextCycles
+    XilEnv_DoNextCyclesAndWait
+    XilEnv_AddBeforeProcessEquationFromFile
+    XilEnv_AddBehindProcessEquationFromFile
+    XilEnv_DelBeforeProcessEquations
+    XilEnv_DelBehindProcessEquations
+    XilEnv_WaitUntil
+
+    XilEnv_StartScript
+    XilEnv_StopScript
+    XilEnv_StartRecorder
+    XilEnv_StopRecorder
+    XilEnv_RecorderAddComment
+    XilEnv_StartPlayer
+    XilEnv_StopPlayer
+    XilEnv_StartEquations
+    XilEnv_StopEquations
+    XilEnv_StartGenerator
+    XilEnv_StopGenerator
+
+    XilEnv_LoadDesktop
+    XilEnv_SaveDesktop
+    XilEnv_CreateDialog
+    XilEnv_AddDialogItem
+    XilEnv_ShowDialog
+    XilEnv_IsDialogClosed
+    XilEnv_SelectSheet
+    XilEnv_AddSheet
+    XilEnv_DeleteSheet
+    XilEnv_RenameSheet
+    XilEnv_OpenWindow
+    XilEnv_CloseWindow
+    XilEnv_DeleteWindow
+    XilEnv_ImportWindow
+    XilEnv_ExportWindow
+
+    XilEnv_AddVari
+    XilEnv_RemoveVari
+    XilEnv_AttachVari
+    XilEnv_Get
+    XilEnv_GetPhys
+    XilEnv_Set
+    XilEnv_SetPhys
+    XilEnv_Equ
+    XilEnv_GetVariConversionType
+    XilEnv_GetVariConversionString
+    XilEnv_SetVariConversion
+    XilEnv_GetVariType
+    XilEnv_GetVariUnit
+    XilEnv_SetVariUnit
+    XilEnv_GetVariMin
+    XilEnv_GetVariMax
+    XilEnv_SetVariMin
+    XilEnv_SetVariMax
+    XilEnv_GetVariDisplayFormatWidth
+    XilEnv_GetVariDisplayFormatPrec
+    XilEnv_SetVariDisplayFormat
+    XilEnv_ImportVariProperties
+    XilEnv_EnableRangeControl
+    XilEnv_DisableRangeControl
+    XilEnv_GetNextVari
+    XilEnv_GetVariEnum
+    XilEnv_WrVariEnable
+    XilEnv_WrVariDisable
+    XilEnv_LoadRefList
+    XilEnv_AddRefList
+    XilEnv_SaveRefList
+
+    XilEnv_LoadSvl
+    XilEnv_SaveSvl
+
+    XilEnv_LoadCanVariante
+    XilEnv_LoadAndSelCanVariante
+    XilEnv_AppendCanVariante
+    XilEnv_DelAllCanVariants
+
+    XilEnv_LoadCCPConfig
+    XilEnv_StartCCPBegin
+    XilEnv_StartCCPAddVar
+    XilEnv_StartCCPEnd
+    XilEnv_StopCCP
+    XilEnv_StartCCPCalBegin
+    XilEnv_StartCCPCalAddVar
+    XilEnv_StartCCPCalEnd
+    XilEnv_StopCCPCal
+
+    XilEnv_LoadXCPConfig
+    XilEnv_StartXCPBegin
+    XilEnv_StartXCPAddVar
+    XilEnv_StartXCPEnd
+    XilEnv_StopXCP
+    XilEnv_StartXCPCalBegin
+    XilEnv_StartXCPCalAddVar
+    XilEnv_StartXCPCalEnd
+    XilEnv_StopXCPCal
+
+    XilEnv_TransmitCAN
+    XilEnv_TransmitCANFd
+
+    XilEnv_OpenCANQueue
+    XilEnv_OpenCANFdQueue
+    XilEnv_SetCANAcceptanceWindows
+    XilEnv_FlushCANQueue
+    XilEnv_ReadCANQueue
+    XilEnv_ReadCANFdQueue
+    XilEnv_TransmitCANQueue
+    XilEnv_TransmitCANFdQueue
+    XilEnv_CloseCANQueue
+
+    XilEnv_CopyFileToLocal
+    XilEnv_CopyFileFromLocal
+
+    XilEnv_SetCanChannelCount
+
+    XilEnv_SetCanErr
+    XilEnv_SetCanErrSignalName
+    XilEnv_ClearCanErr
+    XilEnv_SetCanSignalConversion
+    XilEnv_ResetCanSignalConversion
+    XilEnv_ResetAllCanSignalConversion
+
+    XilEnv_StartCANRecorder
+    XilEnv_StopCANRecorder
+
+    XilEnv_SetupLinkToExternProcess
+    XilEnv_GetLinkToExternProcess
+    XilEnv_GetIndexFromLink
+    XilEnv_GetNextSymbolFromLink
+    XilEnv_GetDataFromLink
+    XilEnv_SetDataToLink
+
+    XilEnv_ReferenceMeasurementToBlackboard
+
+    XilEnv_GetLinkDataType
+    XilEnv_GetLinkDataArrayCount
+    XilEnv_GetLinkDataArraySize
+    XilEnv_CopyLinkData
+    XilEnv_FreeLinkData
+
+    XilEnv_GetLinkSingleValueDataType
+    XilEnv_GetLinkSingleValueTargetDataType
+    XilEnv_GetLinkSingleValueFlags
+    XilEnv_GetLinkSingleValueAddress
+    XilEnv_GetLinkSingleValueDimensionCount
+    XilEnv_GetLinkSingleValueDimension
+    XilEnv_SetLinkSingleValueDataDouble
+    XilEnv_GetLinkSingleValueDataInt
+    XilEnv_GetLinkSingleValueDataUint
+    XilEnv_GetLinkSingleValueDataString
+    XilEnv_GetLinkSingleValueDataStringPtr
+    XilEnv_GetLinkSingleValueUnit
+    XilEnv_GetLinkSingleValueUnitPtr
+
+    XilEnv_GetLinkArrayValueDataType
+    XilEnv_GetLinkArrayValueTargetDataType
+    XilEnv_GetLinkArrayValueFlags
+    XilEnv_GetLinkArrayValueAddress
+    XilEnv_GetLinkArrayValueDimensionCount
+    XilEnv_GetLinkArrayValueDimension
+    XilEnv_GetLinkArrayValueDataDouble
+    XilEnv_GetLinkArrayValueDataInt
+    XilEnv_GetLinkArrayValueDataUint
+    XilEnv_GetLinkArrayValueDataString
+    XilEnv_GetLinkArrayValueDataStringPtr
+    XilEnv_GetLinkArrayValueUnit
+    XilEnv_GetLinkArrayValueUnitPtr
+
+    XilEnv_PrintLinkData

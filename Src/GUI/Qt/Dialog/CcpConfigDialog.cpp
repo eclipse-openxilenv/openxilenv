@@ -1,0 +1,44 @@
+/*
+ * Copyright 2023 ZF Friedrichshafen AG
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+
+#include "CcpConfigDialog.h"
+#include "ui_CcpConfigDialog.h"
+#include "CcpConfigWidget.h"
+
+CCPConfigDialog::CCPConfigDialog(QWidget *parent) : Dialog(parent),
+    ui(new Ui::CCPConfigDialog)
+{
+    ui->setupUi(this);
+}
+
+CCPConfigDialog::~CCPConfigDialog()
+{
+    delete ui;
+}
+
+void CCPConfigDialog::on_buttonBox_accepted()
+{
+    ui->tab->saveCCPConfigData();
+    ui->tab_2->saveCCPConfigData();
+    ui->tab_3->saveCCPConfigData();
+    ui->tab_4->saveCCPConfigData();
+
+    /*ui->tab_4->~CCPConfigWidget();
+    ui->tab_3->~CCPConfigWidget();
+    ui->tab_2->~CCPConfigWidget();
+    ui->tab->~CCPConfigWidget();*/
+}
