@@ -308,7 +308,7 @@ Attention: Full compability to lower OpenXiLEnv-versions is not given in all par
 
 OpenXilEnv is primarily a Software in the loop environment for testing embedded software without target hardware. It has a graphical user interface. It is automatable, repeatable and freezable.
 
-![](.\Images\WhatIsOpenXilEnv.png)
+![](./Images/WhatIsOpenXilEnv.png)
 
 ###  2.1. <a name='Usecasescenarios'></a> Use case scenarios
 
@@ -447,7 +447,7 @@ Todo
 
 Through the menu item **Settings =\> Basic Settings** the default setting can be adjusted.
 
-![](.\images\BasicSettingsMain.png)
+![](./Images/BasicSettingsMain.png)
 
 1.  Titel bar of the project, this has no effect.
 
@@ -515,7 +515,7 @@ Through the menu item **Settings =\> Basic Settings** the default setting can be
           not faster than real time=1
           ...
 
-    ![](.\images\ToolboxNotFasterThanRealtime.png)
+    ![](./Images/ToolboxNotFasterThanRealtime.png)
 
 9.  If this is checked all filter inside OpenXilEnv arre not case sensitive. Default is 0.
 
@@ -596,7 +596,7 @@ The settings "Project name"," Scheduling period" and "Blackb. elements" will be 
 
 The tab \"display settings\" configured the the behaviour of the main window and some child windows.
 
-![](.\images\BasicSettingsDisplay.png)
+![](./Images/BasicSettingsDisplay.png)
 
 1.  Show physical units for variables without conversion dez=\>phys.
     Default is 0.
@@ -630,7 +630,7 @@ The tab \"display settings\" configured the the behaviour of the main window and
 
 5.  If this is checked all none existing blackboard variables would be hide inside all text and oscilloscope windows. Default is 0.
 
-    ![](.\images\ToolboxHideShowNoneExisting.png)
+    ![](./Images/ToolboxHideShowNoneExisting.png)
 
         [BasicSettings]
           ...
@@ -652,7 +652,7 @@ The tab \"display settings\" configured the the behaviour of the main window and
 
 The tab \"INI file settings\" configured the behaviour of the INI file handling.
 
-![](.\images\BasicSettingsINI.png)
+![](./Images/BasicSettingsINI.png)
 
 1.  Protect process list against changes. If set the process list inside the INi configuration file will not change if you add or remove a process. Default is 0.
 
@@ -697,7 +697,7 @@ The tab \"INI file settings\" configured the behaviour of the INI file handling.
 
 The tab \"scipt settings\" includes all settings for the script:
 
-![](.\images\BasicSettingsScript.png)
+![](./Images/BasicSettingsScript.png)
 
 1.  Eliminate the creation of a script-debug-file. For durantion test it can be accumulate to a very large file. Default value is \"no\".
 
@@ -729,7 +729,7 @@ The tab \"scipt settings\" includes all settings for the script:
 
 The tab \"remote procedure call\" configured the RPC interface of OpenXilEnv. If you change someting inside this tab you have to restart OpenXilEnv to take place the changes:
 
-![](.\images\BasicSettingsRPC.png)
+![](./Images/BasicSettingsRPC.png)
 
 1.  Here you can select if OpenXilEnv schould be accessable through named pipes or sockets. Only sockets can be used to control OpenXilEnv over network. If sockets are used a port number on which OpenXilEnv should listen must be defined. Default value is \"NamedPipe\"
 
@@ -759,7 +759,7 @@ The tab \"remote procedure call\" configured the RPC interface of OpenXilEnv. If
 
 The tab \"remote master\" is only usefull for the HIL option. Here you can configured the connection to the second linux realtime PC. If you change someting inside this tab you have to restart OpenXilEnv to take place the changes:
 
-![](.\images\BasicSettingsRemoteMaster.png)
+![](./Images/BasicSettingsRemoteMaster.png)
 
 1.  If this is checked OpenXilEnv will try to connect to the second linux PC. otherwise it will start as a norml OpenXilEnv instance without any hardware connections. Default value is \"no\".
 
@@ -841,7 +841,7 @@ Todo
 
 The test objects, model and OpenXilEnv are separated into own executable. The test object(s), model(s) will be calles external processes. Parts living inside OpenXilEnv will be called internal processes. The seperation into own executable have the advantage of memory protection agains each other. The external processes will be communicate with OpenXilEnv over named pipes or sockets. A library or a DLL is available that executes the access to the blackboard as well as register at OpenXilEnv. The use of the DLL or shared library is prefered to avoid compiler dependency.
 
-![](images/Concept.jpg)
+![](./Images/Concept.jpg)
 OpenXilEnv concept
 
 Advantages of OpenXilEnv:
@@ -862,11 +862,11 @@ Advantages of OpenXilEnv:
 
 OpenXilEnv is seperated into two windows: the main window for displaying and changing values and th control-panel for controlling the execution and the blackboard variable settings. Also the internal components (script, recorder, player, generator and the equation calculater can be controlled there.
 
-![](.\images\ControlPanel.png)
+![](./Images/ControlPanel.png)
 
 A screenshot of the main window with a text, enum, oscilloscope, calibration map, sliders, bargraphs, tachos, calibration tree and CAN message window:
 
-![](.\images\MainWindow.png)
+![](./Images/MainWindow.png)
 
 ##  5. <a name='ControlPanel'></a>Control Panel
 
@@ -878,7 +878,7 @@ The internal functions are controlled through the control panel. It is always in
 
 The execution of all processes can be interrupted manually or with a breakpoint in this section of the panel.
 
-![](./images/ControlPanel_RunControl.png)
+![](./Images/ControlPanel_RunControl.png)
  
 **Continue** -key continue execution of all processes (internal and external)
 
@@ -898,7 +898,7 @@ If **Breakpoint** is activated there is a verification on the breakpoint conditi
 
 ###  5.3. <a name='Process'></a>Process
 
-![](./images/ControlPanel_InternalProcess.png)
+![](./Images/ControlPanel_InternalProcess.png)
 
 Process administration **Add\...** offers a variety of all not yet started internal processes (should be empty in most cases). The button ext. process provides a dialogue box for file selection to start external processes (exe-files) manually at any time.
 
@@ -910,7 +910,7 @@ Process administration **Add\...** offers a variety of all not yet started inter
 
 The blackboard is a kind of database of all current values and their setups.
 
-![](./images/ControlPanel_Blackboard.png)
+![](./Images/ControlPanel_Blackboard.png)
 
 There are the follwoing settings: name, unit, datatype, min-, max-value, format specification, step size, conversion formula or text  replacement, color.
 
@@ -949,7 +949,7 @@ Example:
 
 When a text replacement should be used for the display of a variable, set the dialogue item \'Conversion type\' to \"text replace\". Do not forget or OpenXilEnv will not use the text replacement! Text replace \"status\" can get color information. In addition to that an additional dialogue (button \"Edit Textrepl.\") was created for \"Blackboard-Info\" wihtin the control panel. Currently the color information of enum-windows, tachometers, knobs, sliders, bargraphs and oscilloscopes can be displayed. This dialogue box looks as follows:
 
-![](images/TextReplaceEditor.png)
+![](./Images/TextReplaceEditor.png)
 
 Additional to that the input can be made in a text line
 
@@ -1042,7 +1042,7 @@ To display variables there are two types of representation available, the text w
 
 New text windows can be created through the menu **Display --> New --> Text**. New text windows get the name Blackboard(1..n) automatically. Once created and closed windows can be reopened through **Display --> Open --> Text** .
 
-![](images/TextWindow.png)
+![](./Images/TextWindow.png)
 
 Adding further variables is always possible by double clicking with the left mous button onto the headpiece (name value) or through the menu **Display --> EditVars\...** .
 
@@ -1066,7 +1066,7 @@ The form of representation is set by the \"change variablevalue\"-dialogue. So d
 
 ###  6.3. <a name='Oscilloscope-window'></a> Oscilloscope-window
 
-![](images/Oscilloscope.png)
+![](./Images/Oscilloscope.png)
 
 ####  6.3.1. <a name='Defaultsettings'></a>Default settings
 
@@ -1087,7 +1087,7 @@ By a left-click on an axis description a dialogue box for choice of variables is
 
 Either typing in a variable name directly or a term with wildcard (\*.?). By the use of the filter-key all applied variables are listed and can be selected. When a new variable was choosen the settings of color, minimum and maximum are applied from the blackboard but they can be changed afterwards. The choice of notation (decimal or physical) is set to decimal by default. Physical notification is only possible when a conversion was entered for this variable within the blackboard before.
 
-![](images/OscilloscopeChooseVariable.png)
+![](./Images/OscilloscopeChooseVariable.png)
 
 ####  6.3.3. <a name='Deactivatingchosenvariables'></a> Deactivating chosen variables
 
@@ -1128,13 +1128,13 @@ OpenXilEnv has no direct printing function. But it has an interface to the clipb
 
 ###  6.4. <a name='Tachometer'></a>Tachometer
 
-![](images/Tacho.jpg)
+![](./Images/Tacho.jpg)
 
 Right-click (right mouse button), double-click (left mouse button) or **Display --> Config** opens the configuration-dialogue for the active tachometer:
 
 The dialogue shows the selction of variable that should be displayed in the tachometer. Additional to that selection the minimum and maximum values of the variable must be specified. Tachometers can have several styles which can be applied by other tachometers or adjusted with the \"Edit\"-button:
 
-![](images/KnobConfig.png)
+![](./Images/KnobConfig.png)
 
 **„Min angle" / „max angle":** Rotation-area of the tachometer needle in degree
 
@@ -1148,7 +1148,7 @@ The dialogue shows the selction of variable that should be displayed in the tach
 
 ###  6.5. <a name='Knob'></a>Knob
 
-![](images/Knob.png)
+![](./Images/Knob.png)
 
 A knob is a tachometer that can be \"twisted\" with the mouse.
 
@@ -1158,25 +1158,25 @@ The configuration of the knob is equal to the configuration of the tachometer
 
 ###  6.6. <a name='SliderSlidecontrol'></a>Slider (Slide control)
 
-![](images/Slider.png)
+![](./Images/Slider.png)
 
 Right-click, double-click (left mous button) or **Display --> Config** opens the configuration-dialogue for the active slider. The dialogue looks the same as the dialogue of the oscilloscope.
 
 ###  6.7. <a name='Bargraph'></a> Bargraph
 
-![](images/Bargraph.png)
+![](./Images/Bargraph.png)
 
 Right-click, double-click (left mous button) or **Display --> Config** opens the configuration-dialogue for the active slider. The dialogue looks the same as the dialogue of the oscilloscope.
 
 ###  6.8. <a name='Controllamps'></a>Control lamps
 
-![](images/ControlLamps.png)
+![](./Images/ControlLamps.png)
 
 Control lamps are elements for coloured display of states (example indicator). For each „control lamp"-window there can be several lamps placed. The lamps are formed and coloured according to the value of the variable. The use of \"text replace\" is a condition for the conversion of the variable as well as defined colour value for each Enum.
 
 ####  6.8.1. <a name='Controllampsconfiguration-dialogue'></a>Control lamps configuration-dialogue
 
-![](images/ControlLampConfig.png)
+![](./Images/ControlLampConfig.png)
 
 1.  Window name
 
@@ -1196,7 +1196,7 @@ Example:
 
     (+0.2/0.2;0.8/0.5;0.2/0.8;)(-0.4/0.4;0.6/0.5;0.4/0.6;)
 
-![](images/NewControlLamp.png)
+![](./Images/NewControlLamp.png)
 
 ###  6.9. <a name='Enums'></a>Enums
 
@@ -1206,7 +1206,7 @@ Example: conversion of EnumVar:
 
     0 0 \"RGB(0xC0:0xC0:0xC0)Off\";1 1 \"RGB(0xFF:0x00:0x00)On\";2 \* \"RGB(0xFF:0xFF:0x00)undef\"; Conversion of pos:0 0 \"P\";1 1 \"R\";2 2 \"N\";3 3 \"D\";
 
-![](images/Enums.png)
+![](./Images/Enums.png)
 
 ##  7. <a name='Calibrationtree'></a>Calibration tree
 
@@ -1222,18 +1222,18 @@ There is differenced between the possibility of influence single values (also st
 
 ###  7.2. <a name='Datadisplay'></a>Data display
 
-![](images/CalibrationTree.png)
+![](./Images/CalibrationTree.png)
 
 The symbols have the following meaning:
 
 |**Symbol** | **Meaning**|
 |:--------:|-----------------------------------------------------------|
-| ![](images/CalibrationTree_1.jpg)       | Basic data type (char, short, long, float, double, \...)  |
-| ![](images/CalibrationTree_2.jpg)       | Pointer                                                   |
-| ![](images/CalibrationTree_3.jpg)       | Array                                                     |
-| ![](images/CalibrationTree_4.jpg)       | Structure, union or class                                 |
-| ![](images/CalibrationTree_5.jpg)       | Basic class                                               |
-| ![](images/CalibrationTree_6.jpg)       | Unknown data type (Function pointer and bit error are not |
+| ![](./Images/CalibrationTree_1.jpg)       | Basic data type (char, short, long, float, double, \...)  |
+| ![](./Images/CalibrationTree_2.jpg)       | Pointer                                                   |
+| ![](./Images/CalibrationTree_3.jpg)       | Array                                                     |
+| ![](./Images/CalibrationTree_4.jpg)       | Structure, union or class                                 |
+| ![](./Images/CalibrationTree_5.jpg)       | Basic class                                               |
+| ![](./Images/CalibrationTree_6.jpg)       | Unknown data type (Function pointer and bit error are not |
 
 By double clicking with the left mouse button or pressing the insert-key, a variable or structure-/array-/pointer-element can be referenced or modified (applied) later on.
 
@@ -1684,7 +1684,7 @@ This function is called cyclical, as long as the external process (ECU) runs.
 
 This function is called when the external process is ending.
 
-![](images/ExternProcess.png)
+![](./Images/ExternProcess.png)
 
 
 Examples
@@ -1754,7 +1754,7 @@ That means that the external process tries to log in to OpenXilEnv for 10 second
 
 For each external process it is possible to control their variables, which are registered in the blackboard, on falling below/exeeding of min./max.-thresholds. The control has to be configured via process-info-dialogue of the OpenXilEnv-control panel. In the first step choose the process whose variables should be monitored. The options for value range control are summarized in the block „Blackboard variable range control", below in the dialogue (see image). As min.-/max.- thresholds the min.-/max.- specifications from the blackboard are used for each variable.
 
-![](images/RangeControl.png)
+![](./Images/RangeControl.png)
 
 **active before process:** Turns on the value range control before each cyclical call.
 
@@ -1776,7 +1776,7 @@ Min \> Phys(Variable) \< Max
 
 **error messagebox:** An error message window is opened. If another window is open, an error message will be written into the existing window.
 
-![](images/ErrorWindow.png)
+![](./Images/ErrorWindow.png)
 
 **Write to script.msg file :** The error message is written into the script.msg-file and into the script-message-window.
 
@@ -3175,7 +3175,7 @@ The script command SET_ENV_SYS_VAR and REMOVE_ENV_SYS_VAR can be used to change 
 
 The script debug window was implemented to control and follow the execution of a script file. To get to the script debug-mode, turn on the button \'Script-Debugging\' onto the OpenXiLEnv-control-panel. Atferwards the following window will be opened immediately:
 
-![](images/ScriptDebugging.jpg)
+![](./Images/ScriptDebugging.jpg)
 
 The line of the script-file that should execute next are displayed blue. Breakpoints are marked red An automated indentation is done to improve the readability. In the lower section of the window, four tabs are displayed.
 
@@ -7033,7 +7033,7 @@ This function returns the bits from bit-position \"bitoffset\" up to the bit-pos
 
 Example:
 
-![](images/GetBits.png)
+![](./Images/GetBits.png)
 
 ##### setbits(x,bitoffset,bitsize,bits)
 
@@ -7041,7 +7041,7 @@ This function replaces the bits of x from position \"bitoffset\" up to bit-posit
 
 Example:
 
-![](images/SetBits.png){
+![](./Images/SetBits.png){
 
 ##### andbits(x,bitoffset,bitsize,bits)
 
@@ -7049,7 +7049,7 @@ This function performs an and-operation for the bits of x from bit-position \"bi
 
 Example:
 
-![](images/AndBits.png)
+![](./Images/AndBits.png)
 
 ##### orbits(x,bitoffset,bitsize,bits)
 
@@ -7057,7 +7057,7 @@ This function performs an or-operation for the bits of x from bit-position \"bit
 
 Example:
 
-![](images/OrBits.png)
+![](./Images/OrBits.png)
 
 ##### xorbits(x,bitoffset,bitsize,bits)
 
@@ -7065,7 +7065,7 @@ This function performs an xor-operation for the bits of x from bit-position \"bi
 
 Example:
 
-![](images/XorBits.png)
+![](./Images/XorBits.png)
 
 ##### add_msb_lsb(x)
 
@@ -7073,7 +7073,7 @@ This function adds the highest byte and the lowest byte, all other bytes are ign
 
 Example:
 
-![](images/AddMsbLsb.png)
+![](./Images/AddMsbLsb.png)
 
 ##### add_msn_lsn(x)
 
@@ -7081,19 +7081,19 @@ This function adds the highest nibble (4bits) and the lowest nibble, all other b
 
 Example:
 
-![](images/add_msn_lsn.png){width="388px" height="255px"}
+![](./Images/add_msn_lsn.png){width="388px" height="255px"}
 
 ##### swap16(x)
 
 This function swps the first and the second byte of a word. All other bytes are cut off.
 
-![](images/Swap16.png)
+![](./Images/Swap16.png)
 
 ##### swap32(x)
 
 This function swaps the first and the fourth byte as well as the third and the second byte of a value.
 
-![](images/Swap32.png)
+![](./Images/Swap32.png)
 
 ##### shift_left(x,y)
 
@@ -7805,7 +7805,7 @@ An example of signal inside an object describtion of an exported CAN variant (no
 
 OpenXilEnv for HiL basically corresponds to OpenXilEnv, expanded with realtime extension. The realtime extension need a secound PC with a special linux image running (see section installing OpenXilEnv for HiL). The realtime extension redirect signal gerneration thourgh CAN-cards and can be include a user defined model.
 
-![](.\images\2PC_Concept.png)
+![](./Images/2PC_Concept.png)
 
 -   Windows10 desktop PC
 
@@ -7870,7 +7870,7 @@ The following connection is valid:
 
 When selecting the CAN-server and doing a right-click with the mouse, a context menu opens. By ***Add new variante*** a new variant of the CAN-layout can be created, by ***Paste variante*** a previously copied variant can be inserted or by ***Import variante*** a variant from a file can be imported.
 
-![](images/CanDbServer.png)
+![](./Images/CanDbServer.png)
 
 A CAN-Layout variant contains the following settings:
 
@@ -7878,7 +7878,7 @@ A variant name, a description, a baud-rate the CAN operates with, as well as all
 
 When selecting the variant and doing a right-click with the mouse, a context menu opens. By***Add new object*** a new CAN-object can be created. by ***Delete variante*** delete the variant, by ***Copy variante*** copy a variant into the clipboard, by ***Paste Object*** insert a CAN-object that was copied before, by ***Export variante*** export the selected variant into a file or import by ***Import object*** from a file.
 
-![](images/CanDbNode.png)
+![](./Images/CanDbNode.png)
 
 A CAN-layout variant contains the following settings:
 
@@ -7913,7 +7913,7 @@ The CAN-object allocated to the variant are visible when the branch is opened. A
     -   **J1939:** This setting is only a marker and has **no** effects (so far). It is treat like a \"normal\" object, so it has only 8 data-bytes.
 
 -   Additional calculations can be defined before or after the sending of an object. Variables that are use in this formulas should always be declared previously in the mask „additional variables" deklariert werden. The right datatype must be specified (possible: BYTE, UBYTE, WORD, UWORD, DWORD, UDWORD, FLOAT and DOUBLE). The declaration is structured equal to C: Datatype, variablename with concluding semicolon. Every calculation has to end with a semicolon. It can also contain the buildin-functions described in
-    ![](images/CanDbAdditionalSignals.png)
+    ![](./Images/CanDbAdditionalSignals.png)
 
 -   Format, this setting is only used for the display and has no effects on the position of single signals, these need a separate specification of the format setting. There are two object formates (Intel / Motorola), that are send through CAN-bus as follows: Motorola: 63 62 61 60 59 58 57 56 55 54 \... 13 12 11 10 9 8 7 6 5 4 3 2 1 0 Intel: 7 6 5 4 3 2 1 0 15 14 13 12 11 10 \... 49 48 63 62 61 60 59 58 57 56
 
@@ -7923,7 +7923,7 @@ The CAN-object allocated to the variant are visible when the branch is opened. A
 
 When selecting a CAN-object and doing a right-click with the mouse, a context menu opens. By ***Add new signal*** a new signal can be created in the object, by ***Delete object*** delete the selected object, by ***Copy object*** copy the selected object to the clipboard, by ***Paste signal*** insert a previously copied signal, by ***Export object*** export the selected object into a file or by ***Import signal*** import a signal from a file.
 
-![](images/CanDbObject.png)
+![](./Images/CanDbObject.png)
 
 Each CAN-object contains a list of signals that will be visible when opening the branch of the CAN-object.
 
@@ -7957,7 +7957,7 @@ A signal contains the following settings:
 
  When selecting a CAN-object and doing a right-click with the mouse, a context menu opens. By ***Delete signal*** delete the selected Signal, by ***Copy signal*** copy the selected signal to the clipboard, by ***Export signal*** export the selected signal into a file.
 
-![](images/CanDbSignal.png)
+![](./Images/CanDbSignal.png)
 
 All settings are saved to the currend used INI-file.
 
@@ -7969,7 +7969,7 @@ E.g.: OpenXilEnv for HiL.CAN0.0x620 complys with the CAN-object having the ID 0x
 
 Through the menu **„CAN" -\> „Insert CAN error"** the data-bits of a selectable CAN-objects can be overwritten. It can be used to overwrite an alive-counter or a checksum and set them to an invalid value.
 
-![](images/InsertCanError.png)
+![](./Images/InsertCanError.png)
 
 On the left part of the tree view from the dialogue, the signal whose content should be overwritten is selected. By using \"bit value\", the new value of the bits from bit-position \"start bit\" and length \"bit size\" is defined. The signal conversion is **not** considered. After entering all signals in the CAN-object, the overwriting starts. The number of cycles where bits are overwritten is defined by \"cycles\". One cycle conforms to the send-cycle of the corresponding CAN-object.
 
