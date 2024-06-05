@@ -61,7 +61,7 @@
      <x>0</x>
      <y>0</y>
      <width>800</width>
-     <height>25</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuDatei">
@@ -562,7 +562,7 @@
   </action>
   <action name="actionContinue">
    <property name="icon">
-    <iconset>
+    <iconset resource="Icons.qrc">
      <normaloff>:/Icons/Continue.png</normaloff>:/Icons/Continue.png</iconset>
    </property>
    <property name="text">
@@ -620,7 +620,7 @@
    </property>
    <property name="icon">
     <iconset resource="Icons.qrc">
-     <normaloff>:/Icons/ControlPanel.png</normaloff>:/Icons/ControlPanel.png</iconset>
+     <normaloff>:/Icons/HideControlPanel.png</normaloff>:/Icons/HideControlPanel.png</iconset>
    </property>
    <property name="text">
     <string>ControlPnl</string>
@@ -776,7 +776,7 @@
   <action name="actionmove_control_panel_to_top_left_position">
    <property name="icon">
     <iconset resource="Icons.qrc">
-     <normaloff>:/Icons/ControlPanelFetch.png</normaloff>:/Icons/ControlPanelFetch.png</iconset>
+     <normaloff>:/Icons/MoveControlPanel.png</normaloff>:/Icons/MoveControlPanel.png</iconset>
    </property>
    <property name="text">
     <string>move control panel to this position</string>

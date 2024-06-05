@@ -38,27 +38,24 @@ ASAP2_DATABASE *LoadAsapFile (const char *Filename, int Flags, char *ErrString, 
 void FreeAsap2Database(ASAP2_DATABASE *Database);
 
 
-// Gibt den Namen des naechsten Modules in der eingelesenen A2L-Datenstruktur zurueck.
-// Wenn 'Index' = -1 wird von Begin gesucht. Ansonsten sollte der Rueckgabewert des
-// vorherigen Aufrufes uebergeben werden. Ist der Return-Wert -1 ist kein
-// weiteres Modul mehr vorhanden (normalerweise ist immer ein Modul in einem A2L-File)
+// Returns the namen of the next module inside the loaded A2L data structure.
+// If 'Index' = -1 we will start from the beginning. Otherwise this should be the return value of the
+// previous call. There are no more modules available if the return value is -1.
 int GetNextModuleName (ASAP2_DATABASE *Database, int Index,  char *Filter, char *RetName, int MaxSize);
 
-// waehlt ein Modul als aktiv aus
+// Select an active module
 int SelectModule (ASAP2_DATABASE *Database, char *Module);
 
-// Gibt den Namen des naechsten Function-Block in der eingelesenen A2L-Datenstruktur zurueck.
-// Wenn 'Index' = -1 wird von Begin gesucht. Ansonsten sollte der Rueckgabewert des
-// vorherigen Aufrufes uebergeben werden. Ist der Return-Wert -1 ist kein
-// weiteres Funnction-Block mehr vorhanden.
+// Returns the namen of the next function block inside the loaded A2L data structure.
+// If 'Index' = -1 we will start from the beginning. Otherwise this should be the return value of the
+// previous call. There are no more function blocks available if the return value is -1.
 int GetNextFunction (ASAP2_DATABASE *Database, int Index, const char *Filter, char *RetName, int MaxSize);
 
 int GetFunctionIndex (ASAP2_DATABASE *Database, const char *Name);
 
-// Gibt den Namen des naechsten Member eines Function-Block in der eingelesenen A2L-Datenstruktur zurueck.
-// Wenn 'Index' = -1 wird von Begin gesucht. Ansonsten sollte der Rueckgabewert des
-// vorherigen Aufrufes uebergeben werden. Ist der Return-Wert -1 ist kein
-// weiterer Member mehr vorhanden.
+// Returns the namen of the next function block member inside the loaded A2L data structure.
+// If 'Index' = -1 we will start from the beginning. Otherwise this should be the return value of the
+// previous call. There are no more function block members available if the return value is -1.
 #define FLAG_DEF_CHARACTERISTIC    0x1
 #define FLAG_REF_CHARACTERISTIC    0x2
 #define FLAG_CHARACTERISTIC        (FLAG_DEF_CHARACTERISTIC | FLAG_REF_CHARACTERISTIC)
@@ -69,17 +66,16 @@ int GetFunctionIndex (ASAP2_DATABASE *Database, const char *Name);
 #define FLAG_SUB_FUNCTION         0x20
 int GetNextFunctionMember (ASAP2_DATABASE *Database, int FuncIdx, int MemberIdx, const char *Filter, unsigned int Flags, char *RetName, int MaxSize, int *RetType);
 
-// Gibt den Namen des naechsten Measurement in der eingelesenen A2L-Datenstruktur zurueck.
-// Wenn 'Index' = -1 wird von Begin gesucht. Ansonsten sollte der Rueckgabewert des
-// vorherigen Aufrufes uebergeben werden. Ist der Return-Wert -1 ist kein
-// weiteres Measurement mehr vorhanden.
+// Returns the namen of the next measurement inside the loaded A2L data structure.
+// If 'Index' = -1 we will start from the beginning. Otherwise this should be the return value of the
+// previous call. There are no more measurement available if the return value is -1.
 int GetNextMeasurement (ASAP2_DATABASE *Database, int Index, const char *Filter, unsigned int Flags, char *RetName, int MaxSize);
 
-// Gibt den Index eines Measurement in der A2L-Datenstruktur mit dem 'Namen ' zurueck.
-// wenn dierser nicht exisitiert wird -1 zurueckgegeben.
+// Returns the index of a measurement inside the loaded A2L data structure.
+// If it is not existing it will return -1.
 int GetMeasurementIndex (ASAP2_DATABASE *Database, const char *Name);
 
-// Liest alle Infos bezueglich eines Measurement aus der A2L-Datenstruktur
+// Returns all informations of a measurement from the the loaded A2L data structure
 int GetMeasurementInfos (ASAP2_DATABASE *Database, int Index,
                          char *Name, int MaxSizeName,
                          int *pType, uint64_t *pAddress,
@@ -90,10 +86,9 @@ int GetMeasurementInfos (ASAP2_DATABASE *Database, int Index,
                          double *pMin, double *pMax, int *pIsWritable);
 
 
-// Gibt den Namen des naechsten Characteristic in der eingelesenen A2L-Datenstruktur zurueck.
-// Wenn 'Index' = -1 wird von Begin gesucht. Ansonsten sollte der Rueckgabewert des
-// vorherigen Aufrufes uebergeben werden. Ist der Return-Wert -1 ist kein
-// weiterer Characteristic mehr vorhanden. 
+// Returns the namen of the next characteristic inside the loaded A2L data structure.
+// If 'Index' = -1 we will start from the beginning. Otherwise this should be the return value of the
+// previous call. There are no more measurement available if the return value is -1.
 #define FLAG_VALUE_CHARACTERISTIC      0x2
 #define FLAG_CURVE_CHARACTERISTIC      0x4
 #define FLAG_MAP_CHARACTERISTIC        0x8
@@ -134,11 +129,8 @@ int GetCharacteristicAxisInfos(ASAP2_DATABASE *Database, int Index, int AxisNo,
 
 int GetAxisIndex(ASAP2_DATABASE *Database, char *Name);
 
-
 int GetRecordLayoutIndex(ASAP2_DATABASE* Database, char *Name);
 
-
 int SearchMinMaxCalibrationAddress(ASAP2_DATABASE *Database, uint64_t *ret_MinAddress, uint64_t *ret_MaxAddress);
-
 
 #endif

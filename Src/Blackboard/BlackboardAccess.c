@@ -2664,19 +2664,6 @@ int convert_textreplace_value (VID vid, char *txt, int64_t *pfrom, int64_t *pto)
                                       txt, pfrom, pto);
 }
 
-
-/*************************************************************************
-**
-**    Function    : read_bbvari_frame
-**
-**    Description :
-**    Parameter   : VID Vids - Array der zu lesenden Variablen-ID
-**                  FRAME_VALUE *RetFrameValues - Rueckgabe des Werte-Arrays
-**                  int Size - Anzahl der Variable
-**    Returnvalues:
-**
-*************************************************************************/
-
 int read_bbvari_frame (VID *Vids, double *RetFrameValues, int Size)
 {
     int x;

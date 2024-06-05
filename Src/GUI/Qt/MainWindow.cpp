@@ -636,7 +636,11 @@ MainWindow::MainWindow(QSize par_NormalSize, QWidget *parent) :
 
     if (!s_main_ini_val.HideControlPanel) {
         d_controlPanel->show();
+        SwitchToolboxShowHideControlPanelIcon(false);
+    } else {
+        SwitchToolboxShowHideControlPanelIcon(true);
     }
+
 
     InitMessageWindow (d_controlPanel, this);
 
@@ -1745,11 +1749,17 @@ void MainWindow::toolbarControlPanelShow(bool showPanel)
 {
     d_controlPanel->setVisible(showPanel);
     showPanel ? s_main_ini_val.HideControlPanel = 0 : s_main_ini_val.HideControlPanel = 1;
+    if (showPanel) {
+        SwitchToolboxShowHideControlPanelIcon(false);
+    } else {
+        SwitchToolboxShowHideControlPanelIcon(true);
+    }
 }
 
 void MainWindow::toolbarControlPanelButtonDeaktivate()
 {
     ui->actionControlPnl->setChecked(false);
+    SwitchToolboxShowHideControlPanelIcon(true);
 }
 
 void MainWindow::toolbarControlPanelMoveToTopLeftCorner()
@@ -2173,6 +2183,15 @@ void MainWindow::openElementDialog(QStringList arg_selectedVaraibles, bool arg_a
         disconnect(m_elementDialog, SIGNAL(windowNameChanged(QString)), loc_window, SLOT(changeWindowName(QString)));
         delete m_elementDialog;
         m_elementDialog = nullptr;
+    }
+}
+
+void MainWindow::SwitchToolboxShowHideControlPanelIcon(bool par_Show)
+{
+    if (par_Show) {
+        ui->actionControlPnl->setIcon(QIcon(":/Icons/ShowControlPanel.png"));
+    } else {
+        ui->actionControlPnl->setIcon(QIcon(":/Icons/HideControlPanel.png"));
     }
 }
 

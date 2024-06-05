@@ -330,7 +330,7 @@ EXPORT_OR_IMPORT int __FUNC_CALL_CONVETION__ sc_read_virt_can_msg_buff (int chan
 //        this can be NULL if not needed
 // psize = returns the size 1...8
 //        this can be NULL if not needed
-// data = Rueckgabe der Daten der empfangenen CAN-Message
+// data = return buffer for the received CAN data bytes
 // return value:
 //    0 -> The data are old
 //    1 -> The data are new
@@ -375,7 +375,7 @@ EXPORT_OR_IMPORT int __FUNC_CALL_CONVETION__ sc_peek_virt_can_msg_buff (int chan
 // channel = 0...15
 // buffer_idx = 0...n
 // data = Data that should be written
-// Rueckgabewert:
+// Return value:
 //    0 -> Data was successful written into the buffer
 //   -2 -> invalid parameter
 //   -3 -> CAN channel was not opened

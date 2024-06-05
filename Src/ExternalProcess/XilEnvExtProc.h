@@ -25,7 +25,7 @@
 #define SC_MAX_LABEL_SIZE         512
 #define SC_MAX_UNIT_SIZE           64
 #define SC_MAX_CONV_SIZE         1376
-#define SC_MAX_CONV_EXT_SIZE   130000
+#define SC_MAX_CONV_EXT_SIZE   500000
 #define SC_MAX_TEXTREPL_SIZE       64
 
 #define XILENV_LIBRARY_INTERFACE_TYPE   0

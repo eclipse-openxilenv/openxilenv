@@ -1,12 +1,8 @@
 <RCC>
     <qresource prefix="/">
         <file>Icons/save.png</file>
-        <file>Icons/open.png</file>
         <file>Icons/Continue.png</file>
         <file>Icons/ContinueOne.png</file>
-        <file>Icons/editDbg.png</file>
-        <file>Icons/editError.png</file>
-        <file>Icons/editMsg.png</file>
         <file>Icons/realtime.png</file>
         <file>Icons/stop.png</file>
         <file>Icons/Slider.ico</file>
@@ -54,7 +50,6 @@
         <file>Icons/CalTreeDataTypeStruct.png</file>
         <file>Icons/CalTreeDataTypeErr.png</file>
         <file>Icons/BlackboardList.ico</file>
-        <file>Icons/MoveControlPnl.png</file>
         <file>Icons/UserDraw.ico</file>
         <file>Icons/Car_1.ico</file>
         <file>Icons/Car_2.ico</file>
@@ -71,8 +66,6 @@
         <file>Icons/MagnifierDebugFile.png</file>
         <file>Icons/SheetPlus.png</file>
         <file>Icons/SheetMinus.png</file>
-        <file>Icons/ControlPanel.png</file>
-        <file>Icons/ControlPanelFetch.png</file>
         <file>Icons/Text.png</file>
         <file>Icons/ScrewDriver.ico</file>
         <file>Icons/ErrorFile.png</file>
@@ -90,5 +83,8 @@
         <file>Icons/Octopus_4.ico</file>
         <file>Icons/Octopus_5.ico</file>
         <file>Icons/XiL.png</file>
+        <file>Icons/HideControlPanel.png</file>
+        <file>Icons/MoveControlPanel.png</file>
+        <file>Icons/ShowControlPanel.png</file>
     </qresource>
 </RCC>

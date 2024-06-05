@@ -103,7 +103,7 @@ static double GetCPUFreqFromRegestry (void)
                     &hKey) == ERROR_SUCCESS) {  //PHKEY phkResult
         Size = sizeof (Data); 
         if (RegQueryValueEx (hKey, "~MHz", NULL, &Type, (LPBYTE)&Data, &Size) == ERROR_SUCCESS) {
-            Ret = Data * 1000000.0;   // Rueckgabe in Hz
+            Ret = Data * 1000000.0;   // return with unit Hz
         } 
         RegCloseKey (hKey);
     }
@@ -114,7 +114,7 @@ static double GetCPUFreqFromRegestry (void)
 int GetRuntimeMeassurement (int id, char *line)
 {
 	static double CPUClock;
-    if (id == 0) {                          // Anfang
+    if (id == 0) {                          // beginning
         id = 1;
     }
 	if (CPUClock <= 1.0) {

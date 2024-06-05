@@ -42,8 +42,7 @@
 #endif
 
 
-int conv_rec_time_steps;    /* Aufzeichnungsschrittweite in Timer
-                               Steps */
+int conv_rec_time_steps;    /*  Recording step size */
 
 static void write_pascal_string (void *dest, char *src, int maxlen)
 {

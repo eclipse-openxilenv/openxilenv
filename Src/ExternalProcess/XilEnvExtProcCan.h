@@ -152,14 +152,14 @@ EXPORT_OR_IMPORT int __FUNC_CALL_CONVETION__ sc_get_fifo_fill_level (int channel
 //   -3 -> CAN channel was not opened
 EXPORT_OR_IMPORT int __FUNC_CALL_CONVETION__ sc_cfg_virt_can_msg_buff (int channel, int buffer_idx, WSC_TYPE_UINT32 id, unsigned char ext, unsigned char size, unsigned char dir);
 
-// Liest eine CAN-Message aus einem CAN-Message-Objekt-Puffer des virtuellen CAN-Controller
-// channel = 0...7
-// buffer_idx = 0...127
-// pext = Rueckgabe des ID Typs: =0 standart ID's, =1 extendet ID's
-//        kann auch NULL sein falls nicht benoetigt
-// psize = Rueckgabe der Datenlaenge 1...8
-//         kann auch NULL sein falls nicht benoetigt
-// data = Rueckgabe der Daten der empfangenen CAN-Message
+// This will read a CAN message from the CAN message object-buffer of the virtual CAN controller
+// channel = 0...15
+// buffer_idx = 0...n
+// pext = Returns the Id typs: =0 standard ID's, =1 extendet ID's
+//        this can be NULL if not needed
+// psize = Returns the message size 1...8
+//        this can be NULL if not needed
+// data = Return buffer for CAN message data
 //    0 -> gelesene Daten sind alt
 //    1 -> es wurden neue Daten gelesen
 //   -1 -> ungueltige Parameter
@@ -180,7 +180,7 @@ EXPORT_OR_IMPORT int __FUNC_CALL_CONVETION__ sc_peek_virt_can_msg_buff (int chan
 // channel = 0...15
 // buffer_idx = 0...n
 // data = Data that should be written
-// Rueckgabewert:
+// Return value:
 //    0 -> Data was successful written into the buffer
 //   -2 -> invalid parameter
 //   -3 -> CAN channel was not opened

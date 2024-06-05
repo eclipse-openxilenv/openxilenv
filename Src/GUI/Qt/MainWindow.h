@@ -311,6 +311,7 @@ public Q_SLOTS:
 
     void openElementDialog(QStringList arg_selectedVaraibles, bool arg_allVaraibles, bool arg_multiselect, QColor arg_color, QFont arg_font, bool arg_TitleEditable);
 private:
+    void SwitchToolboxShowHideControlPanelIcon(bool par_Show);
     void ClearDesktop();
     void LoadDesktop(QString par_Filename);
     void SaveDesktop(QString par_Filename);

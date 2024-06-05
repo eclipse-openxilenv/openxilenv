@@ -51,7 +51,7 @@
 #define OPT_ACT_CTRL_TEXT   "SelectedControl"
 #define OPT_ACT_CTRL_DEF    0
 #define OPT_BB_SIZE_TEXT    "BlackBoardSize"
-#define OPT_BB_SIZE_DEF     2048
+#define OPT_BB_SIZE_DEF     32768
 #define OPT_ED_PATH_TEXT    "Editor"
 #define OPT_ED_PATH_DEF     ""
 #define OPT_SCRMSG_TEXT     "Scriptmessages"

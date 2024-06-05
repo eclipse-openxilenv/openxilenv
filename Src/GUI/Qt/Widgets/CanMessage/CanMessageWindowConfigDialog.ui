@@ -15,7 +15,7 @@
   </property>
   <property name="windowIcon">
    <iconset>
-    <normaloff>:/Icons/CAN.ico</normaloff>:/Icons/CAN.ico</iconset>
+    <normaloff>:/Icons/CAN.png</normaloff>:/Icons/CAN.png</iconset>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout_4">
    <item>

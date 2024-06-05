@@ -21,13 +21,9 @@
 #include <QString>
 #include <QImage>
 
-// max. line length inside INI file
-#ifndef INI_MAX_LINE_LENGTH
-#define INI_MAX_LINE_LENGTH  4096
-#define INI_MAX_LONGLINE_LENGTH  131071
-#define INI_MAX_SECTION_LENGTH  1024
-#define INI_MAX_ENTRYNAME_LENGTH  1024
-#endif
+extern "C" {
+#include "IniDataBase.h"
+}
 
 int ScQt_IniFileDataBaseOpen(QString &par_Filename);
 int ScQt_IniFileDataBaseClose(int par_FileDescriptor);
@@ -131,6 +127,5 @@ int ScQt_IniFileDataBaseCopySection(int par_DstFileDescriptor, int par_SrcFileDe
 int ScQt_IniFileDataBaseCopySectionSameName(int par_DstFileDescriptor, int par_SrcFileDescriptor, QString &par_Section);
 
 bool IsAValidWindowSectionName(QString &par_WindowName);
-
 
 #endif // QTINIFILE_H

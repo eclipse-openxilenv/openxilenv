@@ -33,45 +33,37 @@ typedef struct {
 } GET_NEXT_STRUCT_ENTRY_BUFFER;
 
 int GetNextStructEntry (PROCESS_APPL_DATA *pappldata, // in  ...
-                        char *lname,                 // in  Symbol-Labelname
-                        char *buffer,               // out Rueckgabe des expandierten Labelname
+                        char *lname,                  // in  symbol lable name
+                        char *buffer,                 // out return the expanded lable name
                         int maxc,
-                        uint64_t *paddress,     // io  Symbol-Adresse
-                        int *pbbtype,                // out Datentyp
+                        uint64_t *paddress,           // io  symbol address
+                        int *pbbtype,                 // out data type
                         int flag,                     // in
                         int ConvPointerToIntFlag,     // in
                         GET_NEXT_STRUCT_ENTRY_BUFFER *internal_data); // in/out
 
 int GetNextStructEntryEx (PROCESS_APPL_DATA *pappldata, // in  ...
-                          char *lname,                 // in  Symbol-Labelname
+                          char *lname,                  // in  symbol lable name
                           int32_t parent_typenr,
                           uint64_t parrent_address,
-                          char *buffer, int maxc,                // out Rueckgabe des expandierten Labelname
-                          uint64_t *paddress,     // io  Symbol-Adresse
-                          int *pbbtype,                // out Datentyp
-                          int flag);                   // in
-// Returnwerte
+                          char *buffer, int maxc,       // out  return the expanded lable name
+                          uint64_t *paddress,           // io  symbol address
+                          int *pbbtype,                 // out data type
+                          int flag);                    // in
+// Return value
 #define NO_MORE_ENTRYS  0
 #define VALID_ENTRY     1
 #define BASIC_TYPE      2
 #define ERROR_IN_ENTRY -1
 
 
-/* Ermittelt aus einer Adresse das dazugehoerige Label
-   aus den Debug-Infos des externen Prozesses   */
+/* Find a lable on base of the address
+   Search inside the debug information of the exrenal process */
 
-int DbgInfoTranslatePointerToLabel (uint64_t ptr, // in  Adresse des zu suchenden Labels
-                                    char *label,      // out Ermitteltes Label
-                                    int maxc,         // in  max. Laellaenge (wird noch ignoroert!)
-                                    int *pbbtype,     // out Datentyp
-                                    int pid);       // in  Prozess-ID
-
-/* ist jetzt in blackboard.c
-// da Doppelpunkte in ASAP-Label nicht erlaubt sind ?!!!
-// wenn op==0 dann je nach INI-Einstellung
-// wenn op==1 alle :: mit ._. ersetzen
-// wenn op>=2 alle ._. mit :: ersetzen
-void ConvertLabelAsapCombatible (char *Label, int op);
-*/
+int DbgInfoTranslatePointerToLabel (uint64_t ptr,     // in  address of the lable to search for
+                                    char *label,      // out found lable
+                                    int maxc,         // in  max. Lale length
+                                    int *pbbtype,     // out data type
+                                    int pid);         // in  process Id
 
 #endif
