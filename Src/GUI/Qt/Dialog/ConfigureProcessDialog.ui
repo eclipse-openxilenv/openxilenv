@@ -6,15 +6,15 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>800</width>
-    <height>600</height>
+    <width>809</width>
+    <height>614</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Configure processes</string>
   </property>
   <property name="windowIcon">
-   <iconset resource="../Icons.qrc">
+   <iconset>
     <normaloff>:/Icons/car.png</normaloff>:/Icons/car.png</iconset>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout_18">
@@ -697,7 +697,7 @@
              <item>
               <widget class="QCheckBox" name="UpdateMultiDLLA2LCheckBox">
                <property name="text">
-                <string>Mmulti DLL offsets</string>
+                <string>Multi DLL offsets</string>
                </property>
               </widget>
              </item>
@@ -2165,9 +2165,7 @@
    </item>
   </layout>
  </widget>
- <resources>
-  <include location="../Icons.qrc"/>
- </resources>
+ <resources/>
  <connections>
   <connection>
    <sender>buttonBox</sender>

@@ -132,7 +132,7 @@ static uint32_t Func_StartCopyFile(RM_PACKAGE_HEADER *par_Req, RM_PACKAGE_HEADER
     RM_COPY_FILE_START_REQ *Req = (RM_COPY_FILE_START_REQ*)par_Req;
     RM_COPY_FILE_START_ACK *Ack = (RM_COPY_FILE_START_ACK*)par_Ack;
     char *FileName = (char*)Req + Req->OffsetFileName;
-    Ack->FileHandle = open(FileName, O_WRONLY | O_CREAT | O_TRUNC);
+    Ack->FileHandle = open(FileName, O_WRONLY | O_CREAT | O_TRUNC, 0600);
     if (Ack->FileHandle < 0) {
         Ack->Ret = -1;
         strcpy((char*)(Ack + 1), strerror(errno));

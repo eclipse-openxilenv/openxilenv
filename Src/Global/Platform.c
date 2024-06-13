@@ -237,7 +237,7 @@ int CheckOpenIPCFile(char *Instance, char *Name, char *ret_Path, int DirCraeteOr
     }
     break;
     case FILENAME_CREATE_EXIST:
-        if ((fh = open(Path, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH)) < 0) {
+        if ((fh = open(Path, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH, 0600)) < 0) {
             return -1;
         }
         close(fh);

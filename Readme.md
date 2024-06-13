@@ -18,7 +18,9 @@ and will be used for:
 **XilEnv** have no graphical user interface and can be used for automation with no user interaction.
 
  - Current GCC compiler with dwarf debug information is Supported. Visual Studio compiler only withot debug information.
- - FMUs with FMI2.0 interface are supported (by **ExtProc_FMUExtract(.EXE)**, **ExtProc_FMULoader32(.EXE)**, **ExtProc_FMULoader64(.EXE)**)
+ - FMUs with FMI2.0 interface are supported (by **ExtProc_FMU2Extract(.EXE)**, **ExtProc_FMU2Loader32(.EXE)**, **ExtProc_FMU2Loader64(.EXE)**)
+   Partial FMI3.0 interface are supported (by **ExtProc_FMU3Extract(.EXE)**, **ExtProc_FMU3Loader32(.EXE)**, **ExtProc_FMU3Loader64(.EXE)**)
+   (It will be only support the additional datatypes).
  - An small A2L parser is included for calibration.
  - With a XCP over ethernet port a connection to a calibration systen is possible.
  - Multicore support with barriers for synchronisation.
@@ -47,10 +49,12 @@ Table of contents
          * [Build options](#build-options-windows)
          * [Install dependencies](#install-dependencies-window)
          * [Build and install](#build-and-install-windows)
+         * [Run example](#run-example-windows)
       * [Linux](#linux)
          * [Build options](#build-options-linux)
          * [Install dependencies](#install-dependencies-linux)
          * [Build and install](#build-and-install-linux)
+         * [Run example](#run-example-linux)
    * [Setting up your project](#setting-up-your-project)
    * [Setup an own external process](#Setup-an-own-external-process)
    
@@ -69,8 +73,17 @@ You can get OpenXilEnv from:
 - Qt Library 5.12.9 ... 6.4.3
 - MinGW 11.2
 - Strawberry perl 
-- pugixml-1.11 (optional if -DBUILD_WITH_FMU_SUPPORT=ON)
-- FMU Parser (optional if -DBUILD_WITH_FMU_SUPPORT=ON)
+- pugixml-1.11 (optional if -DBUILD_WITH_FMU2_SUPPORT=ON or if -DBUILD_WITH_FMU3_SUPPORT=ON)
+
+    <https://pugixml.org/>
+<br/>
+
+- FMU Parser (optional if -DBUILD_WITH_FMU2_SUPPORT=ON or if -DBUILD_WITH_FMU3_SUPPORT=ON)
+
+    <https://github.com/modelica/fmi-standard/releases/download/v3.0.1/FMI-Standard-3.0.1.zip>
+
+    <https://github.com/modelica/fmi-standard/releases/download/v2.0.4/FMI-Standard-2.0.4.zip>
+<br/>
 
 ### <a name='build-options-windows'></a> Build options
 ```
@@ -106,6 +119,7 @@ Install
 ```
   > cmake --install .
 ```
+### <a name='run-example-windows'></a> Run example
 
 Running the electric car sample
 ```
@@ -118,7 +132,17 @@ Running the electric car sample
 ### <a name='install-dependencies-linux'></a> Install dependencies
 
 - Qt Library 5.12.9 ... 6.4.3
-- pugixml-1.11 (optional if -DBUILD_WITH_FMU_SUPPORT=ON)
+- pugixml-1.11 (optional if -DBUILD_WITH_FMU2_SUPPORT=ON or if -DBUILD_WITH_FMU3_SUPPORT=ON)
+
+    <https://pugixml.org/>
+<br/>
+
+- FMU Parser (optional if -DBUILD_WITH_FMU2_SUPPORT=ON or if -DBUILD_WITH_FMU3_SUPPORT=ON)
+
+    <https://github.com/modelica/fmi-standard/releases/download/v3.0.1/FMI-Standard-3.0.1.zip>
+
+    <https://github.com/modelica/fmi-standard/releases/download/v2.0.4/FMI-Standard-2.0.4.zip>
+<br/>
 
 ### <a name='build-and-install-linux'></a> Build and install
 
@@ -135,6 +159,8 @@ Install
 ```
   > cmake --install .
 ```
+
+### <a name='run-example-linux'></a> Run example
 
 Running the electric car sample
 ```

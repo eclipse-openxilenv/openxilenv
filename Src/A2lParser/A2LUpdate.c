@@ -318,7 +318,7 @@ static int WriteA2LWithUpdateAddresses(ASAP2_DATABASE *Database, const char *par
             return -1;
         }
 #else
-        hFile = open(par_OutA2LFile, O_CREAT | O_WRONLY);
+        hFile = open(par_OutA2LFile, O_CREAT | O_WRONLY, 0600);
         if (hFile < 0) {
             *ret_ErrString = "cannot open file";
             return -1;

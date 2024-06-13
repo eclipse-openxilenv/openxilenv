@@ -479,6 +479,96 @@ int CopyBackDllIfChanged(const char *par_TempDirectory, const char *par_BinaryPa
 #endif
 }
 
+
+#ifdef BUILD_WITH_FMU2_SUPPORT
+int CheckIfFmu2(char *BinaryPathInsideExtractedFmuDirectrory,
+                char *ExtractedFmuDirectrory,
+                char *ExecName)
+{
+    int Ret;
+
+    strcpy(BinaryPathInsideExtractedFmuDirectrory, ExtractedFmuDirectrory);
+#ifdef _WIN32
+    strcat(BinaryPathInsideExtractedFmuDirectrory, "\\binaries\\win64");
+#else
+    strcat(BinaryPathInsideExtractedFmuDirectrory, "/binaries/linux64");
+#endif
+    if (CheckIfOneDllExists(BinaryPathInsideExtractedFmuDirectrory)) {
+        // ExtProc_FMU2Loader64.EXE -fmuextracted PathToExtractedFMUDirectory -fmu PathToFMUFile ...
+#ifdef _WIN32
+        strcat (ExecName, "\\ExtProc_FMU2Loader64.EXE");
+#else
+        strcat(ExecName, "/ExtProc_FMU2Loader32.EXE");
+#endif
+        Ret = 1;
+    } else {
+        strcpy(BinaryPathInsideExtractedFmuDirectrory, ExtractedFmuDirectrory);
+#ifdef _WIN32
+        strcat(BinaryPathInsideExtractedFmuDirectrory, "\\binaries\\win32");
+#else
+        strcat(BinaryPathInsideExtractedFmuDirectrory, "/binaries/linux32");
+#endif
+        if (CheckIfOneDllExists(BinaryPathInsideExtractedFmuDirectrory)) {
+            // ExtProc_FMU2Loader32.EXE -fmuextracted PathToExtractedFMUDirectory -fmu PathToFMUFile ...
+#ifdef _WIN32
+            strcat (ExecName, "\\ExtProc_FMU2Loader32.EXE");
+#else
+            strcat(ExecName, "/ExtProc_FMU2Loader64.EXE");
+#endif
+            Ret = 1;
+        } else {
+            Ret = 0;
+        }
+    }
+    return Ret;
+}
+#endif
+
+
+#ifdef BUILD_WITH_FMU3_SUPPORT
+int CheckIfFmu3(char *BinaryPathInsideExtractedFmuDirectrory,
+                char *ExtractedFmuDirectrory,
+                char *ExecName)
+{
+    int Ret;
+    // Now we check if it is a FMU3
+    strcpy(BinaryPathInsideExtractedFmuDirectrory, ExtractedFmuDirectrory);
+    #ifdef _WIN32
+    strcat(BinaryPathInsideExtractedFmuDirectrory, "\\binaries\\x86_64-windows");
+    #else
+    strcat(BinaryPathInsideExtractedFmuDirectrory, "/binaries/x86_64-linux");
+    #endif
+    if (CheckIfOneDllExists(BinaryPathInsideExtractedFmuDirectrory)) {
+        // ExtProc_FMU3Loader64.EXE -fmuextracted PathToExtractedFMUDirectory -fmu PathToFMUFile ...
+    #ifdef _WIN32
+        strcat (ExecName, "\\ExtProc_FMU3Loader64.EXE");
+    #else
+        strcat(ExecName, "/ExtProc_FMU3Loader64.EXE");
+    #endif
+        Ret = 1;
+    } else {
+        strcpy(BinaryPathInsideExtractedFmuDirectrory, ExtractedFmuDirectrory);
+    #ifdef _WIN32
+        strcat(BinaryPathInsideExtractedFmuDirectrory, "\\binaries\\x86-windows");
+    #else
+        strcat(BinaryPathInsideExtractedFmuDirectrory, "/binaries/x86-linux");
+    #endif
+        if (CheckIfOneDllExists(BinaryPathInsideExtractedFmuDirectrory)) {
+            // ExtProc_FMU3Loader64.EXE -fmuextracted PathToExtractedFMUDirectory -fmu PathToFMUFile ...
+    #ifdef _WIN32
+            strcat (ExecName, "\\ExtProc_FMU3Loader32.EXE");
+    #else
+            strcat(ExecName, "/ExtProc_FMU3Loader32.EXE");
+    #endif
+            Ret = 1;
+        } else {
+            Ret = 0;
+        }
+    }
+    return Ret;
+}
+#endif // BUILD_WITH_FMU3_SUPPORT
+
 int main(int argc, char* argv[])
 {
     char FmuFileName[MAX_PATH];
@@ -530,79 +620,28 @@ int main(int argc, char* argv[])
         while ((p > ExecName) && (*p != '\\') && (*p != '/')) p--;
         *p = 0;
 
+        int FmuVersionHit = 0;
 #ifdef BUILD_WITH_FMU2_SUPPORT
-        strcpy(BinaryPathInsideExtractedFmuDirectrory, ExtractedFmuDirectrory);
-#ifdef _WIN32
-        strcat(BinaryPathInsideExtractedFmuDirectrory, "\\binaries\\win64");
-#else
-        strcat(BinaryPathInsideExtractedFmuDirectrory, "/binaries/linux64");
-#endif
-        if (CheckIfOneDllExists(BinaryPathInsideExtractedFmuDirectrory)) {
-            // ExtProc_FMULoader64.EXE -fmuextracted PathToExtractedFMUDirectory -fmu PathToFMUFile ...
-#ifdef _WIN32
-            strcat (ExecName, "\\ExtProc_FMU2Loader64.EXE");
-#else
-            strcat(ExecName, "/ExtProc_FMU2Loader32.EXE");
-#endif
-        } else {
-            strcpy(BinaryPathInsideExtractedFmuDirectrory, ExtractedFmuDirectrory);
-#ifdef _WIN32
-            strcat(BinaryPathInsideExtractedFmuDirectrory, "\\binaries\\win32");
-#else
-            strcat(BinaryPathInsideExtractedFmuDirectrory, "/binaries/linux32");
-#endif
-            if (CheckIfOneDllExists(BinaryPathInsideExtractedFmuDirectrory)) {
-                // ExtProc_FMULoader32.EXE -fmuextracted PathToExtractedFMUDirectory -fmu PathToFMUFile ...
-#ifdef _WIN32
-                strcat (ExecName, "\\ExtProc_FMU2Loader32.EXE");
-#else
-                strcat(ExecName, "/ExtProc_FMU2Loader64.EXE");
-#endif                
-            } else {
-#else
-        {
-#endif
+        FmuVersionHit = CheckIfFmu2(BinaryPathInsideExtractedFmuDirectrory,
+                                    ExtractedFmuDirectrory,
+                                    ExecName);
+#endif // BUILD_WITH_FMU2_SUPPORT
 #ifdef BUILD_WITH_FMU3_SUPPORT
-                // Now we check if it is a FMU3
-                strcpy(BinaryPathInsideExtractedFmuDirectrory, ExtractedFmuDirectrory);
-#ifdef _WIN32
-                strcat(BinaryPathInsideExtractedFmuDirectrory, "\\binaries\\x86_64-windows");
-#else
-                strcat(BinaryPathInsideExtractedFmuDirectrory, "/binaries/x86_64-linux");
-#endif
-                if (CheckIfOneDllExists(BinaryPathInsideExtractedFmuDirectrory)) {
-                    // ExtProc_FMU3Loader64.EXE -fmuextracted PathToExtractedFMUDirectory -fmu PathToFMUFile ...
-#ifdef _WIN32
-                    strcat (ExecName, "\\ExtProc_FMU3Loader64.EXE");
-#else
-                    strcat(ExecName, "/ExtProc_FMU3Loader64.EXE");
-#endif
-                } else {
-                    strcpy(BinaryPathInsideExtractedFmuDirectrory, ExtractedFmuDirectrory);
-#ifdef _WIN32
-                    strcat(BinaryPathInsideExtractedFmuDirectrory, "\\binaries\\x86-windows");
-#else
-                    strcat(BinaryPathInsideExtractedFmuDirectrory, "/binaries/x86-linux");
-#endif
-                    if (CheckIfOneDllExists(BinaryPathInsideExtractedFmuDirectrory)) {
-                        // ExtProc_FMU3Loader64.EXE -fmuextracted PathToExtractedFMUDirectory -fmu PathToFMUFile ...
-#ifdef _WIN32
-                        strcat (ExecName, "\\ExtProc_FMU3Loader32.EXE");
-#else
-                        strcat(ExecName, "/ExtProc_FMU3Loader32.EXE");
-#endif
-                    } else {
-#ifdef _WIN32
-                        printf("there are no x86-windows/win32 or x86_64-windows/win64 binary .DLL inside \"%s\"\n", FmuFileName);
-#else
-                        printf("there are no x86-linux/linux32 or x86_64-linux/linux64 binary .so inside \"%s\"\n", FmuFileName);
-#endif
-                        return 1;
-                    }
-                }
-#endif
-            }
+        if (!FmuVersionHit) {
+            FmuVersionHit = CheckIfFmu3(BinaryPathInsideExtractedFmuDirectrory,
+                                        ExtractedFmuDirectrory,
+                                        ExecName);
         }
+#endif // BUILD_WITH_FMU3_SUPPORT
+        if (!FmuVersionHit) {
+#ifdef _WIN32
+            printf("there are no x86-windows/win32 or x86_64-windows/win64 binary .DLL inside \"%s\"\n", FmuFileName);
+#else
+            printf("there are no x86-linux/linux32 or x86_64-linux/linux64 binary .so inside \"%s\"\n", FmuFileName);
+#endif
+            return 1;
+        }
+
         strcpy (SystemCommandLine, "-fmuextracted \"");
         strcat (SystemCommandLine, ExtractedFmuDirectrory);
         strcat (SystemCommandLine, "\" ");
@@ -611,7 +650,7 @@ int main(int argc, char* argv[])
         strcat (SystemCommandLine, XcpExeWriteBackPath);
         strcat (SystemCommandLine, "\" ");
 
-        // Alle Aufruf-Parameter uebertragen
+        // transfer all call parameters
         for (x = 1; x < argc; x++) {
             int WithWhiteSpaces;
             if (strchr(argv[x], ' ') != NULL) WithWhiteSpaces = 1;
@@ -621,8 +660,6 @@ int main(int argc, char* argv[])
             strcat (SystemCommandLine, argv[x]);
             if (WithWhiteSpaces) strcat (SystemCommandLine, "\"");
         }
-        //printf ("\n%s\n", ExecName);
-        //printf ("\n%s\n", SystemCommandLine);
 #ifdef _WIN32
         STARTUPINFO si;
         PROCESS_INFORMATION pi;
