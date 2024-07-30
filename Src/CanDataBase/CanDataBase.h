@@ -56,6 +56,7 @@ int SetCanObjectCycleById (int Vnr, unsigned int Id, int ExtFlag, unsigned int C
 int CopySignal (int vnr, int new_vnr, int onr, int new_onr, int snr, int new_snr, int DstFile, int SrcFile);
 
 int ScriptSetCANChannelCount (int ChannelCount);
+int ScriptSetCANChannelStartupState (int Channel, int StartupState);
 int ScriptSetAZGChannel (int Channel);
 
 int GetDtypeString (char *Dtype, char **pTxt, char **pDtypstr, char **pName);

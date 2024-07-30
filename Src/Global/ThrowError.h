@@ -24,7 +24,7 @@
 **    constants and macros
 *************************************************************************/
 
-// Fehlerdefines
+// error type defines
 #define MESSAGE_ONLY              0
 #define MESSAGE_STOP	          1
 #define ERROR_NO_CRITICAL    	  2

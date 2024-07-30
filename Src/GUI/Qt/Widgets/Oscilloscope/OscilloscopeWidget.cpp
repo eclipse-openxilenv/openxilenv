@@ -16,6 +16,7 @@
 
 
 #include <math.h>
+#include <inttypes.h>
 
 extern "C" {
 #include "Config.h"
@@ -691,6 +692,7 @@ void OscilloscopeWidget::GoOffline (bool par_WithTime, uint64_t par_EndTime)
         }
         m_Data->t_current_updated_end = m_Data->t_current_to_update_end;
         m_Data->t_cursor = m_Data->t_current_to_update_end;
+#if 0
         if (m_Data->t_current_to_update_end < m_Data->t_window_size) {
             set_t_window_start_end (0,
                                     m_Data->t_window_size);
@@ -698,6 +700,7 @@ void OscilloscopeWidget::GoOffline (bool par_WithTime, uint64_t par_EndTime)
             set_t_window_start_end (m_Data->t_current_to_update_end - m_Data->t_window_size,
                                     m_Data->t_current_to_update_end);
         }
+#endif
     }
     LeaveOsciWidgetCriticalSection (m_Data->CriticalSectionNumber);
     if (StateSave) {

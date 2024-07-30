@@ -139,13 +139,13 @@ int RemoveExternProcessTerminateOrResetBBVariable (int pid)
     return -1;
 }
 
-static long exit_vid;
-static long exitcode_vid;
-static long period_vid;
+static int exit_vid;
+static int exitcode_vid;
+static int period_vid;
 
 static int init_cycle_state;
 
-static long RealtimeFactor_vid;
+static int RealtimeFactor_vid;
 
 #define IDLE_STATE                                       0
 #define WAIT_UNTIL_DSP_IS_CONFIGURED_STATE               1
@@ -216,7 +216,7 @@ int init_init (void)
     vids[3] = add_bbvari (ExtendsWithConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_SHORT_BLACKBOARD, "Realtime", Name, sizeof(Name)), BB_UWORD, "");
     vids[4] = add_bbvari (ExtendsWithConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_LONG2_BLACKBOARD, "Version.Patch", Name, sizeof(Name)), BB_WORD, "");
     exit_vid = add_bbvari (ExtendsWithConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_SHORT_BLACKBOARD, "exit", Name, sizeof(Name)), BB_UWORD, "");
-    exitcode_vid = add_bbvari (ExtendsWithConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_LONG2_BLACKBOARD, "ExitCode", Name, sizeof(Name)), BB_DWORD, "");
+    exitcode_vid = add_bbvari (ExtendsWithConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_OWN_EXIT_CODE, "", Name, sizeof(Name)), BB_DWORD, "");
 
     IniFileDataBaseReadString("Scheduler", "Period", "0.01", str_period,
                                sizeof (str_period), GetMainFileDescriptor());
@@ -418,7 +418,7 @@ void cyclic_init (void)
     if (exit_vid > 0) {
         if (read_bbvari_uword (exit_vid) != 0) {
             int ExitCode = read_bbvari_dword (exitcode_vid);
-            exit_vid = 0;   // Send this only one time otherwise there wil be rise error message like
+            exit_vid = 0;   // Send this only one time otherwise there will be rise error message like
                             // "cannot write to INI file" if remote master is active
             CloseFromOtherThread (ExitCode, 1);
         }

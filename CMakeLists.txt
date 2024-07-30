@@ -14,7 +14,7 @@ set(FMI2_SOURCE_PATH "Default" CACHE PATH "path to FMI2")
 set(FMI3_SOURCE_PATH "Default" CACHE PATH "path to FMI3")
 #option(FMI_SOURCE_PATH "Path to the sourcees of FMI interface")
 
-option(BUILD_EXAMPLES "Build with examples" OFF)
+option(BUILD_EXAMPLES "Build with examples" ON)
 option(BUILD_ESMINI_EXAMPLE "Build with Esmini examples (OpenSCENARIO)" OFF)
 set(ESMINI_LIBRARY_PATH "Default" CACHE PATH "path to esmini library")
 #option(ESMINI_LIBRARY_PATH "Path to the Esmini library" "path to esmini library")

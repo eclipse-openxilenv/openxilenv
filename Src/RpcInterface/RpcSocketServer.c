@@ -1263,7 +1263,7 @@ void ExecuteShouldExit(void)
     char Name[BBVARI_NAME_SIZE];
     if (SetExitCode) {
         int Vid;
-        Vid = get_bbvarivid_by_name(ExtendsWithConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_LONG2_BLACKBOARD, "ExitCode", Name, sizeof(Name)));
+        Vid = get_bbvarivid_by_name(ExtendsWithConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_OWN_EXIT_CODE, "", Name, sizeof(Name)));
         if (Vid <= 0) {
             ThrowError (1, "cannot attach variable \"%s\"", Name);
         }

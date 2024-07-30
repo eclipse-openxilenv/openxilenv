@@ -35,7 +35,7 @@
 #include "Wildcards.h"
 #include "StringMaxChar.h"
 #include "MainWinowSyncWithOtherThreads.h"
-
+#include "IniDatabaseInOutputFilter.h"
 
 #define FILE_DESCRIPTOR_OFFSET  0x100
 
@@ -174,9 +174,9 @@ static int ParserIniFile(FILE* par_FileHanlde, int par_FileDescriptor)
     int ProgressBarId;
 
     ProgressBarId = OpenProgressBarFromOtherThread("(Read INI)");
-    fseek(par_FileHanlde, 0L, SEEK_END);
-    IniFileSize = ftell(par_FileHanlde);
-    fseek(par_FileHanlde, 0L, SEEK_SET);
+    //fseek(par_FileHanlde, 0L, SEEK_END);
+    IniFileSize = 10000; //ftell(par_FileHanlde);
+    //fseek(par_FileHanlde, 0L, SEEK_SET);
 
     while (GetLine (&Line, &LineSize, par_FileHanlde) != NULL) {
         IniFileProcess += (int32_t)strlen (Line);
@@ -293,70 +293,77 @@ __ERROUT:
     return NULL;
 }
 
-int IniFileDataBaseOpen(const char *par_Filename)
+static int IniFileDataBaseOpenInternal(const char *par_Filename, int par_FilterPossible)
 {
     int Ret;
     int x;
     int FirstEmptyEntry = -1;
-    char *FullName = NULL;
-    FILE *FileHandle = NULL;
+    char* FullName = NULL;
+    FILE* FileHandle = NULL;
     int FileDescriptor = -1;
-    char *p;
+    char* p;
     int Version;
     int MinorVersion;
     int PatchVersion;
     char VersionString[64];
 
-    INI_ENTER_CS (&IniDBCriticalSection);
+    INI_ENTER_CS(&IniDBCriticalSection);
 
+    if (!strcmp("stdin", par_Filename) || !strcmp("stdout", par_Filename)) {
+        FullName = (char*)my_malloc(strlen(par_Filename) + 1);
+        if (FullName == NULL) {
+            Ret = -1;
+            goto __ERROUT;
+        }
+        strcpy(FullName, par_Filename);
+    } else {
 #ifdef _WIN32
-    int NeedSize, Size = MAX_PATH;
-    FullName = (char*)my_malloc(Size);
-    if (FillPath == NULL) {
-        Ret = -1;
-        goto __ERROUT;
-    }
-    NeedSize = GetFullPathName (par_Filename, Size, FullName, NULL);
-    if (NeedSize == 0) {
-        Ret = -1;
-        goto __ERROUT;
-    }
-    if (NeedSize > Size) {
-        Size = NeedSize;
-        FullName = (char*)my_realloc(FullName, Size);
+        int NeedSize, Size = MAX_PATH;
+        FullName = (char*)my_malloc(Size);
         if (FillPath == NULL) {
             Ret = -1;
             goto __ERROUT;
         }
-        NeedSize = GetFullPathName (par_Filename, Size, FullName, NULL);
-        if ((NeedSize == 0)  || (NeedSize > Size)) {
+        NeedSize = GetFullPathName(par_Filename, Size, FullName, NULL);
+        if (NeedSize == 0) {
             Ret = -1;
             goto __ERROUT;
         }
-    }
+        if (NeedSize > Size) {
+            Size = NeedSize;
+            FullName = (char*)my_realloc(FullName, Size);
+            if (FillPath == NULL) {
+                Ret = -1;
+                goto __ERROUT;
+            }
+            NeedSize = GetFullPathName(par_Filename, Size, FullName, NULL);
+            if ((NeedSize == 0) || (NeedSize > Size)) {
+                Ret = -1;
+                goto __ERROUT;
+            }
+        }
 #else
-    p = realpath (par_Filename, NULL);
-    if (p == NULL) {
-        Ret = -1;
-        goto __ERROUT;
-    }
-    // make a copy with my_malloc
-    FullName = (char*)my_malloc(strlen(p) + 1);
-    if (FullName == NULL) {
-        Ret = -1;
-        goto __ERROUT;
-    }
-    strcpy(FullName, p);
-    free(p);
+        p = realpath(par_Filename, NULL);
+        if (p == NULL) {
+            Ret = -1;
+            goto __ERROUT;
+        }
+        // make a copy with my_malloc
+        FullName = (char*)my_malloc(strlen(p) + 1);
+        if (FullName == NULL) {
+            Ret = -1;
+            goto __ERROUT;
+        }
+        strcpy(FullName, p);
+        free(p);
 #endif
-
-    p = FullName;
-    while (*p != 0) {
-        if (*p == '\\') *p = '/';
-        else *p = FILE_CHAR_UPPER(*p);
-        p++;
+        p = FullName;
+        while (*p != 0) {
+            if (*p == '\\') *p = '/';
+            else *p = FILE_CHAR_UPPER(*p);
+            p++;
+        }
     }
-
     // Check if file already loaded
     for (x = 0; x < MAX_INI_FILES; x++) {
         if (AllLoadedIniFiles[x].Filename != NULL) {
@@ -376,9 +383,17 @@ int IniFileDataBaseOpen(const char *par_Filename)
     }
 
     // Now open the file
-    if ((FileHandle = open_file (FullName, "rt")) == NULL) {
-        Ret = -1;
-        goto __ERROUT;
+    if (par_FilterPossible && ((s_main_ini_val.IniFilterProgramFlags & INI_FILTER_PROGRAM_INPUT) == INI_FILTER_PROGRAM_INPUT)) {
+        if ((FileHandle = CreateInOrOutputFilterProcessPipe (s_main_ini_val.IniFilterProgram,
+                                                             FullName, 0)) == NULL) {
+            Ret = -1;
+            goto __ERROUT;
+        }
+    } else {
+        if ((FileHandle = open_file (FullName, "rt")) == NULL) {
+            Ret = -1;
+            goto __ERROUT;
+        }
     }
 
     // Build a hanlde
@@ -393,52 +408,80 @@ int IniFileDataBaseOpen(const char *par_Filename)
     AllLoadedIniFiles[FirstEmptyEntry].FileDescriptor = FileDescriptor;
     AllLoadedIniFilesCounter++;
 
-    if (ParserIniFile(FileHandle, FileDescriptor)) {
-        Ret = -1;
-        goto __ERROUT;
+    if (strcmp("stdout", par_Filename)) {
+        if (ParserIniFile(FileHandle, FileDescriptor)) {
+            Ret = -1;
+            goto __ERROUT;
+        }
     }
-    if (FileHandle != NULL) close_file(FileHandle);
-
+    if (FileHandle != NULL) {
+        if (IsInOrOutputFilterProcessPipe(FileHandle)) {
+            if (strcmp("stdin", par_Filename) && strcmp("stdout", par_Filename)) {
+                CloseInOrOutputFilterProcessPipe(FileHandle);
+            }
+        } else {
+            close_file(FileHandle);
+        }
+    }
     INI_LEAVE_CS (&IniDBCriticalSection);
 
     // now check if it is the right version
-    Version = 0;
-    MinorVersion = 0;
-    PatchVersion = 0;
-    IniFileDataBaseReadString(OPT_FILE_INFOS, OPT_FILE_VERSION, "0.0.0", VersionString, sizeof(VersionString), FileDescriptor);
-    Version = strtoul(VersionString, &p, 10);
-    if ((p != NULL) && (*p == '.')) {
-        MinorVersion = strtoul(p + 1, &p, 10);
+    if (par_FilterPossible && ((s_main_ini_val.IniFilterProgramFlags & INI_FILTER_PROGRAM_NO_FILE_VERSION_CKECK) != INI_FILTER_PROGRAM_NO_FILE_VERSION_CKECK)) {
+        Version = 0;
+        MinorVersion = 0;
+        PatchVersion = 0;
+        IniFileDataBaseReadString(OPT_FILE_INFOS, OPT_FILE_VERSION, "0.0.0", VersionString, sizeof(VersionString), FileDescriptor);
+        Version = strtoul(VersionString, &p, 10);
         if ((p != NULL) && (*p == '.')) {
-            PatchVersion = strtoul(p + 1, &p, 10);
+            MinorVersion = strtoul(p + 1, &p, 10);
+            if ((p != NULL) && (*p == '.')) {
+                PatchVersion = strtoul(p + 1, &p, 10);
+            }
         }
-    }
-    if ((Version < XILENV_INIFILE_MIN_VERSION) ||
-        ((Version == XILENV_INIFILE_MIN_VERSION) && (MinorVersion < XILENV_INIFILE_MIN_MINOR_VERSION)) ||
-        ((Version == XILENV_INIFILE_MIN_VERSION) && (MinorVersion == XILENV_INIFILE_MIN_MINOR_VERSION) && (PatchVersion < XILENV_INIFILE_MIN_PATCH_VERSION))) {
-        int Ret = ThrowError(ERROR_OKCANCEL,
-                             "the file \"%s\" has not the correct version information >= %d.%d.%d (%d.%d.%d)\n"
-                             "Press (OK) to ignore or (Cancel) to stop loading",
-                             par_Filename,
-                             XILENV_INIFILE_MIN_VERSION, XILENV_INIFILE_MIN_MINOR_VERSION, XILENV_INIFILE_MIN_PATCH_VERSION,
-                             Version, MinorVersion, PatchVersion);
-        if (Ret == IDCANCEL) {
-            IniFileDataBaseClose(FileDescriptor);
-            return -1;
-        } else {
-            sprintf(VersionString, "%d.%d.%d", XILENV_INIFILE_MIN_VERSION, XILENV_INIFILE_MIN_MINOR_VERSION, XILENV_INIFILE_MIN_PATCH_VERSION);
-            IniFileDataBaseWriteString(OPT_FILE_INFOS, OPT_FILE_VERSION, VersionString, FileDescriptor);
+        if ((Version < XILENV_INIFILE_MIN_VERSION) ||
+            ((Version == XILENV_INIFILE_MIN_VERSION) && (MinorVersion < XILENV_INIFILE_MIN_MINOR_VERSION)) ||
+            ((Version == XILENV_INIFILE_MIN_VERSION) && (MinorVersion == XILENV_INIFILE_MIN_MINOR_VERSION) && (PatchVersion < XILENV_INIFILE_MIN_PATCH_VERSION))) {
+            int Ret = ThrowError(ERROR_OKCANCEL,
+                "the file \"%s\" has not the correct version information >= %d.%d.%d (%d.%d.%d)\n"
+                "Press (OK) to ignore or (Cancel) to stop loading",
+                par_Filename,
+                XILENV_INIFILE_MIN_VERSION, XILENV_INIFILE_MIN_MINOR_VERSION, XILENV_INIFILE_MIN_PATCH_VERSION,
+                Version, MinorVersion, PatchVersion);
+            if (Ret == IDCANCEL) {
+                IniFileDataBaseClose(FileDescriptor);
+                return -1;
+            }
+            else {
+                sprintf(VersionString, "%d.%d.%d", XILENV_INIFILE_MIN_VERSION, XILENV_INIFILE_MIN_MINOR_VERSION, XILENV_INIFILE_MIN_PATCH_VERSION);
+                IniFileDataBaseWriteString(OPT_FILE_INFOS, OPT_FILE_VERSION, VersionString, FileDescriptor);
+            }
         }
     }
     return FileDescriptor;
 __ERROUT:
     if (FullName != NULL) {
         if (FileDescriptor > 0) IniFileDataBaseClose(FileDescriptor);
-        if (FileHandle != NULL) close_file(FileHandle);
+        if (FileHandle != NULL) {
+            if (IsInOrOutputFilterProcessPipe(FileHandle)) {
+                CloseInOrOutputFilterProcessPipe(FileHandle);
+            } else {
+                close_file(FileHandle);
+            }
+        }
         if (FullName != NULL) my_free(FullName);
     }
     INI_LEAVE_CS (&IniDBCriticalSection);
     return Ret;
+}
+
+int IniFileDataBaseOpen(const char *par_Filename)
+{
+    return IniFileDataBaseOpenInternal(par_Filename, 1);
+}
+
+int IniFileDataBaseOpenNoFilterPossible(const char *par_Filename)
+{
+    return IniFileDataBaseOpenInternal(par_Filename, 0);
 }
 
 static int Compare2FileNames(const char *par_Name, const char *par_RefName)
@@ -594,10 +637,14 @@ static int SortEntryCompareFunction (const void *a, const void *b)
  }
 
 
-/* par_Operation == 0 -> Do nothing
+/* par_Operation == 0 -> Only save it. Do nothing more
    par_Operation == 1 -> rename file to DestFileName
-   par_Operation == 2 -> remove infos from INI-DB */
-int IniFileDataBaseSave(int par_FileDescriptor, const char *par_DstFileName, int par_Operation)
+   par_Operation == 2 -> remove infos from INI-DB 
+   par_Operation == 3 -> write it to stdout (with [FileInfos] Section)
+   par_Operation == 4 -> write it to stdout (without [FileInfos] Section)
+   par_Operation == 5 -> Only save it, same as 0 but without [FileInfos] Section.
+   */
+static int IniFileDataBaseSaveInternal(int par_FileDescriptor, const char *par_DstFileName, int par_Operation, int par_FilterPossible)
 {
     FILE *fh = NULL;
     char txt[MAX_PATH+100];
@@ -609,38 +656,47 @@ int IniFileDataBaseSave(int par_FileDescriptor, const char *par_DstFileName, int
     int s;
 
     switch(par_Operation) {
-    case 2:
-    case 0:
+    case INIFILE_DATABAE_OPERATION_WRITE_ONLY:
+    case INIFILE_DATABAE_OPERATION_REMOVE:
+    case INIFILE_DATABAE_OPERATION_WRITE_ONLY_WITHOUT_VERSION_INFO:
         DstFileNameFullPath = GetFileNameByDescriptor(par_FileDescriptor);
         if (DstFileNameFullPath == NULL) {
             goto __ERROUT;
         }
         break;
-    case 1:
+    case INIFILE_DATABAE_OPERATION_RENAME:
         DstFileNameFullPath = GetFullPath(par_DstFileName);
         if (DstFileNameFullPath == NULL) {
             goto __ERROUT;
         }
         if (GetFileDescriptorByName(DstFileNameFullPath) > 0) {
-            par_Operation = 0;   // same name "Save as" to current namen
+            par_Operation = INIFILE_DATABAE_OPERATION_WRITE_ONLY;   // same name "Save as" to current namen
         }
+        break;
+    case INIFILE_DATABAE_OPERATION_WRITE_TO_STDOUT:
+    case INIFILE_DATABAE_OPERATION_WRITE_TO_STDOUT_WITHOUT_VERSION_INFO:
+        DstFileNameFullPath = StringMalloc("stdout");
         break;
     default:
         goto __ERROUT;
     }
 
     // Inside every INI file store the version
-    sprintf(txt, "%d.%d.%d", XILENV_VERSION, XILENV_MINOR_VERSION, XILENV_PATCH_VERSION);
-    IniFileDataBaseWriteString(OPT_FILE_INFOS, OPT_FILE_VERSION, txt, par_FileDescriptor);
-
+    if ((par_Operation != INIFILE_DATABAE_OPERATION_WRITE_TO_STDOUT_WITHOUT_VERSION_INFO) && 
+        (par_Operation != INIFILE_DATABAE_OPERATION_WRITE_ONLY_WITHOUT_VERSION_INFO)) {
+        sprintf(txt, "%d.%d.%d", XILENV_VERSION, XILENV_MINOR_VERSION, XILENV_PATCH_VERSION);
+        IniFileDataBaseWriteString(OPT_FILE_INFOS, OPT_FILE_VERSION, txt, par_FileDescriptor);
+    }
     SortedStore = s_main_ini_val.SaveSortedINIFiles;   // Should the INI file stored sorted?
 
     INI_ENTER_CS (&IniDBCriticalSection);
 
-    if (s_main_ini_val.MakeBackupBeforeSaveINIFiles) {              // Should be stored a backup?
+    if (s_main_ini_val.MakeBackupBeforeSaveINIFiles &&
+        (par_Operation != INIFILE_DATABAE_OPERATION_WRITE_TO_STDOUT) &&
+        (par_Operation != INIFILE_DATABAE_OPERATION_WRITE_TO_STDOUT_WITHOUT_VERSION_INFO)) {              // Should be stored a backup?
         char *SrcFilename = GetFileNameByDescriptor(par_FileDescriptor);
         char *Filename;
-        if (par_Operation == 1) {
+        if (par_Operation == INIFILE_DATABAE_OPERATION_RENAME) {
             Filename = DstFileNameFullPath;
         } else {
             Filename = SrcFilename;
@@ -657,8 +713,18 @@ int IniFileDataBaseSave(int par_FileDescriptor, const char *par_DstFileName, int
         }
     }
 
-    if ((fh = open_file (DstFileNameFullPath, "wt")) == NULL) {
-        goto __ERROUT;
+    // Now open the file
+    if (par_FilterPossible && (((s_main_ini_val.IniFilterProgramFlags & INI_FILTER_PROGRAM_OUTPUT) == INI_FILTER_PROGRAM_OUTPUT) ||
+                               (par_Operation == INIFILE_DATABAE_OPERATION_WRITE_TO_STDOUT) || 
+                               (par_Operation == INIFILE_DATABAE_OPERATION_WRITE_TO_STDOUT_WITHOUT_VERSION_INFO))) {
+        if ((fh = CreateInOrOutputFilterProcessPipe (s_main_ini_val.IniFilterProgram,
+                                                     DstFileNameFullPath, 1)) == NULL) {
+            goto __ERROUT;
+        }
+    } else {
+        if ((fh = open_file (DstFileNameFullPath, "wt")) == NULL) {
+            goto __ERROUT;
+        }
     }
 
     FileIndex = GetIndexByDescriptor(par_FileDescriptor);
@@ -704,25 +770,50 @@ int IniFileDataBaseSave(int par_FileDescriptor, const char *par_DstFileName, int
         }
     }
     switch(par_Operation) {
-    case 2:
+    case INIFILE_DATABAE_OPERATION_REMOVE:
         DeleteFromIniFileDataBase(FileIndex);
         break;
-    case 1:
+    case INIFILE_DATABAE_OPERATION_RENAME:
         IniFileDataBaseRenameFile(par_DstFileName, par_FileDescriptor);
         break;
-    case 0:
+    case INIFILE_DATABAE_OPERATION_WRITE_ONLY:
+    case INIFILE_DATABAE_OPERATION_WRITE_TO_STDOUT:
+    case INIFILE_DATABAE_OPERATION_WRITE_TO_STDOUT_WITHOUT_VERSION_INFO:
+    case INIFILE_DATABAE_OPERATION_WRITE_ONLY_WITHOUT_VERSION_INFO:
     default:
         break;
     }
 
-    close_file (fh);
+    if (IsInOrOutputFilterProcessPipe(fh)) {
+        if (strcmp("stdin", DstFileNameFullPath) && strcmp("stdout", DstFileNameFullPath)) {
+            CloseInOrOutputFilterProcessPipe(fh);
+        }
+    } else {
+        close_file(fh);
+    }
     if (ProgressBarID >= 0) CloseProgressBarFromOtherThread(ProgressBarID);
     INI_LEAVE_CS (&IniDBCriticalSection);
     return 0;
 __ERROUT:
-    if (fh != NULL) close_file (fh);
+    if (fh != NULL) {
+        if (IsInOrOutputFilterProcessPipe(fh)) {
+            CloseInOrOutputFilterProcessPipe(fh);
+        } else {
+            close_file(fh);
+        }
+    }
     INI_LEAVE_CS (&IniDBCriticalSection);
     return -1;
+}
+
+int IniFileDataBaseSave(int par_FileDescriptor, const char *par_DstFileName, int par_Operation)
+{
+    return IniFileDataBaseSaveInternal(par_FileDescriptor, par_DstFileName, par_Operation, 1);
+}
+
+int IniFileDataBaseSaveNoFilterPossible(int par_FileDescriptor, const char *par_DstFileName, int par_Operation)
+{
+    return IniFileDataBaseSaveInternal(par_FileDescriptor, par_DstFileName, par_Operation, 0);
 }
 
 #define CHAR_UPPER(c) (c)
@@ -1166,9 +1257,9 @@ int IniFileDataBaseReadYesNo (const char* par_Section, const char* par_Entry, in
     int Ret;
     char Buffer[64];
     IniFileDataBaseReadString (par_Section, par_Entry, (par_DefaultValue) ? "yes" : "no", Buffer, sizeof (Buffer), par_FileDescriptor);
-    if (!stricmp(Buffer, "yes")) {
+    if (!_stricmp(Buffer, "yes")) {
         Ret = 1;
-    } else if (!stricmp(Buffer, "no")) {
+    } else if (!_stricmp(Buffer, "no")) {
         Ret = 0;
     } else {
         // "0" and "1" are also allowed
@@ -1615,7 +1706,7 @@ __ERROUT:
         FreeSection(DstSection);
     }
 __OUT:
-    INI_ENTER_CS (&IniDBCriticalSection);
+    INI_LEAVE_CS (&IniDBCriticalSection);
     return Ret;
 }
 
@@ -1737,7 +1828,7 @@ int CreateNewEmptyIniFile(const char *par_Name)
 int IniFileDataBaseCreateAndOpenNewIniFile(const char *par_Name)
 {
     if (CreateNewEmptyIniFile(par_Name) == 0) {
-        return IniFileDataBaseOpen(par_Name);
+        return IniFileDataBaseOpenNoFilterPossible(par_Name);
     }
     return -1;
 }

@@ -43,12 +43,12 @@ int cExitToDosCmd::Execute (cParser *par_Parser, cExecutor *par_Executor)
 {
     UNUSED(par_Executor);
     if(par_Parser->GetParameterCounter () == 1) { // If there wa transferd an exit value than use that
-        int Len = strlen(GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_LONG2_BLACKBOARD));
-        Len += strlen("ExitCode=");
+        int Len = strlen(GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_OWN_EXIT_CODE));
+        Len += strlen("=");
         Len += strlen(par_Parser->GetParameter (0));
         Len += 1; // for termination character
         char *Buffer = static_cast<char*>(my_malloc(Len));
-        sprintf (Buffer, "%sExitCode=%s", GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_LONG2_BLACKBOARD), par_Parser->GetParameter (0));
+        sprintf (Buffer, "%s=%s", GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_OWN_EXIT_CODE), par_Parser->GetParameter (0));
         direct_solve_equation (Buffer);
         my_free(Buffer);
     }

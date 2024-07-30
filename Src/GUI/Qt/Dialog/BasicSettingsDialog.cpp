@@ -55,7 +55,11 @@ BasicSettingsDialog::BasicSettingsDialog(QWidget *parent) : Dialog(parent),
     ui->SchedulingLineEdit->SetValue(s_main_ini_val.SchedulerPeriode);
     ui->BlackboardElemLineEdit->SetOnlyInteger(true);
     ui->BlackboardElemLineEdit->SetValue(s_main_ini_val.BlackboardSize);
+#ifdef _WIN32
     ui->EditorLineEdit->setText(QString (s_main_ini_val.Editor));
+#else
+    ui->EditorLineEdit->setText(QString (s_main_ini_val.EditorX));
+#endif
     ui->WriteProcessListCheckBox->setChecked(s_main_ini_val.WriteProtectIniProcessList != 0);
     ui->AutosaveCheckBox->setChecked(s_main_ini_val.SwitchAutomaticSaveIniOff != 0);
     ui->SaveFileCheckBox->setEnabled(s_main_ini_val.SwitchAutomaticSaveIniOff != 0);
@@ -266,8 +270,11 @@ void BasicSettingsDialog::accept()
     }
     s_main_ini_val.BlackboardSize = blackboard_size;
 
+#ifdef _WIN32
     strcpy (s_main_ini_val.Editor, QStringToConstChar(ui->EditorLineEdit->text()));
-
+#else
+    strcpy (s_main_ini_val.EditorX, QStringToConstChar(ui->EditorLineEdit->text()));
+#endif
     strcpy (s_main_ini_val.Priority, QStringToConstChar(ui->PriorityComboBox->currentText()));
 
     s_main_ini_val.DontCallSleep = SetPriority (s_main_ini_val.Priority);

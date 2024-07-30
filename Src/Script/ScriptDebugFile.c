@@ -65,7 +65,7 @@ int GenerateNewDebugFile(void)
         // Write the file head
         fprintf (DebugFile, "\nThis file is generated automatically from %s", GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_PROGRAM_NAME));
         fprintf (DebugFile, "\n%s debug file file: %s", GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_PROGRAM_NAME), debugfilename);
-        fprintf (DebugFile, "\n%s version    : %.3lf", GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_PROGRAM_NAME), XILENV_VERSION/1000.0);
+        fprintf (DebugFile, "\n%s version    : %d.%d.%d", GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_PROGRAM_NAME), XILENV_VERSION, XILENV_MINOR_VERSION, XILENV_PATCH_VERSION);
         fprintf (DebugFile, "\n%s INI file   : %s", GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_PROGRAM_NAME), IniFileName);
         /* Date and time */
         {

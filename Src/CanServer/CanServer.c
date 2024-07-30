@@ -880,8 +880,24 @@ static int add_additional_bbvaris (NEW_CAN_SERVER_CONFIG *csc)
 
     for (c = 0; c < csc->channel_count; c++) {
         sprintf (CanObjectName, "%s.CAN%i", GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_CAN_NAMES), c);
-        csc->channels[c].global_tx_enable_vid = add_bbvari (CanObjectName, BB_UDWORD, "[]");
-        write_bbvari_udword (csc->channels[c].global_tx_enable_vid, 1);
+        switch(csc->channels[c].StartupState) {
+        case 0:
+            csc->channels[c].global_tx_enable_vid = add_bbvari (CanObjectName, BB_UDWORD, "[]");
+            write_bbvari_udword (csc->channels[c].global_tx_enable_vid, 0);
+            break;
+        default:
+        case 1:
+            csc->channels[c].global_tx_enable_vid = add_bbvari (CanObjectName, BB_UDWORD, "[]");
+            write_bbvari_udword (csc->channels[c].global_tx_enable_vid, 1);
+            break;
+        case 2:
+        case 3:
+            csc->channels[c].global_tx_enable_vid = add_bbvari (CanObjectName, BB_UDWORD, "[]");
+            if (get_bbvari_attachcount(csc->channels[c].global_tx_enable_vid) == 1) {
+                write_bbvari_udword (csc->channels[c].global_tx_enable_vid, csc->channels[c].StartupState - 2);
+            }
+            break;
+        }
         for (o = 0; o < csc->channels[c].object_count; o++) {
             o_pos = csc->channels[c].objects[o];
             if (csc->objects[o_pos].dir == WRITE_VARIABLE_ID_OBJECT) write_bbvari_udword (csc->objects[o_pos].vid, csc->objects[o_pos].id);

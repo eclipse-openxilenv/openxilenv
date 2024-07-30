@@ -956,3 +956,15 @@ int ScriptSetCANChannelCount (int ChannelCount)
         return 0;
     }
 }
+
+int ScriptSetCANChannelStartupState (int Channel, int StartupState)
+{
+    char Entry[64];
+    int Fd = GetMainFileDescriptor();
+    if (GetCanControllerCountFromIni ("CAN/Global", Fd) < Channel) {
+        sprintf (Entry, "can_controller%i_startup_state", Channel);
+        IniFileDataBaseWriteInt ("CAN/Global", Entry, StartupState, Fd);
+        return 0;
+    }
+    return -1;
+}

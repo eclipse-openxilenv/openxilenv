@@ -18,6 +18,7 @@
 
 #define XILENV_INTERFACE_TYPE XILENV_DLL_INTERFACE_TYPE
 #include "XilEnvExtProc.h"
+#include "XilEnvExtProcCan.h"
 #include "XilEnvExtProcMain.c"
 
 

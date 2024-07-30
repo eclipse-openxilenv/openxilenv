@@ -26,6 +26,7 @@ extern "C" {
 }
 
 int ScQt_IniFileDataBaseOpen(QString &par_Filename);
+int ScQt_IniFileDataBaseOpenNoFilterPossible(QString &par_Filename);
 int ScQt_IniFileDataBaseClose(int par_FileDescriptor);
 #define INIFILE_DATABAE_OPERATION_WRITE_ONLY  0
 #define INIFILE_DATABAE_OPERATION_RENAME      1

@@ -333,9 +333,9 @@ FILE *GenerateHTMLReportFile (char *HTML_ReportFilename)
  // und auf Courier umschalten
  fprintf (HTML_ReportFile, "\n<FONT FACE=\"courier\">");
  fprintf (HTML_ReportFile, "\n<br>Filename              : %s", HTML_ReportFilename);
- fprintf (HTML_ReportFile, "\n<br>%s-Version (used): %.3lf",
+ fprintf (HTML_ReportFile, "\n<br>%s-Version (used): %i.%i.%i",
           GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_PROGRAM_NAME),
-          XILENV_VERSION/1000.0 );
+          XILENV_VERSION, XILENV_MINOR_VERSION, XILENV_PATCH_VERSION);
  /* DATUM & ZEIT!!! */
  {
   char *datum;            /* aktuelles Datum                       */

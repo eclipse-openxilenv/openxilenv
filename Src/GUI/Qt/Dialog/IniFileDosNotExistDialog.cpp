@@ -71,7 +71,7 @@ int IniFileDosNotExist::BuidANewIniFile()
         ThrowError (1, "cannot build file %s", QStringToConstChar(m_NewSelectedIniFile));
         return 0;
     }
-    int Fd = ScQt_IniFileDataBaseOpen(m_NewSelectedIniFile);
+    int Fd = ScQt_IniFileDataBaseOpenNoFilterPossible(m_NewSelectedIniFile);
     if (Fd > 0) {
         MAIN_INI_VAL BasicSettings;
         STRUCT_ZERO_INIT (BasicSettings, MAIN_INI_VAL);
@@ -81,7 +81,8 @@ int IniFileDosNotExist::BuidANewIniFile()
         ReadBasicConfigurationFromIni(&BasicSettings);
         ScQt_SetMainFileDescriptor(-1);
         // change something
-        strcpy (BasicSettings.Editor, "NOTEPAD.EXE");
+        strcpy (BasicSettings.Editor, "");
+        strcpy (BasicSettings.EditorX, "");
         strcpy (BasicSettings.WorkDir, ".");
         WriteBasicConfigurationToIni (&BasicSettings);
         //   op == 2 -> remove infos from INI-DB */
@@ -132,7 +133,6 @@ IniFileDosNotExist::IniFileDosNotExist(char *par_SelectedIniFile, void *par_Appl
         StringAppendMaxCharTruncate(HistoryFileChar, "\\History.ini", sizeof(HistoryFileChar));
 #else
         {
-            FILE *fh;
             DIR *Dir;
             GetXilEnvHomeDirectory(HistoryFileChar);
             StringAppendMaxCharTruncate(HistoryFileChar, "/.", sizeof(HistoryFileChar));
@@ -143,14 +143,10 @@ IniFileDosNotExist::IniFileDosNotExist(char *par_SelectedIniFile, void *par_Appl
                 closedir(Dir);
             }
             StringAppendMaxCharTruncate(HistoryFileChar, "/LastLoadedFiles.ini", sizeof(HistoryFileChar));
-            fh = fopen(HistoryFileChar, "at");
-            if (fh != nullptr) {
-                fclose(fh);
-            }
         }
 #endif
         m_HistoryFile = CharToQString(HistoryFileChar);
-        int Fd = ScQt_IniFileDataBaseOpen(m_HistoryFile);
+        int Fd = ScQt_IniFileDataBaseOpenNoFilterPossible(m_HistoryFile);
         if (Fd <= 0) {
             Fd = ScQt_IniFileDataBaseCreateAndOpenNewIniFile(m_HistoryFile);
         }

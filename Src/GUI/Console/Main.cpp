@@ -56,7 +56,7 @@ int main(int argc, char *argv[])
 {
     int Ret;
 #ifndef _WIN32
-    // damit auch unter Linux auf die argumente in ParseCommandLine() zugegriffen werden kann
+    // Save the calling parameter so we can access these later
     SaveCommandArgs(argc, argv);
 #endif
 

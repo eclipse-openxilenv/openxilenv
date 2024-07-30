@@ -249,7 +249,7 @@ SCRPCDLL_API int __STDCALL__ XilEnv_IsConnectedTo(void)
     }
     // If handel is valid call GetVersion to check if the connection is alive
     if (Ret) {
-        if (XilEnv_GetVersion () <= 0) {
+        if (XilEnv_GetVersion () < 0) {
             Ret = 0;
         }
     }
@@ -3270,6 +3270,24 @@ CFUNC SCRPCDLL_API int __STDCALL__ XilEnv_SetCanChannelCount (int ChannelCount)
     Req->ChannelCount = ChannelCount;
 
     Ret = RemoteProcedureCallTransact(SocketOrNamedPipe, Socket, RPC_API_SET_CAN_CHANNEL_COUNT_CMD, &(Req->Header), sizeof(*Req), &(Ack.Header), sizeof(Ack));
+    if (Ret != sizeof(Ack)) {
+        return -1;
+    }
+    return Ack.Header.ReturnValue;
+}
+
+CFUNC SCRPCDLL_API int __STDCALL__ XilEnv_SetSetCanChannelStartupState (int Channel, int StartupState)
+{
+    RPC_API_SET_CAN_CHANNEL_STARTUP_STATE_MESSAGE *Req;
+    RPC_API_SET_CAN_CHANNEL_STARTUP_STATE_MESSAGE_ACK Ack;
+    int Ret;
+
+    Req = (RPC_API_SET_CAN_CHANNEL_STARTUP_STATE_MESSAGE*)RemoteProcedureGetTransmitBuffer(sizeof(*Req));
+    memset(Req, 0, sizeof(*Req));
+    Req->Channel = Channel;
+    Req->StartupState = StartupState;
+
+    Ret = RemoteProcedureCallTransact(SocketOrNamedPipe, Socket, RPC_API_SET_CAN_CHANNEL_STARTUP_STATE_CMD, &(Req->Header), sizeof(*Req), &(Ack.Header), sizeof(Ack));
     if (Ret != sizeof(Ack)) {
         return -1;
     }

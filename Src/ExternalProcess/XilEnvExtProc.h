@@ -20,7 +20,7 @@
 
 #define XILENV_VERSION              0
 #define XILENV_MINOR_VERSION        8
-#define XILENV_PATCH_VERSION       15
+#define XILENV_PATCH_VERSION       16
 
 #define SC_MAX_LABEL_SIZE         512
 #define SC_MAX_UNIT_SIZE           64
@@ -378,6 +378,14 @@ extern void reference_varis (void);
                                           rgb_color, \
                                           steptype, (double)(step), dir);
 
+#define REF_PTR_DOUBLE_VAR_AI(dir, ptr, name, unit, convtype, conversion, pmin, pmax, width, prec, rgb_color, steptype, step) \
+    reference_double_var_all_infos_flags (ptr, name, unit, \
+                                          convtype, conversion, \
+                                          (double)(pmin), (double)(pmax), \
+                                          width, prec, \
+                                          rgb_color, \
+                                          steptype, (double)(step), dir);
+
 #define REF_DIR_DOUBLE_VAR(dir, ptr, name, unit) \
     reference_double_var_flags (&(ptr), (name), (unit), dir);
 
@@ -416,6 +424,14 @@ extern void reference_varis (void);
 
 #define REF_DIR_FLOAT_VAR_AI(dir, name, unit, convtype, conversion, pmin, pmax, width, prec, rgb_color, steptype, step) \
     reference_float_var_all_infos_flags (&(name), (#name), unit, \
+                                         convtype, conversion, \
+                                         (double)(pmin), (double)(pmax), \
+                                         width, prec, \
+                                         rgb_color, \
+                                         steptype, (double)(step), dir);
+
+#define REF_PTR_FLOAT_VAR_AI(dir, ptr, name, unit, convtype, conversion, pmin, pmax, width, prec, rgb_color, steptype, step) \
+    reference_float_var_all_infos_flags (ptr, name, unit, \
                                          convtype, conversion, \
                                          (double)(pmin), (double)(pmax), \
                                          width, prec, \
@@ -466,6 +482,14 @@ extern void reference_varis (void);
                                          rgb_color, \
                                          steptype, (double)(step), dir);
 
+#define REF_PTR_QWORD_VAR_AI(dir, ptr, name, unit, convtype, conversion, pmin, pmax, width, prec, rgb_color, steptype, step) \
+    reference_qword_var_all_infos_flags (ptr, name, unit, \
+                                         convtype, conversion, \
+                                         (double)(pmin), (double)(pmax), \
+                                         width, prec, \
+                                         rgb_color, \
+                                         steptype, (double)(step), dir);
+
 #define REF_DIR_QWORD_VAR(dir, ptr, name, unit) \
     reference_qword_var_flags (&(ptr), (name), (unit), dir);
 
@@ -504,6 +528,14 @@ extern void reference_varis (void);
 
 #define REF_DIR_UQWORD_VAR_AI(dir, name, unit, convtype, conversion, pmin, pmax, width, prec, rgb_color, steptype, step) \
     reference_uqword_var_all_infos_flags (&(name), (#name), unit, \
+                                          convtype, conversion, \
+                                          (double)(pmin), (double)(pmax), \
+                                          width, prec, \
+                                          rgb_color, \
+                                          steptype, (double)(step), dir);
+
+#define REF_PTR_UQWORD_VAR_AI(dir, ptr, name, unit, convtype, conversion, pmin, pmax, width, prec, rgb_color, steptype, step) \
+    reference_uqword_var_all_infos_flags (ptr, name, unit, \
                                           convtype, conversion, \
                                           (double)(pmin), (double)(pmax), \
                                           width, prec, \
@@ -554,6 +586,14 @@ extern void reference_varis (void);
                                          rgb_color, \
                                          steptype, (double)(step), dir);
 
+#define REF_PTR_DWORD_VAR_AI(dir, ptr, name, unit, convtype, conversion, pmin, pmax, width, prec, rgb_color, steptype, step) \
+    reference_dword_var_all_infos_flags (ptr, name, unit, \
+                                         convtype, conversion, \
+                                         (double)(pmin), (double)(pmax), \
+                                         width, prec, \
+                                         rgb_color, \
+                                         steptype, (double)(step), dir);
+
 #define REF_DIR_DWORD_VAR(dir, ptr, name, unit) \
     reference_dword_var_flags (&(ptr), (name), (unit), dir);
 
@@ -592,6 +632,14 @@ extern void reference_varis (void);
 
 #define REF_DIR_UDWORD_VAR_AI(dir, name, unit, convtype, conversion, pmin, pmax, width, prec, rgb_color, steptype, step) \
     reference_udword_var_all_infos_flags (&(name), (#name), unit, \
+                                          convtype, conversion, \
+                                          (double)(pmin), (double)(pmax), \
+                                          width, prec, \
+                                          rgb_color, \
+                                          steptype, (double)(step), dir);
+
+#define REF_PTR_UDWORD_VAR_AI(dir, ptr, name, unit, convtype, conversion, pmin, pmax, width, prec, rgb_color, steptype, step) \
+    reference_udword_var_all_infos_flags (ptr, name, unit, \
                                           convtype, conversion, \
                                           (double)(pmin), (double)(pmax), \
                                           width, prec, \
@@ -642,6 +690,14 @@ extern void reference_varis (void);
                                          rgb_color, \
                                          steptype, (double)(step), dir);
 
+#define REF_PTR_INT_VAR_AI(dir, ptr, name, unit, convtype, conversion, pmin, pmax, width, prec, rgb_color, steptype, step) \
+    reference_dword_var_all_infos_flags (ptr, name, unit, \
+                                         convtype, conversion, \
+                                         (double)(pmin), (double)(pmax), \
+                                         width, prec, \
+                                         rgb_color, \
+                                         steptype, (double)(step), dir);
+
 #define REF_DIR_INT_VAR(dir, ptr, name, unit) \
     reference_dword_var_flags (&(ptr), (name), (unit), dir);
 
@@ -680,6 +736,14 @@ extern void reference_varis (void);
 
 #define REF_DIR_UINT_VAR_AI(dir, name, unit, convtype, conversion, pmin, pmax, width, prec, rgb_color, steptype, step) \
     reference_udword_var_all_infos_flags (&(name), (#name), unit, \
+                                          convtype, conversion, \
+                                          (double)(pmin), (double)(pmax), \
+                                          width, prec, \
+                                          rgb_color, \
+                                          steptype, (double)(step), dir);
+
+#define REF_PTR_UINT_VAR_AI(dir, ptr, name, unit, convtype, conversion, pmin, pmax, width, prec, rgb_color, steptype, step) \
+    reference_udword_var_all_infos_flags (ptr, name, unit, \
                                           convtype, conversion, \
                                           (double)(pmin), (double)(pmax), \
                                           width, prec, \
@@ -730,6 +794,14 @@ extern void reference_varis (void);
                                         rgb_color, \
                                         steptype, (double)(step), dir);
 
+#define REF_PTR_CHAR_VAR_AI(dir, ptr, name, unit, convtype, conversion, pmin, pmax, width, prec, rgb_color, steptype, step) \
+    reference_byte_var_all_infos_flags (ptr, name, unit, \
+                                        convtype, conversion, \
+                                        (double)(pmin), (double)(pmax), \
+                                        width, prec, \
+                                        rgb_color, \
+                                        steptype, (double)(step), dir);
+
 #define REF_DIR_CHAR_VAR(dir, ptr, name, unit) \
     reference_byte_var_flags (&(ptr), (name), (unit), dir);
 
@@ -768,6 +840,14 @@ extern void reference_varis (void);
 
 #define REF_DIR_UCHAR_VAR_AI(dir, name, unit, convtype, conversion, pmin, pmax, width, prec, rgb_color, steptype, step) \
     reference_ubyte_var_all_infos_flags (&(name), (#name), unit, \
+                                         convtype, conversion, \
+                                         (double)(pmin), (double)(pmax), \
+                                         width, prec, \
+                                         rgb_color, \
+                                         steptype, (double)(step), dir);
+
+#define REF_PTR_UCHAR_VAR_AI(dir, ptr, name, unit, convtype, conversion, pmin, pmax, width, prec, rgb_color, steptype, step) \
+    reference_ubyte_var_all_infos_flags (ptr, name, unit, \
                                          convtype, conversion, \
                                          (double)(pmin), (double)(pmax), \
                                          width, prec, \
@@ -818,6 +898,14 @@ extern void reference_varis (void);
                                         rgb_color, \
                                         steptype, (double)(step), dir);
 
+#define REF_PTR_WORD_VAR_AI(dir, ptr, name, unit, convtype, conversion, pmin, pmax, width, prec, rgb_color, steptype, step) \
+    reference_word_var_all_infos_flags (ptr, name, unit, \
+                                        convtype, conversion, \
+                                        (double)(pmin), (double)(pmax), \
+                                        width, prec, \
+                                        rgb_color, \
+                                        steptype, (double)(step), dir);
+
 #define REF_DIR_WORD_VAR(dir, ptr, name, unit) \
     reference_word_var_flags (&(ptr), (name), (unit), dir);
 
@@ -856,6 +944,14 @@ extern void reference_varis (void);
 
 #define REF_DIR_UWORD_VAR_AI(dir, name, unit, convtype, conversion, pmin, pmax, width, prec, rgb_color, steptype, step) \
     reference_uword_var_all_infos_flags (&(name), (#name), unit, \
+                                         convtype, conversion, \
+                                         (double)(pmin), (double)(pmax), \
+                                         width, prec, \
+                                         rgb_color, \
+                                         steptype, (double)(step), dir);
+
+#define REF_PTR_UWORD_VAR_AI(dir, ptr, name, unit, convtype, conversion, pmin, pmax, width, prec, rgb_color, steptype, step) \
+    reference_uword_var_all_infos_flags (ptr, name, unit, \
                                          convtype, conversion, \
                                          (double)(pmin), (double)(pmax), \
                                          width, prec, \
@@ -906,6 +1002,14 @@ extern void reference_varis (void);
                                         rgb_color, \
                                         steptype, (double)(step), dir);
 
+#define REF_PTR_BYTE_VAR_AI(dir, ptr, name, unit, convtype, conversion, pmin, pmax, width, prec, rgb_color, steptype, step) \
+    reference_byte_var_all_infos_flags (ptr, name, unit, \
+                                        convtype, conversion, \
+                                        (double)(pmin), (double)(pmax), \
+                                        width, prec, \
+                                        rgb_color, \
+                                        steptype, (double)(step), dir);
+
 #define REF_DIR_BYTE_VAR(dir, ptr, name, unit) \
     reference_byte_var_flags (&(ptr), (name), (unit), dir);
 
@@ -950,6 +1054,14 @@ extern void reference_varis (void);
                                          rgb_color, \
                                          steptype, (double)(step), dir);
 
+#define REF_PTR_UBYTE_VAR_AI(dir, ptr, name, unit, convtype, conversion, pmin, pmax, width, prec, rgb_color, steptype, step) \
+    reference_ubyte_var_all_infos_flags (ptr, name, unit, \
+                                         convtype, conversion, \
+                                         (double)(pmin), (double)(pmax), \
+                                         width, prec, \
+                                         rgb_color, \
+                                         steptype, (double)(step), dir);
+
 #define REF_DIR_UBYTE_VAR(dir, ptr, name, unit) \
     reference_ubyte_var_flags (&(ptr), (name), (unit), dir);
 
@@ -988,6 +1100,14 @@ extern void reference_varis (void);
 
 #define REF_DIR_BOOL_VAR_AI(dir, name, unit, convtype, conversion, pmin, pmax, width, prec, rgb_color, steptype, step) \
     reference_ubyte_var_all_infos_flags ((unsigned char*)&(name), (#name), unit, \
+                                         convtype, conversion, \
+                                         (double)(pmin), (double)(pmax), \
+                                         width, prec, \
+                                         rgb_color, \
+                                         steptype, (double)(step), dir);
+
+#define REF_PTR_BOOL_VAR_AI(dir, ptr, name, unit, convtype, conversion, pmin, pmax, width, prec, rgb_color, steptype, step) \
+    reference_ubyte_var_all_infos_flags (ptr, name, unit, \
                                          convtype, conversion, \
                                          (double)(pmin), (double)(pmax), \
                                          width, prec, \
@@ -1060,6 +1180,14 @@ extern void reference_varis (void);
     case 2: reference_word_var_all_infos_flags ((short*)&(name), (#name), unit, convtype, conversion, (double)(pmin), (double)(pmax), width, prec, rgb_color, steptype, (double)(step), dir); break;\
     case 4: reference_dword_var_all_infos_flags ((WSC_TYPE_INT32*)&(name), (#name), unit, convtype, conversion, (double)(pmin), (double)(pmax), width, prec, rgb_color, steptype, (double)(step), dir); break;\
     default: ThrowError (1, "call REF_DIR_ENUM_VAR_AI macro with a reference having a wrong size \"%s\" (%i)", __FILE__, __LINE__); break;\
+    }
+
+#define REF_PTR_ENUM_VAR_AI(dir, ptr, name, unit, convtype, conversion, pmin, pmax, width, prec, rgb_color, steptype, step) \
+    switch (sizeof (name)) {\
+    case 1: reference_byte_var_all_infos_flags ((signed char*)ptr, name, unit, convtype, conversion, (double)(pmin), (double)(pmax), width, prec, rgb_color, steptype, (double)(step), dir); break;\
+    case 2: reference_word_var_all_infos_flags ((short*)ptr, name, unit, convtype, conversion, (double)(pmin), (double)(pmax), width, prec, rgb_color, steptype, (double)(step), dir); break;\
+    case 4: reference_dword_var_all_infos_flags ((WSC_TYPE_INT32*)ptr, name, unit, convtype, conversion, (double)(pmin), (double)(pmax), width, prec, rgb_color, steptype, (double)(step), dir); break;\
+    default: error (1, "call REF_PTR_ENUM_VAR_AI macro with a reference having a wrong size \"%s\" (%i)", __FILE__, __LINE__); break;\
     }
 
 #define REF_DIR_ENUM_VAR(dir, ptr, name, unit) \
@@ -1135,6 +1263,14 @@ extern void reference_varis (void);
     default: ThrowError (1, "call REF_DIR_UENUM_VAR_AI macro with a reference having a wrong size \"%s\" (%i)", __FILE__, __LINE__); break;\
     }
 
+#define REF_PTR_UENUM_VAR_AI(dir, ptr, name, unit, convtype, conversion, pmin, pmax, width, prec, rgb_color, steptype, step) \
+    switch (sizeof (name)) {\
+    case 1: reference_ubyte_var_all_infos_flags ((unsigned char*)ptr, name, unit, convtype, conversion, (double)(pmin), (double)(pmax), width, prec, rgb_color, steptype, (double)(step), dir); break;\
+    case 2: reference_uword_var_all_infos_flags ((unsigned short*)ptr, name, unit, convtype, conversion, (double)(pmin), (double)(pmax), width, prec, rgb_color, steptype, (double)(step), dir); break;\
+    case 4: reference_udword_var_all_infos_flags ((WSC_TYPE_UINT32*)ptr, name, unit, convtype, conversion, (double)(pmin), (double)(pmax), width, prec, rgb_color, steptype, (double)(step), dir); break;\
+        default: error (1, "call REF_PTR_UENUM_VAR_AI macro with a reference having a wrong size \"%s\" (%i)", __FILE__, __LINE__); break;\
+    }
+
 #define REF_DIR_UENUM_VAR(dir, ptr, name, unit) \
     switch (sizeof (ptr)) {\
     case 1: reference_ubyte_var_flags ((unsigned char*)&(ptr), (name), (unit), dir); break;\
@@ -1183,6 +1319,14 @@ extern void reference_varis (void);
                                        rgb_color, \
                                        steptype, (double)(step), dir);
 
+#define REF_PTR_XXX_VAR_AI(dir, ptr, name, unit, convtype, conversion, pmin, pmax, width, prec, rgb_color, steptype, step) \
+    reference_xxx_var_all_infos_flags (&(name), name, unit, \
+                                       convtype, conversion, \
+                                       (double)(pmin), (double)(pmax), \
+                                       width, prec, \
+                                       rgb_color, \
+                                       steptype, (double)(step), dir);
+
 #define REF_DIR_XXX_VAR(dir, ptr, name, unit) \
     reference_xxx_var_flags (&(ptr), (name), (unit), dir);
 
@@ -1222,6 +1366,15 @@ extern void reference_varis (void);
 #define REF_DIR_VAR_AI(dir, name, unit, convtype, conversion, pmin, pmax, width, prec,\
                        rgb_color, steptype, step) \
     cReferenceWrapper::RefVarAllInfosFlags (&(name), (#name), unit, \
+                                            convtype, conversion, \
+                                            (double)(pmin), (double)(pmax), \
+                                            width, prec, \
+                                            rgb_color, \
+                                            steptype, (double)(step));
+
+#define REF_PTR_VAR_AI(dir, ptr, name, unit, convtype, conversion, pmin, pmax, width, prec,\
+                       rgb_color, steptype, step) \
+    cReferenceWrapper::RefVarAllInfosFlags (ptr, name, unit, \
                                             convtype, conversion, \
                                             (double)(pmin), (double)(pmax), \
                                             width, prec, \

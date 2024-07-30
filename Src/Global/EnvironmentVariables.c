@@ -209,6 +209,52 @@ int SearchAndReplaceEnvironmentStrings (const char *src, char *dest, int maxc)
     return SearchAndReplaceEnvironmentStringsExt (src, dest, maxc, NULL, NULL);
 }
 
+static int StartWith(const char *par_EqualTo, char *par_String, char **ret_Next)
+{
+    if (s_main_ini_val.EnableLegacyEnvironmentVariables) {
+        if ((par_EqualTo[0] == 'X') && (par_EqualTo[1] == 'I') && (par_EqualTo[2] == 'L') &&
+            (par_EqualTo[3] == 'E') && (par_EqualTo[4] == 'N') && (par_EqualTo[5] == 'V') &&
+            (par_String[0] == 'S') && (par_String[1] == 'C')) {
+            par_String += 2;
+            par_EqualTo += 6;
+        }
+    }
+    while(*par_EqualTo == *par_String) {
+        if (*par_EqualTo == 0) {
+            *ret_Next = par_String;
+            return 1;
+        }
+        par_EqualTo++;
+        par_String++;
+    }
+    return 0;
+}
+
+static int EqualWith(const char *par_EqualTo, char *par_String)
+{
+    if (s_main_ini_val.EnableLegacyEnvironmentVariables) {
+        if ((par_EqualTo[0] == 'X') && (par_EqualTo[1] == 'I') && (par_EqualTo[2] == 'L') &&
+            (par_EqualTo[3] == 'E') && (par_EqualTo[4] == 'N') && (par_EqualTo[5] == 'V') &&
+            (par_String[0] == 'S') && (par_String[1] == 'C')) {
+            par_String += 2;
+            par_EqualTo += 6;
+        }
+    }
+    while(*par_EqualTo == *par_String) {
+        if (*par_EqualTo == 0) {
+            if (*par_String == 0) {
+                return 1;
+            } else {
+                return 0;
+            }
+        }
+        par_EqualTo++;
+        par_String++;
+    }
+    return 0;
+}
+
+
 int SearchAndReplaceEnvironmentStringsExt (const char *src, char *dest, int maxc, int *pSolvedEnvVars, int *pNoneSolvedEnvVars)
 {
     char *s, *os, *d, *h;
@@ -229,6 +275,7 @@ int SearchAndReplaceEnvironmentStringsExt (const char *src, char *dest, int maxc
     d = dest;
     while (*s != 0) {
         if (*s == '%') {    // Environment variable ?
+            char *Next;
             char EnvVarName[1024];
             char EnvVarValue[2048];
             int envcc;
@@ -246,7 +293,7 @@ int SearchAndReplaceEnvironmentStringsExt (const char *src, char *dest, int maxc
             }
             *h = 0;
             s++;  // jump over %
-            if (!strcmp ("XILENV_EXE_DIR", EnvVarName)) {
+            if (EqualWith ("XILENV_EXE_DIR", EnvVarName)) {
                 SolvedEnvVarsCounter++;
 #ifdef _WIN32
                 GetModuleFileName (GetModuleHandle(NULL), EnvVarValue, sizeof (EnvVarValue));
@@ -257,13 +304,13 @@ int SearchAndReplaceEnvironmentStringsExt (const char *src, char *dest, int maxc
                 while (*h != 0) h++;
                 while ((*h != '\\') && (*h != '/') && (h > EnvVarValue)) h--;
                 *h = 0;
-            } else if (!strcmp ("XILENV_WORK_DIR", EnvVarName)) {    // Work folder from basic settings
+            } else if (EqualWith ("XILENV_WORK_DIR", EnvVarName)) {    // Work folder from basic settings
                 SolvedEnvVarsCounter++;
                 strcpy (EnvVarValue, s_main_ini_val.WorkDir);
-            } else if (!strcmp ("XILENV_CURRENT_DIR", EnvVarName)) {    // current folder
+            } else if (EqualWith ("XILENV_CURRENT_DIR", EnvVarName)) {    // current folder
                 SolvedEnvVarsCounter++;
                 GetCurrentDirectory (maxc, EnvVarValue);
-            } else if (!strcmp("XILENV_SCRIPT_PATH", EnvVarName)) { // Name of the running script
+            } else if (EqualWith("XILENV_SCRIPT_PATH", EnvVarName)) { // Name of the running script
                 const char *ScriptFilename;
                 ScriptFilename = GetRunningScriptPath ();
                 if (ScriptFilename == NULL) { // no script is running
@@ -272,7 +319,7 @@ int SearchAndReplaceEnvironmentStringsExt (const char *src, char *dest, int maxc
                 }
                 strcpy (EnvVarValue, ScriptFilename);
                 SolvedEnvVarsCounter++;
-            } else if (!strcmp ("XILENV_SCRIPT_DIR", EnvVarName)) {  // Verzeichnis des aktuell laufenden Scriptfiles
+            } else if (EqualWith ("XILENV_SCRIPT_DIR", EnvVarName)) {  // Verzeichnis des aktuell laufenden Scriptfiles
                 const char *ScriptPath;
                 ScriptPath = GetRunningScriptPath ();
                 if (ScriptPath == NULL) { // no script is running
@@ -285,17 +332,17 @@ int SearchAndReplaceEnvironmentStringsExt (const char *src, char *dest, int maxc
                 while ((*h != '\\') && (*h != '/') && (h > EnvVarValue)) h--;
                 *h = 0;
                 SolvedEnvVarsCounter++;
-            } else if (!strcmp("XILENV_INI_PATH", EnvVarName)) { // Name of the INI file
+            } else if (EqualWith("XILENV_INI_PATH", EnvVarName)) { // Name of the INI file
                 IniFileDataBaseGetFileNameByDescriptor(GetMainFileDescriptor(), EnvVarValue, sizeof(EnvVarValue));
                 SolvedEnvVarsCounter++;
-            } else if (!strcmp ("XILENV_INI_DIR", EnvVarName)) {  // Folder of the current loaded INI file
+            } else if (EqualWith ("XILENV_INI_DIR", EnvVarName)) {  // Folder of the current loaded INI file
                 IniFileDataBaseGetFileNameByDescriptor(GetMainFileDescriptor(), EnvVarValue, sizeof(EnvVarValue));
                 h = EnvVarValue;
                 while (*h != 0) h++;
                 while ((*h != '\\') && (*h != '/') && (h > EnvVarValue)) h--;
                 *h = 0;
                 SolvedEnvVarsCounter++;
-            } else if (!strcmp("XILENV_SCRIPT_NAME", EnvVarName)) { // Name of the running Script file
+            } else if (EqualWith("XILENV_SCRIPT_NAME", EnvVarName)) { // Name of the running Script file
                 const char *ScriptFilename;
                 ScriptFilename = GetRunningScriptPath ();
                 if (ScriptFilename == NULL) { // no script is running
@@ -308,58 +355,58 @@ int SearchAndReplaceEnvironmentStringsExt (const char *src, char *dest, int maxc
                 if ((*ch == '\\') || (*ch == '/')) ch++;
                 strcpy (EnvVarValue, ch);   // only file name without path
                 SolvedEnvVarsCounter++;
-            } else if (!strcmp("XILENV_SCRIPT_LINE", EnvVarName)) { // Name of the running Script file
+            } else if (EqualWith("XILENV_SCRIPT_LINE", EnvVarName)) { // Name of the running Script file
                 int LineNr;
                 LineNr = GetRunningScriptLine ();
                 if (LineNr >= 0) sprintf (EnvVarValue, "%i", LineNr); 
                 else strcpy (EnvVarValue, "unknown");
                 SolvedEnvVarsCounter++;
-            } else if (!strcmp ("XILENV_CCP_SWSTAND", EnvVarName)) {    // The name of the software version received by CCP
+            } else if (EqualWith ("XILENV_CCP_SWSTAND", EnvVarName)) {    // The name of the software version received by CCP
                 GetECUString_CCP (0, EnvVarValue, maxc);
                 SolvedEnvVarsCounter++;
-            } else if (!strcmp ("XILENV_CCP_INFOS", EnvVarName)) {    // Get complete infos for CCP connection
+            } else if (EqualWith ("XILENV_CCP_INFOS", EnvVarName)) {    // Get complete infos for CCP connection
                 GetECUInfos_CCP (0, EnvVarValue, maxc);
                 SolvedEnvVarsCounter++;
-            } else if (!strcmp ("XILENV_CCP0_SWSTAND", EnvVarName)) {    // The name of the software version received by CCP
+            } else if (EqualWith ("XILENV_CCP0_SWSTAND", EnvVarName)) {    // The name of the software version received by CCP
                 GetECUString_CCP (0, EnvVarValue, maxc);
                 SolvedEnvVarsCounter++;
-            } else if (!strcmp ("XILENV_CCP0_INFOS", EnvVarName)) {    // Get complete infos for CCP connection
+            } else if (EqualWith ("XILENV_CCP0_INFOS", EnvVarName)) {    // Get complete infos for CCP connection
                 GetECUInfos_CCP (0, EnvVarValue, maxc);
                 SolvedEnvVarsCounter++;
-            } else if (!strcmp ("XILENV_CCP1_SWSTAND", EnvVarName)) {    // The name of the software version received by CCP
+            } else if (EqualWith ("XILENV_CCP1_SWSTAND", EnvVarName)) {    // The name of the software version received by CCP
                 GetECUString_CCP (1, EnvVarValue, maxc);
                 SolvedEnvVarsCounter++;
-            } else if (!strcmp ("XILENV_CCP1_INFOS", EnvVarName)) {    // Get complete infos for CCP connection
+            } else if (EqualWith ("XILENV_CCP1_INFOS", EnvVarName)) {    // Get complete infos for CCP connection
                 GetECUInfos_CCP (1, EnvVarValue, maxc);
                 SolvedEnvVarsCounter++;
-            } else if (!strcmp ("XILENV_CCP2_SWSTAND", EnvVarName)) {    // The name of the software version received by CCP
+            } else if (EqualWith ("XILENV_CCP2_SWSTAND", EnvVarName)) {    // The name of the software version received by CCP
                 GetECUString_CCP (2, EnvVarValue, maxc);
                 SolvedEnvVarsCounter++;
-            } else if (!strcmp ("XILENV_CCP2_INFOS", EnvVarName)) {    // Get complete infos for CCP connection
+            } else if (EqualWith ("XILENV_CCP2_INFOS", EnvVarName)) {    // Get complete infos for CCP connection
                 GetECUInfos_CCP (2, EnvVarValue, maxc);
                 SolvedEnvVarsCounter++;
-            } else if (!strcmp ("XILENV_CCP3_SWSTAND", EnvVarName)) {    // The name of the software version received by CCP
+            } else if (EqualWith ("XILENV_CCP3_SWSTAND", EnvVarName)) {    // The name of the software version received by CCP
                 GetECUString_CCP (3, EnvVarValue, maxc);
                 SolvedEnvVarsCounter++;
-            } else if (!strcmp ("XILENV_CCP3_INFOS", EnvVarName)) {    // Get complete infos for CCP connection
+            } else if (EqualWith ("XILENV_CCP3_INFOS", EnvVarName)) {    // Get complete infos for CCP connection
                 GetECUInfos_CCP (3, EnvVarValue, maxc);
                 SolvedEnvVarsCounter++;
-            } else if (!strcmp ("XILENV_XCP0_SWSTAND", EnvVarName)) {    // The name of the software version received by XCP
+            } else if (EqualWith ("XILENV_XCP0_SWSTAND", EnvVarName)) {    // The name of the software version received by XCP
                 GetECUString_XCP (0, EnvVarValue, maxc);
                 SolvedEnvVarsCounter++;
-            } else if (!strcmp ("XILENV_XCP1_SWSTAND", EnvVarName)) {    // The name of the software version received by XCP
+            } else if (EqualWith ("XILENV_XCP1_SWSTAND", EnvVarName)) {    // The name of the software version received by XCP
                 GetECUString_XCP (1, EnvVarValue, maxc);
                 SolvedEnvVarsCounter++;
-            } else if (!strcmp ("XILENV_XCP2_SWSTAND", EnvVarName)) {    // The name of the software version received by XCP
+            } else if (EqualWith ("XILENV_XCP2_SWSTAND", EnvVarName)) {    // The name of the software version received by XCP
                 GetECUString_XCP (2, EnvVarValue, maxc);
                 SolvedEnvVarsCounter++;
-            } else if (!strcmp ("XILENV_XCP3_SWSTAND", EnvVarName)) {    // The name of the software version received by XCP
+            } else if (EqualWith ("XILENV_XCP3_SWSTAND", EnvVarName)) {    // The name of the software version received by XCP
                 GetECUString_XCP (3, EnvVarValue, maxc);
                 SolvedEnvVarsCounter++;
-            } else if (!strncmp ("XILENV_VARIABLE", EnvVarName, 11)) {  // Value of a blackboard variable
+            } else if (StartWith ("XILENV_VARIABLE", EnvVarName, &Next)) {  // Value of a blackboard variable
                 double erg;
                 int FormatChar = 'g';   // If not defined use %g as format spezifier
-                char *p = &EnvVarName[11];
+                char *p = Next;
                 char FormatString[16+BBVARI_NAME_SIZE];
                 char *f = FormatString;
                 int Size = 0;
@@ -372,7 +419,7 @@ int SearchAndReplaceEnvironmentStringsExt (const char *src, char *dest, int maxc
                     *f++ = '%';
                     while (*p != ']') {
                         if ((*p == 0) || (Size >= (int)(sizeof (FormatString)-1))){
-                            if (ErrOutFlag) ThrowError (1, "Environment variable SC_VARIABLE: contains error in format specification field []"); //, &EnvVarName[11]);
+                            if (ErrOutFlag) ThrowError (1, "Environment variable XILENV_VARIABLE: contains error in format specification field []");
                             s = os;       // it was not an environment variable
                             goto NO_ENV_VAR;
                         }
@@ -392,7 +439,7 @@ int SearchAndReplaceEnvironmentStringsExt (const char *src, char *dest, int maxc
                             f++;
                         }
                         if (*f != '(') {
-                            if (ErrOutFlag) ThrowError (1, "Environment variable SC_VARIABLE: contains error in format specification field [], ecpecting a '(' after enum"); //, &EnvVarName[11]);
+                            if (ErrOutFlag) ThrowError (1, "Environment variable XILENV_VARIABLE: contains error in format specification field [], ecpecting a '(' after enum");
                             s = os;       // it was not an environment variable
                             goto NO_ENV_VAR;
                         }
@@ -403,7 +450,7 @@ int SearchAndReplaceEnvironmentStringsExt (const char *src, char *dest, int maxc
                         VariableName = f;
                         while (*f != ')') {
                             if (*f == 0) {
-                                if (ErrOutFlag) ThrowError (1, "Environment variable SC_VARIABLE: contains error in format specification field [], ecpecting a ')' after enum", &EnvVarName[11]);
+                                if (ErrOutFlag) ThrowError (1, "Environment variable XILENV_VARIABLE: contains error in format specification field [], ecpecting a ')' after enum");
                                 s = os;       // it was not an environment variable
                                 goto NO_ENV_VAR;
                             }
@@ -415,7 +462,7 @@ int SearchAndReplaceEnvironmentStringsExt (const char *src, char *dest, int maxc
                         *f = 0;
                         Vid = get_bbvarivid_by_name(VariableName);
                         if (Vid <= 0) {
-                            if (ErrOutFlag) ThrowError (1, "Environment variable SC_VARIABLE: contains error in format specification field [], variable \"%s\" doesn't exists", VariableName);
+                            if (ErrOutFlag) ThrowError (1, "Environment variable XILENV_VARIABLE: contains error in format specification field [], variable \"%s\" doesn't exists", VariableName);
                             s = os;       // it was not an environment variable
                             goto NO_ENV_VAR;
                         }
@@ -430,7 +477,7 @@ int SearchAndReplaceEnvironmentStringsExt (const char *src, char *dest, int maxc
                 }
                 p++;
                 if(direct_solve_equation_err_string (p, &erg, &ErrStr)) {
-                    if (ErrOutFlag) ThrowError (1, "in environment variable SC_VARIABLE: \"%s\"", ErrStr);
+                    if (ErrOutFlag) ThrowError (1, "in environment variable XILENV_VARIABLE: \"%s\"", ErrStr);
                     FreeErrStringBuffer (&ErrStr);
                     s = os;       // it was not an environment variable
                     goto NO_ENV_VAR;
@@ -460,23 +507,23 @@ int SearchAndReplaceEnvironmentStringsExt (const char *src, char *dest, int maxc
                         int ret = convert_value_textreplace (Vid, (long)erg, EnvVarValue, BBVARI_ENUM_NAME_SIZE, &Color);
                         if ((ret < 0) &&
                             (ret != -2)) {   // -2 is "out of range", this should not result into an error message
-                            if (ErrOutFlag) ThrowError (1, "Environment variable SC_VARIABLE: contains error in format specification field [], variable has no enum conversion type");
+                            if (ErrOutFlag) ThrowError (1, "Environment variable XILENV_VARIABLE: contains error in format specification field [], variable has no enum conversion type");
                             s = os;       // it was not an environment variable
                             goto NO_ENV_VAR;
                         }
                     }
                     break;
                 default:
-                    if (ErrOutFlag) ThrowError (1, "not valid format specification field [%s] in environment variable SC_VARIABLE", FormatChar);
+                    if (ErrOutFlag) ThrowError (1, "not valid format specification field [%s] in environment variable XILENV_VARIABLE", FormatChar);
                     s = os;       // it was not an environment variable
                     goto NO_ENV_VAR;
                     // no break;
                 } 
                 SolvedEnvVarsCounter++; 
-            } else if (!strncmp ("XILENV_PROCESS_DIR:", EnvVarName, 15)) {  // Folder of an external process
+            } else if (StartWith ("XILENV_PROCESS_DIR:", EnvVarName, &Next)) {  // Folder of an external process
                 int pid;
-                if((pid = get_pid_by_name(&EnvVarName[15])) <= 0) {
-                    if (ErrOutFlag) ThrowError (1, "Process '%s' in environment variable SC_PROCESS_DIR: doesn't exist", &EnvVarName[15]);
+                if((pid = get_pid_by_name(Next)) <= 0) {
+                    if (ErrOutFlag) ThrowError (1, "Process '%s' in environment variable XILENV_PROCESS_DIR: doesn't exist", Next);
                     s = os;       // it was not an environment variable
                     goto NO_ENV_VAR;
                 }
@@ -486,10 +533,10 @@ int SearchAndReplaceEnvironmentStringsExt (const char *src, char *dest, int maxc
                 while ((*h != '\\') && (*h != '/') && (h > EnvVarValue)) h--;
                 *h = 0;
                 SolvedEnvVarsCounter++;
-            } else if (!strcmp ("XILENV_RANDOM", EnvVarName)) {  // Random value
+            } else if (EqualWith ("XILENV_RANDOM", EnvVarName)) {  // Random value
                 sprintf (EnvVarValue, "%d", rand());
                 SolvedEnvVarsCounter++;
-            } else if (!strcmp ("XILENV_TIME_STRING", EnvVarName)) {  // Time string
+            } else if (EqualWith ("XILENV_TIME_STRING", EnvVarName)) {  // Time string
 #ifdef _WIN32
                 SYSTEMTIME Time;
                 GetLocalTime (&Time);
@@ -507,7 +554,7 @@ int SearchAndReplaceEnvironmentStringsExt (const char *src, char *dest, int maxc
                 sprintf (EnvVarValue, "%02u:%02u:%02u", (unsigned int)LocalTime.tm_hour, (unsigned int)LocalTime.tm_min, (unsigned int)LocalTime.tm_sec);
 #endif
                 SolvedEnvVarsCounter++;
-            } else if (!strcmp ("XILENV_TIME2_STRING", EnvVarName)) {  // Time string
+            } else if (EqualWith ("XILENV_TIME2_STRING", EnvVarName)) {  // Time string
 #ifdef _WIN32
                 SYSTEMTIME Time;
                 GetLocalTime (&Time);
@@ -525,7 +572,7 @@ int SearchAndReplaceEnvironmentStringsExt (const char *src, char *dest, int maxc
                 sprintf (EnvVarValue, "%02u.%02u.%02u", (unsigned int)LocalTime.tm_hour, (unsigned int)LocalTime.tm_min, (unsigned int)LocalTime.tm_sec);
 #endif
                 SolvedEnvVarsCounter++;
-            } else if (!strcmp ("XILENV_DATE_STRING", EnvVarName)) {  // Date string
+            } else if (EqualWith ("XILENV_DATE_STRING", EnvVarName)) {  // Date string
 #ifdef _WIN32
                 SYSTEMTIME Time;
                 GetLocalTime (&Time);
@@ -543,14 +590,14 @@ int SearchAndReplaceEnvironmentStringsExt (const char *src, char *dest, int maxc
                 sprintf (EnvVarValue, "%02u.%02u.%04u", (unsigned int)LocalTime.tm_mday, (unsigned int)LocalTime.tm_mon, (unsigned int)LocalTime.tm_year + 1900);
 #endif
                 SolvedEnvVarsCounter++;
-            } else if (!strcmp ("XILENV_WINDOWS_TICK_COUNTER", EnvVarName)) {
+            } else if (EqualWith ("XILENV_WINDOWS_TICK_COUNTER", EnvVarName)) {
                 DWORD TickCount;
                 TickCount = GetTickCount();
                 sprintf (EnvVarValue, "%u", (uint32_t)TickCount);
                 SolvedEnvVarsCounter++;
-            } else if (!strncmp ("XILENV_BASIC_SETTINGS:", EnvVarName, 18)) {  // Folder of an external process
+            } else if (StartWith ("XILENV_BASIC_SETTINGS:", EnvVarName, &Next)) {  // Folder of an external process
                 char *RetPointer;
-                if (ScriptChangeBasicSettings (CHANGE_SETTINGS_COMMAND_GET, 0, &EnvVarName[18], (char*)&RetPointer) == 0) {
+                if (ScriptChangeBasicSettings (CHANGE_SETTINGS_COMMAND_GET, 0, Next, (char*)&RetPointer) == 0) {
                     size_t Len = strlen(RetPointer);
                     if (Len >= sizeof (EnvVarValue)) {
                         Len = sizeof (EnvVarValue) - 1;
@@ -560,7 +607,7 @@ int SearchAndReplaceEnvironmentStringsExt (const char *src, char *dest, int maxc
                     EnvVarValue[Len] = 0;
                     SolvedEnvVarsCounter++;
                 } else {
-                    if (ErrOutFlag) ThrowError (1, "in environment variable SC_BASIC_SETTINGS: \"%s\" is a not valid basic setting name", &EnvVarName[18]);
+                    if (ErrOutFlag) ThrowError (1, "in environment variable XILENV_BASIC_SETTINGS: \"%s\" is a not valid basic setting name", Next);
                     s = os;       // it was not an environment variable
                     goto NO_ENV_VAR;
                 }

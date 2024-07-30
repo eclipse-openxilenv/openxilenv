@@ -59,6 +59,7 @@
 #include <QKeySequence>
 #include <QScreen>
 #include <QGuiApplication>
+#include <QProcess>
 
 extern "C" {
 #include "MyMemory.h"
@@ -74,6 +75,21 @@ extern "C" {
 #include "Scheduler.h"
 #include "ReadDspConfig.h"
 #include "RemoteMasterBlackboard.h"
+}
+
+
+static StartExecutable StartExecutableInst;
+
+void StartExecutable::ConnectToProcess(QProcess *par_Process)
+{
+    connect(par_Process, SIGNAL(finished(int,QProcess::ExitStatus)), this, SLOT(ProcessFinished(int,QProcess::ExitStatus)));
+}
+
+void StartExecutable::ProcessFinished(int exitCode, QProcess::ExitStatus exitStatus)
+{
+    Q_UNUSED(exitCode);
+    Q_UNUSED(exitStatus);
+    delete sender();
 }
 
 static SignalsFromOtherThread SignalsFromOtherThreadInst;
@@ -153,16 +169,18 @@ void MainWindow::SchedulerStateChangedSlot(int par_ThreadId, int par_State)
 void MainWindow::OpenWindowByNameSlot(int par_ThreadId, char *par_WindowName, bool par_PosFlag, int par_XPos, int par_YPos, bool par_SizeFlag, int par_Width, int par_Hight)
 {
     // current selected sheet
-    Sheets *Sheet = m_allSheets->value(ui->centralwidget->tabText(ui->centralwidget->currentIndex()));
-    QStringList OpenWindowNameList(par_WindowName);
-    QPoint Point;
-    Point.setX(par_XPos);
-    Point.setY(par_YPos);
-    QList<MdiWindowWidget*> OpendWidgets = Sheet->OpenWindows(OpenWindowNameList, m_allWindowTypes, m_updateTimers, par_PosFlag, Point, par_SizeFlag, par_Width, par_Hight);
-    foreach (MdiWindowWidget* OpenWidget, OpendWidgets) {
-        connect(OpenWidget, SIGNAL(openStandardDialog(QStringList,bool,bool,QColor,QFont,bool)), this, SLOT(openElementDialog(QStringList,bool,bool,QColor,QFont,bool)));
+    Sheets *Sheet = GetSheet();
+    if (Sheet != nullptr) {
+        QStringList OpenWindowNameList(par_WindowName);
+        QPoint Point;
+        Point.setX(par_XPos);
+        Point.setY(par_YPos);
+        QList<MdiWindowWidget*> OpendWidgets = Sheet->OpenWindows(OpenWindowNameList, m_allWindowTypes, m_updateTimers, par_PosFlag, Point, par_SizeFlag, par_Width, par_Hight);
+        foreach (MdiWindowWidget* OpenWidget, OpendWidgets) {
+            connect(OpenWidget, SIGNAL(openStandardDialog(QStringList,bool,bool,QColor,QFont,bool)), this, SLOT(openElementDialog(QStringList,bool,bool,QColor,QFont,bool)));
+        }
+        OpenWindowByNameFromOtherThreadAck(par_ThreadId, 0);
     }
-    OpenWindowByNameFromOtherThreadAck(par_ThreadId, 0);
 }
 
 void MainWindow::IsWindowOpenSlot(int par_ThreadId, char *par_WindowName)
@@ -194,8 +212,8 @@ void MainWindow::SelectSheetSlot(int par_ThreadId, char *par_SheetName)
        SheetName = "Default";
     }
     for(int i = 0; i < TabCount; i++) {
-        if(ui->centralwidget->tabText(i).compare(SheetName) == 0) {
-            Sheets *Sheet1 = m_allSheets->value(ui->centralwidget->tabText(ui->centralwidget->currentIndex()));
+        if(GetSheetName(i).compare(SheetName) == 0) {
+            Sheets *Sheet1 = GetSheet();
             Sheets *Sheet2 = m_allSheets->value(SheetName);
             if (Sheet1 != Sheet2) {
                 // If the last sheet should not be the selected one
@@ -229,8 +247,8 @@ void MainWindow::DeleteSheetSlot(int par_ThreadId, char *par_SheetName)
     int Ret = -1;
 
     for(int i = 0; i < TabCount; i++) {
-        if(ui->centralwidget->tabText(i).compare(SheetName) == 0) {
-            Sheets *Sheet1 = m_allSheets->value(ui->centralwidget->tabText(ui->centralwidget->currentIndex()));
+        if(GetSheetName(i).compare(SheetName) == 0) {
+            Sheets *Sheet1 = GetSheet();
             Sheets *Sheet2 = m_allSheets->value(SheetName);
             if (Sheet1 != Sheet2) {
                 closeTab(i, false);
@@ -252,8 +270,8 @@ void MainWindow::RenameSheetSlot(int par_ThreadId, char *par_OldSheetName, char 
        SheetName = "Default";
     }
     for(int i = 1; i < TabCount; i++) {  // The first sheet named always "default" and cannot be renamed
-        if(ui->centralwidget->tabText(i).compare(SheetName) == 0) {
-            Sheets *Sheet1 = m_allSheets->value(ui->centralwidget->tabText(ui->centralwidget->currentIndex()));
+        if(GetSheetName(i).compare(SheetName) == 0) {
+            Sheets *Sheet1 = GetSheet();
             Sheets *Sheet2 = m_allSheets->value(SheetName);
             if (Sheet1 == Sheet2) {
                 Ret = renameTab(i, QString(par_OldSheetName), QString(par_NewSheetName));
@@ -432,25 +450,34 @@ void MainWindow::OpenOpenWindowMenuAt(const QPoint &par_Point)
 
     QList<QMenu*> Menus = menuBar()->findChildren<QMenu*>();
     foreach (QMenu* Menu, Menus) {
-        if (!Menu->title().compare("&Display")) {
+        QString Name = Menu->title();
+        Name.remove('&');
+        if (!Name.compare("Display")) {
             Menus = Menu->findChildren<QMenu*>();  // Sub menues
             foreach (QMenu* Menu, Menus) {
-                QString Name = Menu->title();
+                Name = Menu->title();
+                Name.remove('&');
                 if (!Name.compare("New")) {
                     QMenu *ContexOpenMenu = ContextMenu.addMenu("New");
                     QList<QAction*> NewActions = Menu->actions();  // Sub menues
                     foreach (QAction *ActionMember, NewActions) {
-                        QString Name = ActionMember->text();
+                        Name = ActionMember->text();
+                        Name.remove('&');
                         MdiWindowType* Window = m_allWindowTypes->value(Name);
-                        ContexOpenMenu->addAction(Window->GetIcon(), Window->GetMenuEntryName(), this, SLOT(newElement()));
+                        if (Window != nullptr) {
+                            ContexOpenMenu->addAction(Window->GetIcon(), Window->GetMenuEntryName(), this, SLOT(newElement()));
+                        }
                     }
                 } else if (!Name.compare("Open")) {
                     QMenu *ContexNewMenu = ContextMenu.addMenu("Open");
                     QList<QAction*> OpenActions = Menu->actions();  // Sub-Menues
                     foreach (QAction *ActionMember, OpenActions) {
-                        QString Name = ActionMember->text();
+                        Name = ActionMember->text();
+                        Name.remove('&');
                         MdiWindowType* Window = m_allWindowTypes->value(Name);
-                        ContexNewMenu->addAction(Window->GetIcon(), Window->GetMenuEntryName(), this, SLOT(openElement()));
+                        if (Window != nullptr) {
+                            ContexNewMenu->addAction(Window->GetIcon(), Window->GetMenuEntryName(), this, SLOT(openElement()));
+                        }
                     }
                 }
             }
@@ -842,7 +869,7 @@ void MainWindow::closeTab(int index, bool AskFlag)
         }
         if (DeleteFlag) {
             d_comboBoxSheets->removeItem(index);
-            QString SheetName = ui->centralwidget->tabText(index);
+            QString SheetName = GetSheetName(index);
             ui->centralwidget->removeTab(index);
             m_allSheets->remove(SheetName);
         }
@@ -905,7 +932,8 @@ void MainWindow::unhook(const QPoint)
             d_widget->show();
             d_area->currentSubWindow()->hide();
             d_widget->move(QCursor::pos().x() - 20, QCursor::pos().y() - 10);
-            QApplication::setActiveWindow(d_widget);
+            QWidget::activateWindow();
+            //QApplication::setActiveWindow(d_widget);
         }
 
         if(selectedItem->text() == "Close") {
@@ -953,7 +981,7 @@ void MainWindow::changeTabFromComboBox(int index)
 void MainWindow::changeComboBoxFromTab(int index)
 {
     // Current selected sheet
-    Sheets *Sheet = m_allSheets->value(ui->centralwidget->tabText(ui->centralwidget->currentIndex()));
+    Sheets *Sheet = GetSheet();
     if (Sheet != nullptr) {
         Sheet->Activating();
     }
@@ -977,7 +1005,7 @@ void MainWindow::hideSubwindows()
 void MainWindow::writeSheetsToIni()
 {
     // the current selected sheet would be stored into the BasicSettings section inside the INI file
-    QString SelectedSheet = ui->centralwidget->tabText(ui->centralwidget->currentIndex());
+    QString SelectedSheet = GetSheetName();
     IniFileDataBaseWriteString("BasicSettings", "SelectedSheet", QStringToConstChar(SelectedSheet), GetMainFileDescriptor());
 
     saveAllSheets (SelectedSheet);
@@ -1027,7 +1055,7 @@ void MainWindow::ReadAllSheetsFromIni()
     int tabs = ui->centralwidget->count();
 
     for(int i = 0; i < tabs; i++) {
-        if(ui->centralwidget->tabText(i).compare(showTab) == 0) {
+        if(GetSheetName(i).compare(showTab) == 0) {
             Sheets *SheetShouldBeSelected = m_allSheets->value(QString(SelectedSheet));
             if ((SheetShouldBeSelected != nullptr)) {
                 // If not the last one should be selected
@@ -1118,9 +1146,11 @@ int MainWindow::IsWindowOpen (QString &par_WindowName, bool par_OnlyActiveSheet)
 {
     Q_UNUSED(par_OnlyActiveSheet)
     // Current selected sheet
-    Sheets *Sheet = m_allSheets->value(ui->centralwidget->tabText(ui->centralwidget->currentIndex()));
-    if (Sheet->WindowNameAlreadyInUse (par_WindowName)) {
-        return 1;
+    Sheets *Sheet = GetSheet();
+    if (Sheet != nullptr) {
+        if (Sheet->WindowNameAlreadyInUse (par_WindowName)) {
+            return 1;
+        }
     }
     return 0;
 }
@@ -1178,7 +1208,7 @@ QMap<QString, Sheets *> *MainWindow::GetRefToAllSheets()
 
 QString MainWindow::GetCurrentSheet()
 {
-    return ui->centralwidget->tabText(ui->centralwidget->currentIndex());
+    return GetSheetName();
 }
 
 
@@ -1644,6 +1674,7 @@ void MainWindow::toolbarNotFasterThanRealtime(bool rtState)
     }
 }
 
+
 void MainWindow::toolbarHelp()
 {
 #ifdef _WIN32
@@ -1660,8 +1691,27 @@ void MainWindow::toolbarHelp()
         ThrowError (1, "cannot open user guide \"%s\"", Path);
     }
 #else
-    // TODO
-    ThrowError (1, "not implemented");
+    char *Desktop = getenv("XDG_CURRENT_DESKTOP");
+    if (Desktop != nullptr) {
+        char PathToUserguide[MAX_PATH];
+        const char *Viewer;
+        SearchAndReplaceEnvironmentStringsExt("%XILENV_EXE_DIR%/OpenXiL_Userguide.pdf", PathToUserguide, sizeof(PathToUserguide), NULL, NULL);
+        if (!strcmp("KDE", Desktop)) {
+            Viewer = "okular";
+        } else if (!strcmp("GNOME", Desktop)) {
+            Viewer = "evince";
+        } else {
+            ThrowError (1, "unknown desktop %s", Desktop);
+            return;
+        }
+        QStringList Arguments;
+        Arguments.append(PathToUserguide);
+        QProcess *Process = new QProcess();
+        StartExecutableInst.ConnectToProcess(Process);
+        Process->start(Viewer, Arguments);
+    } else {
+        ThrowError (1, "cannot detect desktop");
+    }
 #endif
 }
 
@@ -1787,54 +1837,71 @@ void MainWindow::toolbarControlStop()
 
 int LaunchEditor(const char *szFilename)
 {
+    char Editor[MAX_PATH];
 #ifdef _WIN32
-    char exec_string[MAX_PATH];
-    char TempString[MAX_PATH];
-
-    if (!strlen(s_main_ini_val.Editor)) {
-        ThrowError (1, "no Editor selected");
-        return -1;
+    if (strlen(s_main_ini_val.Editor) == 0) {
+        strcpy(Editor, "NOTEPAD.EXE");
+    } else {
+        SearchAndReplaceEnvironmentStrings (s_main_ini_val.Editor,
+                                            Editor,
+                                            sizeof(Editor));
     }
-    SearchAndReplaceEnvironmentStrings (s_main_ini_val.Editor,
-                                        TempString,
-                                        sizeof(s_main_ini_val.Editor));
-
-    sprintf(exec_string, "%s %s", TempString, szFilename);
-    if (WinExec(exec_string, SW_NORMAL) < 32) {
-        ThrowError (1, "Can't start Editor '%s' !!! Please check entry in Basic Settings !", TempString);
-        return -1;
-    }
-    return 0;
 #else
-    Q_UNUSED(szFilename);
-    // TODO
-    ThrowError (1, "not implemented");
-    return 0;
+    if (strlen(s_main_ini_val.EditorX) == 0) {
+        char *Desktop = getenv("XDG_CURRENT_DESKTOP");
+        if (Desktop != nullptr) {
+            if (!strcmp("KDE", Desktop)) {
+                // start kate
+                strcpy(Editor, "kate");
+            } else if (!strcmp("GNOME", Desktop)) {
+                // start gedit
+                strcpy(Editor, "gedit");
+            } else {
+                ThrowError (1, "unknown desktop %s", Desktop);
+                return -1;
+            }
+        } else {
+            ThrowError (1, "cannot detect desktop");
+            return -1;
+        }
+    } else {
+        SearchAndReplaceEnvironmentStrings (s_main_ini_val.EditorX,
+                                            Editor,
+                                            sizeof(Editor));
+    }
 #endif
+    QStringList Arguments;
+    Arguments.append(szFilename);
+    QProcess *Process = new QProcess();
+    StartExecutableInst.ConnectToProcess(Process);
+    Process->start(Editor, Arguments);
+    return 0;
 }
-
 
 void MainWindow::toolbarEditDebug()
 {
-#ifdef _WIN32
     char Path[MAX_PATH];
+#ifdef _WIN32
     sprintf (Path, "%s\\%sscript.dbg", s_main_ini_val.StartDirectory, s_main_ini_val.ScriptOutputFilenamesPrefix);
+#else
+    sprintf (Path, "%s/%sscript.dbg", s_main_ini_val.StartDirectory, s_main_ini_val.ScriptOutputFilenamesPrefix);
+#endif
     SearchAndReplaceEnvironmentStrings(Path, Path, sizeof(Path));
     if (access(Path, 0) == 0) {
         LaunchEditor(Path);
     } else {
         ThrowError (1, "cannot open script debug file \"%s\"", Path);
     }
-#else
-    // TODO
-    ThrowError (1, "not implemented");
-#endif
 }
 
 void MainWindow::toolbarEditError()
 {
     char Path[2*MAX_PATH+16];
+#ifdef _WIN32
     sprintf (Path, "%s\\%sscript.err", s_main_ini_val.StartDirectory, s_main_ini_val.ScriptOutputFilenamesPrefix);
+#else
+    sprintf (Path, "%s/%sscript.err", s_main_ini_val.StartDirectory, s_main_ini_val.ScriptOutputFilenamesPrefix);
+#endif
     SearchAndReplaceEnvironmentStrings(Path, Path, sizeof(Path));
     if (access(Path, 0) == 0) {
         LaunchEditor(Path);
@@ -1846,20 +1913,23 @@ void MainWindow::toolbarEditError()
 void MainWindow::toolbarEditMessage()
 {
     char Path[2*MAX_PATH+16];
+#ifdef _WIN32
     sprintf (Path, "%s\\%sscript.msg", s_main_ini_val.StartDirectory, s_main_ini_val.ScriptOutputFilenamesPrefix);
+#else
+    sprintf (Path, "%s/%sscript.msg", s_main_ini_val.StartDirectory, s_main_ini_val.ScriptOutputFilenamesPrefix);
+#endif
     SearchAndReplaceEnvironmentStrings(Path, Path, sizeof(Path));
     if (access(Path, 0) == 0) {
         LaunchEditor(Path);
     } else {
         ThrowError (1, "cannot open script message file \"%s\"", Path);
     }
-
 }
 
 void MainWindow::toolbarHTMLreport()
 {
-#ifdef _WIN32
     char Path[2*MAX_PATH+16];
+#ifdef _WIN32
     sprintf (Path, "%s\\%sreport.html", s_main_ini_val.StartDirectory, s_main_ini_val.ScriptOutputFilenamesPrefix);
     SearchAndReplaceEnvironmentStrings(Path, Path, sizeof(Path));
     if (access(Path, 0) == 0) {
@@ -1868,28 +1938,31 @@ void MainWindow::toolbarHTMLreport()
         ThrowError (1, "cannot open html report file \"%s\"", Path);
     }
 #else
-    // TODO
-    ThrowError (1, "not implemented");
+    sprintf (Path, "%s/%sreport.html", s_main_ini_val.StartDirectory, s_main_ini_val.ScriptOutputFilenamesPrefix);
+    QStringList Arguments;
+    Arguments.append(Path);
+    QProcess *Process = new QProcess();
+    StartExecutableInst.ConnectToProcess(Process);
+    Process->start("firefox", Arguments);
 #endif
-
 }
 
 void MainWindow::toolbarOpenErrorFileWithEditor()
 {
-#ifdef _WIN32
     char Path[2*MAX_PATH+16];
+#ifdef _WIN32
     sprintf (Path, "%s\\%s\\%s.err", s_main_ini_val.StartDirectory, s_main_ini_val.ScriptOutputFilenamesPrefix,
              GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_ERROR_FILE));
+#else
+    sprintf (Path, "%s/%s/%s.err", s_main_ini_val.StartDirectory, s_main_ini_val.ScriptOutputFilenamesPrefix,
+             GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_ERROR_FILE));
+#endif
     SearchAndReplaceEnvironmentStrings(Path, Path, sizeof(Path));
     if (access(Path, 0) == 0) {
-        ShellExecute (nullptr, "open", Path, nullptr, "", SW_SHOW);
+        LaunchEditor(Path);
     } else {
-        ThrowError (1, "cannot open %s.err file \"%s\"", Path, GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_ERROR_FILE));
+        ThrowError (1, "cannot open script message file \"%s\"", Path);
     }
-#else
-    // TODO
-    ThrowError (1, "not implemented");
-#endif
 }
 
 void MainWindow::setTopHintFlagControlPanel()
@@ -1959,36 +2032,41 @@ QSize MainWindow::sizeHint(void) const
 void MainWindow::openElement()
 {
     QAction *act = qobject_cast<QAction*>(sender());
-    QStringList ToOpenWindowNames = m_allWindowTypes->value(act->text())->openElementDialog();
-    // current selected sheet
-    Sheets *Sheet = m_allSheets->value(ui->centralwidget->tabText(ui->centralwidget->currentIndex()));
-    QList<MdiWindowWidget*> OpendWidgets = Sheet->OpenWindows(ToOpenWindowNames, m_allWindowTypes, m_updateTimers, m_OpenWindowPosValid, m_OpenWindowPos);
-    int dx = 0;
-    int dy = 0;
-    foreach (MdiWindowWidget* OpenWidget, OpendWidgets) {
-        connect(OpenWidget, SIGNAL(openStandardDialog(QStringList,bool,bool,QColor,QFont,bool)), this, SLOT(openElementDialog(QStringList,bool,bool,QColor,QFont,bool)));
-        // If context menu is open select this position
-        if (m_OpenWindowPosValid) {
-            QPoint Point = Sheet->mapFromGlobal(m_OpenWindowPos);
-            OpenWidget->GetCustomMdiSubwindow()->move(Point.x() + dx, Point.y() + dy);
-            dx += 10;
-            dy += 10;
+    QString Help = act->text();
+    Help.remove('&');
+    MdiWindowType *MdiWindow =  m_allWindowTypes->value(Help);
+    if (MdiWindow != nullptr) {
+        QStringList ToOpenWindowNames = MdiWindow->openElementDialog();
+        // current selected sheet
+        Sheets *Sheet = GetSheet();
+        QList<MdiWindowWidget*> OpendWidgets = Sheet->OpenWindows(ToOpenWindowNames, m_allWindowTypes, m_updateTimers, m_OpenWindowPosValid, m_OpenWindowPos);
+        int dx = 0;
+        int dy = 0;
+        foreach (MdiWindowWidget* OpenWidget, OpendWidgets) {
+            connect(OpenWidget, SIGNAL(openStandardDialog(QStringList,bool,bool,QColor,QFont,bool)), this, SLOT(openElementDialog(QStringList,bool,bool,QColor,QFont,bool)));
+            // If context menu is open select this position
+            if (m_OpenWindowPosValid) {
+                QPoint Point = Sheet->mapFromGlobal(m_OpenWindowPos);
+                OpenWidget->GetCustomMdiSubwindow()->move(Point.x() + dx, Point.y() + dy);
+                dx += 10;
+                dy += 10;
+            }
         }
-
     }
 }
 
 void MainWindow::newElement()
 {
     QAction *act = qobject_cast<QAction*>(sender());
-
-    Sheets *Sheet = m_allSheets->value(ui->centralwidget->tabText(ui->centralwidget->currentIndex()));
-
-    if (Sheet != nullptr) {
+    Sheets *Sheet = GetSheet();
+    if ((Sheet != nullptr) && (act != nullptr)) {
         MdiSubWindow *SubWindow = new MdiSubWindow(Sheet);
-        MdiWindowWidget *loc_SC_Widget = m_allWindowTypes->value(act->text())->newElement(SubWindow);
+        QString Help = act->text();
+        Help.remove("&");
+        MdiWindowWidget *loc_SC_Widget = m_allWindowTypes->value(Help)->newElement(SubWindow);
+        MdiWindowType *loc_Type = m_allWindowTypes->value(Help);
 
-        if (loc_SC_Widget != nullptr) {
+        if ((loc_SC_Widget != nullptr) && (loc_Type != nullptr)) {
             connect(loc_SC_Widget, SIGNAL(openStandardDialog(QStringList,bool,bool,QColor,QFont,bool)), this, SLOT(openElementDialog(QStringList,bool,bool,QColor,QFont,bool)));
 
             // Add new window to the [all xxxx windows] list
@@ -2008,7 +2086,7 @@ void MainWindow::newElement()
             }
 
             bool Ret = true;
-            switch (m_allWindowTypes->value(act->text())->GetUpdateRate()){
+            switch (loc_Type->GetUpdateRate()){
             case InterfaceWidgetPlugin::FastUpdateWindow:
                 Ret = connect(m_updateTimers->updateTimer(InterfaceWidgetPlugin::FastUpdateWindow), SIGNAL(timeout()), loc_SC_Widget, SLOT(CyclicUpdate()));
                 break;
@@ -2126,7 +2204,11 @@ void MainWindow::resizeEvent(QResizeEvent * event)
 {
     if (!isMaximized() && !isMinimized()) {
         if (!event->oldSize().isEmpty()) {
+#ifdef _WIN32
             m_NormalSize = event->oldSize();
+#else
+            m_NormalSize = event->size();
+#endif
         }
     }
     RePositioningProcessBars();
@@ -2213,6 +2295,21 @@ void MainWindow::cascadeSubWindows()
 void MainWindow::tileSubWindows()
 {
     (dynamic_cast<QMdiArea*>(ui->centralwidget->currentWidget()))->tileSubWindows();
+}
+
+QString MainWindow::GetSheetName(int par_index)
+{
+    if (par_index == -1) {
+        par_index = ui->centralwidget->currentIndex();
+    }
+    QString SheetName = ui->centralwidget->tabText(par_index);
+    SheetName.remove('&');
+    return SheetName;
+}
+
+Sheets *MainWindow::GetSheet(int par_index)
+{
+    return m_allSheets->value(GetSheetName(par_index));
 }
 
 int WindowNameAlreadyInUse(QString &par_WindowName)

@@ -53,6 +53,7 @@ WSC_TYPE_INT32 OpenScen_LaneId = 0;
 double OpenScen_LaneOffset = 0.0;
 double OpenScen_XPos_m = 0.0;
 double OpenScen_YPos_m = 0.0;
+double OpenScen_ZPos_m = 0.0;
 double OpenScen_Yaw_rad = 0.0;
 double OpenScen_Pitch_rad = 0.0;
 double OpenScen_Roll_rad = 0.0;
@@ -62,7 +63,7 @@ bool OpenScen_UseCarModelLast = false;
 
 void reference_varis(void)
 {
-    REF_DIR_DOUBLE_VAR(READ_ONLY_REFERENCE, abt_per, "abt_per", "");
+    REF_DIR_DOUBLE_VAR(READ_ONLY_REFERENCE, abt_per, "XilEnv.SampleTime", "");
 #ifdef INTERNAL_CAR_MODEL
     REF_DIR_ENUM_VAR_AI(READ_WRITE_REFERENCE, OpenScen_UseCarModel, "", CONVTYPE_TEXTREPLACE, "0 0 \"No Car Model\";1 1 \"Car Model\";", 0, 1, 0, 0, COLOR_UNDEFINED, 0, 1);
     REF_DIR_DOUBLE_VAR(READ_ONLY_REFERENCE, OpenScen_SteerAngle, "OpenScen_SteerAngle", "");
@@ -75,6 +76,7 @@ void reference_varis(void)
     REF_DIR_DOUBLE_VAR(READ_ONLY_REFERENCE, OpenScen_Pos_m, "OpenScen_Pos_m", "");
     REF_DIR_DOUBLE_VAR(READ_WRITE_REFERENCE, OpenScen_XPos_m, "OpenScen_XPos_m", "");
     REF_DIR_DOUBLE_VAR(READ_WRITE_REFERENCE, OpenScen_YPos_m, "OpenScen_YPos_m", "");
+    REF_DIR_DOUBLE_VAR(READ_WRITE_REFERENCE, OpenScen_ZPos_m, "OpenScen_ZPos_m", "");
     REF_DIR_DOUBLE_VAR(READ_WRITE_REFERENCE, OpenScen_Yaw_rad, "OpenScen_Yaw_rad", "");
     REF_DIR_DOUBLE_VAR(READ_WRITE_REFERENCE, OpenScen_Pitch_rad, "OpenScen_Pitch_rad", "");
     REF_DIR_DOUBLE_VAR(READ_WRITE_REFERENCE, OpenScen_Roll_rad, "OpenScen_Roll_rad", "");
@@ -102,18 +104,19 @@ int CyclicCall(EXTERN_PROCESS_TASK_HANDLE, double Period)
     }
 
     if (OpenScen_UseCarModel && (vehicleHandle != NULL)) {
-        SE_SimpleVehicleState vehicleState = { 0, 0, 0, 0, 0, 0 };
-
         // Step vehicle model with driver input, but wait until time > 0
-        if (SE_GetSimulationTime() > 0) {
+        if (SE_GetSimulationTimeDouble() > 0) {
             SE_SimpleVehicleControlAnalog(vehicleHandle, dt, OpenScen_Throttle, -OpenScen_SteerAngle);
         }
 
         // Fetch updated state and report to scenario engine
+        SE_SimpleVehicleState vehicleState = { 0, 0, 0, 0, 0, 0 };
         SE_SimpleVehicleGetState(vehicleHandle, &vehicleState);
         OpenScen_XPos_m = vehicleState.x;
         OpenScen_YPos_m = vehicleState.y;
+        OpenScen_ZPos_m = vehicleState.z;
         OpenScen_Yaw_rad = vehicleState.h;
+        OpenScen_Pitch_rad = vehicleState.p;
         OpenScen_VehicleSpeed = vehicleState.speed;
     }
 #endif
@@ -121,13 +124,13 @@ int CyclicCall(EXTERN_PROCESS_TASK_HANDLE, double Period)
     default:
     case 0:  // free
         // Report updated vehicle position and heading. z, pitch and roll will be aligned to the road
-        SE_ReportObjectPosXYH(0, simTime, OpenScen_XPos_m, OpenScen_YPos_m, OpenScen_Yaw_rad, OpenScen_VehicleSpeed);
+        SE_ReportObjectPosXYH(0, simTime, OpenScen_XPos_m, OpenScen_YPos_m, OpenScen_Yaw_rad);
         break;
     case 1: // stay on road
-        SE_ReportObjectRoadPos(0, simTime, OpenScen_RooadId, OpenScen_LaneId, OpenScen_LaneOffset, OpenScen_Pos_m, OpenScen_VehicleSpeed);
+        SE_ReportObjectRoadPos(0, simTime, OpenScen_RooadId, OpenScen_LaneId, OpenScen_LaneOffset, OpenScen_Pos_m);
         break;
     case 2: // free 6 DOF
-        SE_ReportObjectPos(0, simTime, OpenScen_XPos_m, OpenScen_YPos_m, 0, OpenScen_Yaw_rad, OpenScen_Pitch_rad, OpenScen_Roll_rad, OpenScen_VehicleSpeed);
+        SE_ReportObjectPos(0, simTime, OpenScen_XPos_m, OpenScen_YPos_m, OpenScen_ZPos_m, OpenScen_Yaw_rad, OpenScen_Pitch_rad, OpenScen_Roll_rad);
         break;
     }
 

@@ -132,7 +132,7 @@ int GenerateNewMessageFile (void)
 
     fprintf (messagefile, "\nThis file is generated automatically from %s", GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_PROGRAM_NAME));
     fprintf (messagefile, "\n%s message file: %s", GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_PROGRAM_NAME), messagefilename);
-    fprintf (messagefile, "\n%s version    : %.3lf", GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_PROGRAM_NAME), XILENV_VERSION/1000.0);
+    fprintf (messagefile, "\n%s version    : %d.%d.%d", GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_PROGRAM_NAME), XILENV_VERSION, XILENV_MINOR_VERSION, XILENV_PATCH_VERSION);
 #if (XILENV_MINOR_VERSION < 0)
     fprintf (messagefile, " pre%i", XILENV_MINOR_VERSION);
 #elif (XILENV_MINOR_VERSION > 0)

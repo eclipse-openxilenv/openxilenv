@@ -116,7 +116,7 @@ void AddNewScriptErrorMessageFromOtherThread (int par_Level, int par_LineNr, con
             LevelString = "Unknown:";
             break;
         }
-        printf("Script> %s (%i) \"%s\"\n", par_Filename, par_LineNr, par_Message);
+        printf("Script> %s %s (%i) \"%s\"\n", LevelString, par_Filename, par_LineNr, par_Message);
     }
 }
 

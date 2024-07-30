@@ -342,6 +342,7 @@ private:
     QList<CanConfigVariant*> m_Variants;
 
     QMap<int, CanConfigVariant*> m_ChannelVariant;
+    QList<int> m_ChannelStartupState;
 
     CanConfigBase *m_ParentBase;
 };

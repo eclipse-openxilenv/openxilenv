@@ -42,9 +42,6 @@ static char *szIntProcessnames[]  = { "Script", "Generator",
                                       "Recorder", NULL};
 
 
-#define INIFILE Fd
-
-
 static void ReadOneConfigurablePrefix(int par_No, const char *par_Entry, const char *par_Default)
 {
     if (s_main_ini_val.ConfigurablePrefix[par_No] != NULL) {
@@ -52,6 +49,10 @@ static void ReadOneConfigurablePrefix(int par_No, const char *par_Entry, const c
     }
     s_main_ini_val.ConfigurablePrefix[par_No] =
         IniFileDataBaseReadStringBuffer(OPT_SECTION, par_Entry, par_Default, GetMainFileDescriptor());
+    // the "none" string will be replace by an emty string
+    if (!strcmp(s_main_ini_val.ConfigurablePrefix[par_No], "none")) {
+        s_main_ini_val.ConfigurablePrefix[par_No][0] = 0;
+    }
 }
 
 int ReadBasicConfigurationFromIni(MAIN_INI_VAL *sp_main_ini)
@@ -61,7 +62,7 @@ int ReadBasicConfigurationFromIni(MAIN_INI_VAL *sp_main_ini)
     int   i;
     int Fd = GetMainFileDescriptor();
 
-    // Titel of the main window
+    // Title of the main window
     IniFileDataBaseReadString(OPT_SECTION, OPT_PROJECT_TEXT, OPT_PROJECT_DEF,
                             sp_main_ini->ProjectName,
                             sizeof (sp_main_ini->ProjectName),
@@ -169,6 +170,9 @@ int ReadBasicConfigurationFromIni(MAIN_INI_VAL *sp_main_ini)
     IniFileDataBaseReadString(OPT_SECTION, OPT_ED_PATH_TEXT,
                             OPT_ED_PATH_DEF, sp_main_ini->Editor,
                             sizeof(sp_main_ini->Editor), Fd);
+    IniFileDataBaseReadString(OPT_SECTION, OPT_ED_X_PATH_TEXT,
+                            OPT_ED_PATH_DEF, sp_main_ini->EditorX,
+                            sizeof(sp_main_ini->EditorX), Fd);
 
     sp_main_ini->ScriptMessageDialogVisable = (char)
         IniFileDataBaseReadInt( OPT_SECTION, OPT_SCRMSG_TEXT,
@@ -303,7 +307,7 @@ int ReadBasicConfigurationFromIni(MAIN_INI_VAL *sp_main_ini)
         }
     }
     // oscilloscope window:
-    sp_main_ini->OscilloscopeDefaultBufferDepth = IniFileDataBaseReadInt (OPT_SECTION, "OscilloscopeDefaultBufferDepth", 16384, Fd);
+    sp_main_ini->OscilloscopeDefaultBufferDepth = IniFileDataBaseReadInt (OPT_SECTION, "OscilloscopeDefaultBufferDepth", 131072, Fd);
     memset (sp_main_ini->OscilloscopeDefaultFont, 0, sizeof (sp_main_ini->OscilloscopeDefaultFont));
     sp_main_ini->OscilloscopeDefaultFontSize = 0;
     if (IniFileDataBaseReadString(OPT_SECTION, "OscilloscopeDefaultFont", "", tmp_str, sizeof (tmp_str), Fd) > 0) {
@@ -335,11 +339,6 @@ int ReadBasicConfigurationFromIni(MAIN_INI_VAL *sp_main_ini)
     IniFileDataBaseReadString (OPT_SECTION, "RemoteMasterExecutable", "", sp_main_ini->RemoteMasterExecutable, sizeof(sp_main_ini->RemoteMasterExecutable), Fd);
     sp_main_ini->RemoteMasterExecutableResoved = NULL;
     IniFileDataBaseReadString (OPT_SECTION, "RemoteMasterCopyTo", "/tmp/LinuxRemoteMaster.out", sp_main_ini->RemoteMasterCopyTo, sizeof(sp_main_ini->RemoteMasterCopyTo), Fd);
-
-    IniFileDataBaseReadString (OPT_SECTION, "RpcOverSocketOrNamedPipe",
-                                "NamedPipe", tmp_str, sizeof (tmp_str), Fd);
-    if (!_strcmpi (tmp_str, "Socket")) sp_main_ini->RpcOverSocketOrNamedPipe = 1;
-    else sp_main_ini->RpcOverSocketOrNamedPipe = 0;
 
     IniFileDataBaseReadString (OPT_SECTION, "RpcOverSocketOrNamedPipe",
                                 "NamedPipe", tmp_str, sizeof (tmp_str), Fd);
@@ -381,26 +380,29 @@ int ReadBasicConfigurationFromIni(MAIN_INI_VAL *sp_main_ini)
     if (!s_main_ini_val.DarkModeWasSetByUser) {  // Dark mode was not set before?
         s_main_ini_val.DarkMode = s_main_ini_val.ShouldUseDarkModeIni;
     }
-    ReadOneConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_PROGRAM_NAME, "PrefixTypeProgramName", DEFAULT_PREFIX_TYPE_PROGRAM_NAME);
+    if (s_main_ini_val.RenameExecutableActive) {
+        ReadOneConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_PROGRAM_NAME, "PrefixTypeProgramName", DEFAULT_PREFIX_TYPE_PROGRAM_NAME);
 
-    ReadOneConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_SHORT_BLACKBOARD, "PrefixTypeShortBlackboard", DEFAULT_PREFIX_TYPE_SHORT_BLACKBOARD);
-    ReadOneConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_LONG_BLACKBOARD, "PrefixTypeLongBlackboard", DEFAULT_PREFIX_TYPE_LONG_BLACKBOARD);
-    ReadOneConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_LONG2_BLACKBOARD, "PrefixTypeLong2Blackboard", DEFAULT_PREFIX_TYPE_LONG2_BLACKBOARD);
+        ReadOneConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_SHORT_BLACKBOARD, "PrefixTypeShortBlackboard", DEFAULT_PREFIX_TYPE_SHORT_BLACKBOARD);
+        ReadOneConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_LONG_BLACKBOARD, "PrefixTypeLongBlackboard", DEFAULT_PREFIX_TYPE_LONG_BLACKBOARD);
+        ReadOneConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_LONG2_BLACKBOARD, "PrefixTypeLong2Blackboard", DEFAULT_PREFIX_TYPE_LONG2_BLACKBOARD);
 
-    ReadOneConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_ERROR_FILE, "PrefixTypeErrorFile", DEFAULT_PREFIX_TYPE_ERROR_FILE);
+        ReadOneConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_ERROR_FILE, "PrefixTypeErrorFile", DEFAULT_PREFIX_TYPE_ERROR_FILE);
 
-    ReadOneConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_CAN_NAMES, "PrefixTypeCANNames", DEFAULT_PREFIX_TYPE_CAN_NAMES);
-    ReadOneConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_FLEXRAY_NAMES, "PrefixTypeFlexrayNames", DEFAULT_PREFIX_TYPE_FLEXRAY_NAMES);
+        ReadOneConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_CAN_NAMES, "PrefixTypeCANNames", DEFAULT_PREFIX_TYPE_CAN_NAMES);
+        ReadOneConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_FLEXRAY_NAMES, "PrefixTypeFlexrayNames", DEFAULT_PREFIX_TYPE_FLEXRAY_NAMES);
 
-    ReadOneConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_CYCLE_COUNTER, "PrefixTypeCycleCounter", DEFAULT_PREFIX_TYPE_CYCLE_COUNTER);
-    ReadOneConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_SAMPLE_TIME, "PrefixTypeSampleTime", DEFAULT_PREFIX_TYPE_SAMPLE_TIME);
-    ReadOneConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_SAMPLE_FREQUENCY, "PrefixTypeSampleFrequency", DEFAULT_PREFIX_TYPE_SAMPLE_FREQUENCY);
+        ReadOneConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_CYCLE_COUNTER, "PrefixTypeCycleCounter", DEFAULT_PREFIX_TYPE_CYCLE_COUNTER);
+        ReadOneConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_SAMPLE_TIME, "PrefixTypeSampleTime", DEFAULT_PREFIX_TYPE_SAMPLE_TIME);
+        ReadOneConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_SAMPLE_FREQUENCY, "PrefixTypeSampleFrequency", DEFAULT_PREFIX_TYPE_SAMPLE_FREQUENCY);
+        ReadOneConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_OWN_EXIT_CODE, "PrefixTypeOwnExitCode", DEFAULT_PREFIX_TYPE_OWN_EXIT_CODE);
 
-    ReadOneConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_SCRIPT, "PrefixTypeScript", DEFAULT_PREFIX_TYPE_SCRIPT);
-    ReadOneConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_GENERATOR, "PrefixTypeGenerator", DEFAULT_PREFIX_TYPE_GENERATOR);
-    ReadOneConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_TRACE_RECORDER, "PrefixTypeTraceRecorder", DEFAULT_PREFIX_TYPE_TRACE_RECORDER);
-    ReadOneConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_STIMULUS_PLAYER, "PrefixTypeStimulusPlayer", DEFAULT_PREFIX_TYPE_STIMULUS_PLAYER);
-    ReadOneConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_EQUATION_CALCULATOR, "PrefixTypeEquationCalculator", DEFAULT_PREFIX_TYPE_EQUATION_CALCULATOR);
+        ReadOneConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_SCRIPT, "PrefixTypeScript", DEFAULT_PREFIX_TYPE_SCRIPT);
+        ReadOneConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_GENERATOR, "PrefixTypeGenerator", DEFAULT_PREFIX_TYPE_GENERATOR);
+        ReadOneConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_TRACE_RECORDER, "PrefixTypeTraceRecorder", DEFAULT_PREFIX_TYPE_TRACE_RECORDER);
+        ReadOneConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_STIMULUS_PLAYER, "PrefixTypeStimulusPlayer", DEFAULT_PREFIX_TYPE_STIMULUS_PLAYER);
+        ReadOneConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_EQUATION_CALCULATOR, "PrefixTypeEquationCalculator", DEFAULT_PREFIX_TYPE_EQUATION_CALCULATOR);
+    }
     return 0;
 }
 
@@ -524,6 +526,11 @@ int WriteBasicConfigurationToIni(MAIN_INI_VAL *sp_main_ini)
 
     if (IniFileDataBaseWriteString(OPT_SECTION, OPT_ED_PATH_TEXT,
                                 sp_main_ini->Editor, Fd) == 0) {
+        return INI_WRITE_ERROR;
+    }
+
+    if (IniFileDataBaseWriteString(OPT_SECTION, OPT_ED_X_PATH_TEXT,
+                                sp_main_ini->EditorX, Fd) == 0) {
         return INI_WRITE_ERROR;
     }
 
@@ -779,6 +786,16 @@ void InitMainSettings(void)
     s_main_ini_val.ConfigurablePrefix[CONFIGURABLE_PREFIX_TYPE_CAN_NAMES] = StringMalloc(DEFAULT_PREFIX_TYPE_CAN_NAMES);
     s_main_ini_val.ConfigurablePrefix[CONFIGURABLE_PREFIX_TYPE_FLEXRAY_NAMES] = StringMalloc(DEFAULT_PREFIX_TYPE_FLEXRAY_NAMES);
     s_main_ini_val.ConfigurablePrefix[CONFIGURABLE_PREFIX_TYPE_CYCLE_COUNTER] = StringMalloc(DEFAULT_PREFIX_TYPE_CYCLE_COUNTER);
+
+    s_main_ini_val.ConfigurablePrefix[CONFIGURABLE_PREFIX_TYPE_SAMPLE_TIME] = StringMalloc(DEFAULT_PREFIX_TYPE_SAMPLE_TIME);
+    s_main_ini_val.ConfigurablePrefix[CONFIGURABLE_PREFIX_TYPE_SAMPLE_FREQUENCY] = StringMalloc(DEFAULT_PREFIX_TYPE_SAMPLE_FREQUENCY);
+    s_main_ini_val.ConfigurablePrefix[CONFIGURABLE_PREFIX_TYPE_OWN_EXIT_CODE] = StringMalloc(DEFAULT_PREFIX_TYPE_OWN_EXIT_CODE);
+
+    s_main_ini_val.ConfigurablePrefix[CONFIGURABLE_PREFIX_TYPE_SCRIPT] = StringMalloc(DEFAULT_PREFIX_TYPE_SCRIPT);
+    s_main_ini_val.ConfigurablePrefix[CONFIGURABLE_PREFIX_TYPE_GENERATOR] = StringMalloc(DEFAULT_PREFIX_TYPE_GENERATOR);
+    s_main_ini_val.ConfigurablePrefix[CONFIGURABLE_PREFIX_TYPE_TRACE_RECORDER] = StringMalloc(DEFAULT_PREFIX_TYPE_TRACE_RECORDER);
+    s_main_ini_val.ConfigurablePrefix[CONFIGURABLE_PREFIX_TYPE_STIMULUS_PLAYER] = StringMalloc(DEFAULT_PREFIX_TYPE_STIMULUS_PLAYER);
+    s_main_ini_val.ConfigurablePrefix[CONFIGURABLE_PREFIX_TYPE_EQUATION_CALCULATOR] = StringMalloc(DEFAULT_PREFIX_TYPE_EQUATION_CALCULATOR);
 }
 
 void SetProgramNameIntoMainSettings(const char *par_ProgramName)
@@ -787,7 +804,15 @@ void SetProgramNameIntoMainSettings(const char *par_ProgramName)
         StringFree(s_main_ini_val.ConfigurablePrefix[CONFIGURABLE_PREFIX_TYPE_PROGRAM_NAME]);
     }
     s_main_ini_val.ConfigurablePrefix[CONFIGURABLE_PREFIX_TYPE_PROGRAM_NAME] = StringMalloc(par_ProgramName);
+    s_main_ini_val.RenameExecutableActive = 1;
 }
+
+void SetIniFilterProgram(const char *par_FilterProgramName, int par_Flags)
+{
+    s_main_ini_val.IniFilterProgram = StringMalloc(par_FilterProgramName);
+    s_main_ini_val.IniFilterProgramFlags = par_Flags;
+}
+
 
 void SetDarkModeIntoMainSettings(int par_DarkMode)
 {
@@ -798,4 +823,9 @@ void SetDarkModeIntoMainSettings(int par_DarkMode)
         s_main_ini_val.DarkMode = par_DarkMode;
         s_main_ini_val.DarkModeWasSetByUser = 1;
     }
+}
+
+void SetEnableLegacyEnvironmentVariables(void)
+{
+    s_main_ini_val.EnableLegacyEnvironmentVariables = 1;
 }

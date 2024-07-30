@@ -70,7 +70,7 @@ You can get OpenXilEnv from:
 
 ### <a name='install-dependencies-window'></a> Install dependencies
 
-- Qt Library 5.12.9 ... 6.4.3
+- Qt Library 5.12.9 ... 6.7.2
 - MinGW 11.2
 - Strawberry perl 
 - pugixml-1.11 (optional if -DBUILD_WITH_FMU2_SUPPORT=ON or if -DBUILD_WITH_FMU3_SUPPORT=ON)
@@ -87,7 +87,7 @@ You can get OpenXilEnv from:
 
 ### <a name='build-options-windows'></a> Build options
 ```
-  > -DBUILD_EXAMPLES=ON/OFF (default is OFF)
+  > -DBUILD_EXAMPLES=ON/OFF (default is ON)
   > -DBUILD_WITH_FMU2_SUPPORT=ON/OFF (default is OFF)
   >   -DFMI2_SOURCE_PATH=<path>
   >   -DPUGIXML_SOURCE_PATH=<path>
@@ -119,6 +119,11 @@ Install
 ```
   > cmake --install .
 ```
+Install optional (copy the Qt DLL to the install folder)
+```
+  > cd xxx\openxilenv\install_win
+  > windeployqt6.exe XilEnvGui.exe
+```
 ### <a name='run-example-windows'></a> Run example
 
 Running the electric car sample
@@ -131,7 +136,7 @@ Running the electric car sample
 
 ### <a name='install-dependencies-linux'></a> Install dependencies
 
-- Qt Library 5.12.9 ... 6.4.3
+- Qt Library 5.12.9 ... 6.7.2
 - pugixml-1.11 (optional if -DBUILD_WITH_FMU2_SUPPORT=ON or if -DBUILD_WITH_FMU3_SUPPORT=ON)
 
     <https://pugixml.org/>
@@ -171,7 +176,7 @@ Running the electric car sample
 #### <a name='build-options-linux'></a> Build options
 
 ```
-  > -DBUILD_EXAMPLES=ON/OFF (default is OFF)
+  > -DBUILD_EXAMPLES=ON/OFF (default is ON)
   > -DBUILD_WITH_FMU2_SUPPORT=ON/OFF (default is OFF)
   >   -DPUGIXML_SOURCE_PATH=<path>
   >   -DFMI2_SOURCE_PATH=<path>

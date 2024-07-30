@@ -34,11 +34,16 @@ void SetMainIniFilename(const char *par_FileName);
 int IniFileDataBaseInit(void);
 void IniFileDataBaseTerminate(void);
 int IniFileDataBaseOpen(const char *par_Filename);
+int IniFileDataBaseOpenNoFilterPossible(const char *par_Filename);
 int IniFileDataBaseClose(int par_FileDescriptor);
 #define INIFILE_DATABAE_OPERATION_WRITE_ONLY  0
 #define INIFILE_DATABAE_OPERATION_RENAME      1
 #define INIFILE_DATABAE_OPERATION_REMOVE      2
+#define INIFILE_DATABAE_OPERATION_WRITE_TO_STDOUT                       3
+#define INIFILE_DATABAE_OPERATION_WRITE_TO_STDOUT_WITHOUT_VERSION_INFO  4
+#define INIFILE_DATABAE_OPERATION_WRITE_ONLY_WITHOUT_VERSION_INFO       5
 int IniFileDataBaseSave(int par_FileDescriptor, const char *par_DstFileName, int par_Operation);
+int IniFileDataBaseSaveNoFilterPossible(int par_FileDescriptor, const char *par_DstFileName, int par_Operation);
 int IniFileDataBaseGetFileNameByDescriptor(int par_FileDescriptor, char *ret_Name, int par_MaxSize);
 
 int IniFileDataBaseWriteString (const char* section, const char* par_Entry, const char* txt, int par_FileDescriptor);

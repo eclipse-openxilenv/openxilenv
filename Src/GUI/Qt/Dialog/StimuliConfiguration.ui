@@ -14,7 +14,7 @@
    <string>Stimuli Configuration</string>
   </property>
   <property name="windowIcon">
-   <iconset resource="../Icons.qrc">
+   <iconset>
     <normaloff>:/Icons/car.png</normaloff>:/Icons/car.png</iconset>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout_7">
@@ -158,7 +158,7 @@
           <item>
            <widget class="QLabel" name="label_5">
             <property name="text">
-             <string>do not stimulat</string>
+             <string>do not stimulate</string>
             </property>
            </widget>
           </item>
@@ -175,10 +175,13 @@
             </property>
            </spacer>
           </item>
+          <item>
+           <widget class="QLineEdit" name="NotStimulateFilterLineEdit"/>
+          </item>
          </layout>
         </item>
         <item>
-         <widget class="QListWidget" name="AllVariableListWidget">
+         <widget class="QListView" name="AllVariableListView">
           <property name="selectionMode">
            <enum>QAbstractItemView::ExtendedSelection</enum>
           </property>
@@ -286,7 +289,7 @@
           <item>
            <widget class="QLabel" name="label_6">
             <property name="text">
-             <string>to be stimulat</string>
+             <string>to be stimulate</string>
             </property>
            </widget>
           </item>
@@ -377,9 +380,7 @@
    </item>
   </layout>
  </widget>
- <resources>
-  <include location="../Icons.qrc"/>
- </resources>
+ <resources/>
  <connections>
   <connection>
    <sender>buttonBox</sender>

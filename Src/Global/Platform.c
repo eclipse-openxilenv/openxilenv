@@ -19,6 +19,7 @@
 #include <stdio.h>
 #include "Files.h"
 #include "Platform.h"
+#include "ConfigurablePrefix.h"
 
 /* do not include: #include "ThrowError.h"
    instead own declaration */
@@ -190,9 +191,12 @@ int CheckOpenIPCFile(char *Instance, char *Name, char *ret_Path, int DirCraeteOr
     int fh;
     DIR *dir;
     char Path[1024];
+    const char *ProgramName = "XilEnv"; // GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_PROGRAM_NAME);
 
     GetXilEnvHomeDirectory(Path);
-    strcat(Path, "/.xilenv");
+    strcat(Path, "/.");
+    strcat(Path, ProgramName);
+
     dir = opendir(Path);
     if (dir == NULL) {
         if (DirCraeteOrMustExists == DIR_CREATE_EXIST) {

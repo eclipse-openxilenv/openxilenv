@@ -63,7 +63,7 @@ Sheets::~Sheets()
 void Sheets::writeToIni(bool par_IsSelectedSheet)
 {
     int Index = m_allSheet->indexOf(this);
-    QString SheetName = m_allSheet->tabText(Index);
+    QString SheetName = GetName(Index);
     QString SheetIniName = QString("GUI/OpenWindowsForSheet%1").arg(QString().number(Index));
     ScQt_IniFileDataBaseWriteString(SheetIniName, nullptr, nullptr, ScQt_GetMainFileDescriptor());
     ScQt_IniFileDataBaseWriteString(SheetIniName, "SheetName", SheetName, ScQt_GetMainFileDescriptor());
@@ -254,12 +254,15 @@ void Sheets::addSubWindowToSheet(MdiWindowWidget *arg_subWindow)
     connect(arg_subWindow->GetCustomMdiSubwindow(), SIGNAL(focusInSubWindow()), arg_subWindow, SLOT(setDefaultFocus()));
 }
 
-QString Sheets::GetName()
+QString Sheets::GetName(int par_Index)
 {
-    int index = m_allSheet->indexOf(this);
-    return m_allSheet->tabText(index);
+    if (par_Index == -1) {
+        par_Index = m_allSheet->indexOf(this);
+    }
+    QString SheetName = m_allSheet->tabText(par_Index);
+    SheetName.remove('&');
+    return SheetName;
 }
-
 
 int Sheets::WindowNameAlreadyInUse (QString &par_WindowName)
 {

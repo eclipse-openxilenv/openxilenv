@@ -2350,7 +2350,7 @@ int InitPipeSchedulers (char *par_Prefix)
                                BB_UWORD, "");
     add_bbvari (ExtendsWithConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_SHORT_BLACKBOARD, "exit", Name, sizeof(Name)),
                 BB_UWORD, "");
-    add_bbvari (ExtendsWithConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_LONG2_BLACKBOARD, "ExitCode", Name, sizeof(Name)),
+    add_bbvari (ExtendsWithConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_OWN_EXIT_CODE, "", Name, sizeof(Name)),
                 BB_DWORD, "");
     add_bbvari (ExtendsWithConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_LONG_BLACKBOARD, ".RealtimeFactor", Name, sizeof(Name)),
                 BB_DOUBLE, "-");

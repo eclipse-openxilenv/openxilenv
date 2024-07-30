@@ -68,7 +68,7 @@ int GenerateNewErrorFile(void)
     // Write file header
     fprintf (ErrorFile, "\nThis file is generated automatically from %s", GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_PROGRAM_NAME));
     fprintf (ErrorFile, "\n%s error file: %s", GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_PROGRAM_NAME), ErrorFileName);
-    fprintf (ErrorFile, "\n%s version    : %.3lf", GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_PROGRAM_NAME), XILENV_VERSION/1000.0 );
+    fprintf (ErrorFile, "\n%s version    : %d.%d.%d", GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_PROGRAM_NAME), XILENV_VERSION, XILENV_MINOR_VERSION, XILENV_PATCH_VERSION);
     /* Date and time */
     {
     char *Date;

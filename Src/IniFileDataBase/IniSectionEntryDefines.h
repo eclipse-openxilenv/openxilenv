@@ -53,8 +53,9 @@
 #define OPT_BB_SIZE_TEXT    "BlackBoardSize"
 #define OPT_BB_SIZE_DEF     32768
 #define OPT_ED_PATH_TEXT    "Editor"
+#define OPT_ED_X_PATH_TEXT    "EditorX"
 #define OPT_ED_PATH_DEF     ""
-#define OPT_SCRMSG_TEXT     "Scriptmessages"
+#define OPT_SCRMSG_TEXT     "ScriptMessages"
 #define OPT_SCRMSG_DEF      0
 
 #define LAST_10_BP_SECT   "GUI/Last_10_Breakpoints"

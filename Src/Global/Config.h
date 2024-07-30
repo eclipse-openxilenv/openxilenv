@@ -20,7 +20,7 @@
 
 #define XILENV_VERSION               0
 #define XILENV_MINOR_VERSION         8
-#define XILENV_PATCH_VERSION         15
+#define XILENV_PATCH_VERSION         16
 #define XILENV_INIFILE_MIN_VERSION           0
 #define XILENV_INIFILE_MIN_MINOR_VERSION     8
 #define XILENV_INIFILE_MIN_PATCH_VERSION     0
@@ -98,6 +98,7 @@ extern void LeaveGlobalCriticalSection (void);
 #define DEFAULT_PREFIX_TYPE_CYCLE_COUNTER        "SoftcarCycleCounter"
 #define DEFAULT_PREFIX_TYPE_SAMPLE_TIME          "abt_per"
 #define DEFAULT_PREFIX_TYPE_SAMPLE_FREQUENCY     "abt_frq"
+#define DEFAULT_PREFIX_TYPE_OWN_EXIT_CODE        "SoftcarExitCode"
 
 #define DEFAULT_PREFIX_TYPE_SCRIPT               "Script"
 #define DEFAULT_PREFIX_TYPE_GENERATOR            "Generator"
@@ -118,6 +119,7 @@ extern void LeaveGlobalCriticalSection (void);
 #define DEFAULT_PREFIX_TYPE_CYCLE_COUNTER        "XilEnv.CycleCounter"
 #define DEFAULT_PREFIX_TYPE_SAMPLE_TIME          "XilEnv.SampleTime"
 #define DEFAULT_PREFIX_TYPE_SAMPLE_FREQUENCY     "XilEnv.SampleFrequency"
+#define DEFAULT_PREFIX_TYPE_OWN_EXIT_CODE        "XilEnv.OwnExitCode"
 
 #define DEFAULT_PREFIX_TYPE_SCRIPT               "XilEnv.Script"
 #define DEFAULT_PREFIX_TYPE_GENERATOR            "XilEnv.Generator"

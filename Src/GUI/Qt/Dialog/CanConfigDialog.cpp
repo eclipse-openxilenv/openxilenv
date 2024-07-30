@@ -22,6 +22,8 @@
 
 #include <QMenu>
 #include <QPainter>
+#include <QItemDelegate>
+#include <QComboBox>
 
 #include "FileDialog.h"
 #include "QtIniFile.h"
@@ -64,6 +66,28 @@ static void EnableGatewayFlags(Ui::CanConfigDialog *ui, bool par_Enable)
     ui->RealGatewayLineEdit->setEnabled(par_Enable);
 }
 
+class QTreeWidgetEditorDelegate : public QItemDelegate
+{
+    //    Q_OBJECT
+public:
+    QTreeWidgetEditorDelegate(QObject *parent):QItemDelegate(parent) {};
+    QWidget* createEditor(QWidget *parent, const QStyleOptionViewItem &option, const QModelIndex &index) const;
+};
+
+
+QWidget* QTreeWidgetEditorDelegate::createEditor(QWidget *parent, const QStyleOptionViewItem &option, const QModelIndex &index) const
+{
+    if(index.column() == 2) {
+        QComboBox *Editor = new QComboBox(parent);
+        Editor->addItem("OFF");
+        Editor->addItem("ON");
+        Editor->addItem("IF_NOT_EXIST_OFF");
+        Editor->addItem("IF_NOT_EXIST_ON");
+        return Editor;
+    } else {
+        return nullptr;
+    }
+}
 
 CanConfigDialog::CanConfigDialog(QWidget *par_Parent) : Dialog(par_Parent),
     ui(new Ui::CanConfigDialog)
@@ -98,7 +122,12 @@ CanConfigDialog::CanConfigDialog(QWidget *par_Parent) : Dialog(par_Parent),
     Text = Prefix;
     Text.append(".CANx.\"variante name\".\"object name\"");
     ui->ObjectControlVarObjNameRadioButton->setText(Text);
+
     createActions();
+
+    ui->MappingTreeWidget->setEditTriggers(QAbstractItemView::AllEditTriggers);
+    QTreeWidgetEditorDelegate *DelegateComboBox = new QTreeWidgetEditorDelegate(ui->MappingTreeWidget);
+    ui->MappingTreeWidget->setItemDelegate(DelegateComboBox);
 
     ui->NumberOfChannelsSpinBox->setValue(m_CanConfig->GetNumberOfChannels());
 
@@ -1096,6 +1125,9 @@ void CanConfigServer::ReadFromIni()
 
     sprintf (section, "CAN/Global");
     for (int i = 0; i < m_NumberOfChannels; i++) {
+        sprintf (entry, "can_controller%i_startup_state", i+1);
+        int StartupState = IniFileDataBaseReadInt("CAN/Global", entry, 1, Fd);
+        m_ChannelStartupState.append(StartupState);
         sprintf (entry, "can_controller%i_variante", i+1);
         IniFileDataBaseReadString (section, entry, "", txt2, sizeof (txt2), Fd);
         char *p = txt2;
@@ -1144,6 +1176,8 @@ void CanConfigServer::WriteToIni(bool par_Delete)
     }
 
     for (int c = 0; c < m_NumberOfChannels; c++) {
+        sprintf (entry, "can_controller%i_startup_state", c+1);
+        IniFileDataBaseWriteInt("CAN/Global", entry, m_ChannelStartupState.at(c), Fd);
         sprintf (entry, "can_controller%i_variante", c+1);
         strcpy (txt, "");
         for (int v = 0; v < m_Variants.size(); v++) {
@@ -1310,14 +1344,36 @@ void CanConfigServer::UpdateChannelMapping(Ui::CanConfigDialog *ui)
     for (int c = 0; c < m_NumberOfChannels; c++) {
         QStringList ChannelLine;
         ChannelLine.append(QString().number(c));
+        ChannelLine.append(QString());
+        if (m_ChannelStartupState.size() > c) {
+            switch(m_ChannelStartupState.at(c)) {
+            case 0:
+                ChannelLine.append(QString("OFF"));
+                break;
+            default:
+            case 1:
+                ChannelLine.append(QString("ON"));
+                break;
+            case 2:
+                ChannelLine.append(QString("IF_NOT_EXIST_OFF"));
+                break;
+            case 3:
+                ChannelLine.append(QString("IF_NOT_EXIST_ON"));
+                break;
+            }
+        } else {
+            ChannelLine.append(QString("ON"));  // new one are by default enabled
+        }
         QTreeWidgetItem *ChannelItem = new QTreeWidgetItem(ui->MappingTreeWidget, ChannelLine);
+        ChannelItem->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable | Qt::ItemIsUserCheckable | Qt::ItemIsEditable);
         ui->MappingTreeWidget->addTopLevelItem(ChannelItem);
         foreach (CanConfigVariant *Variant, m_Variants) {
             if (Variant->IsConnectedToChannel(c+1)) {
                 QStringList VariantLine;
                 VariantLine.append(Variant->GetName());
                 VariantLine.append(Variant->GetDescription());
-                VariantLine.append(QString().number(i));  // 3. column will be used to save the index inside in m_ChannelVariant verwendet and must be invisible
+                VariantLine.append(QString()); // no data for the variant inside the startup state column
+                VariantLine.append(QString().number(i));  // 4. column will be used to save the index inside in m_ChannelVariant verwendet and must be invisible
                 QTreeWidgetItem *VariantItem = new QTreeWidgetItem(ChannelItem, VariantLine);
                 m_ChannelVariant.insert(i, Variant);
                 ChannelItem->addChild(VariantItem);
@@ -1337,6 +1393,21 @@ void CanConfigServer::StoreDialogTab(Ui::CanConfigDialog *ui)
     this->m_EnableGatewayirtualDeviceDriverEqu = ui->VirtualGatewayLineEdit->text();
     this->m_EnableGatewayRealDeviceDriver = ui->RealGatewayComboBox->currentIndex();
     this->m_EnableGatewayRealDeviceDriverEqu = ui->RealGatewayLineEdit->text();
+    m_ChannelStartupState.clear();
+    for (int c = 0; c < ui->MappingTreeWidget->topLevelItemCount(); c++) {
+        QString StartupState = ui->MappingTreeWidget->model()->index(c, 2).data(Qt::DisplayRole).toString();
+        if (!StartupState.compare("OFF")) {
+            m_ChannelStartupState.append(0);
+        } else if (!StartupState.compare("ON")) {
+            m_ChannelStartupState.append(1);
+        } else if (!StartupState.compare("IF_NOT_EXIST_OFF")) {
+            m_ChannelStartupState.append(2);
+        } else if (!StartupState.compare("IF_NOT_EXIST_ON")) {
+            m_ChannelStartupState.append(3);
+        } else {
+            m_ChannelStartupState.append(1);
+        }
+    }
 }
 
 void CanConfigServer::AddNewChild(int par_Row)
@@ -3246,7 +3317,7 @@ void CanConfigDialog::on_RemoveVariantFromPushButton_clicked()
         int Row = SelectedChannel.row();
         QModelIndex Parent = SelectedChannel.parent();
         if (Parent.isValid()) {
-            QModelIndex Index = Parent.model()->index(Row, 2, Parent);
+            QModelIndex Index = Parent.model()->index(Row, 3, Parent);
             if (Index.isValid()) {
                 QVariant v = Index.data(Qt::DisplayRole);
                 if (v.isValid()) {

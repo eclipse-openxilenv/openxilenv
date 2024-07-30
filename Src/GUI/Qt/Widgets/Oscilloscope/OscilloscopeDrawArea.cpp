@@ -23,6 +23,7 @@
 #include "GetEventPos.h"
 #include "StringHelpers.h"
 
+#include <inttypes.h>
 #include <math.h>
 
 extern "C" {
@@ -34,21 +35,37 @@ extern "C" {
     #include "OscilloscopeFile.h"
 }
 
+#define DEBUG_PRINT_TO_FILE
+
+#ifdef DEBUG_PRINT_TO_FILE
+void OscilloscopeDrawAreaDebugPrint (OscilloscopeDrawArea *DrawArea, const char *txt, ...);
+#define DEBUG_PRINT(DrawArea, txt, ...) OscilloscopeDrawAreaDebugPrint(DrawArea, txt, ##__VA_ARGS__)
+#else
+#define DEBUG_PRINT(DrawArea, txt, ...)
+#endif
+
 OscilloscopeDrawArea::OscilloscopeDrawArea(OscilloscopeWidget *par_OscilloscopeWidget, OSCILLOSCOPE_DATA *par_Data, QWidget *parent) : QWidget(parent)
 {
     m_OscilloscopeWidget = par_OscilloscopeWidget;
     m_Data = par_Data;
     m_FileHandle = nullptr;
-    m_OnlyUpdateCursorFlag = 0;
-    m_OnlyUpdateZoomRectFlag = 0;
+    //m_OnlyUpdateCursorFlag = NO_CURSOR;
+    m_OnlyUpdateZoomRectFlag = NO_ZOOM_RECT;
     m_MouseGrabbed = 0;
+
+    DEBUG_PRINT (this, "QGuiApplication::platformName() = %s\n", QGuiApplication::platformName().toLatin1().data());
+    if(!QGuiApplication::platformName().compare(QString("xcb"))) {
+        m_IsX11 = true;
+    } else {
+        m_IsX11 = false;
+    }
 
     CursorPen = QPen (Qt::blue, 1, Qt::DashLine);
     RefCursorPen = QPen (Qt::red, 1, Qt::DashLine);
 
     createActions ();
 
-    setAutoFillBackground (false);
+    setAutoFillBackground(false);
     setAttribute(Qt::WA_OpaquePaintEvent, true);
     if (s_main_ini_val.DarkMode) {
         m_BackgroundColor = QColor (Qt::black);
@@ -81,235 +98,240 @@ static QPen BuildPen(int par_LineWidth, int par_Color)
     return Pen;
 }
 
-void OscilloscopeDrawArea::paintEvent(QPaintEvent *event)
+void OscilloscopeDrawArea::PaintTimeLineToPixmap(QRect par_Rec)
 {
     int i;
-    QRect Rec = event->rect();
-    int StartXPos = Rec.x() - 2;
-    int EndXPos = Rec.x() + Rec.width();
-
+    int StartXPos = par_Rec.x() - 2;
+    int EndXPos = par_Rec.x() + par_Rec.width();
     if (StartXPos < 0) {
         StartXPos = 0; // Otherwise there can be go to negative time
     }
 
+    QPainter painter(m_BufferPixMap);
+
+    // Fill background
+    DEBUG_PRINT (this, "fill background: rect.x()) = %" PRIi32 ", "
+                 "rect.y()) = %" PRIi32 ", "
+                 "rect.width()) = %" PRIi32 ", "
+                 "rect.height()) = %" PRIi32 "\n", par_Rec.x(), par_Rec.y(), par_Rec.width(), par_Rec.height());
+    painter.fillRect (par_Rec, m_BackgroundColor);
+
+    uint64_t w = static_cast<uint64_t>(width());
+    uint64_t d = m_Data->t_window_end - m_Data->t_window_start;
+    // Y axis == time
+    uint64_t StartXTime = my_umuldiv64(static_cast<uint64_t>(StartXPos), d, w) + m_Data->t_window_start;
+    uint64_t EndXTime =  my_umuldiv64(static_cast<uint64_t>(EndXPos), d, w) + m_Data->t_window_start;
+    StartXTime /= m_Data->t_step;
+    StartXTime *= m_Data->t_step;
+    EndXTime /= m_Data->t_step;
+    EndXTime *= m_Data->t_step;
+    DEBUG_PRINT (this, "paintEvent: StartXTime = %" PRIu64 ", EndXTime = %" PRIu64 ", t_current_to_update_end = %" PRIu64 "\n", StartXTime, EndXTime, m_Data->t_current_to_update_end);
+
+    if (m_Data->t_current_to_update_end > StartXTime) {   // There are no valid values in this time range
+        if (EndXTime > m_Data->t_current_to_update_end) {
+            EndXTime = m_Data->t_current_to_update_end;
+        }
+        int win_height = height();
+        double win_height_d = static_cast<double>(win_height);
+        double win_height_p20_d = win_height_d + 20;  // Easyer for out of window hight check, the max. line with is limited to 40 pixek
+
+        // First paint all lines on the right side
+        for (i = 0; i < 20; i++) {
+            if ((m_Data->vids_right[i] > 0) && (!m_Data->vars_disable_right[i])) {
+                // set the color
+                painter.setPen (BuildPen(m_Data->LineSize_right[i], m_Data->color_right[i]));
+
+                uint64_t t = StartXTime;
+                int x_m1, y_m1, valid_m1 = 0;
+                for (;;) {
+                    int x;
+                    if (t >= m_Data->t_window_start) {
+                        x = static_cast<int>(my_umuldiv64(t - m_Data->t_window_start, w, d));
+                        double Value = FiFoPosRight (m_Data, i, t);
+                        if (!_isnan (Value)) {
+                            double y_d = (((Value - m_Data->min_right[i]) / (m_Data->max_right[i] - m_Data->min_right[i]) - m_Data->y_off[m_Data->zoom_pos]) * m_Data->y_zoom[m_Data->zoom_pos] * win_height_d);
+                            if (y_d > win_height_p20_d) y_d = win_height_p20_d;
+                            if (y_d < -20.0) y_d = -20.0;  // Line width  max. 40 pixel
+                            int y = win_height - static_cast<int>(y_d + 0.5);
+
+                            if (m_Data->presentation_right[i] == 1) {
+                                QPoint Point(x, y);
+                                painter.drawPoint(Point);
+                            } else {
+                                if (valid_m1) { // Value before was valid too
+                                    if (y != y_m1) {  // Are the y changed?
+                                        if (x != x_m1) {  // Are the x changed?
+                                            if ((x - x_m1) > 1) { // Are the x value change more as one pixel? Than we have to paint a _| otherwise only a |
+                                                painter.drawLine (x_m1, y_m1, x, y_m1);
+                                            }
+                                            painter.drawLine (x, y_m1, x, y);
+                                            x_m1 = x;
+                                            y_m1 = y;
+                                        }
+                                    }
+                                } else {
+                                    // Value before was not valid than only store it
+                                    x_m1 = x;
+                                    y_m1 = y;
+                                }
+                            }
+                            valid_m1 = 1;
+                        } else if (m_Data->presentation_right[i] == 0) {
+                            // This is only neccassary for lines not for points
+                            if (valid_m1) { // The value before was valid and are now invalid
+                                if (x != x_m1) {  // Are the x changed?
+                                    if ((x - x_m1) > 1) { // Are the x value change more as one pixel? Than we have to paint a _| otherwise only a |
+                                        painter.drawLine (x_m1, y_m1, x, y_m1);
+                                    } else {
+                                        painter.drawPoint(x, y_m1);
+                                    }
+                                }
+                            }
+                            valid_m1 = 0;
+                        }
+                    }
+                    t += m_Data->t_step;
+                    if (t > EndXTime) {
+                        if (m_Data->presentation_right[i] == 0) {
+                            // This is only neccassary for lines not for points
+                            if (valid_m1) { // The value before was valid
+                                if (x != x_m1) {  // Are the x changed?
+                                    if ((x - x_m1) > 1) { // Are the x value change more as one pixel? Than we have to paint a _| otherwise only a |
+                                        painter.drawLine (x_m1, y_m1, x, y_m1);
+                                    } else {
+                                        painter.drawPoint(x, y_m1);
+                                    }
+                                }
+                            }
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+        // Second paint all lines on the left side
+        for (i = 0; i < 20; i++) {
+            if ((m_Data->vids_left[i] > 0) && (!m_Data->vars_disable_left[i])) {
+                // set the color
+                painter.setPen (BuildPen(m_Data->LineSize_left[i], m_Data->color_left[i]));
+
+                uint64_t t = StartXTime;
+                int x_m1, y_m1, valid_m1 = 0;
+                for (;;) {
+                    int x;
+                    if (t >= m_Data->t_window_start) {
+                        x = static_cast<int>(my_umuldiv64(t - m_Data->t_window_start, w, d));
+                        double Value = FiFoPosLeft (m_Data, i, t);
+                        if (!_isnan (Value)){
+                            double y_d = (((Value - m_Data->min_left[i]) / (m_Data->max_left[i] - m_Data->min_left[i]) - m_Data->y_off[m_Data->zoom_pos]) * m_Data->y_zoom[m_Data->zoom_pos] * win_height_d);
+                            if (y_d > win_height_p20_d) y_d = win_height_p20_d;
+                            if (y_d < -20.0) y_d = -20.0;  // Line width  max. 40 pixel
+                            int y = win_height - static_cast<int>(y_d + 0.5);
+
+                            if (m_Data->presentation_left[i] == 1) {
+                                QPoint Point(x, y);
+                                painter.drawPoint(Point);
+                            } else {
+                                if (valid_m1) { // Value before was valid too
+                                    if (y != y_m1) {  // Are the y changed?
+                                        if (x != x_m1) {  //  Are the x changed?
+                                            if ((x - x_m1) > 1) { // Are the x value change more as one pixel? Than we have to paint a _| otherwise only a |
+                                                painter.drawLine (x_m1, y_m1, x, y_m1);
+                                            }
+                                            painter.drawLine (x, y_m1, x, y);
+                                            x_m1 = x;
+                                            y_m1 = y;
+                                        }
+                                    }
+                                } else {
+                                    // Value before was not valid than only store it
+                                    x_m1 = x;
+                                    y_m1 = y;
+                                }
+                            }
+                            valid_m1 = 1;
+                        } else if (m_Data->presentation_left[i] == 0) {
+                            // This is only neccassary for lines not for points
+                            if (valid_m1) { // The value before was valid
+                                if (x != x_m1) {  // Are the x changed?
+                                    if ((x - x_m1) > 1) { // Are the x value change more as one pixel? Than we have to paint a _| otherwise only a |
+                                        painter.drawLine (x_m1, y_m1, x, y_m1);
+                                        painter.drawLine (x_m1, y_m1, x, y_m1);
+                                    } else {
+                                        painter.drawPoint(x, y_m1);
+                                    }
+                                }
+                            }
+                            valid_m1 = 0;
+                        }
+                    }
+                    t += m_Data->t_step;
+                    if (t > EndXTime) {
+                        if (m_Data->presentation_left[i] == 0) {
+                            // This is only neccassary for lines not for points
+                            if (valid_m1) { // The value before was valid
+                                if (x != x_m1) {  // Are the x changed?
+                                    if ((x - x_m1) > 1) { // Are the x value change more as one pixel? Than we have to paint a _| otherwise only a |
+                                        painter.drawLine (x_m1, y_m1, x, y_m1);
+                                    } else {
+                                        painter.drawPoint(x, y_m1);
+                                    }
+                                }
+                            }
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+    }
+}
+
+void OscilloscopeDrawArea::paintEvent(QPaintEvent *event)
+{
     QPainter painter(this);
 
     if (m_OnlyUpdateZoomRectFlag) {
-        if (m_OnlyUpdateCursorFlag) {
-            DEBUG_PRINT ("Internal error");
-        }
+        painter.drawPixmap(this->rect(), *m_BufferPixMap);
         // Paint only the zoom frame
-        redraw_zoom (&painter);
-        m_OnlyUpdateZoomRectFlag = 0;
-    } else if (m_OnlyUpdateCursorFlag) {
-        if (!m_Data->state) redraw_cursor (&painter);
-        m_OnlyUpdateCursorFlag = 0;
+        PaintZoomRectangle (&painter);
+        m_OnlyUpdateZoomRectFlag = NO_ZOOM_RECT;
     } else {
+        if (m_BufferPixMap == nullptr) {
+            m_BufferPixMap = new QPixmap(size());
+            m_ClearFlag = true;
+        } else if (m_BufferPixMap->size() != size()) {
+            delete m_BufferPixMap;
+            m_BufferPixMap = new QPixmap(size());
+            m_ClearFlag = true;
+        }
         EnterOsciWidgetCriticalSection (m_Data->CriticalSectionNumber);
-
         // Store how many time elapsed till the paint method is called.
         // this have to paint inside the next call
         m_Data->t_current_buffer_end_diff = m_Data->t_current_buffer_end - m_Data->t_current_buffer_end_save;
         m_Data->t_current_to_update_end = m_Data->t_current_buffer_end;
         if (m_Data->xy_view_flag) {
-            if (m_BufferPixMap == nullptr) {
-                m_BufferPixMap = new QPixmap(size());
-                m_ClearFlag = true;
-            } else if (m_BufferPixMap->size() != size()) {
-                delete m_BufferPixMap;
-                m_BufferPixMap = new QPixmap(size());
-                m_ClearFlag = true;
-            }
             PaintXYToPixmap();
-            painter.drawPixmap(this->rect(), *m_BufferPixMap);
-
         } else {
-            // Fill background
-            painter.fillRect (event->rect(), m_BackgroundColor);
-
-            uint64_t w = static_cast<uint64_t>(width());
-            uint64_t d = m_Data->t_window_end - m_Data->t_window_start;
-            // Y axis == time
-            uint64_t StartXTime = my_umuldiv64(static_cast<uint64_t>(StartXPos), d, w) + m_Data->t_window_start;
-            uint64_t EndXTime =  my_umuldiv64(static_cast<uint64_t>(EndXPos), d, w) + m_Data->t_window_start;
-            StartXTime /= m_Data->t_step;
-            StartXTime *= m_Data->t_step;
-            EndXTime /= m_Data->t_step;
-            EndXTime *= m_Data->t_step;
-            DEBUG_PRINT ("paintEvent: StartXTime = %" PRIu64 ", EndXTime = %" PRIu64 ", t_current_to_update_end = %" PRIu64 "\n", StartXTime, EndXTime, m_Data->t_current_to_update_end);
-
-            if (m_Data->t_current_to_update_end > StartXTime) {   // There are no valid values in this time range
-                if (EndXTime > m_Data->t_current_to_update_end) {
-                    EndXTime = m_Data->t_current_to_update_end;
-                }
-                int win_height = height();
-                double win_height_d = static_cast<double>(win_height);
-                double win_height_p20_d = win_height_d + 20;  // Easyer for out of window hight check, the max. line with is limited to 40 pixek
-
-                // First paint all lines on the right side
-                for (i = 0; i < 20; i++) {
-                    if ((m_Data->vids_right[i] > 0) && (!m_Data->vars_disable_right[i])) {
-                        // set the color
-                        painter.setPen (BuildPen(m_Data->LineSize_right[i], m_Data->color_right[i]));
-
-                        uint64_t t = StartXTime;
-                        int x_m1, y_m1, valid_m1 = 0;
-                        for (;;) {
-                            int x;
-                            if (t >= m_Data->t_window_start) {
-                                x = static_cast<int>(my_umuldiv64(t - m_Data->t_window_start, w, d));
-                                double Value = FiFoPosRight (m_Data, i, t);
-                                if (!_isnan (Value)) {
-                                    double y_d = (((Value - m_Data->min_right[i]) / (m_Data->max_right[i] - m_Data->min_right[i]) - m_Data->y_off[m_Data->zoom_pos]) * m_Data->y_zoom[m_Data->zoom_pos] * win_height_d);
-                                    if (y_d > win_height_p20_d) y_d = win_height_p20_d;
-                                    if (y_d < -20.0) y_d = -20.0;  // Line width  max. 40 pixel
-                                    int y = win_height - static_cast<int>(y_d + 0.5);
-
-                                    if (m_Data->presentation_right[i] == 1) {
-                                        QPoint Point(x, y);
-                                        painter.drawPoint(Point);
-                                    } else {
-                                        if (valid_m1) { // Value before was valid too
-                                            if (y != y_m1) {  // Are the y changed?
-                                                if (x != x_m1) {  // Are the x changed?
-                                                    if ((x - x_m1) > 1) { // Are the x value change more as one pixel? Than we have to paint a _| otherwise only a |
-                                                        painter.drawLine (x_m1, y_m1, x, y_m1);
-                                                    }
-                                                    painter.drawLine (x, y_m1, x, y);
-                                                    x_m1 = x;
-                                                    y_m1 = y;
-                                                }
-                                            }
-                                        } else {
-                                            // Value before was not valid than only store it
-                                            x_m1 = x;
-                                            y_m1 = y;
-                                        }
-                                    }
-                                    valid_m1 = 1;
-                                } else if (m_Data->presentation_right[i] == 0) {
-                                    // This is only neccassary for lines not for points
-                                    if (valid_m1) { // The value before was valid and are now invalid
-                                        if (x != x_m1) {  // Are the x changed?
-                                            if ((x - x_m1) > 1) { // Are the x value change more as one pixel? Than we have to paint a _| otherwise only a |
-                                                painter.drawLine (x_m1, y_m1, x, y_m1);
-                                            } else {
-                                                painter.drawPoint(x, y_m1);
-                                            }
-                                        }
-                                    }
-                                    valid_m1 = 0;
-                                }
-                            }
-                            t += m_Data->t_step;
-                            if (t > EndXTime) {
-                                if (m_Data->presentation_right[i] == 0) {
-                                    // This is only neccassary for lines not for points
-                                    if (valid_m1) { // The value before was valid
-                                        if (x != x_m1) {  // Are the x changed?
-                                            if ((x - x_m1) > 1) { // Are the x value change more as one pixel? Than we have to paint a _| otherwise only a |
-                                                painter.drawLine (x_m1, y_m1, x, y_m1);
-                                            } else {
-                                                painter.drawPoint(x, y_m1);
-                                            }
-                                        }
-                                    }
-                                }
-                                break;
-                            }
-                        }
-                    }
-                }
-                // Second paint all lines on the left side
-                for (i = 0; i < 20; i++) {
-                    if ((m_Data->vids_left[i] > 0) && (!m_Data->vars_disable_left[i])) {
-                        // set the color
-                        painter.setPen (BuildPen(m_Data->LineSize_left[i], m_Data->color_left[i]));
-
-                        uint64_t t = StartXTime;
-                        int x_m1, y_m1, valid_m1 = 0;
-                        for (;;) {
-                            int x;
-                            if (t >= m_Data->t_window_start) {
-                                x = static_cast<int>(my_umuldiv64(t - m_Data->t_window_start, w, d));
-                                double Value = FiFoPosLeft (m_Data, i, t);
-                                if (!_isnan (Value)){
-                                    double y_d = (((Value - m_Data->min_left[i]) / (m_Data->max_left[i] - m_Data->min_left[i]) - m_Data->y_off[m_Data->zoom_pos]) * m_Data->y_zoom[m_Data->zoom_pos] * win_height_d);
-                                    if (y_d > win_height_p20_d) y_d = win_height_p20_d;
-                                    if (y_d < -20.0) y_d = -20.0;  // Line width  max. 40 pixel
-                                    int y = win_height - static_cast<int>(y_d + 0.5);
-
-                                    if (m_Data->presentation_left[i] == 1) {
-                                        QPoint Point(x, y);
-                                        painter.drawPoint(Point);
-                                    } else {
-                                        if (valid_m1) { // Value before was valid too
-                                            if (y != y_m1) {  // Are the y changed?
-                                                if (x != x_m1) {  //  Are the x changed?
-                                                    if ((x - x_m1) > 1) { // Are the x value change more as one pixel? Than we have to paint a _| otherwise only a |
-                                                        painter.drawLine (x_m1, y_m1, x, y_m1);
-                                                    }
-                                                    painter.drawLine (x, y_m1, x, y);
-                                                    x_m1 = x;
-                                                    y_m1 = y;
-                                                }
-                                            }
-                                        } else {
-                                            // Value before was not valid than only store it
-                                            x_m1 = x;
-                                            y_m1 = y;
-                                        }
-                                    }
-                                    valid_m1 = 1;
-                                } else if (m_Data->presentation_left[i] == 0) {
-                                    // This is only neccassary for lines not for points
-                                    if (valid_m1) { // The value before was valid
-                                        if (x != x_m1) {  // Are the x changed?
-                                            if ((x - x_m1) > 1) { // Are the x value change more as one pixel? Than we have to paint a _| otherwise only a |
-                                                painter.drawLine (x_m1, y_m1, x, y_m1);
-                                                painter.drawLine (x_m1, y_m1, x, y_m1);
-                                            } else {
-                                                painter.drawPoint(x, y_m1);
-                                            }
-                                        }
-                                    }
-                                    valid_m1 = 0;
-                                }
-                            }
-                            t += m_Data->t_step;
-                            if (t > EndXTime) {
-                                if (m_Data->presentation_left[i] == 0) {
-                                    // This is only neccassary for lines not for points
-                                    if (valid_m1) { // The value before was valid
-                                        if (x != x_m1) {  // Are the x changed?
-                                            if ((x - x_m1) > 1) { // Are the x value change more as one pixel? Than we have to paint a _| otherwise only a |
-                                                painter.drawLine (x_m1, y_m1, x, y_m1);
-                                            } else {
-                                                painter.drawPoint(x, y_m1);
-                                            }
-                                        }
-                                    }
-                                }
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
+            PaintTimeLineToPixmap(event->rect());
         }
-        if (!m_Data->state) redraw_cursor (&painter);
+        painter.drawPixmap(this->rect(), *m_BufferPixMap);
+        if (!m_Data->state) PaintCursor (&painter);
         m_Data->t_current_updated_end = m_Data->t_current_to_update_end;
         LeaveOsciWidgetCriticalSection (m_Data->CriticalSectionNumber);
     }
 }
 
-
-
-void OscilloscopeDrawArea::redraw_zoom (QPainter *painter)
+void OscilloscopeDrawArea::PaintZoomRectangle (QPainter *painter)
 {
-    // Paint with XOR operation
-    painter->setCompositionMode (QPainter::RasterOp_SourceXorDestination);
-    QPen Pen(QColor (255,255,255));
+    DEBUG_PRINT(this, "PaintZoomRectangle: paint zoom box\n");
+    QColor Color;
+    if (s_main_ini_val.DarkMode) {
+        Color = QColor(Qt::white);
+    } else {
+        Color = QColor(Qt::black);
+    }
+    QPen Pen(Color);
     Pen.setStyle(Qt::DashLine);
     painter->setPen (Pen);
     painter->drawLine (m_x1, m_y1, m_x1, m_y2);
@@ -318,7 +340,7 @@ void OscilloscopeDrawArea::redraw_zoom (QPainter *painter)
     painter->drawLine (m_x2, m_y1, m_x1, m_y1);
 }
 
-void OscilloscopeDrawArea::redraw_cursor (QPainter *painter)
+void OscilloscopeDrawArea::PaintCursor (QPainter *painter)
 {
     double x_d, y_d;
     double Min, Max, Value, ValueX, MinX, MaxX;
@@ -406,17 +428,11 @@ void OscilloscopeDrawArea::redraw_cursor (QPainter *painter)
         Pen.setStyle(Qt::DashLine);
         painter->setPen (Pen);
 
-        enum QPainter::CompositionMode SaveCompositionMode = painter->compositionMode ();
-        painter->setCompositionMode (QPainter::RasterOp_SourceXorDestination);
-
-        if ((qIsInf(x_d)) | (qIsInf(y_d)) | (qIsNaN(x_d)) | (qIsNaN(y_d)))
-        {
+        if ((qIsInf(x_d)) | (qIsInf(y_d)) | (qIsNaN(x_d)) | (qIsNaN(y_d))) {
             // no zoom possibility
             // actual no drawing of the line
             // better solution can be developed
-        }
-        else
-        {
+        } else {
             if (Visable) {
                 QLineF Line1(x_d, y_d, x_d, static_cast<double>(height()));
                 painter->drawLine (Line1);
@@ -442,7 +458,6 @@ void OscilloscopeDrawArea::redraw_cursor (QPainter *painter)
                 }
             }
         }
-        painter->setCompositionMode (SaveCompositionMode);
         painter->setPen (SavePen);
     }
 }
@@ -1006,10 +1021,11 @@ void OscilloscopeDrawArea::mouseReleaseEvent(QMouseEvent * event)
     case Qt::LeftButton:
         if (m_MouseGrabbed) {
             releaseMouse();
-            DEBUG_PRINT ("zoom loeschen\n");
-            m_OnlyUpdateZoomRectFlag = 1;
-            this->repaint();
-            m_OnlyUpdateZoomRectFlag = 0;
+            DEBUG_PRINT (this, "delete zoom\n");
+            m_OnlyUpdateZoomRectFlag = LAST_ZOOM_RECT;
+            //this->repaint();
+            this->update();
+            //m_OnlyUpdateZoomRectFlag = 0;
             m_MouseGrabbed = 0;
             event->accept();
 
@@ -1020,6 +1036,8 @@ void OscilloscopeDrawArea::mouseReleaseEvent(QMouseEvent * event)
             menu.addAction (NoZoomAct);
 
             menu.exec(GetEventGlobalPos(event));
+
+            update();
         }
         break;
     default:
@@ -1040,14 +1058,15 @@ void OscilloscopeDrawArea::mousePressEvent(QMouseEvent * event)
                 m_MouseGrabbed = 1;
                 m_x2 = m_x1 = GetEventXPos(event);
                 m_y2 = m_y1 = GetEventYPos(event);
-                m_OnlyUpdateZoomRectFlag = 1;
-                DEBUG_PRINT ("erstes zoom malen\n");
-                this->repaint();
-                m_OnlyUpdateZoomRectFlag = 0;
+                m_OnlyUpdateZoomRectFlag = FIRST_ZOOM_RECT;
+                DEBUG_PRINT (this, "first paint zoom\n");
+                //this->repaint();
+                this->update();
+                //m_OnlyUpdateZoomRectFlag = 0;
                 event->accept();
             }
         } else {
-            DEBUG_PRINT ("setze Cursor\n");
+            DEBUG_PRINT (this, "setze Cursor\n");
             if (m_Data->xy_view_flag) {
                 uint64_t Time;
                 if (PickingXYPoint(GetEventXPos(event), GetEventYPos(event), &Time)) {
@@ -1072,16 +1091,18 @@ void OscilloscopeDrawArea::mouseMoveEvent(QMouseEvent * event)
         int x = GetEventXPos(event);
         int y = GetEventYPos(event);
         if ((m_x2 != x) || (m_y2 != y)) {
-            DEBUG_PRINT ("altes zoom loeschen\n");
-            m_OnlyUpdateZoomRectFlag = 1;
-            this->repaint();
-            m_OnlyUpdateZoomRectFlag = 0;
+            DEBUG_PRINT (this, "delete old zoom\n");
+            m_OnlyUpdateZoomRectFlag = NEXT_ZOOM_RECT;
+            //this->repaint();
+            this->update();
+            //m_OnlyUpdateZoomRectFlag = 0;
             m_x2 = x;
             m_y2 = y;
-            DEBUG_PRINT ("  dann wieder neues zoom malen\n");
-            m_OnlyUpdateZoomRectFlag = 1;
-            this->repaint();
-            m_OnlyUpdateZoomRectFlag = 0;
+            DEBUG_PRINT (this, "  than paint new zoom\n");
+            m_OnlyUpdateZoomRectFlag = NEXT_ZOOM_RECT;
+            //this->repaint();
+            this->update();
+            //m_OnlyUpdateZoomRectFlag = 0;
         }
         event->accept();
     }
@@ -1089,9 +1110,10 @@ void OscilloscopeDrawArea::mouseMoveEvent(QMouseEvent * event)
 
 void OscilloscopeDrawArea::UpdateCursor ()
 {
-    m_OnlyUpdateCursorFlag = 1;
-    repaint ();
-    m_OnlyUpdateCursorFlag = 0;
+    //m_OnlyUpdateCursorFlag = FIRST_CURSOR;
+    //repaint ();
+    this->update();
+    //m_OnlyUpdateCursorFlag = NO_CURSOR;
 }
 
 bool OscilloscopeDrawArea::SetBackgroundImage(QString &FileName)
@@ -1124,26 +1146,29 @@ bool OscilloscopeDrawArea::SetBackgroundImage(QString &FileName)
 }
 
 // only for debugging
-#if DEBUG_PRINT_TO_FILE
-void OscilloscopeDrawArea::DebugPrint (const char *txt, ...)
-
+#ifdef DEBUG_PRINT_TO_FILE
+void OscilloscopeDrawAreaDebugPrint (OscilloscopeDrawArea *DrawArea, const char *txt, ...)
 {
     va_list args;
     va_start (args, txt);
 
-    if (m_FileHandle == nullptr) {
+    if (DrawArea->m_FileHandle == nullptr) {
         char Name[MAX_PATH];
-        sprintf (Name, "c:\\tmp\\%s_log.txt", this->m_Data->winname);
-        m_FileHandle = fopen (Name, "w");
-        if (m_FileHandle != nullptr) {
-            setvbuf (m_FileHandle, nullptr, _IOLBF, 1000);
+#ifdef _WIN32
+        sprintf (Name, "c:\\tmp\\%s_log.txt", DrawArea->GetOscilloscopeWidget()->GetWindowTitle().toLatin1().data());
+#else
+        sprintf (Name, "/tmp/%s_log.txt", DrawArea->GetOscilloscopeWidget()->GetWindowTitle().toLatin1().data());
+#endif
+        DrawArea->m_FileHandle = fopen (Name, "w");
+        if (DrawArea->m_FileHandle != nullptr) {
+            setvbuf (DrawArea->m_FileHandle, nullptr, _IOLBF, 1000);
         }
     }
-    if (m_FileHandle != nullptr) {
+    if (DrawArea->m_FileHandle != nullptr) {
         //fputs (txt, m_FileHandle);
         //fputs (Buffer, m_FileHandle);
-        vfprintf (m_FileHandle, txt, args);
-        fflush(m_FileHandle);
+        vfprintf (DrawArea->m_FileHandle, txt, args);
+        fflush(DrawArea->m_FileHandle);
     }
     va_end (args);
 }

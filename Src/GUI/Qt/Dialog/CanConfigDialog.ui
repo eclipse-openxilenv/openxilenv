@@ -185,14 +185,14 @@
                 </layout>
                </item>
                <item>
-                <layout class="QHBoxLayout" name="horizontalLayout_34">
+                <layout class="QHBoxLayout" name="horizontalLayout_34" stretch="3,0,2">
                  <item>
                   <widget class="QTreeWidget" name="MappingTreeWidget">
                    <property name="editTriggers">
-                    <set>QAbstractItemView::NoEditTriggers</set>
+                    <set>QAbstractItemView::AllEditTriggers</set>
                    </property>
                    <property name="columnCount">
-                    <number>3</number>
+                    <number>4</number>
                    </property>
                    <attribute name="headerDefaultSectionSize">
                     <number>100</number>
@@ -205,6 +205,11 @@
                    <column>
                     <property name="text">
                      <string notr="true">Description</string>
+                    </property>
+                   </column>
+                   <column>
+                    <property name="text">
+                     <string>Startup state</string>
                     </property>
                    </column>
                    <column>
@@ -1219,7 +1224,7 @@
                 </size>
                </property>
                <property name="text">
-                <string>Equation:</string>
+                <string>E&amp;quation:</string>
                </property>
               </widget>
              </item>
@@ -1240,7 +1245,7 @@
            <item>
             <widget class="QRadioButton" name="ObjectTypeNormalRadioButton">
              <property name="text">
-              <string>normal none multiplesed object</string>
+              <string>Normal none multiplexed object</string>
              </property>
             </widget>
            </item>
@@ -1763,7 +1768,7 @@
                 </size>
                </property>
                <property name="text">
-                <string>Equation</string>
+                <string>E&amp;quation</string>
                </property>
               </widget>
              </item>

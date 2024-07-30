@@ -21,7 +21,6 @@
 
 extern "C"
 {
-//    #include "IniDataBase.h"
     #include "MainValues.h"
     #include "EquationParser.h"
     #include "EnvironmentVariables.h"

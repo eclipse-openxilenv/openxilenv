@@ -86,7 +86,7 @@ void AddIniFileToHistory (char *par_IniFile)
             CheckIfDirectoryExists(Directory);
             StringAppendMaxCharTruncate(Directory, "/LastLoadedFiles.ini", sizeof(Directory));
 #endif
-            Fd = IniFileDataBaseOpen(Directory);
+            Fd = IniFileDataBaseOpenNoFilterPossible(Directory);
             if (Fd <= 0) {
                 // If file not exist create it.
                 Fd = IniFileDataBaseCreateAndOpenNewIniFile(Directory);
@@ -120,7 +120,7 @@ void AddIniFileToHistory (char *par_IniFile)
                 } else {  // It is not inside
                     IniFileDataBaseWriteString (ProgramName, "last_used_ini_file", par_IniFile, Fd);
                 }
-                IniFileDataBaseSave(Fd, Directory, 2);
+                IniFileDataBaseSaveNoFilterPossible(Fd, Directory, 2);
             }
 #ifdef _WIN32
         }

@@ -342,7 +342,8 @@ typedef struct NEW_CAN_SERVER_CONFIG_STRUCT {
     /*64*4*/ sJ1939Tp_MP_TxChannel J1939Tp_MP_TxChannels[J1939TP_MP_CHANNELS_MAX];
 
     /*4*/    int32_t VirtualNetworkId;
-             int8_t filler[8192-5292];
+    /*4*/    int32_t StartupState;   // 0 -> off 1, -> on
+             int8_t filler[8192-5296];
     } channels[MAX_CAN_CHANNELS];            // max. 4 Kanaele    8192Bytes
 
     NEW_CAN_SERVER_OBJECT objects[MAX_OBJECTS_ALL_CHANNELS];       // max. 512 CAN-Objekte fuer alle Kanal  131072Bytes

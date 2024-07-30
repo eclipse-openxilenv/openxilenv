@@ -81,8 +81,6 @@ saveprocessesdialog::saveprocessesdialog(QWidget *parent) : Dialog(parent),
     } else if (strcmp(strg, "SATVLFILE") == 0) {
         ApplTarget = TO_SATVLFILE;
     } else {
-        ThrowError(MESSAGE_STOP, "Wrong Application-Target in INI-File"
-                   "\nUsing \"to svl\" as default !");
         ApplTarget = TO_FILE;
     }
 

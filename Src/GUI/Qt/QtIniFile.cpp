@@ -33,6 +33,11 @@ int ScQt_IniFileDataBaseOpen(QString &par_Filename)
     return IniFileDataBaseOpen(QStringToConstChar(par_Filename));
 }
 
+int ScQt_IniFileDataBaseOpenNoFilterPossible(QString &par_Filename)
+{
+    return IniFileDataBaseOpenNoFilterPossible(QStringToConstChar(par_Filename));
+}
+
 int ScQt_IniFileDataBaseClose(int par_FileDescriptor)
 {
     return IniFileDataBaseClose(par_FileDescriptor);

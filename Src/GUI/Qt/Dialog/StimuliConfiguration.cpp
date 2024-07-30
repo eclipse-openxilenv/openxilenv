@@ -40,11 +40,17 @@ StimuliConfiguration::StimuliConfiguration(QString &par_ConfigurationFileName, Q
 {
     ui->setupUi(this);
 
+    m_Model = new QStringListModel(this);
+    m_SortModelListView = new QSortFilterProxyModel(this);
+    m_SortModelListView->setSourceModel(m_Model);
+
     ui->TriggerEventComboBox->addItem(QString(">"));
 
     m_SortModelComboBox = nullptr;
 
     ui->ConfigurationFileNameLineEdit->setText (par_ConfigurationFileName);
+
+    connect(ui->NotStimulateFilterLineEdit, SIGNAL(textChanged(QString)), m_SortModelListView, SLOT(setFilterWildcard(QString)));
 
     if (!par_ConfigurationFileName.isEmpty() &&
         (access (QStringToConstChar(par_ConfigurationFileName), 0) == 0)) {
@@ -59,17 +65,20 @@ StimuliConfiguration::StimuliConfiguration(QString &par_ConfigurationFileName, Q
         // Set the default values
         SetDefaultValues();
     }
+    // do that at last
+    ui->AllVariableListView->setModel(m_SortModelListView);
 }
 
 StimuliConfiguration::~StimuliConfiguration()
 {
     delete ui;
+    if (m_SortModelListView != nullptr) delete m_SortModelListView;
+    if (m_Model != nullptr) delete m_Model;
     if (m_SortModelComboBox != nullptr) delete m_SortModelComboBox;
 }
 
 bool StimuliConfiguration::ReadStimuliVariablesFromHeader (QString par_StimuliFileName)
 {
-    ui->AllVariableListWidget->clear();
     ui->ToPlayVariableListWidget->clear();
     if (QFile(par_StimuliFileName).exists()) {
         char *VariableList;
@@ -81,15 +90,18 @@ bool StimuliConfiguration::ReadStimuliVariablesFromHeader (QString par_StimuliFi
         if (VariableList != nullptr) {
             char *p, *pp;
             bool NotTheEnd = true;
+            QStringList List;
             for (pp = p = VariableList; NotTheEnd; p++) {
                 if ((*p == ';') || (*p == 0)) {
                     if (*p == 0) NotTheEnd = false;
                     else *p = 0;
-                    ui->AllVariableListWidget->addItem (QString (pp));
+                    List.append(QString (pp));
                     pp = p + 1;
                 }
             }
             my_free (VariableList);
+            m_Model->setStringList(List);
+            m_Model->sort(0);
             return true;
         }
     }
@@ -188,12 +200,13 @@ void StimuliConfiguration::on_PlayFileNameLineEdit_editingFinished()
 
 void StimuliConfiguration::on_AddVariablePushButton_clicked()
 {
-    QList<QListWidgetItem*> SelectedItems = ui->AllVariableListWidget->selectedItems();
-    foreach (QListWidgetItem* Item, SelectedItems) {
-        QString Name = Item->data(Qt::DisplayRole).toString();
+    QModelIndexList Selected = ui->AllVariableListView->selectionModel()->selectedIndexes();
+    std::sort(Selected.begin(),Selected.end(),[](const QModelIndex& a, const QModelIndex& b)->bool{return a.row()>b.row();}); // sort from bottom to top
+    foreach (QModelIndex Item, Selected) {
+        QString Name = Item.data(Qt::DisplayRole).toString();
         if (ui->ToPlayVariableListWidget->findItems(Name, Qt::MatchFixedString).isEmpty()) {
             ui->ToPlayVariableListWidget->addItem (Name);
-            delete Item;
+            m_Model->removeRow(Item.row());
         }
     }
 }
@@ -201,17 +214,17 @@ void StimuliConfiguration::on_AddVariablePushButton_clicked()
 void StimuliConfiguration::on_DeleteVariablePushButton_clicked()
 {
     QList<QListWidgetItem*> SelectedItems = ui->ToPlayVariableListWidget->selectedItems();
+    QStringList List = m_Model->stringList();
     foreach (QListWidgetItem* Item, SelectedItems) {
         QString Name = Item->data(Qt::DisplayRole).toString();
-        if (ui->AllVariableListWidget->findItems(Name, Qt::MatchFixedString).isEmpty()) {
-            ui->AllVariableListWidget->addItem (Name);
-            delete Item;
-        } else {
-            delete Item;
+        if (List.indexOf(Name) < 0) {
+            List.append(Name);
         }
+        delete Item;
     }
+    m_Model->setStringList(List);
+    m_Model->sort(0);
 }
-
 
 void StimuliConfiguration::EnableDisableTrigger(bool par_Enable, bool par_Init)
 {
@@ -365,19 +378,16 @@ int StimuliConfiguration::StringToDialog(QString &par_CfgFileContent)
         return -1;
     }
     // All variables
+    QStringList List = m_Model->stringList();
     while (GetCfgEntry (Stream, HDPLAY_VAR, &Text, 0)) {
-        QList<QListWidgetItem *> Items = ui->AllVariableListWidget->findItems (Text, Qt::MatchExactly);
-        if (Items.size() >= 1) {
-            QListWidgetItem *Item = Items.at(0);
-            if (Item != nullptr) {
-                QString Variable = Item->data(Qt::DisplayRole).toString();
-                if (!Variable.isEmpty()) {
-                    ui->ToPlayVariableListWidget->addItem (Variable);
-                }
-                delete Item;
-            }
+        int Index = List.lastIndexOf(Text);
+        if (Index >= 0) {
+            List.removeAt(Index);
+            ui->ToPlayVariableListWidget->addItem (Text);
         }
     }
+    m_Model->setStringList(List);
+    m_Model->sort(0);
     return 0;
 }
 
@@ -446,7 +456,7 @@ void StimuliConfiguration::on_ConfigurationFileNameLineEdit_editingFinished()
 
 void StimuliConfiguration::on_SelectAllAvailableVariablesPushButton_clicked()
 {
-    ui->AllVariableListWidget->selectAll();
+    ui->AllVariableListView->selectAll();
 }
 
 void StimuliConfiguration::on_SelectAllPlayVariablePushButton_clicked()

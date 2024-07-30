@@ -84,7 +84,7 @@ void SetDarkMode(QApplication *par_Application, bool par_DarkMode)
             darkPalette.setColor(QPalette::WindowText, Qt::white);
             darkPalette.setColor(QPalette::Base, BaseColor);
             darkPalette.setColor(QPalette::AlternateBase, DarkColor);
-            darkPalette.setColor(QPalette::ToolTipBase, Qt::white);
+            darkPalette.setColor(QPalette::ToolTipBase, Qt::black);
             darkPalette.setColor(QPalette::ToolTipText, Qt::white);
             darkPalette.setColor(QPalette::Text, Qt::white);
             darkPalette.setColor(QPalette::Disabled, QPalette::Text, DisabledColor);

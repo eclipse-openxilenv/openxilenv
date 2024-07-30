@@ -39,6 +39,7 @@
 #include <QUrl>
 #include <QPluginLoader>
 #include <QFrame>
+#include <QProcess>
 
 #include "HotkeyHandler.h"
 #include "ControlPanel.h"
@@ -159,6 +160,9 @@ private:
     void loadAllPlugins();
     void CloseWindowByName(char *par_WindowName);
     void changeEvent(QEvent *arg_event);
+
+    QString GetSheetName(int par_index = -1);
+    Sheets *GetSheet(int par_index = -1);
 
 signals:
     void SetProgressBarSignal(int value, unsigned int par_progressID, bool par_CalledFromNonGuiThread);
@@ -348,6 +352,16 @@ private:
 
     bool m_ExitCodeSeeded;
     int m_ExitCode;
+};
+
+
+class StartExecutable : public QObject
+{
+    Q_OBJECT
+public:
+    void ConnectToProcess(QProcess *par_Process);
+public Q_SLOTS:
+    void ProcessFinished(int exitCode, QProcess::ExitStatus exitStatus);
 };
 
 

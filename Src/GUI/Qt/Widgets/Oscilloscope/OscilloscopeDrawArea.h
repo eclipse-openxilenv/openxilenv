@@ -18,6 +18,7 @@
 #ifndef OSCILLOSCOPEDRAWAREA_H
 #define OSCILLOSCOPEDRAWAREA_H
 
+#include <stdio.h>
 #include <QWidget>
 #include <QPixmap>
 #include <QImage>
@@ -28,13 +29,6 @@
 
 #include "OscilloscopeData.h"
 
-//#define DEBUG_PRINT_TO_FILE
-
-#ifdef DEBUG_PRINT_TO_FILE
-#define DEBUG_PRINT(txt, ...) DebugPrint(txt, __VA_ARGS__)
-#else
-#define DEBUG_PRINT(txt, ...)
-#endif
 
 class OscilloscopeWidget;
 
@@ -71,6 +65,7 @@ public slots:
     void TimeZoomSlot (void);
     void YandTimeZoomSlot (void);
     void NoZoomSlot (void);
+    OscilloscopeWidget *GetOscilloscopeWidget() { return m_OscilloscopeWidget; }
 
 protected:
     virtual void dragEnterEvent(QDragEnterEvent *event) Q_DECL_OVERRIDE;
@@ -82,10 +77,11 @@ protected:
     void mousePressEvent(QMouseEvent * event) Q_DECL_OVERRIDE;
     void mouseMoveEvent(QMouseEvent * event) Q_DECL_OVERRIDE;
 
-    void redraw_zoom (QPainter *painter);
-    void redraw_cursor (QPainter *painter);
+    void PaintZoomRectangle (QPainter *painter);
+    void PaintCursor (QPainter *painter);
 
 private:
+    void PaintTimeLineToPixmap(QRect par_Rec);
     void PaintXYToPixmap();
     bool PickingXYPoint(int x, int y, uint64_t *ret_Time);
     QPen CursorPen;
@@ -119,14 +115,13 @@ private:
 
     OscilloscopeWidget *m_OscilloscopeWidget;
 
-    int m_OnlyUpdateCursorFlag;
-
     int m_MouseGrabbed;
     int m_x1;
     int m_y1;
     int m_x2;
     int m_y2;
-    int m_OnlyUpdateZoomRectFlag;
+    enum OnlyUpdateZoomRectFlag {NO_ZOOM_RECT, FIRST_ZOOM_RECT, NEXT_ZOOM_RECT, LAST_ZOOM_RECT} m_OnlyUpdateZoomRectFlag;
+    bool m_IsX11;
 
     QColor m_BackgroundColor;
 
@@ -134,8 +129,8 @@ private:
     bool m_ClearFlag;         // If this is true delete m_BufferPixMap and paint everything new
     QImage *m_BackgroundImage;
 
+public:
     FILE *m_FileHandle;
-
 };
 
 #endif // OSCILLOSCOPEDRAWAREA_H

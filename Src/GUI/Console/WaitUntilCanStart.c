@@ -23,7 +23,6 @@ int WaitUntilXilEnvCanStart(char *par_InstanceName, void *par_Application)
 {
     const char *Name = GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_PROGRAM_NAME);
     printf("%s with the instance \"%s\" already running. %s will be terminated immediately!\n", Name, par_InstanceName, Name);
-    // Wenn 1 Zurueckgegeben wird XilEnv beenden
-    // Wenn 0 XilEnv Startup fortfuehren
+    // This will return alsways 1 to terminate XilEnv (it will never wait loke XilEnvGui)
     return 1;
 }

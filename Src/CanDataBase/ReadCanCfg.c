@@ -382,7 +382,13 @@ int SortMuxSignals (NEW_CAN_SERVER_CONFIG *csc, int o_p)
     int16_t NewSigs[MAX_SIGNALS_ONE_OBJECT];
     int NewSigsIdx;
     int s_p;
+    short *new_ptr;
 
+    // this must be recalculate each time it is used! csc can be moved!
+    new_ptr = (short*)(void*)&(csc->Symbols[csc->objects[o_p].SignalsArrayIdx]);
+    if (csc->objects[o_p].signals_ptr != new_ptr) {
+        csc->objects[o_p].signals_ptr = new_ptr;
+    }
 
     // MUX signale with same MUX start bit inide the MUX martix sort
     FirstMuxSig = -1;
@@ -729,6 +735,8 @@ NEW_CAN_SERVER_CONFIG *ReadCanConfig (int par_Fd)
         rxc = txc = 0;
         sprintf (section, "CAN/Global");
         csc->channels[c].enable = 0x0;
+        sprintf (entry, "can_controller%i_startup_state", c+1);
+        csc->channels[c].StartupState =  IniFileDataBaseReadInt ("CAN/Global", entry, 1, par_Fd);
         sprintf (entry, "can_controller%i_variante", c+1);
         IniFileDataBaseReadString ("CAN/Global", entry, "", txt2, sizeof (txt2), par_Fd);
         p = txt2;

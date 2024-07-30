@@ -179,10 +179,43 @@ int ParseCommandLine (char *ret_IniFile, unsigned int par_MaxCharsIniFile,
 
     // Search inside the complete command line string
     for (szCmdLine = lpCmdLine; (szToken = GetNextParameter(&szCmdLine, " ")) != NULL;) {
-        // Maybe XilEnv have an other name
-        if (stricmp(szToken, "-program_name") == 0) {
+        // Maybe XilEnv should have an other name
+        if (stricmp(szToken, "-executable_name") == 0) {
             if ((szToken = GetNextParameter(&szCmdLine, " ")) != NULL) {
                 SetProgramNameIntoMainSettings(szToken);
+            } else {
+                // Leave the loop if no more token found
+                break;
+            }
+        }
+        // Maybe XilEnv should have an additional set of environment variables
+        if (stricmp(szToken, "-enable_legacy_environment_variables") == 0) {
+            SetEnableLegacyEnvironmentVariables();
+        }
+        // Maybe INI file should be read throgh a filter program
+        if (stricmp(szToken, "-ini_input_filter") == 0) {
+            if ((szToken = GetNextParameter(&szCmdLine, " ")) != NULL) {
+                SetIniFilterProgram(szToken, 1);
+            } else {
+                // Leave the loop if no more token found
+                break;
+            }
+        }
+
+        // Maybe INI file should be write throgh a filter program
+        if (stricmp(szToken, "-ini_output_filter") == 0) {
+            if ((szToken = GetNextParameter(&szCmdLine, " ")) != NULL) {
+                SetIniFilterProgram(szToken, 2);
+            } else {
+                // Leave the loop if no more token found
+                break;
+            }
+        }
+
+        // Maybe INI file should be read and write throgh a filter program
+        if (stricmp(szToken, "-ini_filter") == 0) {
+            if ((szToken = GetNextParameter(&szCmdLine, " ")) != NULL) {
+                SetIniFilterProgram(szToken, 3);
             } else {
                 // Leave the loop if no more token found
                 break;

@@ -278,7 +278,7 @@ int RemoteMasterCopyAndStartExecutable(const char *par_ExecutableNameClient, con
         Counter++;
         RetOfCall = TransactRemoteMasterStartService (Socket, COMMAND_IS_RUNNING, Counter, 0, NULL, Req, Ack, ErrorString, sizeof(ErrorString));
         if (RetOfCall) {
-            ThrowError (1, "% already running error: %s", GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_PROGRAM_NAME), ErrorString);
+            ThrowError (1, "%s already running error: %s", GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_PROGRAM_NAME), ErrorString);
             goto __ERROR;
         } else {
             Counter++;

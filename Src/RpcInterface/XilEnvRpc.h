@@ -15,8 +15,8 @@
  */
 
 
-#ifndef __SCRPCDLL_H
-#define __SCRPCDLL_H
+#ifndef XILENVRPC_H
+#define XILENVRPC_H
 
 #include <stdint.h>
 
@@ -278,6 +278,7 @@ CFUNC SCRPCDLL_API int __STDCALL__ XilEnv_SetSymbolRaw(const char* Symbol, const
 
 // CAN
 CFUNC SCRPCDLL_API int __STDCALL__ XilEnv_SetCanChannelCount (int ChannelCount);
+CFUNC SCRPCDLL_API int __STDCALL__ XilEnv_SetSetCanChannelStartupState (int Channel, int StartupState);
 
 CFUNC SCRPCDLL_API int __STDCALL__ XilEnv_LoadCanVariante(const char* canfile, int channel);
 CFUNC SCRPCDLL_API int __STDCALL__ XilEnv_LoadAndSelCanVariante(const char* canfile, int channel);

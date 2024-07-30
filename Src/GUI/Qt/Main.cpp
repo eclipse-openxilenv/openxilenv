@@ -55,11 +55,7 @@ bool SystemDarkMode(QApplication *par_Application)
 }
 
 
-#ifdef _WIN32
-int main_main(int argc, char *argv[])
-#else
 int main(int argc, char *argv[])
-#endif
 {
 #ifndef _WIN32
     // Store the command line so we can access it later
@@ -120,18 +116,3 @@ int main(int argc, char *argv[])
     return ExitCode;
 }
 
-#ifdef _WIN32
-int main(int argc, char *argv[])
-{
-#if defined(_WIN32) && !defined(__GNUC__)
-    __try {
-        return main_main(argc, argv);
-    } __except(ExceptionFilter(GetExceptionInformation(), "main")) {
-        printf ("an exception has rised\n");
-    }
-    return -1;
-#else
-    return main_main(argc, argv);
-#endif
-}
-#endif

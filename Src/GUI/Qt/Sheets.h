@@ -34,7 +34,7 @@ public:
     void addSubWindowToSheet(MdiWindowWidget *arg_subWindow, int left, int top, int width, int height, int is_icon, int minimized_left, int minimized_right);
     void addSubWindowToSheet(MdiWindowWidget *arg_subWindow);
 
-    QString GetName();
+    QString GetName(int par_Index = -1);
 
     void writeToIni(bool par_IsSelectedSheet);
     void readFromIni(bool par_WithStorage, bool par_WithoutStorage);
@@ -54,7 +54,6 @@ public:
     MdiWindowWidget *FetchWidget (MdiWindowWidget *par_Widget, QSize *ret_MinSize = nullptr, QSize *ret_MaxSize = nullptr);
     bool ReleaseWidget(MdiWindowWidget *par_Widget);
     void Activating ();
-
     void SelectWindow (QString par_WindowName);
 
     static void CleanIni();

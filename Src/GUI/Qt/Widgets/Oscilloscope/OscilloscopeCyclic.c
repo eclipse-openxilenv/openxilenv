@@ -248,8 +248,10 @@ void SwitchAllSyncronOffline(void)
             all_oszidatas[x]->t_current_to_update_end = all_oszidatas[x]->t_current_buffer_end;
             all_oszidatas[x]->t_current_updated_end = all_oszidatas[x]->t_current_to_update_end;
             all_oszidatas[x]->t_cursor = all_oszidatas[x]->t_current_to_update_end;
+#if 0
             all_oszidatas[x]->t_window_end = all_oszidatas[x]->t_current_to_update_end;
             all_oszidatas[x]->t_window_start = all_oszidatas[x]->t_window_end - all_oszidatas[x]->t_window_size;
+#endif
         }
         LeaveOsciWidgetCriticalSection (all_oszidatas[x]->CriticalSectionNumber);
     }

@@ -46,6 +46,7 @@ typedef struct
                                                // 1 -> visable, 0 -> not visable
   int             BlackboardSize;       // Blackboard size (max numbers of variables)
   char            Editor[MAX_PATH];     // Path to a text editor
+  char            EditorX[MAX_PATH];     // Path to a text editor for Linux
   double          SchedulerPeriode;     // Scheduler periode
   int             SyncWithFlexray;      // Scheduler mit Flexray Synchronisieren
   int             WriteProtectIniProcessList;
@@ -168,11 +169,21 @@ typedef struct
   int             DarkMode;
   void*           QtApplicationPointer;
 
+  int             RenameExecutableActive;
   char*           ConfigurablePrefix[32];
+
+  int             EnableLegacyEnvironmentVariables;
+
+  char*           IniFilterProgram;
+  int             IniFilterProgramFlags;
+#define INI_FILTER_PROGRAM_INPUT                   0x1
+#define INI_FILTER_PROGRAM_OUTPUT                  0x2
+#define INI_FILTER_PROGRAM_NO_FILE_VERSION_CKECK   0x8
+
 } MAIN_INI_VAL;
 
 
-extern MAIN_INI_VAL   s_main_ini_val;
+extern MAIN_INI_VAL s_main_ini_val;
 extern int32_t CycleCounterVid;
 extern int DisplayUnitForNonePhysicalValues;
 
@@ -191,6 +202,8 @@ int IsExternProcessLoginSocketPortConfigured(void);
 
 void InitMainSettings(void);
 void SetProgramNameIntoMainSettings(const char *par_ProgramName);
+void SetIniFilterProgram(const char *par_FilterProgramName, int par_Flags);
 void SetDarkModeIntoMainSettings(int par_DarkMode);
+void SetEnableLegacyEnvironmentVariables(void);
 
 #endif

@@ -6,6 +6,7 @@ EXPORTS
     XilEnv_IsConnectedTo
     XilEnv_GetVersion
     XilEnv_GetAPIVersion
+    XilEnv_GetAPIModulePath
 
     XilEnv_CreateFileWithContent
     XilEnv_GetEnvironVar
@@ -14,11 +15,18 @@ EXPORTS
     XilEnv_TextOut
     XilEnv_ErrorTextOut
 
+    XilEnv_CreateFile
+    XilEnv_CloseHandle
+    XilEnv_ReadFile
+    XilEnv_WriteFile
+
     XilEnv_StopScheduler
     XilEnv_ContinueScheduler
     XilEnv_IsSchedulerRunning
     XilEnv_StartProcess
     XilEnv_StartProcessAndLoadSvl
+    XilEnv_StartProcessEx
+    XilEnv_StartProcessEx2
     XilEnv_StopProcess
     XilEnv_GetNextProcess
     XilEnv_GetProcessState
@@ -44,6 +52,7 @@ EXPORTS
 
     XilEnv_LoadDesktop
     XilEnv_SaveDesktop
+    XilEnv_ClearDesktop
     XilEnv_CreateDialog
     XilEnv_AddDialogItem
     XilEnv_ShowDialog
@@ -82,16 +91,22 @@ EXPORTS
     XilEnv_ImportVariProperties
     XilEnv_EnableRangeControl
     XilEnv_DisableRangeControl
+    XilEnv_WriteFrame
+    XilEnv_GetFrame
+    XilEnv_WriteFrameWaitReadFrame
     XilEnv_GetNextVari
+    XilEnv_GetNextVariEx
     XilEnv_GetVariEnum
     XilEnv_WrVariEnable
     XilEnv_WrVariDisable
+    XilEnv_IsWrVariEnabled
     XilEnv_LoadRefList
     XilEnv_AddRefList
     XilEnv_SaveRefList
 
     XilEnv_LoadSvl
     XilEnv_SaveSvl
+    XilEnv_SaveSal
 
     XilEnv_LoadCanVariante
     XilEnv_LoadAndSelCanVariante
@@ -135,6 +150,7 @@ EXPORTS
     XilEnv_CopyFileFromLocal
 
     XilEnv_SetCanChannelCount
+    XilEnv_SetSetCanChannelStartupState
 
     XilEnv_SetCanErr
     XilEnv_SetCanErrSignalName
@@ -146,6 +162,13 @@ EXPORTS
     XilEnv_StartCANRecorder
     XilEnv_StopCANRecorder
 
+    XilEnv_ReferenceSymbol
+    XilEnv_DereferenceSymbol
+    XilEnv_GetRaw
+    XilEnv_SetRaw
+    XilEnv_GetSymbolRaw
+    XilEnv_SetSymbolRaw
+
     XilEnv_SetupLinkToExternProcess
     XilEnv_GetLinkToExternProcess
     XilEnv_GetIndexFromLink
@@ -154,6 +177,7 @@ EXPORTS
     XilEnv_SetDataToLink
 
     XilEnv_ReferenceMeasurementToBlackboard
+    XilEnv_DereferenceMeasurementFromBlackboard
 
     XilEnv_GetLinkDataType
     XilEnv_GetLinkDataArrayCount
@@ -167,13 +191,17 @@ EXPORTS
     XilEnv_GetLinkSingleValueAddress
     XilEnv_GetLinkSingleValueDimensionCount
     XilEnv_GetLinkSingleValueDimension
-    XilEnv_SetLinkSingleValueDataDouble
     XilEnv_GetLinkSingleValueDataInt
     XilEnv_GetLinkSingleValueDataUint
+    XilEnv_GetLinkSingleValueDataDouble
     XilEnv_GetLinkSingleValueDataString
     XilEnv_GetLinkSingleValueDataStringPtr
     XilEnv_GetLinkSingleValueUnit
+    XilEnv_SetLinkSingleValueDataDouble
     XilEnv_GetLinkSingleValueUnitPtr
+    XilEnv_SetLinkSingleValueDataInt
+    XilEnv_SetLinkSingleValueDataUint
+    XilEnv_SetLinkSingleValueDataString
 
     XilEnv_GetLinkArrayValueDataType
     XilEnv_GetLinkArrayValueTargetDataType
@@ -188,5 +216,9 @@ EXPORTS
     XilEnv_GetLinkArrayValueDataStringPtr
     XilEnv_GetLinkArrayValueUnit
     XilEnv_GetLinkArrayValueUnitPtr
+    XilEnv_SetLinkArrayValueDataDouble
+    XilEnv_SetLinkArrayValueDataInt
+    XilEnv_SetLinkArrayValueDataUint
+    XilEnv_SetLinkArrayValueDataString
 
     XilEnv_PrintLinkData

@@ -20,6 +20,7 @@
 
 #include <QDialog>
 #include <QSortFilterProxyModel>
+#include <QStringListModel>
 #include <QTextStream>
 #include "Dialog.h"
 
@@ -84,6 +85,9 @@ private:
     void EnableDisableTrigger(bool par_Enable, bool par_Init = false);
 
     int LoadNewCfgFile(QString &par_NewCfgFile);
+
+    QStringListModel *m_Model;
+    QSortFilterProxyModel *m_SortModelListView;
 
     QSortFilterProxyModel *m_SortModelComboBox;
 

@@ -307,6 +307,7 @@ int StartupInit (void * par_Application)
     status_vars[2] = add_bbvari (GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_STIMULUS_PLAYER), BB_UBYTE, "");
     status_vars[3] = add_bbvari (GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_EQUATION_CALCULATOR), BB_UBYTE, "");
     status_vars[4] = add_bbvari (GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_TRACE_RECORDER), BB_UBYTE, "");
+    // exit code if an program is startet with START_EXE script command (not the XilEnv exit code)
     status_vars[5] = add_bbvari (ExtendsWithConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_LONG2_BLACKBOARD, "ExitCode", txt, sizeof(txt)), BB_DWORD, "");
 
     SetNotFasterThanRealtimeState (s_main_ini_val.NotFasterThanRealTime);

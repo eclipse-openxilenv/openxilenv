@@ -1,6 +1,7 @@
 set(CommonFileList
     DeleteWindowFromIni.c
     IniDataBase.c
+    IniDataBaseInOutputFilter.c
 )
 
 target_sources(XilEnv  PRIVATE ${CommonFileList})

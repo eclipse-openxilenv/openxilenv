@@ -27,6 +27,7 @@ set(CommonFileList
     EndDefProcCmd.cpp
     MessageCmd.cpp
     SetCanChannelCountCmd.cpp
+    SetCanChannelStartupStateCmd.cpp
     StopCppCmd.cpp
     AtomicCmd.cpp
     EndIfCmd.cpp

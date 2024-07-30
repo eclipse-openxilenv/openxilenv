@@ -29,6 +29,7 @@ enum ConfigurablePrefixType {CONFIGURABLE_PREFIX_TYPE_PROGRAM_NAME,
                              CONFIGURABLE_PREFIX_TYPE_CYCLE_COUNTER,
                              CONFIGURABLE_PREFIX_TYPE_SAMPLE_TIME,
                              CONFIGURABLE_PREFIX_TYPE_SAMPLE_FREQUENCY,
+                             CONFIGURABLE_PREFIX_TYPE_OWN_EXIT_CODE,
 
                              CONFIGURABLE_PREFIX_TYPE_SCRIPT,
                              CONFIGURABLE_PREFIX_TYPE_GENERATOR,

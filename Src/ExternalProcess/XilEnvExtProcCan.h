@@ -15,8 +15,8 @@
  */
 
 
-#ifndef _WSC_CAN_H
-#define _WSC_CAN_H
+#ifndef XILENVEXTPROCCAN_H
+#define XILENVEXTPROCCAN_H
 
 #define XILENV_LIBRARY_INTERFACE_TYPE   0
 #define XILENV_DLL_INTERFACE_TYPE       1
