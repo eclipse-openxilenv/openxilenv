@@ -13,6 +13,13 @@ set(CommonFileList
     ReadExeInfos.c
 )
 
+if (BUILD_WITH_PDB_READER_DLL_INTERFACE)
+    set(CommonFileList
+        ${CommonFileList}
+        CallbacksForDebugReaderDll.c
+    )
+endif()
+
 target_sources(XilEnv PRIVATE ${CommonFileList})
 
 target_sources(XilEnvGui PRIVATE ${CommonFileList})

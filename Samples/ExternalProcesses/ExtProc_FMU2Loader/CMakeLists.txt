@@ -2,8 +2,10 @@ message("FMU2 loader byte size")
 message(${MY_CMAKE_SIZEOF_VOID_P})
 if(${MY_CMAKE_SIZEOF_VOID_P} GREATER 4)
     set(FMU2LoaderTargetName ExtProc_FMU2Loader64)
+    set(FMU2LoaderTargetPath "")
 else()
     set(FMU2LoaderTargetName ExtProc_FMU2Loader32)
+    set(FMU2LoaderTargetPath "/Bin32")
 endif()
 message("FMU2 loader name")
 message(${FMU2LoaderTargetName})
@@ -48,5 +50,5 @@ target_link_libraries(${ExtProc_TargetName} PRIVATE ${XilEnvExtProcTargetName})
 install(TARGETS ${ExtProc_TargetName}
     #BUNDLE DESTINATION .
     #LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}${FMU2LoaderTargetPath}
 )

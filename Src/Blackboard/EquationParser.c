@@ -727,6 +727,7 @@ static int BuildinFunctions(EQUATION_PARSER_INFOS *pParser)
                     EquationError (pParser, EQU_PARSER_ERROR_STOP, "Missing separator ('.' or '@') in enum() inside equation \"%s\"", pParser->Equation);
                     return pParser->Token = EQU_OP_END;
                 }
+                p++;
             }
             *p = 0;
             p++;

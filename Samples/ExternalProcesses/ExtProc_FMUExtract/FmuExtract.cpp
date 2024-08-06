@@ -498,7 +498,7 @@ int CheckIfFmu2(char *BinaryPathInsideExtractedFmuDirectrory,
 #ifdef _WIN32
         strcat (ExecName, "\\ExtProc_FMU2Loader64.EXE");
 #else
-        strcat(ExecName, "/ExtProc_FMU2Loader32.EXE");
+        strcat(ExecName, "/ExtProc_FMU2Loader64.EXE");
 #endif
         Ret = 1;
     } else {
@@ -511,9 +511,9 @@ int CheckIfFmu2(char *BinaryPathInsideExtractedFmuDirectrory,
         if (CheckIfOneDllExists(BinaryPathInsideExtractedFmuDirectrory)) {
             // ExtProc_FMU2Loader32.EXE -fmuextracted PathToExtractedFMUDirectory -fmu PathToFMUFile ...
 #ifdef _WIN32
-            strcat (ExecName, "\\ExtProc_FMU2Loader32.EXE");
+            strcat (ExecName, "\\Bin32\\ExtProc_FMU2Loader32.EXE");
 #else
-            strcat(ExecName, "/ExtProc_FMU2Loader64.EXE");
+            strcat(ExecName, "/Bin32/ExtProc_FMU2Loader32.EXE");
 #endif
             Ret = 1;
         } else {

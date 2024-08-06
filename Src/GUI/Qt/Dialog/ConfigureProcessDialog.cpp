@@ -388,6 +388,7 @@ void ConfigureProcessDialog::ReadAllProcessesInfos(bool par_WithNonRunning)
                 StringCompareBegin (Entry, "Scheduler_") &&
                 StringCompareBegin (Entry, "PriorityForScheduler") &&
                 strcmp (Entry, "Period") &&
+                strcmp (Entry, "LoginTimeout") &&
                 strcmp (Entry, "Login Timeout") &&
                 strcmp (Entry, "SyncWithFlexray")) {
                 QString Name(Entry);

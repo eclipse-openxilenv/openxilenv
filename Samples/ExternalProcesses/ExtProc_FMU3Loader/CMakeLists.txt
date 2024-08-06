@@ -2,8 +2,10 @@ message("FMU3 loader byte size")
 message(${MY_CMAKE_SIZEOF_VOID_P})
 if(${MY_CMAKE_SIZEOF_VOID_P} GREATER 4)
     set(FMU3LoaderTargetName ExtProc_FMU3Loader64)
+    set(FMU3LoaderTargetPath "")
 else()
     set(FMU3LoaderTargetName ExtProc_FMU3Loader32)
+    set(FMU3LoaderTargetPath "/Bin32")
 endif()
 message("FMU3 loader name")
 message(${FMU3LoaderTargetName})
@@ -48,5 +50,5 @@ target_link_libraries(${ExtProc_TargetName} PRIVATE ${XilEnvExtProcTargetName})
 install(TARGETS ${ExtProc_TargetName}
     #BUNDLE DESTINATION .
     #LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}${FMU3LoaderTargetPath}
 )

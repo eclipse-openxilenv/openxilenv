@@ -220,12 +220,12 @@ static int StartWith(const char *par_EqualTo, char *par_String, char **ret_Next)
         }
     }
     while(*par_EqualTo == *par_String) {
+        par_EqualTo++;
+        par_String++;
         if (*par_EqualTo == 0) {
             *ret_Next = par_String;
             return 1;
         }
-        par_EqualTo++;
-        par_String++;
     }
     return 0;
 }

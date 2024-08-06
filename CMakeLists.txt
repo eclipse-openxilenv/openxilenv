@@ -17,7 +17,10 @@ set(FMI3_SOURCE_PATH "Default" CACHE PATH "path to FMI3")
 option(BUILD_EXAMPLES "Build with examples" ON)
 option(BUILD_ESMINI_EXAMPLE "Build with Esmini examples (OpenSCENARIO)" OFF)
 set(ESMINI_LIBRARY_PATH "Default" CACHE PATH "path to esmini library")
-#option(ESMINI_LIBRARY_PATH "Path to the Esmini library" "path to esmini library")
+
+option(BUILD_WITH_J1939_SUPPORT "Build with J1939 support" OFF)
+option(BUILD_WITH_GATEWAY_VIRTUAL_CAN "Build with virtual CAN gateway" OFF)
+option(BUILD_WITH_PDB_READER_DLL_INTERFACE "Build with PDB reader DLL interface" OFF)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
@@ -75,6 +78,7 @@ else()
             Src/Blackboard
             Src/CanDataBase
             Src/CanServer
+            Src/CanServer/J1939
             Src/DebugInfos
             Src/Equations
             Src/ExternalProcess
@@ -112,6 +116,15 @@ else()
             Src/Utilities
             Src/XcpOverEthernet)
         target_compile_definitions(XilEnvGui PUBLIC _M_X64)
+        if(BUILD_WITH_J1939_SUPPORT)
+            target_compile_definitions(XilEnvGui PUBLIC BUILD_WITH_J1939_SUPPORT)
+        endif()
+        if(BUILD_WITH_GATEWAY_VIRTUAL_CAN)
+            target_compile_definitions(XilEnvGui PUBLIC BUILD_WITH_GATEWAY_VIRTUAL_CAN)
+        endif()
+        if(BUILD_WITH_PDB_READER_DLL_INTERFACE)
+            target_compile_definitions(XilEnvGui PUBLIC BUILD_WITH_PDB_READER_DLL_INTERFACE)
+        endif()
 
         target_link_libraries(XilEnvGui PRIVATE Qt${QT_VERSION_MAJOR}::Widgets)
         if(WIN32)
@@ -139,6 +152,7 @@ else()
             Src/Blackboard
             Src/CanDataBase
             Src/CanServer
+            Src/CanServer/J1939
             Src/DebugInfos
             Src/Equations
             Src/ExternalProcess
@@ -164,6 +178,15 @@ else()
         endif()
         target_compile_definitions(XilEnv PUBLIC _M_X64)
         target_compile_definitions(XilEnv PUBLIC NO_GUI)
+        if(BUILD_WITH_J1939_SUPPORT)
+            target_compile_definitions(XilEnv PUBLIC BUILD_WITH_J1939_SUPPORT)
+        endif()
+        if(BUILD_WITH_GATEWAY_VIRTUAL_CAN)
+            target_compile_definitions(XilEnv PUBLIC BUILD_WITH_GATEWAY_VIRTUAL_CAN)
+        endif()
+        if(BUILD_WITH_PDB_READER_DLL_INTERFACE)
+            target_compile_definitions(XilEnv PUBLIC BUILD_WITH_PDB_READER_DLL_INTERFACE)
+        endif()
         if(WIN32)
             if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
                 target_compile_options(XilEnv PRIVATE /wd5105)
@@ -224,8 +247,10 @@ else()
 
     if(${MY_CMAKE_SIZEOF_VOID_P} GREATER 4)
         set(XilEnvExtProcTargetName XilEnvExtProc64)
+        set(XilEnvExtProcLibPath "")
     else()
         set(XilEnvExtProcTargetName XilEnvExtProc32)
+        set(XilEnvExtProcLibPath "/Bin32")
     endif()
 
     add_library(${XilEnvExtProcTargetName} SHARED)
@@ -295,6 +320,9 @@ else()
                 Src/Scheduler)
             target_compile_definitions(LinuxRemoteMasterCore PUBLIC _M_X64)
             target_compile_definitions(LinuxRemoteMasterCore PUBLIC REMOTE_MASTER)
+            if(BUILD_WITH_J1939_SUPPORT)
+                target_compile_definitions(LinuxRemoteMasterCore PUBLIC BUILD_WITH_J1939_SUPPORT)
+            endif()
             target_compile_options(LinuxRemoteMasterCore PRIVATE -Wno-address-of-packed-member)
             target_link_libraries(LinuxRemoteMasterCore PRIVATE pthread)
             target_link_libraries(LinuxRemoteMasterCore PRIVATE rt)
@@ -351,9 +379,9 @@ else()
     endif()
 
     install(TARGETS ${XilEnvExtProcTargetName}
-        RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}
-        LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX}
-        ARCHIVE DESTINATION ${CMAKE_INSTALL_PREFIX}
+        RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}${XilEnvExtProcLibPath}
+        LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX}${XilEnvExtProcLibPath}
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_PREFIX}${XilEnvExtProcLibPath}
         PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_PREFIX}/include
     )
 

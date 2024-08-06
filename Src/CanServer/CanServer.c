@@ -47,11 +47,18 @@
 #include "ThrowError.h"
 #include "ConfigurablePrefix.h"
 
+#ifdef BUILD_WITH_GATEWAY_VIRTUAL_CAN
+#include "GatewayCanDriver.h"
+#endif
 #include "CanServer.h"
 
 #define UNUSED(x) (void)(x)
 
 #define INC_CCP        1
+
+#ifdef BUILD_WITH_J1939_SUPPORT
+#include "J1939_21_MultiPackage.h"
+#endif
 
 static int can_init_flag = 0;
 #define CANSERVER_NOT_INIT        0
@@ -934,7 +941,7 @@ static void attach_one_bbvari_equation (NEW_CAN_SERVER_CONFIG *csc, int c, int o
 }
 #endif
 
-#if defined INC_NEW_J1939
+#if defined BUILD_WITH_J1939_SUPPORT
 static int config_all_j1939_messages (NEW_CAN_SERVER_CONFIG *csc)
 {
     int c, o, o_pos;
@@ -945,7 +952,7 @@ static int config_all_j1939_messages (NEW_CAN_SERVER_CONFIG *csc)
             if (csc->objects[o_pos].type == J1939_OBJECT) {
                 if (csc->channels[c].j1939_flag) {
                     //ThrowError (1, "J1939ConfigMessage ()");
-#ifdef INC_NEW_J1939
+#ifdef BUILD_WITH_J1939_SUPPORT
                     if (csc->channels[c].j1939_rx_object_count < J1939TP_MP_MAX_OBJECTS) {
                         csc->channels[c].j1939_rx_objects[csc->channels[c].j1939_rx_object_count] = o_pos;
                         csc->channels[c].j1939_rx_object_count++;
@@ -972,7 +979,7 @@ static int attach_all_bbvaris_and_equations (NEW_CAN_SERVER_CONFIG *csc)
         for (o = 0; o < csc->channels[c].object_count; o++) {
             o_pos = csc->channels[c].objects[o];
             attach_bbvari (csc->objects[o_pos].vid);
-#if defined INC_NEW_J1939
+#if defined BUILD_WITH_J1939_SUPPORT
             if (csc->objects[o_pos].type == J1939_OBJECT) {
                 if (!csc->channels[c].j1939_flag) {
                     ThrowError(1, "the global J1939 flag is not set for that reason there are no J1939 objects allowed (will be ignored)");
@@ -1110,7 +1117,7 @@ static int detach_all_bbvaris_and_equations (NEW_CAN_SERVER_CONFIG *csc)
         for (o = 0; o < csc->channels[c].object_count; o++) {
             o_pos = csc->channels[c].objects[o];
             remove_bbvari (csc->objects[o_pos].vid);
-#if defined INC_NEW_J1939
+#if defined BUILD_WITH_J1939_SUPPORT
             if (csc->objects[o_pos].type == J1939_OBJECT) {
                 if (csc->objects[o_pos].Protocol.J1939.vid_dlc > 0) {
                     remove_bbvari (csc->objects[o_pos].Protocol.J1939.vid_dlc);
@@ -1328,7 +1335,7 @@ static int CanServerSelectCanCard (void)
 #else
 #if defined(_WIN32) && defined(BUILD_WITH_GATEWAY_VIRTUAL_CAN)
     if (CanServerConfig->EnableGatewayDeviceDriver) {
-        InitGatewayDeviceDriver(CanServerConfig->EnableGatewayDeviceDriver);
+        InitCanGatewayDevice(CanServerConfig->EnableGatewayDeviceDriver);
     }
 #endif
 #endif
@@ -1351,15 +1358,15 @@ static int CanServerSelectCanCard (void)
 #else
         CanServerConfig->channels[c].VirtualNetworkId = -1;
 #if defined(_WIN32) && defined(BUILD_WITH_GATEWAY_VIRTUAL_CAN)
-        if (c < GetGatewayDeviceDriverCount()) {
-            CanServerConfig->channels[c].read_can = gateway_dev_read_can;
-            CanServerConfig->channels[c].write_can = gateway_dev_write_can;
-            CanServerConfig->channels[c].open_can = gateway_dev_open_can;
-            CanServerConfig->channels[c].close_can = gateway_dev_close_can;
-            CanServerConfig->channels[c].status_can = gateway_dev_status_can;
-            CanServerConfig->channels[c].queue_read_can =gateway_dev_ReadNextObjectFromQueue;
-            CanServerConfig->channels[c].queue_write_can = gateway_dev_WriteObjectToQueue;
-            CanServerConfig->channels[c].fd_support = GetGatewayDeviceDriverCannelFdSupport(c);
+        if (c < GetCanGatewayDeviceCount()) {
+            CanServerConfig->channels[c].read_can = CanGatewayDevice_read_can;
+            CanServerConfig->channels[c].write_can = CanGatewayDevice_write_can;
+            CanServerConfig->channels[c].open_can = CanGatewayDevice_open_can;
+            CanServerConfig->channels[c].close_can = CanGatewayDevice_close_can;
+            CanServerConfig->channels[c].status_can = CanGatewayDevice_status_can;
+            CanServerConfig->channels[c].queue_read_can =CanGatewayDevice_ReadNextObjectFromQueue;
+            CanServerConfig->channels[c].queue_write_can = CanGatewayDevice_WriteObjectToQueue;
+            CanServerConfig->channels[c].fd_support = GetCanGatewayDeviceFdSupport(c);
         } else
 #endif
         {
@@ -1387,7 +1394,7 @@ static void CanServerOpenCan (void)
     if (alloc_all_data_blocks (CanServerConfig)) {
         can_init_flag = CANSERVER_NOT_INIT;
     } else {
-#ifdef INC_NEW_J1939
+#ifdef BUILD_WITH_J1939_SUPPORT
         //ThrowError (1, "GetCanServerCycleTime_ms() = %i, get_sched_periode_timer_clocks() = %i", GetCanServerCycleTime_ms(), get_sched_periode_timer_clocks());
         NewJ1939Config (CanServerConfig, GetCanServerCycleTime_ms () * (get_sched_periode_timer_clocks() / 1000));
         config_all_j1939_messages (CanServerConfig);
@@ -1616,7 +1623,7 @@ static void CanServerCyclic (void)
 #ifdef INC_CCP
                 if (GlobalXcpCcpActiveFlag) CppCanMessageFilter (CanServerConfig, c, id, data, size);
 #endif
-#if defined INC_NEW_J1939
+#if defined BUILD_WITH_J1939_SUPPORT
                 if (CanServerConfig->channels[c].j1939_flag) {
                     if (NewJ1939CanMessageFilter (CanServerConfig, c, id, data, size) == IS_J1939_SIGNLE_FRAME_MESSAGE_RET) {
                         // nothing todo all happens inside NewJ1939CanMessageFilter
@@ -1758,7 +1765,7 @@ static void CanServerCyclic (void)
                         }
                         break;
                     case J1939_OBJECT:
-#if defined INC_NEW_J1939
+#if defined BUILD_WITH_J1939_SUPPORT
                         if (po->Protocol.J1939.status != SC_J1939_STATUS_PENDING) {
                             int do_call_J1939Transmit = 0;
                             if (!po->EventOrCyclic) {   // Cyclic
@@ -1798,7 +1805,7 @@ static void CanServerCyclic (void)
                                     da = po->Protocol.J1939.dst_addr;
                                 }
                                 //ThrowError (1, "J1939Transmit");
-#ifdef INC_NEW_J1939
+#ifdef BUILD_WITH_J1939_SUPPORT
                                 NewJ1939Transmit (CanServerConfig, c, (short)o_pos, dlc, (unsigned char)da);
 #endif
                                 po->should_be_send = 0;  // do not call ObjectAreSended(po);
@@ -1837,7 +1844,7 @@ static void CanServerStop (void)
     for (c = 0; c < CanServerConfig->channel_count; c++) {
         CanServerConfig->channels[c].close_can (CanServerConfig, c);
     }
-#ifdef INC_NEW_J1939
+#ifdef BUILD_WITH_J1939_SUPPORT
     NewJ1939Stop ();
 #endif
     remove_additional_bbvaris (CanServerConfig);
@@ -1888,7 +1895,7 @@ void new_canserv_cyclic (void)
 
     case CANSERVER_CYCLIC:
         CanServerCyclic ();
-#ifdef INC_NEW_J1939
+#ifdef BUILD_WITH_J1939_SUPPORT
         if (CanServerConfig->j1939_flag) {
             int c;
             for (c = 0; c < CanServerConfig->channel_count; c++) {

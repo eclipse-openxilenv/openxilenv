@@ -91,10 +91,6 @@ extern int open_write_stimuli_head (START_MESSAGE_DATA hdrec_data,
 extern int open_write_mcsrec_head (START_MESSAGE_DATA hdrec_data,
                                    int32_t *vids, FILE **pfile);
 
-extern int open_write_etasascii_head (START_MESSAGE_DATA hdrec_data,
-                                      int32_t *vids, char *dec_phys_flags, FILE **pfile);
-
-
 extern int conv_bin_stimuli_write (RECORDER_STRUCT *pRecorder, 
                                    uint32_t time_stamp, int elem_count,
                                    VARI_IN_PIPE *pipevari_list, long *vids);
@@ -107,12 +103,6 @@ extern void put_varilist_ringbuff (RING_BUFFER_COLOMN *ring_buff,
 int write_ringbuff_stimuli (FILE *file, RING_BUFFER_COLOMN *stamp, int rpvari_count);
 
 int write_ringbuff_mcsrec  (FILE *file, RING_BUFFER_COLOMN *stamp, int rpvari_count);
-
-int write_ringbuff_etasascii (FILE *file, RING_BUFFER_COLOMN *stamp, int rpvari_count);
-
-int TailMcsRecFile (FILE *fh, unsigned int Samples);
-
-int TailEtasAsciiFile (FILE *fh, unsigned int Samples);
 
 int TailStimuliFile (FILE *fh);
 

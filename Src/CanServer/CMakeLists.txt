@@ -18,8 +18,17 @@ set(CommonFileList
     XcpControl.c
 )
 
+if(BUILD_WITH_GATEWAY_VIRTUAL_CAN)
+    set(CommonFileList
+        ${CommonFileList}
+        GatewayCanDriver.c
+    )
+endif()
+
 target_sources(XilEnv PRIVATE ${CommonFileList})
 
 target_sources(XilEnvGui PRIVATE ${CommonFileList})
 
-    
+if (BUILD_WITH_J1939_SUPPORT)
+    add_subdirectory("J1939")
+endif()

@@ -306,6 +306,7 @@ void ScriptErrorDialog::OpenFileAtLineNr(char *par_Filename, int par_LineNr)
     }
 
     sprintf (p, "code.exe -g %s:%i", loc_Filename, par_LineNr);
+    //sprintf (p, "cmd.exe");
 
     memset (&sStartInfo, 0, sizeof (sStartInfo));
     sStartInfo.cb            = sizeof(STARTUPINFO);
@@ -320,7 +321,7 @@ void ScriptErrorDialog::OpenFileAtLineNr(char *par_Filename, int par_LineNr)
     sa.lpSecurityDescriptor = nullptr;
     sa.bInheritHandle       = TRUE;
 
-    Ret = CreateProcess (nullptr,
+    Ret = CreateProcessA (nullptr,
                          CommandLine,
                          nullptr,
                          nullptr,
@@ -332,7 +333,18 @@ void ScriptErrorDialog::OpenFileAtLineNr(char *par_Filename, int par_LineNr)
                          &sProcInfo);
 
     if (!Ret) {
-        ThrowError (1, "cannot start visual code \"%s\"", CommandLine);
+        char *lpMsgBuf = NULL;
+        DWORD dw = GetLastError ();
+        FormatMessageA (FORMAT_MESSAGE_ALLOCATE_BUFFER |
+                           FORMAT_MESSAGE_FROM_SYSTEM |
+                           FORMAT_MESSAGE_IGNORE_INSERTS,
+                       NULL,
+                       dw,
+                       MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+                       (LPSTR) &lpMsgBuf,
+                       0, NULL);
+        ThrowError (1, "cannot start visual code \"%s\" (%s)", CommandLine, lpMsgBuf);
+        LocalFree (lpMsgBuf);
     } else {
         CloseHandle(sProcInfo.hThread);
         CloseHandle(sProcInfo.hProcess);

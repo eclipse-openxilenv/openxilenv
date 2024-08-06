@@ -107,6 +107,8 @@ EXPORTS
     message_output_stream_va_list
 
     CheckIfConnectedTo
+    CheckIfConnectedToEx
+    SetExternalProcessExecutableName
     LoopOutAndWaitForBarriers
 
     DisconnectFrom

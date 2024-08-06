@@ -44,9 +44,9 @@
 #include "MainValues.h"
 #include "DwarfReader.h"
 #ifdef _WIN32
-//#include "VisualPdbReader.h"
-//#include "VisualDebugReaderDll.h"
-//#include "CallbacksForDebugReaderDll.h"
+#ifdef BUILD_WITH_PDB_READER_DLL_INTERFACE
+#include "CallbacksForDebugReaderDll.h"
+#endif
 #endif
 #include "RemoteMasterScheduler.h"
 
@@ -54,9 +54,6 @@
 
 #define UNUSED(x) (void)(x)
 
-#ifdef _USE_DEBUG_INFI_DLL
-#include "VisualDebugReaderDll.h"
-#endif
 
 #define USE_BSEARCH
 
@@ -522,7 +519,8 @@ static int32_t LoadDebugInfos (DEBUG_INFOS_DATA *par_DebugInfos, char *par_Execu
         calc_all_array_sizes (par_DebugInfos, 0);
         break;
     case 2:  // There exist a PDB but no DBG file
-#if defined(_WIN32) && !defined(__GNUC__)
+#if defined(_WIN32)
+//        && !defined(__GNUC__)
         StringCopyMaxCharTruncate(par_DebugInfos->DebugInfoFileName, PdbFilename, sizeof(par_DebugInfos->DebugInfoFileName));
         if (ReadExeInfos (par_DebugInfos->ExecutableFileName, &(par_DebugInfos->ImageBaseAddr), &LinkerVersion,
                           &(par_DebugInfos->NumOfSections),
@@ -542,22 +540,9 @@ static int32_t LoadDebugInfos (DEBUG_INFOS_DATA *par_DebugInfos, char *par_Execu
             return -1;
         }
         init_lists (par_DebugInfos);
-#ifdef _USE_DEBUG_INFI_DLL
-        if (parse_vc_pdb_file_dll (PdbFilename, par_DebugInfos, LinkerVersion,
-                                   // Funktions-Pointer
-                                   insert_struct_callback,
-                                   insert_field_callback,
-                                   insert_struct_field_callback,
-                                   insert_label_callback,
-                                   error_callback,
-                                   LogFileAccess_callback,
-                                   GetExternProcessBaseAddressDebugInfos_callback,
-                                   SetDebugInfosLoadedFlag_callback,
-                                   SortDtypeList_callback,
-                                   // Werte aus s_main_ini_val
-                                   s_main_ini_val.ViewStaticSymbols,
-                                   s_main_ini_val.ExtendStaticLabelsWithFilename)) {
-
+#ifdef BUILD_WITH_PDB_READER_DLL_INTERFACE
+        if (ParsePdbFile (PdbFilename, par_DebugInfos,
+                          par_DebugInfos->dynamic_base_address, LinkerVersion)) {
             DeleteDebugInfos (par_DebugInfos);
             return -1;
         }
@@ -1683,7 +1668,7 @@ static DTYPE_LIST_ELEM *search_structure_definition_with_name_inside_compile_uni
     int32_t x;
 
     for (x = 0; x < (int32_t)pappldata->dtype_list_entrys; x++) {
-        if (pappldata->dtype_list[x]->what == STRUCT_ELEM) {         // Ala structure member
+        if (pappldata->dtype_list[x]->what == STRUCT_ELEM) {         // All structure member
             if (!strcmp (pappldata->dtype_list[x]->name, name)) {    // with same namen
                 if (pappldata->dtype_list[x]->typenr >= 0x40000000) {
                     if (ret_Index != NULL) *ret_Index = x + 0x40000000;
@@ -1714,7 +1699,6 @@ static DTYPE_LIST_ELEM *search_dtype (int32_t typenr, DEBUG_INFOS_DATA *pappldat
         }
     }
 
-    // checke aufsteigende gegen typenr Sortierung
     /* only debugging {
         int32_t x;
         int32_t last = 0;
@@ -1797,7 +1781,7 @@ int32_t SetDeclarationToSpecification (int32_t typenr, DEBUG_INFOS_DATA *papplda
                                                   sizeof(DTYPE_LIST_ELEM*), (CMP_FUNC_PTR)comp_typenr_func);
         if (itemptr_ptr != NULL) {
             DTYPE_LIST_ELEM *itemptr = *itemptr_ptr;
-            // wenn eine vorab Dektatation
+            // If a previous declaration exist
             if (itemptr->what == PRE_DEC_STRUCT) {
                 itemptr->what = STRUCT_ELEM;
             } else return -1;
@@ -1811,7 +1795,7 @@ int32_t SetDeclarationToSpecification (int32_t typenr, DEBUG_INFOS_DATA *papplda
                                                   sizeof(DTYPE_LIST_ELEM*), (CMP_FUNC_PTR)comp_typenr_func);
         if (itemptr_ptr != NULL) {
             DTYPE_LIST_ELEM *itemptr = *itemptr_ptr;
-            // wenn eine vorab Dektatation
+            // If a previous declaration exist
             if (itemptr->what == PRE_DEC_STRUCT) {
                 itemptr->what = STRUCT_ELEM;
             } else return -1;
@@ -1844,7 +1828,7 @@ static int32_t connect_struct_field (int32_t fieldnr, int32_t my_idx, DEBUG_INFO
                 }
                 pappldata->fieldidx_list[idx].nextidx = my_idx;
             }
-            itemptr->fields++;   // Anzahl der Struktur-Elemente
+            itemptr->fields++;   // Number of structure elements
             ret = 0;
             goto __OUT;
         }
@@ -1867,7 +1851,7 @@ int32_t insert_struct_field (int32_t fieldnr, int32_t typenr,
         ret = -1;
         goto __OUT;
     }
-    // Groesse anpassen
+    // resize
     if ((pappldata->fieldidx_list_entrys + 1) >= pappldata->size_fieldidx_list) {
         pappldata->size_fieldidx_list += 64*1024;
         if ((pappldata->fieldidx_list =(FIELDIDX_LIST_ELEM*)my_realloc (pappldata->fieldidx_list, sizeof (FIELDIDX_LIST_ELEM) * pappldata->size_fieldidx_list)) == NULL) {
@@ -1877,14 +1861,13 @@ int32_t insert_struct_field (int32_t fieldnr, int32_t typenr,
         }
     }
     if ((psym = insert_symbol (field_name, pappldata)) == NULL) {
-        //ThrowError (1, "sanity check %s %li", __FILE__, (int32_t)__LINE__);
         ret = 0;
         goto __OUT;
     }
     pappldata->fieldidx_list[pappldata->fieldidx_list_entrys].name = psym;
     pappldata->fieldidx_list[pappldata->fieldidx_list_entrys].typenr = typenr;
     pappldata->fieldidx_list[pappldata->fieldidx_list_entrys].offset = offset;
-    pappldata->fieldidx_list[pappldata->fieldidx_list_entrys].typenr_idx = -1; // noch kein Index bekannt
+    pappldata->fieldidx_list[pappldata->fieldidx_list_entrys].typenr_idx = -1; // Index not known
     pappldata->fieldidx_list[pappldata->fieldidx_list_entrys].nextidx = -1;
 
     if (connect_struct_field (fieldnr, (int32_t)pappldata->fieldidx_list_entrys, pappldata)) {

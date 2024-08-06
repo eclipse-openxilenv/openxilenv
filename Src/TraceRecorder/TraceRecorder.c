@@ -821,9 +821,9 @@ int TerminateFileWriter (RECORDER_STRUCT *Recorder)
     /* empty the ring buffer */
     if (Recorder->AllFileStatus == 0) {
         for (x = 0; x < LOCK_BACK_DEPTH; x++) {
+            Recorder->RinBufferCurrentPosition = (++(Recorder->RinBufferCurrentPosition)) & RINGBUFF_CLIP_MASK;
             ++(Recorder->RinBufferCurrentPosition);
             Recorder->RinBufferCurrentPosition = Recorder->RinBufferCurrentPosition & RINGBUFF_CLIP_MASK;
-            Recorder->RingPufferPtr = Recorder->RingBuffer + Recorder->RinBufferCurrentPosition;
             /* first entry inside the ring buffer are invalid */
             if (++Recorder->LineNumberCounter >= LOCK_BACK_DEPTH) {
                 CopyRingPufferToStamp (Recorder);
@@ -906,6 +906,7 @@ int WriteWriter (RECORDER_STRUCT *Recorder, uint64_t time_stamp, int elem_count,
             Recorder->RingPufferPtr = Recorder->RingBuffer + Recorder->RinBufferCurrentPosition;
             /* First entrys inside the ring buffer are invalid */
             if (++(Recorder->LineNumberCounter) >= LOCK_BACK_DEPTH) {
+                CopyRingPufferToStamp (Recorder);
                 if (!Recorder->MdfFileStatus) {
                     if ((Recorder->StartMessage.FormatFlags & REC_FORMAT_FLAG_MDF) == REC_FORMAT_FLAG_MDF) {
                         if (WriteRingbuffMdf (Recorder->MdfFile, &Recorder->Stamp, Recorder->RingBufferVariableCount) == EOF) {

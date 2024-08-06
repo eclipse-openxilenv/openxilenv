@@ -249,7 +249,7 @@ STUB_OUT:
             if (sizeof(void*) == 8) {
                 XilEnvInternal_Strcat (DllFunctionCache.DllNameWithPath, sizeof(DllFunctionCache.DllNameWithPath), "XilEnvExtProc64.dll");
             } else {
-                XilEnvInternal_Strcat (DllFunctionCache.DllNameWithPath, sizeof(DllFunctionCache.DllNameWithPath), "XilEnvExtProc32.dll");
+                XilEnvInternal_Strcat (DllFunctionCache.DllNameWithPath, sizeof(DllFunctionCache.DllNameWithPath), "Bin32\\XilEnvExtProc32.dll");
             }
 #ifdef _MSC_VER
     #pragma warning(pop)
@@ -270,7 +270,7 @@ STUB_OUT:
             if (sizeof(void*) == 8) {
                 XilEnvInternal_Strcat(DllFunctionCache.DllNameWithPath, sizeof(DllFunctionCache.DllNameWithPath), "libXilEnvExtProc64.so");
             }  else {
-                XilEnvInternal_Strcat(DllFunctionCache.DllNameWithPath, sizeof(DllFunctionCache.DllNameWithPath), "libXilEnvExtProc32.so");
+                XilEnvInternal_Strcat(DllFunctionCache.DllNameWithPath, sizeof(DllFunctionCache.DllNameWithPath), "Bin32/libXilEnvExtProc32.so");
             }
             DllFunctionCache.SharedLibHandle = dlopen(DllFunctionCache.DllNameWithPath, RTLD_LAZY); // RTLD_NOW | RTLD_GLOBAL);
             if (DllFunctionCache.SharedLibHandle == NULL) {

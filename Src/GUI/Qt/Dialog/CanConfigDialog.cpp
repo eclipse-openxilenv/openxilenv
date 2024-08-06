@@ -45,7 +45,7 @@ extern "C" {
 #include "Message.h"
 #include "MainValues.h"
 #include "ReadCanCfg.h"
-#if BUILD_WITH_GATEWAY_VIRTUAL_CAN
+#ifdef BUILD_WITH_GATEWAY_VIRTUAL_CAN
 #include "GatewayCanDriver.h"
 #endif
 #include "RemoteMasterControlProcess.h"
@@ -98,12 +98,10 @@ CanConfigDialog::CanConfigDialog(QWidget *par_Parent) : Dialog(par_Parent),
 
     ui->setupUi(this);
 
-#ifndef _WIN32
+#if defined _WIN32 && defined BUILD_WITH_GATEWAY_VIRTUAL_CAN
     // Gateway virtual CAN exists only under windows
-    ui->EnableGatewayDeviceDriverCheckBox->setDisabled(true);
-#endif
-
-    // the gateway device drive access is not included
+    ui->EnableGatewayDeviceDriverCheckBox->setEnabled(true);
+#else
     ui->EnableGatewayDeviceDriverCheckBox->setVisible(false);
     ui->RealGatewayLabel->setVisible(false);
     ui->RealGatewayComboBox->setVisible(false);
@@ -111,6 +109,14 @@ CanConfigDialog::CanConfigDialog(QWidget *par_Parent) : Dialog(par_Parent),
     ui->VirtualGatewayLabel->setVisible(false);
     ui->VirtualGatewayComboBox->setVisible(false);
     ui->VirtualGatewayLineEdit->setVisible(false);
+#endif
+
+#ifdef BUILD_WITH_J1939_SUPPORT
+    ui->J1939EnableGroupBox->setEnabled(true);
+    ui->ObjectTypeJ1939RadioButton->setEnabled(true);
+    ui->ObjectTypeJ1939ComboBox->setEnabled(true);
+    ui->ObjectTypeJ1939ConfigPushButton->setEnabled(true);
+#endif
 
     QString Prefix = QString(GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_CAN_NAMES));
     QString Text = Prefix;
@@ -1289,20 +1295,23 @@ static void FillCANCardList(Ui::CanConfigDialog *ui)
         EnableGatewayFlags(ui, false);
     } else {
         int x = 0;
-#if defined(_WIN32) && defined(VECTROR_VIRTUAL_CAN)
+#if defined(_WIN32) && defined(BUILD_WITH_GATEWAY_VIRTUAL_CAN)
         if (ui->EnableGatewayDeviceDriverCheckBox->isChecked()) {
-            InitGatewayDeviceDriver(GetGatewayFlags(ui));
-            for ( ; x < GetGatewayDeviceDriverCount(); x++) {
-                char Name[32];
-                uint32_t DriverVersion;
-                uint32_t DllVersion;
-                uint32_t InterfaceVersion;
-                GetGatewayDeviceDriverInfos(x, Name, 32, &DriverVersion, &DllVersion, &InterfaceVersion);
-                char Text[256];
-                sprintf(Text, "%i.  Gateway %s (versions: DLL 0x%X, driver 0x%X, interface 0x%X)", x, Name, DllVersion, DriverVersion, InterfaceVersion);
-                ui->FoundCANCardslistWidget->addItem(Text);
+            if(InitCanGatewayDevice(GetGatewayFlags(ui)) == 0) {
+                for ( ; x < GetCanGatewayDeviceCount(); x++) {
+                    char Name[32];
+                    uint32_t DriverVersion;
+                    uint32_t DllVersion;
+                    uint32_t InterfaceVersion;
+                    GetCanGatewayDeviceInfos(x, Name, 32, &DriverVersion, &DllVersion, &InterfaceVersion);
+                    char Text[256];
+                    sprintf(Text, "%i.  Gateway %s (versions: DLL 0x%X, driver 0x%X, interface 0x%X)", x, Name, DllVersion, DriverVersion, InterfaceVersion);
+                    ui->FoundCANCardslistWidget->addItem(Text);
+                }
+                EnableGatewayFlags(ui, true);
+            } else {
+                EnableGatewayFlags(ui, false);
             }
-            EnableGatewayFlags(ui, true);
         } else {
             EnableGatewayFlags(ui, false);
         }
