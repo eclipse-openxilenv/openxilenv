@@ -96,6 +96,9 @@ void A2LCalSingleModel::ProcessStarted(void *par_Parent)
     beginResetModel();
     if (Debug_fh != nullptr) {fprintf(Debug_fh, "ProcessStarted()\n"); fflush(Debug_fh);}
     SetupLinkTo(par_Parent);
+    foreach(A2LCalSingleData *loc_variable, m_listOfElements) {
+        loc_variable->SetToExiting();
+    }
     endResetModel();
 }
 

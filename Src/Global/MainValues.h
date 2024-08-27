@@ -172,6 +172,13 @@ typedef struct
   int             RenameExecutableActive;
   char*           ConfigurablePrefix[32];
 
+  struct {
+      char* From;
+      char *To;
+  } *             RenameProcessFromTo;
+  int             RenameProcessFromToSize;
+  int             RenameProcessFromToPos;
+
   int             EnableLegacyEnvironmentVariables;
 
   char*           IniFilterProgram;
@@ -186,6 +193,8 @@ typedef struct
 extern MAIN_INI_VAL s_main_ini_val;
 extern int32_t CycleCounterVid;
 extern int DisplayUnitForNonePhysicalValues;
+
+const char *RenameProcessByBasicSettingsTable(const char *par_From);
 
 int ReadBasicConfigurationFromIni(MAIN_INI_VAL  *sp_main_ini);
 int WriteBasicConfigurationToIni(MAIN_INI_VAL  *sp_main_ini);

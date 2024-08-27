@@ -208,6 +208,7 @@ void A2LCalMapWidget::ConfigDialog (void)
         QStringList Characteristics = Dlg->GetCharacteristics();
         QString Process = Dlg->GetProcess();
         if ((Process.size() > 0) && (Characteristics.size() > 0)) {
+            m_Process = Process;
             m_Model->SetProcess(Process, this);
             m_Characteristic = Characteristics.at(0);
             m_Model->SetCharacteristicName(m_Characteristic);

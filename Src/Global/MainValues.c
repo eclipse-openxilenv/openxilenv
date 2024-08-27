@@ -49,10 +49,49 @@ static void ReadOneConfigurablePrefix(int par_No, const char *par_Entry, const c
     }
     s_main_ini_val.ConfigurablePrefix[par_No] =
         IniFileDataBaseReadStringBuffer(OPT_SECTION, par_Entry, par_Default, GetMainFileDescriptor());
-    // the "none" string will be replace by an emty string
+    // the "none" string will be replace by an empty string
     if (!strcmp(s_main_ini_val.ConfigurablePrefix[par_No], "none")) {
         s_main_ini_val.ConfigurablePrefix[par_No][0] = 0;
     }
+}
+
+static void ReadRenameProcessFromTo(int par_Fd)
+{
+    int x;
+    char Entry[128];
+    char From[MAX_PATH], To[MAX_PATH];
+
+    for (x = 0; x < 16; x++) {
+        sprintf(Entry, "Rename_%i_Process_From", x);
+        if (IniFileDataBaseReadString(OPT_SECTION, Entry, "",  From, sizeof(From), par_Fd) > 0) {
+            sprintf(Entry, "Rename_%i_Process_To", x);
+            if (IniFileDataBaseReadString(OPT_SECTION, Entry, "", To, sizeof(To), par_Fd) > 0) {
+                if ((s_main_ini_val.RenameProcessFromTo == NULL) || (s_main_ini_val.RenameProcessFromToPos >= s_main_ini_val.RenameProcessFromToSize)) {
+                    s_main_ini_val.RenameProcessFromToSize += 8;
+                    s_main_ini_val.RenameProcessFromTo = my_realloc(s_main_ini_val.RenameProcessFromTo,
+                                                                    s_main_ini_val.RenameProcessFromToSize * sizeof(s_main_ini_val.RenameProcessFromTo[0]));
+                }
+                if (s_main_ini_val.RenameProcessFromTo != NULL) {
+                    s_main_ini_val.RenameProcessFromTo[s_main_ini_val.RenameProcessFromToPos].From = StringMalloc(From);
+                    s_main_ini_val.RenameProcessFromTo[s_main_ini_val.RenameProcessFromToPos].To = StringMalloc(To);
+                }
+                s_main_ini_val.RenameProcessFromToPos++;
+            } else break;
+        } else break;
+    }
+}
+
+const char *RenameProcessByBasicSettingsTable(const char *par_From)
+{
+    int x;
+    if (s_main_ini_val.RenameProcessFromTo != NULL) {
+        for (x = 0; x < s_main_ini_val.RenameProcessFromToPos; x++) {
+            if (!strcmp(par_From, s_main_ini_val.RenameProcessFromTo[x].From)) {
+                return s_main_ini_val.RenameProcessFromTo[x].To;
+            }
+        }
+    }
+    return par_From;
 }
 
 int ReadBasicConfigurationFromIni(MAIN_INI_VAL *sp_main_ini)
@@ -402,6 +441,8 @@ int ReadBasicConfigurationFromIni(MAIN_INI_VAL *sp_main_ini)
         ReadOneConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_TRACE_RECORDER, "PrefixTypeTraceRecorder", DEFAULT_PREFIX_TYPE_TRACE_RECORDER);
         ReadOneConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_STIMULUS_PLAYER, "PrefixTypeStimulusPlayer", DEFAULT_PREFIX_TYPE_STIMULUS_PLAYER);
         ReadOneConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_EQUATION_CALCULATOR, "PrefixTypeEquationCalculator", DEFAULT_PREFIX_TYPE_EQUATION_CALCULATOR);
+
+        ReadRenameProcessFromTo(Fd);
     }
     return 0;
 }

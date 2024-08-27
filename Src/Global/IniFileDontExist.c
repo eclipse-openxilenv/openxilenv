@@ -64,8 +64,19 @@ void AddIniFileToHistory (char *par_IniFile)
     char Entry[64];
     char Last[MAX_PATH];
     char Help[MAX_PATH];
+    char FullPath[MAX_PATH];
     int x, xx, NumOfEntrys;
     const char *ProgramName = GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_PROGRAM_NAME);
+
+#ifdef _WIN32
+    if (GetFullPathName (par_IniFile, sizeof(FullPath), FullPath, NULL) == 0) {
+        strcpy(FullPath, par_IniFile);
+    }
+#else
+    if(realpath (par_IniFile, FullPath) == NULL) {
+        strcpy(FullPath, par_IniFile);
+    }
+#endif
 
     if (!OpenWithNoGui() && (par_IniFile != NULL) && strlen (par_IniFile)) {
         int Fd;
@@ -94,14 +105,14 @@ void AddIniFileToHistory (char *par_IniFile)
             if (Fd > 0) {
                 xx = 9999;
                 if (IniFileDataBaseReadString (ProgramName, "last_used_ini_file", "", Last, sizeof (Last), Fd) > 0) {
-                    if (stricmp (par_IniFile, Last)) {   // If it was not the same as last call
+                    if (stricmp (FullPath, Last)) {   // If it was not the same as last call
                         // first only count
                         for (NumOfEntrys = 0; NumOfEntrys < 20; NumOfEntrys++) {
                             sprintf (Entry, "X_%i", NumOfEntrys);
                             if (IniFileDataBaseReadString (ProgramName, Entry, "", Help, sizeof (Help), Fd) <= 0) {
                                 break;
                             }
-                            if (!strcmpi (Help, par_IniFile)) {
+                            if (!strcmpi (Help, FullPath)) {
                                 xx = NumOfEntrys;
                             }
                         }
@@ -115,10 +126,10 @@ void AddIniFileToHistory (char *par_IniFile)
                             }
                         }
                         IniFileDataBaseWriteString (ProgramName, "X_0", Last, Fd);
-                        IniFileDataBaseWriteString (ProgramName, "last_used_ini_file", par_IniFile, Fd);
+                        IniFileDataBaseWriteString (ProgramName, "last_used_ini_file", FullPath, Fd);
                     }
                 } else {  // It is not inside
-                    IniFileDataBaseWriteString (ProgramName, "last_used_ini_file", par_IniFile, Fd);
+                    IniFileDataBaseWriteString (ProgramName, "last_used_ini_file", FullPath, Fd);
                 }
                 IniFileDataBaseSaveNoFilterPossible(Fd, Directory, 2);
             }

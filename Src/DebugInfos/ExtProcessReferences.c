@@ -618,9 +618,10 @@ int ImportVariableReferenceList (int pid, const char *FileName)
     if (IniFileDataBaseLookIfSectionExist ("referenced variables for external process", Fd)) {
         ret = CopyRefListAndConvertFormatNewToOld (GetMainFileDescriptor(), Fd, section, "referenced variables for external process");
     } else {
-        ret = IniFileDataBaseCopySection (GetMainFileDescriptor(), Fd, section, "referenced variables");
+        IniFileDataBaseCopySection (GetMainFileDescriptor(), Fd, section, "referenced variables");
     }
     IniFileDataBaseClose(Fd);
+    rereference_all_vari_from_ini (pid, 1, 0);
     return ret;
 }
 

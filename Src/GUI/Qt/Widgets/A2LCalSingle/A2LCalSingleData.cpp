@@ -782,6 +782,13 @@ void A2LCalSingleData::SetToNotExiting()
     }
 }
 
+
+void A2LCalSingleData::SetToExiting()
+{
+    m_Exists = true;
+    m_HasChanged = true;
+}
+
 bool A2LCalSingleData::Exists()
 {
     return m_Exists;

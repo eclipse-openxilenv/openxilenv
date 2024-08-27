@@ -110,7 +110,7 @@ int CyclicCall(EXTERN_PROCESS_TASK_HANDLE, double Period)
         }
 
         // Fetch updated state and report to scenario engine
-        SE_SimpleVehicleState vehicleState = { 0, 0, 0, 0, 0, 0 };
+        SE_SimpleVehicleState vehicleState = { 0, 0, 0, 0, 0, 0, 0, 0};
         SE_SimpleVehicleGetState(vehicleHandle, &vehicleState);
         OpenScen_XPos_m = vehicleState.x;
         OpenScen_YPos_m = vehicleState.y;
@@ -158,7 +158,7 @@ BOOL GetOpenFilename(const char *szExtension, char *szFullPath, HWND hwnd)
 int GetModuleFileName(void *hModule, char *lpFilename, int nSize)
 {
     UNUSED(hModule);
-    char *Path = (char*)getauxval(AT_EXECFN);
+    const char *Path = (char*)getauxval(AT_EXECFN);
     if (Path == NULL) Path = "unknown";
     else Path = realpath(Path, NULL);
     if (Path == NULL) Path = "unknown";
@@ -173,6 +173,8 @@ int GetModuleFileName(void *hModule, char *lpFilename, int nSize)
 
 int main(int argc, char* argv[])
 {
+    UNUSED(argc);
+    UNUSED(argv);
     EXTERN_PROCESS_TASK_HANDLE Process;
 #ifdef _WIN32
     HINSTANCE h_instance = GetModuleHandle(NULL);

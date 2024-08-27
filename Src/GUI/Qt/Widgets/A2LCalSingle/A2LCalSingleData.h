@@ -81,9 +81,8 @@ public:
 
     void CalcRawMinMaxValues();
 
-    //int Update();
-
     void SetToNotExiting();
+    void SetToExiting();
     bool Exists();
     QString GetUnit();
     QString GetValueStr();

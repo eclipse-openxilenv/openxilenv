@@ -113,6 +113,7 @@ EXPORTS
 
     DisconnectFrom
     BuildNewProcessAndConnectTo
+    BuildNewProcessAndConnectToEx
     WaitUntilFunctionCallRequest
     AcknowledgmentOfFunctionCallRequest
     SetHwndMainWindow

@@ -19,6 +19,7 @@
 #include <QString>
 #include <QMimeData>
 #include <QColor>
+#include <QIcon>
 #include "DragAndDrop.h"
 extern "C" {
 #include "Blackboard.h"
@@ -31,6 +32,8 @@ extern "C" {
 BlackboardVariableModel::BlackboardVariableModel(QObject* arg_parent) : QAbstractListModel(arg_parent), m_ObserverConnection(this)
 {
     m_ConnectedToObserver = false;
+    QString Name = QString (":/Icons/Ghost.png");
+    m_GhostIcon = QIcon(Name);
 }
 
 BlackboardVariableModel::~BlackboardVariableModel()
@@ -53,7 +56,13 @@ QVariant BlackboardVariableModel::data(const QModelIndex& arg_index, int arg_rol
             {
                 int Row =  arg_index.row();
                 if ((Row >= 0) && (Row < m_Elements.size())) {
-                    Ret = m_Elements.at(Row).m_Name;
+                    if (m_Elements.at(Row).m_DataType == BB_UNKNOWN_WAIT) {
+                        QString Help = m_Elements.at(Row).m_Name;
+                        //Help.append("  (not existing)");
+                        Ret = Help;
+                    } else {
+                        Ret = m_Elements.at(Row).m_Name;
+                    }
                 } else {
                     Ret = QString ("@Error Row out of bounds (%1)").arg(Row);
                 }
@@ -66,6 +75,16 @@ QVariant BlackboardVariableModel::data(const QModelIndex& arg_index, int arg_rol
                     if (m_Elements.at(Row).m_DataType == BB_UNKNOWN_WAIT) {
                         QColor Color = Qt::lightGray;
                         Ret = Color;
+                    }
+                }
+                break;
+            }
+            case Qt::DecorationRole:
+            {
+                int Row =  arg_index.row();
+                if ((Row >= 0) && (Row < m_Elements.size())) {
+                    if (m_Elements.at(Row).m_DataType == BB_UNKNOWN_WAIT) {
+                        Ret = m_GhostIcon;
                     }
                 }
                 break;
@@ -87,6 +106,16 @@ QVariant BlackboardVariableModel::data(const QModelIndex& arg_index, int arg_rol
                     Ret = m_Elements.at(Row).m_ConversionType;
                 } else {
                     Ret = -1;
+                }
+                break;
+            }
+            case Qt::UserRole + 3:  // Name without "  (not existing)" postfix
+            {
+                int Row =  arg_index.row();
+                if ((Row >= 0) && (Row < m_Elements.size())) {
+                    Ret = m_Elements.at(Row).m_Name;
+                } else {
+                    Ret = QString ("@Error Row out of bounds (%1)").arg(Row);
                 }
                 break;
             }

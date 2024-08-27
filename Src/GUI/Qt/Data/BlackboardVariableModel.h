@@ -21,6 +21,7 @@
 #include <QAbstractListModel>
 #include <QStringListModel>
 #include <QSortFilterProxyModel>
+#include <QIcon>
 #include "BlackboardObserver.h"
 
 extern "C" {
@@ -77,6 +78,7 @@ private:
     bool m_ConnectedToObserver;
     QList <VariableElemente> m_Elements;
     BlackboardObserverConnection m_ObserverConnection;
+    QIcon m_GhostIcon;
 };
 
 #endif // BLACKBOARDVARIABLEMODEL_H

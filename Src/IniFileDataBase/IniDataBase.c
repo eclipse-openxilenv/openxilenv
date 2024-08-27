@@ -22,6 +22,9 @@
 #include <limits.h>
 #include <stdlib.h>
 #include <string.h>
+#ifndef _WIN32
+#include <sys/stat.h>
+#endif
 #include "IniSectionEntryDefines.h"
 
 #include "Config.h"
@@ -160,7 +163,7 @@ static char *GetLine (char **line, int *line_size, FILE *fh)
 
 static int IniFileDataBaseWriteStringNoLock (const char* par_Section, const char* par_Entry, const char* par_Text, int par_FileDescriptor);
 
-static int ParserIniFile(FILE* par_FileHanlde, int par_FileDescriptor)
+static int ParserIniFile(FILE* par_FileHanlde, int par_FileDescriptor, uint64_t par_IniFileSize)
 {
     char *Line = NULL;
     int LineSize = 0;
@@ -168,19 +171,26 @@ static int ParserIniFile(FILE* par_FileHanlde, int par_FileDescriptor)
     char Entry[INI_MAX_ENTRYNAME_LENGTH];
     char *p, *n;
     int c;
-    int32_t IniFileSize;
     int32_t IniFileProcess = 0;
     int32_t Percent, Percent_old=0L;
     int ProgressBarId;
 
     ProgressBarId = OpenProgressBarFromOtherThread("(Read INI)");
-    //fseek(par_FileHanlde, 0L, SEEK_END);
-    IniFileSize = 10000; //ftell(par_FileHanlde);
-    //fseek(par_FileHanlde, 0L, SEEK_SET);
+
+/*  only for debugging */
+    /*static FILE *fh;
+    if (fh == NULL) {
+        fh = fopen("c:\\temp\\inidb.txt", "wt");
+    } else {
+        fprintf (fh, "\n\n");
+    }*/
 
     while (GetLine (&Line, &LineSize, par_FileHanlde) != NULL) {
+/*  only for debugging*/
+        /*fprintf(fh, "%s\n", Line);
+        fflush(fh);*/
         IniFileProcess += (int32_t)strlen (Line);
-        Percent = (int32_t)(100.0 * (double)IniFileProcess / (double)IniFileSize);
+        Percent = (int32_t)(100.0 * (double)IniFileProcess / (double)par_IniFileSize);
         if (Percent > Percent_old) {
             Percent_old = Percent;
             if (ProgressBarId >= 0) SetProgressBarFromOtherThread(ProgressBarId, Percent);
@@ -257,7 +267,7 @@ static char *GetFullPath(const char *par_Filename)
 #ifdef _WIN32
     int NeedSize, Size = MAX_PATH;
     FullName = (char*)my_malloc(Size);
-    if (FillPath == NULL) {
+    if (FullName == NULL) {
         goto __ERROUT;
     }
     NeedSize = GetFullPathName (par_Filename, Size, FullName, NULL);
@@ -267,7 +277,7 @@ static char *GetFullPath(const char *par_Filename)
     if (NeedSize > Size) {
         Size = NeedSize;
         FullName = (char*)my_realloc(FullName, Size);
-        if (FillPath == NULL) {
+        if (FullName == NULL) {
             goto __ERROUT;
         }
         NeedSize = GetFullPathName (par_Filename, Size, FullName, NULL);
@@ -301,6 +311,7 @@ static int IniFileDataBaseOpenInternal(const char *par_Filename, int par_FilterP
     char* FullName = NULL;
     FILE* FileHandle = NULL;
     int FileDescriptor = -1;
+    uint64_t IniFileSize = 0;
     char* p;
     int Version;
     int MinorVersion;
@@ -320,7 +331,7 @@ static int IniFileDataBaseOpenInternal(const char *par_Filename, int par_FilterP
 #ifdef _WIN32
         int NeedSize, Size = MAX_PATH;
         FullName = (char*)my_malloc(Size);
-        if (FillPath == NULL) {
+        if (FullName == NULL) {
             Ret = -1;
             goto __ERROUT;
         }
@@ -332,7 +343,7 @@ static int IniFileDataBaseOpenInternal(const char *par_Filename, int par_FilterP
         if (NeedSize > Size) {
             Size = NeedSize;
             FullName = (char*)my_realloc(FullName, Size);
-            if (FillPath == NULL) {
+            if (FullName == NULL) {
                 Ret = -1;
                 goto __ERROUT;
             }
@@ -340,6 +351,12 @@ static int IniFileDataBaseOpenInternal(const char *par_Filename, int par_FilterP
             if ((NeedSize == 0) || (NeedSize > Size)) {
                 Ret = -1;
                 goto __ERROUT;
+            }
+        }
+        {
+            WIN32_FILE_ATTRIBUTE_DATA Attributes;
+            if (GetFileAttributesEx(FullName, GetFileExInfoStandard, &Attributes)) {
+                IniFileSize = ((uint64_t)Attributes.nFileSizeHigh << 32) + (uint64_t)Attributes.nFileSizeLow;
             }
         }
 #else
@@ -356,6 +373,12 @@ static int IniFileDataBaseOpenInternal(const char *par_Filename, int par_FilterP
         }
         strcpy(FullName, p);
         free(p);
+        {
+            struct stat st;
+            if(stat(FullName, &st) == 0) {
+                IniFileSize = st.st_size;
+            }
+        }
 #endif
         p = FullName;
         while (*p != 0) {
@@ -409,7 +432,7 @@ static int IniFileDataBaseOpenInternal(const char *par_Filename, int par_FilterP
     AllLoadedIniFilesCounter++;
 
     if (strcmp("stdout", par_Filename)) {
-        if (ParserIniFile(FileHandle, FileDescriptor)) {
+        if (ParserIniFile(FileHandle, FileDescriptor, IniFileSize)) {
             Ret = -1;
             goto __ERROUT;
         }
@@ -1004,7 +1027,6 @@ static void FreeSection(INI_DB_SECTION_ELEM *par_Section)
 static int DeleteSection(int par_FileIndex, const char *par_Section)
 {
     int s;
-    INI_DB_SECTION_ELEM *Ret = NULL;
     for (s = 0; s < AllLoadedIniFiles[par_FileIndex].SectionCount; s++) {
         INI_DB_SECTION_ELEM *Section = AllLoadedIniFiles[par_FileIndex].Sections[s];
         if (!strcmp(par_Section, Section->Name)) {

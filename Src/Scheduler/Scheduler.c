@@ -144,6 +144,8 @@ int GetOrFreeUniquePid (int par_Command, int par_Pid, const char *par_Name)
     int Ret;
     int x;
 
+    par_Name = RenameProcessByBasicSettingsTable(par_Name);
+
     if (s_main_ini_val.ConnectToRemoteMaster) {
         return rm_GetOrFreeUniquePid (par_Command, par_Pid, par_Name);
     }
@@ -414,6 +416,8 @@ PID start_process_timeout (const char *par_ProcessName, int par_Timeout, char **
     char BarriersLoopOutBehindOnlySignal[INI_MAX_LINE_LENGTH];
     char BarriersLoopOutBehindSignalAndWait[INI_MAX_LINE_LENGTH];
 
+
+    par_ProcessName = RenameProcessByBasicSettingsTable(par_ProcessName);
     timeout = par_Timeout;
     // Is the process running
     if (get_pid_by_name (par_ProcessName) != UNKNOWN_PROCESS) {

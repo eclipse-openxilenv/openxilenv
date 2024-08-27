@@ -294,15 +294,36 @@ int SearchAndReplaceEnvironmentStringsExt (const char *src, char *dest, int maxc
             *h = 0;
             s++;  // jump over %
             if (EqualWith ("XILENV_EXE_DIR", EnvVarName)) {
+                int Size;
                 SolvedEnvVarsCounter++;
 #ifdef _WIN32
-                GetModuleFileName (GetModuleHandle(NULL), EnvVarValue, sizeof (EnvVarValue));
+                Size = GetModuleFileName (GetModuleHandle(NULL), EnvVarValue, sizeof (EnvVarValue));
 #else
-                readlink("/proc/self/exe", EnvVarValue, sizeof (EnvVarValue));
+                Size = readlink("/proc/self/exe", EnvVarValue, sizeof (EnvVarValue));
 #endif
                 h = EnvVarValue;
                 while (*h != 0) h++;
                 while ((*h != '\\') && (*h != '/') && (h > EnvVarValue)) h--;
+                if ((Size < (sizeof(EnvVarValue) - 8)) &&
+                    !strncmp("SC_", EnvVarName, 3)) {
+                    if (((h - EnvVarValue) > 12) &&
+                        ((*(h - 11) == '\\') || (*(h - 11) == '/')) &&
+                        ((*(h - 10) == 'o') || (*(h - 10) == 'O')) &&
+                        ((*(h - 9) == 'p') || (*(h - 9) == 'P')) &&
+                        ((*(h - 8) == 'e') || (*(h - 8) == 'E')) &&
+                        ((*(h - 7) == 'n') || (*(h - 7) == 'N')) &&
+                        ((*(h - 6) == 'x') || (*(h - 6) == 'X')) &&
+                        ((*(h - 5) == 'i') || (*(h - 5) == 'I')) &&
+                        ((*(h - 4) == 'l') || (*(h - 4) == 'L')) &&
+                        ((*(h - 3) == 'e') || (*(h - 3) == 'E')) &&
+                        ((*(h - 2) == 'n') || (*(h - 2) == 'N')) &&
+                        ((*(h - 1) == 'v') || (*(h - 1) == 'V')) &&
+                        ((*h  == '\\') || (*h == '/'))) {
+                        h -= 10;
+                        *h++ = 's';
+                        *h++ = 'c';
+                    }
+                }
                 *h = 0;
             } else if (EqualWith ("XILENV_WORK_DIR", EnvVarName)) {    // Work folder from basic settings
                 SolvedEnvVarsCounter++;

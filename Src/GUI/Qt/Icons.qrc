@@ -86,5 +86,6 @@
         <file>Icons/HideControlPanel.png</file>
         <file>Icons/MoveControlPanel.png</file>
         <file>Icons/ShowControlPanel.png</file>
+        <file>Icons/Ghost.png</file>
     </qresource>
 </RCC>

@@ -30,6 +30,7 @@
 #include "Blackboard.h"
 #include "BlackboardAccess.h"
 #include "MyMemory.h"
+#include "MainValues.h"
 #include "CanDataBase.h"
 #ifdef REMOTE_MASTER
 #include <strings.h>
@@ -616,7 +617,7 @@ static int BuildinFunctions(EQUATION_PARSER_INFOS *pParser)
             if (Size >= 0) {
                 char *Parameter = alloca(Size+1);
                 StringCopyMaxCharTruncate(Parameter, ParStart, Size+1);
-                switch (get_process_state (get_pid_by_name (Parameter))) {
+                switch (get_process_state (get_pid_by_name (RenameProcessByBasicSettingsTable(Parameter)))) {
                 case EX_PROCESS_REFERENCE:
                     pParser->Value.value = 1;
                     break;
@@ -722,12 +723,15 @@ static int BuildinFunctions(EQUATION_PARSER_INFOS *pParser)
             p = Parameter;
 
             // enum(blackboardname.ENUM-Text) or enum(blackboardname@ENUM-Text)
+            // search from the end because . characters can also be included inside a variable name
+            while (*p != 0) p++;
+            if (p > Parameter) p--;
             while ((*p != '.') && (*p != '@')) {
-                if (*p == 0) {
+                if (p <= Parameter) {
                     EquationError (pParser, EQU_PARSER_ERROR_STOP, "Missing separator ('.' or '@') in enum() inside equation \"%s\"", pParser->Equation);
                     return pParser->Token = EQU_OP_END;
                 }
-                p++;
+                p--;
             }
             *p = 0;
             p++;

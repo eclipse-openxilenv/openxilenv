@@ -819,14 +819,17 @@ int scm_read_bytes (uint64_t address, PID pid, char *dest, int len)
                         MEMCPY (dest, 
                                 ((PIPE_API_READ_MEMORY_CMD_MESSAGE_ACK*)(Buffer))->Memory,
                                 (size_t)Size);
-                        return Size;
+                        Ret = Size;
+                        break;  // for(;;)
                     } else {
                         // External process send something else and not the acknowledge to the PIPE_API_READ_MEMORY_CMD command
-                        if (OtherCmd (pTcb, Buffer, BytesRead)) break;
+                        if (OtherCmd (pTcb, Buffer, BytesRead)) {
+                            break;  // for(;;)
+                        }
                     }
                 } else {
                     ThrowError (1, "extern process %s close himself (maybe he call exit() or abort() function or he is killed by an exception or stopped from a debugger)", pTcb->name);
-                    break;
+                    break;  // for(;;)
                 }
             }
             GetFreeMessageBuffer(Buffer);
@@ -915,11 +918,13 @@ int scm_write_bytes (uint64_t address, PID pid, unsigned char *src, int len)
                         break;   // for(;;)
                     } else {
                         // External process send something else and not the acknowledge to the des PIPE_API_WRITE_MEMORY_CMD command
-                        if (OtherCmd (pTcb, Buffer, BytesRead)) break;
+                        if (OtherCmd (pTcb, Buffer, BytesRead)) {
+                            break;   // for(;;)
+                        }
                     }
                 } else {
                     ThrowError (1, "extern process %s close himself (maybe he call exit() or abort() function or he is killed by an exception or stopped from a debugger)", pTcb->name);
-                    break;
+                    break;   // for(;;)
                 }
             }
             GetFreeMessageBuffer(Buffer);
@@ -1016,11 +1021,13 @@ int scm_ref_vari_lock_flag(uint64_t address, PID pid, const char *name, int type
                             break;   // for(;;)
                         } else {
                             // External process send something else and not the acknowledge to the PIPE_API_REFERENCE_VARIABLE_CMD command
-                            if (OtherCmd (pTcb, Buffer, BytesRead)) break;
+                            if (OtherCmd (pTcb, Buffer, BytesRead)) {
+                                break;   // for(;;)
+                            }
                         }
                     } else {
                         ThrowError (1, "extern process %s close himself (maybe he call exit() or abort() function or he is killed by an exception or stopped from a debugger)", pTcb->name);
-                        break;
+                        break;   // for(;;)
                     }
                 }
                 GetFreeMessageBuffer(Buffer);
@@ -1112,11 +1119,13 @@ int scm_unref_vari_lock_flag(uint64_t address, PID pid, char *name, int type, in
                             break;  // for(;;)
                         } else {
                             // External process send something else and not the acknowledge to the PIPE_API_DEREFERENCE_VARIABLE_CMD command
-                            if (OtherCmd (pTcb, Buffer, BytesRead)) break;
+                            if (OtherCmd (pTcb, Buffer, BytesRead)) {
+                                break;   // for(;;)
+                            }
                         }
                     } else {
                         ThrowError (1, "extern process %s close himself (maybe he call exit() or abort() function or he is killed by an exception or stopped from a debugger)", pTcb->name);
-                        break;
+                        break;   // for(;;)
                     }
                 }
                 GetFreeMessageBuffer(Buffer);
@@ -1192,11 +1201,13 @@ int scm_write_section_to_exe (PID pid, char *Section)
                             break;  // for(;;)
                         } else {
                             // External process send something else and not the acknowledge to the PIPE_API_WRITE_SECTION_BACK_TO_EXE_CMD command
-                            if (OtherCmd (pTcb, Buffer, BytesRead)) break;
+                            if (OtherCmd (pTcb, Buffer, BytesRead)) {
+                                break;   // for(;;)
+                            }
                         }
                     } else {
                         ThrowError (1, "extern process %s close himself (maybe he call exit() or abort() function or he is killed by an exception or stopped from a debugger)", pTcb->name);
-                        break;
+                        break;   // for(;;)
                     }
                 }
                 GetFreeMessageBuffer(Buffer);
@@ -1264,11 +1275,13 @@ int dereference_all_blackboard_variables (int pid)
                         break;   // for(;;)
                     } else {
                         // External process send something else and not the acknowledge to the PIPE_API_WRITE_SECTION_BACK_TO_EXE_CMD command
-                        if (OtherCmd (pTcb, Buffer, BytesRead)) break;
+                        if (OtherCmd (pTcb, Buffer, BytesRead)) {
+                            break;   // for(;;)
+                        }
                     }
                 } else {
                     ThrowError (1, "extern process %s close himself (maybe he call exit() or abort() function or he is killed by an exception or stopped from a debugger)", pTcb->name);
-                    break;
+                    break; // for(;;)
                 }
             }
             GetFreeMessageBuffer (Buffer);

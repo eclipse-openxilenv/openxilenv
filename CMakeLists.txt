@@ -305,6 +305,7 @@ else()
                 Src/Blackboard
                 Src/CanDataBase
                 Src/CanServer
+                Src/CanServer/J1939
                 Src/Global
                 Src/Ramps
                 Src/RemoteMaster
@@ -318,6 +319,9 @@ else()
                 Src/TraceRecorder
                 Src/Utilities
                 Src/Scheduler)
+            if(BUILD_WITH_J1939_SUPPORT)
+                target_compile_definitions(XilEnvGui PUBLIC BUILD_WITH_J1939_SUPPORT)
+            endif()
             target_compile_definitions(LinuxRemoteMasterCore PUBLIC _M_X64)
             target_compile_definitions(LinuxRemoteMasterCore PUBLIC REMOTE_MASTER)
             if(BUILD_WITH_J1939_SUPPORT)
