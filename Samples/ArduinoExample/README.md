@@ -13,12 +13,11 @@
     - [Modify the arduino\_sim\_config.ini](#modify-the-arduino_sim_configini)
 - [Arduino-CLI](#arduino-cli)
   - [Setup](#setup)
-    - [Commands](#commands)
   - [CMake build (Windows)](#cmake-build-windows)
 
 
 ## Introduction
-This is an example for integrating sample source code into the OpenXiLEnv which was written for Arduino UNO. It shall help to understand how the integration of any source code is working which actually runs on a MCU in the real world. <br>
+This is an example for integrating sample source code into the OpenXiLEnv which was written for Arduino UNO. It shall help to understand how the integration of any source code is working which actually run on a MCU in the real world. <br>
 The example includes a simple simulation of the Arduino driver. **The simulated driver were implemented to have a kind of guideline how a simulation of MCU driver can work. They were kept really simple and might have some bugs.**
 
 
@@ -27,20 +26,21 @@ To understand what is the Arduino sketch about, take a look to [arduino_example_
 
 
 ## Simulation of Arduino drivers
-When you are working with Arduino IDE and .ino sketches you must include the `Arduino.h` header file to use functions like `pinMode`, `digitalRead` and `digitalWrite`. Alle these functions are dependent on registers and addresses which are defined for the specific microchip. In the case of the Arduino UNO it's a AVR microchip. <br><br>
+When you are working with Arduino IDE and .ino sketches you must include the `Arduino.h` header file to use functions like `pinMode`, `digitalRead` or `digitalWrite`. All these functions are dependent on registers and addresses which are defined for the specific microchip. <br><br>
 Tho make the Arduino sketch code run in the OpenXilEnv as external process, the `Arduino.h` must be reimplemented. A driver simulation of this header file must be implemented. <br>
-For that purpose, a new folder was created called `driverSimulations`. This folder includes a re-definition of `Arduino.h` and a implementation file where the actual simulation is implemented, called `pin.c`. <br>
-For now only all necessary simulations are implemented which are required for this Arduino example. **The simulation is not complete!** If required, it can be extended.
+For that purpose, a new folder was created called `driverSimulations`. This folder includes a re-definition of `Arduino.h` and an implementation file where the actual simulation is implemented, called `pin.c`. <br>
+For now, only all necessary simulations are implemented which are required for this Arduino example. **That means the simulation is not complete!** If required, it can be extended.
 
 
 ## Integration of Arduino source code
-The important parts of the code from [arduino_example.ino] (`loop` and `setup` functions)(arduino_example.ino) were integrated into the [arduino_process.cpp](xil_sources/arduino_process.cpp) and [arduino_model.cpp](xil_sources/arduino_model.cpp). All necessary variables were also referenced there.
+The important parts of the code from [arduino_example.ino](arduino_example.ino) (`loop` and `setup` functions) were integrated into the [arduino_process.cpp](xil_sources/arduino_process.cpp) and [arduino_model.cpp](xil_sources/arduino_model.cpp). All necessary variables were also referenced there. <br>
+In case of [arduino_model.cpp](xil_sources/arduino_model.cpp) there are some more variables which start with the prefix "SIM". These are used to simulate actual values, for example the input for digital pins (HIGH/LOW) on the board.
 
 
 ## Building and using the external processes (Windows)
+The cmake build configuration has a option called `BUILD_SIL_SOURCES`. Enabling this option will automatically include the simulated driver and build the external processes. Disabling this option will compile and upload the Arduino sketch to the connected board. <br>
+For this option the Arduino CLI is required. When you want to compile and upload your sketch, follow the instruction in chapter [Arduino-CLI](#arduino-cli). Instead, you can of course use the Arduino IDE for that.
 
-The cmake build configuration has a option called `BUILD_SIL_SOURCES`. Enabling this option will automatically include the simulated drivers and build the external processes. Disabling this option will compile and upload the Arduino sketch to the connected board. <br>
-For this option the Arduino CLI is required. When you want to compile and upload your sketch, follow the instruction in chapter [Arduino-CLI](#arduino-cli). 
 
 ### Generate build files with CMake for external processes
 Run the following command in the directory of this README file:
@@ -66,9 +66,6 @@ Add the built external processes as process in the INI section "InitStartProcess
 
 ## Setup
 Add the path of arduino-cli.exe to PATH.
- 
-
-### Commands
  
 Initialize configurations:
  
