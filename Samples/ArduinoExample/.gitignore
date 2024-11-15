@@ -1,0 +1,7 @@
+# IDE generated
+.idea
+.vscode
+
+# Compiled files
+build
+__pycache__
