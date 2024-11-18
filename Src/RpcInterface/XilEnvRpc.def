@@ -150,7 +150,7 @@ EXPORTS
     XilEnv_CopyFileFromLocal
 
     XilEnv_SetCanChannelCount
-    XilEnv_SetSetCanChannelStartupState
+    XilEnv_SetCanChannelStartupState
 
     XilEnv_SetCanErr
     XilEnv_SetCanErrSignalName

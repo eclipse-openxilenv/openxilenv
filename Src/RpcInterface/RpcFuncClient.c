@@ -3276,7 +3276,7 @@ CFUNC SCRPCDLL_API int __STDCALL__ XilEnv_SetCanChannelCount (int ChannelCount)
     return Ack.Header.ReturnValue;
 }
 
-CFUNC SCRPCDLL_API int __STDCALL__ XilEnv_SetSetCanChannelStartupState (int Channel, int StartupState)
+CFUNC SCRPCDLL_API int __STDCALL__ XilEnv_SetCanChannelStartupState (int Channel, int StartupState)
 {
     RPC_API_SET_CAN_CHANNEL_STARTUP_STATE_MESSAGE *Req;
     RPC_API_SET_CAN_CHANNEL_STARTUP_STATE_MESSAGE_ACK Ack;

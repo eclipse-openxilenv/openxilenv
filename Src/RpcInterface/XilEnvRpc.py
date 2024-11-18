@@ -560,9 +560,6 @@ class XilEnvRpc:
 		self.__Dll.XilEnv_SaveRefList.restype = ct.c_int
 		self.__Dll.XilEnv_SaveRefList.argtypes = [ct.c_char_p, ct.c_char_p]
 
-		self.__Dll.XilEnv_ExportRobFile.restype = ct.c_int
-		self.__Dll.XilEnv_ExportRobFile.argtypes = [ct.c_char_p]
-
 		self.__Dll.XilEnv_GetVariConversionType.restype = ct.c_int
 		self.__Dll.XilEnv_GetVariConversionType.argtypes = [ct.c_int]
 
@@ -658,17 +655,17 @@ class XilEnvRpc:
 		self.__Dll.XilEnv_SetSymbolRaw.argtypes = [ct.c_char_p, ct.c_char_p, ct.c_int, ct.c_int, BB_VARI]
 
 # CAN
-		self.__Dll.SCRT_LoadCanVariante.restype = ct.c_int
-		self.__Dll.SCRT_LoadCanVariante.argtypes = [ct.c_char_p, ct.c_int]
+		self.__Dll.XilEnv_LoadCanVariante.restype = ct.c_int
+		self.__Dll.XilEnv_LoadCanVariante.argtypes = [ct.c_char_p, ct.c_int]
 
-		self.__Dll.SCRT_LoadAndSelCanVariante.restype = ct.c_int
-		self.__Dll.SCRT_LoadAndSelCanVariante.argtypes = [ct.c_char_p, ct.c_int]
+		self.__Dll.XilEnv_LoadAndSelCanVariante.restype = ct.c_int
+		self.__Dll.XilEnv_LoadAndSelCanVariante.argtypes = [ct.c_char_p, ct.c_int]
 
-		self.__Dll.SCRT_AppendCanVariante.restype = ct.c_int
-		self.__Dll.SCRT_AppendCanVariante.argtypes = [ct.c_char_p, ct.c_int]
+		self.__Dll.XilEnv_AppendCanVariante.restype = ct.c_int
+		self.__Dll.XilEnv_AppendCanVariante.argtypes = [ct.c_char_p, ct.c_int]
 
-		self.__Dll.SCRT_DelAllCanVariants.restype = None
-		self.__Dll.SCRT_DelAllCanVariants.argtypes = None
+		self.__Dll.XilEnv_DelAllCanVariants.restype = None
+		self.__Dll.XilEnv_DelAllCanVariants.argtypes = None
 
 # CCP
 		self.__Dll.XilEnv_LoadCCPConfig.restype = ct.c_int
@@ -763,10 +760,10 @@ class XilEnvRpc:
 
 # Other part 2
 		self.__Dll.XilEnv_SetCanChannelCount.restype = ct.c_int
-                self.__Dll.XilEnv_SetCanChannelCount.argtypes = [ct.c_int]
+		self.__Dll.XilEnv_SetCanChannelCount.argtypes = [ct.c_int]
 
-                self.__Dll.XilEnv_SetCanChannelStartupState.restype = ct.c_int
-                self.__Dll.XilEnv_SetCanChannelStartupState.argtypes = [ct.c_int, ct.c_int]
+		self.__Dll.XilEnv_SetCanChannelStartupState.restype = ct.c_int
+		self.__Dll.XilEnv_SetCanChannelStartupState.argtypes = [ct.c_int, ct.c_int]
 
 # CAN bit error
 		self.__Dll.XilEnv_SetCanErr.restype = ct.c_int
@@ -1344,6 +1341,28 @@ class XilEnvRpc:
 		else:
 			return -1
 
+	def WriteFrame(self, vidList, valueList):
+		if (self.__SuccessfulConnected == 1) and len(vidList) == len(valueList):
+			listSize = len(vidList)
+			vidArray = (ct.c_int * listSize)(*vidList)
+			valueArray = (ct.c_double * listSize)(*valueList)
+
+			self.__Dll.XilEnv_WriteFrame(vidArray, valueArray, listSize)
+		else:
+			return -1
+
+	def ReadFrame(self, vidList):
+		if (self.__SuccessfulConnected == 1):
+			listSize = len(vidList)
+			vidArray = (ct.c_int * listSize)(*vidList)
+			valueArrayToReturn = (ct.c_double * listSize)()
+
+			self.__Dll.XilEnv_GetFrame(vidArray, valueArrayToReturn, listSize)
+
+			return list(valueArrayToReturn)
+		else:
+			return -1
+
 	def Equ (self, Equ):
 		if (self.__SuccessfulConnected == 1):
 			return self.__Dll.XilEnv_Equ(self.c_str(Equ))
@@ -1623,25 +1642,25 @@ class XilEnvRpc:
 # CAN
 	def LoadCanVariante (self, CanFile, Channel):
 		if (self.__SuccessfulConnected == 1):
-			return self.__Dll.SCRT_LoadCanVariante(self.c_str(CanFile), Channel)
+			return self.__Dll.XilEnv_LoadCanVariante(self.c_str(CanFile), Channel)
 		else:
 			return -1
 
 	def LoadAndSelCanVariante (self, CanFile, Channel):
 		if (self.__SuccessfulConnected == 1):
-			return self.__Dll.SCRT_LoadAndSelCanVariante(self.c_str(CanFile), Channel)
+			return self.__Dll.XilEnv_LoadAndSelCanVariante(self.c_str(CanFile), Channel)
 		else:
 			return -1
 
 	def AppendCanVariante (self, CanFile, Channel):
 		if (self.__SuccessfulConnected == 1):
-			return self.__Dll.SCRT_AppendCanVariante(self.c_str(CanFile), Channel)
+			return self.__Dll.XilEnv_AppendCanVariante(self.c_str(CanFile), Channel)
 		else:
 			return -1
 
 	def DelAllCanVariants (self):
 		if (self.__SuccessfulConnected == 1):
-			self.__Dll.SCRT_DelAllCanVariants()
+			self.__Dll.XilEnv_DelAllCanVariants()
 
 	def SetCanChannelCount (self, ChannelCount):
 		if (self.__SuccessfulConnected == 1):
@@ -1649,11 +1668,11 @@ class XilEnvRpc:
 		else:
 			return -1
 
-        def SetCanChannelStartupState (self, Channel, State):
-                if (self.__SuccessfulConnected == 1):
-                        return self.__Dll.XilEnv_SetCanChannelStartupState(Channel, State)
-                else:
-                        return -1
+	def SetCanChannelStartupState (self, Channel, State):
+			if (self.__SuccessfulConnected == 1):
+					return self.__Dll.XilEnv_SetCanChannelStartupState(Channel, State)
+			else:
+					return -1
 
 
 	def TransmitCAN (self, Id, Ext, Size, Data0, Data1, Data2, Data3, Data4, Data5, Data6, Data7):
