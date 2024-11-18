@@ -1344,6 +1344,28 @@ class XilEnvRpc:
 		else:
 			return -1
 
+	def WriteFrame(self, vidList, valueList):
+		if (self.__SuccessfulConnected == 1) and len(vidList) == len(valueList):
+			listSize = len(vidList)
+			vidArray = (ct.c_int * listSize)(*vidList)
+			valueArray = (ct.c_double * listSize)(*valueList)
+
+			self.__Dll.XilEnv_WriteFrame(vidArray, valueArray, listSize)
+		else:
+			return -1
+
+	def ReadFrame(self, vidList):
+		if (self.__SuccessfulConnected == 1):
+			listSize = len(vidList)
+			vidArray = (ct.c_int * listSize)(*vidList)
+			valueArrayToReturn = (ct.c_double * listSize)()
+
+			self.__Dll.XilEnv_GetFrame(vidArray, valueArrayToReturn, listSize)
+
+			return list(valueArrayToReturn)
+		else:
+			return -1
+
 	def Equ (self, Equ):
 		if (self.__SuccessfulConnected == 1):
 			return self.__Dll.XilEnv_Equ(self.c_str(Equ))
