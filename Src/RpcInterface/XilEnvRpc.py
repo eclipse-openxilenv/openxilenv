@@ -658,17 +658,17 @@ class XilEnvRpc:
 		self.__Dll.XilEnv_SetSymbolRaw.argtypes = [ct.c_char_p, ct.c_char_p, ct.c_int, ct.c_int, BB_VARI]
 
 # CAN
-		self.__Dll.SCRT_LoadCanVariante.restype = ct.c_int
-		self.__Dll.SCRT_LoadCanVariante.argtypes = [ct.c_char_p, ct.c_int]
+		self.__Dll.XilEnv_LoadCanVariante.restype = ct.c_int
+		self.__Dll.XilEnv_LoadCanVariante.argtypes = [ct.c_char_p, ct.c_int]
 
-		self.__Dll.SCRT_LoadAndSelCanVariante.restype = ct.c_int
-		self.__Dll.SCRT_LoadAndSelCanVariante.argtypes = [ct.c_char_p, ct.c_int]
+		self.__Dll.XilEnv_LoadAndSelCanVariante.restype = ct.c_int
+		self.__Dll.XilEnv_LoadAndSelCanVariante.argtypes = [ct.c_char_p, ct.c_int]
 
-		self.__Dll.SCRT_AppendCanVariante.restype = ct.c_int
-		self.__Dll.SCRT_AppendCanVariante.argtypes = [ct.c_char_p, ct.c_int]
+		self.__Dll.XilEnv_AppendCanVariante.restype = ct.c_int
+		self.__Dll.XilEnv_AppendCanVariante.argtypes = [ct.c_char_p, ct.c_int]
 
-		self.__Dll.SCRT_DelAllCanVariants.restype = None
-		self.__Dll.SCRT_DelAllCanVariants.argtypes = None
+		self.__Dll.XilEnv_DelAllCanVariants.restype = None
+		self.__Dll.XilEnv_DelAllCanVariants.argtypes = None
 
 # CCP
 		self.__Dll.XilEnv_LoadCCPConfig.restype = ct.c_int
@@ -1623,25 +1623,25 @@ class XilEnvRpc:
 # CAN
 	def LoadCanVariante (self, CanFile, Channel):
 		if (self.__SuccessfulConnected == 1):
-			return self.__Dll.SCRT_LoadCanVariante(self.c_str(CanFile), Channel)
+			return self.__Dll.XilEnv_LoadCanVariante(self.c_str(CanFile), Channel)
 		else:
 			return -1
 
 	def LoadAndSelCanVariante (self, CanFile, Channel):
 		if (self.__SuccessfulConnected == 1):
-			return self.__Dll.SCRT_LoadAndSelCanVariante(self.c_str(CanFile), Channel)
+			return self.__Dll.XilEnv_LoadAndSelCanVariante(self.c_str(CanFile), Channel)
 		else:
 			return -1
 
 	def AppendCanVariante (self, CanFile, Channel):
 		if (self.__SuccessfulConnected == 1):
-			return self.__Dll.SCRT_AppendCanVariante(self.c_str(CanFile), Channel)
+			return self.__Dll.XilEnv_AppendCanVariante(self.c_str(CanFile), Channel)
 		else:
 			return -1
 
 	def DelAllCanVariants (self):
 		if (self.__SuccessfulConnected == 1):
-			self.__Dll.SCRT_DelAllCanVariants()
+			self.__Dll.XilEnv_DelAllCanVariants()
 
 	def SetCanChannelCount (self, ChannelCount):
 		if (self.__SuccessfulConnected == 1):
