@@ -560,9 +560,6 @@ class XilEnvRpc:
 		self.__Dll.XilEnv_SaveRefList.restype = ct.c_int
 		self.__Dll.XilEnv_SaveRefList.argtypes = [ct.c_char_p, ct.c_char_p]
 
-		self.__Dll.XilEnv_ExportRobFile.restype = ct.c_int
-		self.__Dll.XilEnv_ExportRobFile.argtypes = [ct.c_char_p]
-
 		self.__Dll.XilEnv_GetVariConversionType.restype = ct.c_int
 		self.__Dll.XilEnv_GetVariConversionType.argtypes = [ct.c_int]
 
@@ -763,10 +760,10 @@ class XilEnvRpc:
 
 # Other part 2
 		self.__Dll.XilEnv_SetCanChannelCount.restype = ct.c_int
-                self.__Dll.XilEnv_SetCanChannelCount.argtypes = [ct.c_int]
+		self.__Dll.XilEnv_SetCanChannelCount.argtypes = [ct.c_int]
 
-                self.__Dll.XilEnv_SetCanChannelStartupState.restype = ct.c_int
-                self.__Dll.XilEnv_SetCanChannelStartupState.argtypes = [ct.c_int, ct.c_int]
+		self.__Dll.XilEnv_SetCanChannelStartupState.restype = ct.c_int
+		self.__Dll.XilEnv_SetCanChannelStartupState.argtypes = [ct.c_int, ct.c_int]
 
 # CAN bit error
 		self.__Dll.XilEnv_SetCanErr.restype = ct.c_int
@@ -1671,11 +1668,11 @@ class XilEnvRpc:
 		else:
 			return -1
 
-        def SetCanChannelStartupState (self, Channel, State):
-                if (self.__SuccessfulConnected == 1):
-                        return self.__Dll.XilEnv_SetCanChannelStartupState(Channel, State)
-                else:
-                        return -1
+	def SetCanChannelStartupState (self, Channel, State):
+			if (self.__SuccessfulConnected == 1):
+					return self.__Dll.XilEnv_SetCanChannelStartupState(Channel, State)
+			else:
+					return -1
 
 
 	def TransmitCAN (self, Id, Ext, Size, Data0, Data1, Data2, Data3, Data4, Data5, Data6, Data7):
