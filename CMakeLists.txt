@@ -229,7 +229,7 @@ else()
             if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
                 target_compile_options(XilEnvRpc PRIVATE /wd5105)
             elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-                # do not as "lib" before the DLL name
+                # do not add "lib" before the DLL name
                 set(CMAKE_SHARED_LIBRARY_PREFIX "")
                 target_compile_definitions(XilEnvRpc PRIVATE WINVER=0x0600)
                 target_compile_definitions(XilEnvRpc PRIVATE _WIN32_WINNT=0x0600)
@@ -401,6 +401,14 @@ else()
             ./Userguide/OpenXiL_Userguide.pdf
             DESTINATION  ${CMAKE_INSTALL_PREFIX}
         )
+	else()
+		# copy the 32-bit mingw dlls into the Bin32 folder
+		cmake_path(GET CMAKE_C_COMPILER PARENT_PATH C_COMPILER_PATH)
+		message("C_COMPILER_PATH")
+		message(${C_COMPILER_PATH})
+		INSTALL(DIRECTORY "${C_COMPILER_PATH}/"
+			DESTINATION ${CMAKE_INSTALL_PREFIX}${XilEnvExtProcLibPath}
+			FILES_MATCHING PATTERN "*.dll")
     endif()
 
     if(${MY_CMAKE_SIZEOF_VOID_P} GREATER 4)

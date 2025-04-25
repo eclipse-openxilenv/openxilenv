@@ -254,7 +254,7 @@ STUB_OUT:
 #ifdef _MSC_VER
     #pragma warning(pop)
 #endif
-            DllFunctionCache.hModulDll = LoadLibraryA (DllFunctionCache.DllNameWithPath);
+            DllFunctionCache.hModulDll = LoadLibraryExA (DllFunctionCache.DllNameWithPath, NULL, LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR);
             if (DllFunctionCache.hModulDll == NULL) {
                 char *lpMsgBuf = NULL;
                 DWORD dw = GetLastError ();
