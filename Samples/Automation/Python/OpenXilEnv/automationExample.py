@@ -13,12 +13,12 @@ def main():
     xil.writeSignal("FireUp", 1)
     cycles = xil.waitUntilValueMatch("FireUp", 1, 1)
     print(f"Remaining cycles: {cycles}")
-    print(f"FireUp: {xil.readSignal("FireUp")}")
+    print(f"FireUp: {xil.readSignal('FireUp')}")
 
     xil.writeSignal("FireUp", 0)
     cycles = xil.waitUntilValueMatch("FireUp", 0, 1)
     print(f"Remaining cycles: {cycles}")
-    print(f"FireUp: {xil.readSignal("FireUp")}")
+    print(f"FireUp: {xil.readSignal('FireUp')}")
 
     xil.disconnectAndCloseXil()
 
