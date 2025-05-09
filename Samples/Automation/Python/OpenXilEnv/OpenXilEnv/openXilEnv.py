@@ -3,7 +3,7 @@ import subprocess
 import sys
 import time
 
-from CoreTestFramework.OpenXilEnv.XilEnvRpc import *
+from OpenXilEnv.XilEnvRpc import *
 
 
 class OpenXilEnv:
