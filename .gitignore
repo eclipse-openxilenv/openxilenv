@@ -1,1 +1,8 @@
 *.txt.user
+
+# Python package information
+*.egg-info/
+
+# Python build files
+build/
+dist/
