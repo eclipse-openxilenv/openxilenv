@@ -1,6 +1,6 @@
 # OpenXilEnv
 
-The Python package **OpenXilEnv** provides an easy way to interact with a XIL environment in automation scripts.
+The Python package **OpenXilEnv** provides an easy way to interact with the XIL environment in automation scripts.
 
 
 ## Build and installation
@@ -36,11 +36,11 @@ The version of the package might differ. Be carefully here and put the correct p
 ## Example: `automationExample.py`
 
 The script `automationExample.py` demonstrates how to use the **OpenXilEnv** package. Keep in mind that you must modify the variables `xilEnvInstallationPath` and `electricCarIniFilePath` to their correct paths in your case. <br>
-This example uses the electric car example. Make sure to configure the OpenXilEnv application correctly with CMake, so that the example are also built.
+This example uses the electric car example. Make sure to configure the OpenXilEnv application correctly with CMake, so that the external processes are also built.
 
 ### Workflow:
 1. The XIL environment is started with the GUI.
-2. Variables like `FireUp` and `PlugIn` are attached.
+2. Variables `FireUp` and `PlugIn` are attached.
 3. Signals are written and read, e.g., activating (`FireUp = 1`) and deactivating (`FireUp = 0`) a signal.
 4. The script waits for signal changes before printing the remaining cycles.
 5. Finally, the connection to the XIL environment is disconnected, and the environment is closed.
