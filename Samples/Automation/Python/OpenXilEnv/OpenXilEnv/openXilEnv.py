@@ -3,7 +3,7 @@ import subprocess
 import sys
 import time
 
-from CoreTestFramework.OpenXilEnv.XilEnvRpc import *
+from OpenXilEnv.XilEnvRpc import *
 
 
 class OpenXilEnv:
@@ -84,6 +84,8 @@ class OpenXilEnv:
 
     def disconnectAndCloseXil(self):
         if self.__xilEnvProcess:
+            self.__removeVariables()
+
             self.__xilEnv.DisconnectAndClose(0, 0)
 
     def readMultipleSignals(self, signalNames):
@@ -97,7 +99,7 @@ class OpenXilEnv:
 
         return value
 
-    def removeVariables(self):
+    def __removeVariables(self):
         for signalName, variableId in self.__attachedVar.items():
             self.__xilEnv.RemoveVari(variableId)
 
