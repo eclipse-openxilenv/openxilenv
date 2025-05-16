@@ -144,8 +144,6 @@ class OpenXilEnv:
         signalIdList = [self.__attachedVar[name] for name in signalNames]
         self.__xilEnv.WriteFrame(signalIdList, signalValues)
 
-        return signalValues
-
     def writeSignal(self, signalName, rawValue):
         self.__xilEnv.Set(self.__attachedVar[signalName], rawValue)
 
