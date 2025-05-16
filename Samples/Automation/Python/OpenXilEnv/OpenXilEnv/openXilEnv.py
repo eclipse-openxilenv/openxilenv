@@ -78,6 +78,11 @@ class OpenXilEnv:
             print(e)
             sys.exit(1)
 
+    def __switchRealTimeFactor(self, setting):
+        self.__xilEnv.StopScheduler()
+        self.__xilEnv.ChangeSettings("NOT_FASTER_THAN_REALTIME", setting)
+        self.__xilEnv.ContinueScheduler()
+
     def __translateSecondsToCycleCounts(self, seconds):
         sampleFrequency = self.readSignal("XilEnv.SampleFrequency")
         return int(seconds * sampleFrequency)
@@ -93,11 +98,17 @@ class OpenXilEnv:
             else:
                 print(f"Could not attach variable {variableName}")
 
+    def disableRealTimeFactorSwitch(self):
+        self.__switchRealTimeFactor("No")
+
     def disconnectAndCloseXil(self):
         if self.__xilEnvProcess:
             self.__removeVariables()
 
             self.__xilEnv.DisconnectAndClose(0, 0)
+
+    def enableRealTimeFactorSwitch(self):
+        self.__switchRealTimeFactor("Yes")
 
     def readMultipleSignals(self, signalNames):
         signalIdList = [self.__attachedVar[name] for name in signalNames]
@@ -128,13 +139,6 @@ class OpenXilEnv:
 
     def startWithoutGui(self, iniFilePath, timeoutInSec=5):
         self.__start(iniFilePath, False, timeoutInSec)
-
-    def switchRTFactor(self, stringValue):
-        self.__xilEnv.StopScheduler()
-        self.__xilEnv.ChangeSettings("NOT_FASTER_THAN_REALTIME", stringValue)
-        self.__xilEnv.ContinueScheduler()
-
-        return stringValue
 
     def writeMultipleSignals(self, signalNames, signalValues):
         signalIdList = [self.__attachedVar[name] for name in signalNames]
