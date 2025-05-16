@@ -44,7 +44,18 @@ class OpenXilEnv:
             else:
                 print(f"Could not attach variable {variableName}")
 
-    def __start(self, iniFilePath, startWithGUI):
+    def __connectToXilEnv(self, timeoutInSec):
+        connectionStatus = -1
+        while timeoutInSec:
+            connectionStatus = self.__xilEnv.ConnectTo("")
+            if connectionStatus == 0 or timeoutInSec == 0:
+                return connectionStatus
+            timeoutInSec -= 1
+            time.sleep(1)
+
+        return connectionStatus
+
+    def __start(self, iniFilePath, startWithGUI, timeoutInSec):
         try:
             if startWithGUI:
                 self.__xilEnvProcess = subprocess.Popen([self.__xilEnvExePath, "-ini", iniFilePath],
@@ -53,11 +64,11 @@ class OpenXilEnv:
                 self.__xilEnvProcess = subprocess.Popen([self.__xilEnvExePath, "-ini", iniFilePath, "-nogui"],
                                                         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
-            self.__waitUntilApplicationIsReady()
+            connectionStatus = self.__connectToXilEnv(timeoutInSec)
 
-            connectionStatus = self.__xilEnv.ConnectTo("")
             if connectionStatus == 0:
                 print("Python has been successfully connected to XilEnv")
+                self.__waitUntilApplicationIsReady()
                 self.__attachDefaultXilEnvVariables()
                 return
             else:
@@ -67,12 +78,17 @@ class OpenXilEnv:
             print(e)
             sys.exit(1)
 
+    def __switchRealTimeFactor(self, setting):
+        self.__xilEnv.StopScheduler()
+        self.__xilEnv.ChangeSettings("NOT_FASTER_THAN_REALTIME", setting)
+        self.__xilEnv.ContinueScheduler()
+
     def __translateSecondsToCycleCounts(self, seconds):
         sampleFrequency = self.readSignal("XilEnv.SampleFrequency")
         return int(seconds * sampleFrequency)
 
     def __waitUntilApplicationIsReady(self):
-        time.sleep(5)
+        time.sleep(1)
 
     def attachVariables(self, signalNames):
         for variableName in signalNames:
@@ -82,11 +98,17 @@ class OpenXilEnv:
             else:
                 print(f"Could not attach variable {variableName}")
 
+    def disableRealTimeFactorSwitch(self):
+        self.__switchRealTimeFactor("No")
+
     def disconnectAndCloseXil(self):
         if self.__xilEnvProcess:
             self.__removeVariables()
 
             self.__xilEnv.DisconnectAndClose(0, 0)
+
+    def enableRealTimeFactorSwitch(self):
+        self.__switchRealTimeFactor("Yes")
 
     def readMultipleSignals(self, signalNames):
         signalIdList = [self.__attachedVar[name] for name in signalNames]
@@ -112,24 +134,15 @@ class OpenXilEnv:
 
         return waitTimeInSec
 
-    def startWithGui(self, iniFilePath):
-        self.__start(iniFilePath, True)
+    def startWithGui(self, iniFilePath, timeoutInSec=5):
+        self.__start(iniFilePath, True, timeoutInSec)
 
-    def startWithoutGui(self, iniFilePath):
-        self.__start(iniFilePath, False)
-
-    def switchRTFactor(self, stringValue):
-        self.__xilEnv.StopScheduler()
-        self.__xilEnv.ChangeSettings("NOT_FASTER_THAN_REALTIME", stringValue)
-        self.__xilEnv.ContinueScheduler()
-
-        return stringValue
+    def startWithoutGui(self, iniFilePath, timeoutInSec=5):
+        self.__start(iniFilePath, False, timeoutInSec)
 
     def writeMultipleSignals(self, signalNames, signalValues):
         signalIdList = [self.__attachedVar[name] for name in signalNames]
         self.__xilEnv.WriteFrame(signalIdList, signalValues)
-
-        return signalValues
 
     def writeSignal(self, signalName, rawValue):
         self.__xilEnv.Set(self.__attachedVar[signalName], rawValue)
