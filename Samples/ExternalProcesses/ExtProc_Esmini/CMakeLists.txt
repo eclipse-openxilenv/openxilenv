@@ -28,3 +28,9 @@ install(TARGETS ${ExtProc_TargetName}
     RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/${SampleOutputFolder}/ExtProc_Esmin
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
+if(WIN32)
+    INSTALL(DIRECTORY "${ESMINI_LIBRARY_PATH}/bin/"
+            DESTINATION ${CMAKE_INSTALL_PREFIX}/${SampleOutputFolder}/ExtProc_Esmin
+            FILES_MATCHING PATTERN "*.dll")
+ endif()
+
