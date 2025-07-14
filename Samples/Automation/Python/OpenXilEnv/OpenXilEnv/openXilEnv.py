@@ -90,6 +90,9 @@ class OpenXilEnv:
     def __waitUntilApplicationIsReady(self):
         time.sleep(1)
 
+    def isConncted(self) -> bool:
+        return self.__xilEnv.IsConnectedTo()
+
     def attachVariables(self, signalNames):
         for variableName in signalNames:
             variableId = self.__xilEnv.AttachVari(variableName)
