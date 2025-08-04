@@ -6,3 +6,6 @@
 # Python build files
 build/
 dist/
+.venv
+.vscode
+__pycache__
