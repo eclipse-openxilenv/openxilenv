@@ -1,0 +1,50 @@
+name: Build OpenXilEnv (Windows)
+on:
+  push:
+    branches: [ test-build ]     # only runs on test-build branch
+  pull_request:
+    branches: [ test-build ]     # only PRs targeting test-build
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Install dependencies via Chocolatey
+        run: |
+          choco install -y strawberryperl
+          choco install -y mingw --version=11.2.0
+          choco install -y qt6-default
+      # Optional: fetch pugixml + FMI parsers
+      - name: Download optional dependencies
+        run: |
+          mkdir deps
+          curl -L -o deps/pugixml-1.11.tar.gz https://github.com/zeux/pugixml/releases/download/v1.11/pugixml-1.11.tar.gz
+          tar -xzf deps/pugixml-1.11.tar.gz -C deps
+          curl -L -o deps/FMI-Standard-2.0.4.zip https://github.com/modelica/fmi-standard/releases/download/v2.0.4/FMI-Standard-2.0.4.zip
+          curl -L -o deps/FMI-Standard-3.0.1.zip https://github.com/modelica/fmi-standard/releases/download/v3.0.1/FMI-Standard-3.0.1.zip
+      - name: Configure with CMake
+        run: |
+          mkdir build
+          cd build
+          cmake -G "MinGW Makefiles" ..
+            -DCMAKE_BUILD_TYPE=Release `
+            -DBUILD_EXAMPLES=ON `
+            -DCMAKE_INSTALL_PREFIX=../install_win `
+            -DPUGIXML_SOURCE_PATH=${{ github.workspace }}\deps\pugixml-1.11 `
+            -DFMI2_SOURCE_PATH=${{ github.workspace }}\deps\FMI-Standard-2.0.4 `
+            -DFMI3_SOURCE_PATH=${{ github.workspace }}\deps\FMI-Standard-3.0.1
+      - name: Build
+        run: |
+          cd build
+          cmake --build . --config Release
+      - name: Install
+        run: |
+          cd build
+          cmake --install .
+      - name: Deploy Qt DLLs
+        run: |
+          cd install_win
+          windeployqt6.exe XilEnvGui.exe
+
+ 
