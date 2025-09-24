@@ -25,6 +25,10 @@ int OpenWithNoGui (void);
 
 int GetNoXcp (void);
 
+int GetSchedulerStopByRpc (void);
+
+int GetSchedulerStopByUser (void);
+
 int GetInstanceParameterInfrontOfInit (char *ret_Instance, int par_MaxCharsInstance);
 
 int ParseCommandLine (char *ret_IniFile, unsigned int par_MaxCharsIniFile,

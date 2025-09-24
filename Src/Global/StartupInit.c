@@ -316,9 +316,6 @@ int StartupInit (void * par_Application)
 
     s_main_ini_val.DontCallSleep = SetPriority (s_main_ini_val.Priority);
 
-    // Start remote control thread
-    StartRemoteProcedureCallThread (s_main_ini_val.RpcOverSocketOrNamedPipe, InstanceName, s_main_ini_val.RpcSocketPort);
-
     init_pid = start_process("init");
 
     return 0;

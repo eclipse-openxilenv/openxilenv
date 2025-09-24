@@ -37,6 +37,7 @@ extern "C" {
     #include "StartupInit.h"
     #include "ParseCommandLine.h"
     #include "Scheduler.h"
+    #include "RpcSocketServer.h"
     extern int rm_Terminate(void);
     extern void rm_Kill(void);
 }
@@ -53,7 +54,6 @@ bool SystemDarkMode(QApplication *par_Application)
 #endif
     return false;
 }
-
 
 int main(int argc, char *argv[])
 {
@@ -100,8 +100,17 @@ int main(int argc, char *argv[])
     }
     Window->MoveControlPanelToItsStoredPosition(s_main_ini_val.Maximized);
 
+    if (GetSchedulerStopByRpc()) {
+        disable_scheduler_at_end_of_cycle (SCHEDULER_CONTROLED_BY_RPC, nullptr, nullptr);
+    }
+    if (GetSchedulerStopByUser()) {
+        disable_scheduler_at_end_of_cycle (SCHEDULER_CONTROLED_BY_USER, nullptr, nullptr);
+    }
+
     // Now the schedulers can run
     SchedulersStartingShot();
+
+    StartRemoteProcedureCallThread (s_main_ini_val.RpcOverSocketOrNamedPipe, s_main_ini_val.InstanceName, s_main_ini_val.RpcSocketPort);
 
     // Starts the Qt event loop
     Application.exec();
@@ -115,4 +124,3 @@ int main(int argc, char *argv[])
 
     return ExitCode;
 }
-
