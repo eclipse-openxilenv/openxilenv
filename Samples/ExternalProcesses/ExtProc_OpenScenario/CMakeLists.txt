@@ -1,7 +1,7 @@
 if(UNIX)
-    set(ExtProc_TargetName ExtProc_Esmin.EXE)
+    set(ExtProc_TargetName ExtProc_OpenScenario.EXE)
 else()
-    set(ExtProc_TargetName ExtProc_Esmin)
+    set(ExtProc_TargetName ExtProc_OpenScenario)
 endif()
 add_executable(${ExtProc_TargetName})
 target_include_directories(${ExtProc_TargetName} PRIVATE ../../../Src/ExternalProcess)
@@ -25,12 +25,12 @@ endif()
 
 install(TARGETS ${ExtProc_TargetName}
     BUNDLE DESTINATION .
-    RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/${SampleOutputFolder}/ExtProc_Esmin
+    RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/${SampleOutputFolder}/ExtProc_OpenScenario
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
 if(WIN32)
     INSTALL(DIRECTORY "${ESMINI_LIBRARY_PATH}/bin/"
-            DESTINATION ${CMAKE_INSTALL_PREFIX}/${SampleOutputFolder}/ExtProc_Esmin
+            DESTINATION ${CMAKE_INSTALL_PREFIX}/${SampleOutputFolder}/ExtProc_OpenScenario
             FILES_MATCHING PATTERN "*.dll")
  endif()
 
