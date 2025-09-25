@@ -80,6 +80,8 @@ static int NoGuiFlag =
 #endif
 
 static int NoXcpFlag;
+static int SchedulerStopByRpc;
+static int SchedulerStopByUser;
 
 int ShouldStartedAsIcon (void)
 {
@@ -96,6 +98,15 @@ int GetNoXcp (void)
     return NoXcpFlag;
 }
 
+int GetSchedulerStopByRpc (void)
+{
+    return SchedulerStopByRpc;
+}
+
+int GetSchedulerStopByUser (void)
+{
+    return SchedulerStopByUser;
+}
 
 static char *GetNextParameter(char **CommandLine, const char *par_Ignored)
 {
@@ -358,7 +369,12 @@ int ParseCommandLine (char *ret_IniFile, unsigned int par_MaxCharsIniFile,
                 break;
             }
         }
-
+        if (stricmp(szToken, "-scheduler_stop_by_rpc") == 0) {
+            SchedulerStopByRpc = 1;
+        }
+        if (stricmp(szToken, "-scheduler_stop_by_user") == 0) {
+            SchedulerStopByUser = 1;
+        }
     } // for(;;)
 
     // Are there a INI file name transfered? otherwise ask for one

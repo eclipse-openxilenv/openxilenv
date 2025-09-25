@@ -29,6 +29,7 @@ extern "C" {
 #include "ParseCommandLine.h"
 #include "ScriptErrorFile.h"
 #include "Scheduler.h"
+#include "RpcSocketServer.h"
     extern int rm_Terminate(void);
     extern void rm_Kill(void);
 }
@@ -71,13 +72,22 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    if (GetSchedulerStopByRpc()) {
+        disable_scheduler_at_end_of_cycle (SCHEDULER_CONTROLED_BY_RPC, nullptr, nullptr);
+    }
+    if (GetSchedulerStopByUser()) {
+        disable_scheduler_at_end_of_cycle (SCHEDULER_CONTROLED_BY_USER, nullptr, nullptr);
+    }
+
     // Now the scheduler can run
     SchedulersStartingShot();
+
+    StartRemoteProcedureCallThread (s_main_ini_val.RpcOverSocketOrNamedPipe, s_main_ini_val.InstanceName, s_main_ini_val.RpcSocketPort);
 
     // Wait till XilEnv should be treminated
     InitializeCriticalSection(&TerminateCriticalSection);
     InitializeConditionVariable(&TerminateConditionVariable);
-    
+
     EnterCriticalSection(&TerminateCriticalSection);
     while (!RunningFlag) {
         SleepConditionVariableCS_INFINITE(&TerminateConditionVariable, &TerminateCriticalSection);
@@ -95,8 +105,8 @@ int main(int argc, char *argv[])
                 if (CheckTerminateAllSchedulerTimeout()) {
                     char *ProcessNames;
                     switch (ThrowError(ERROR_OKCANCEL, "cannot terminate all schedulers press OK to terminate %s anyway or cancel to continue waiting\n"
-                        "following processe are not stopped:\n%s",
-                         GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_PROGRAM_NAME), ProcessNames = GetProcessInsideExecutionFunctionSemicolonSeparated())) {
+                                                       "following processe are not stopped:\n%s",
+                                       GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_PROGRAM_NAME), ProcessNames = GetProcessInsideExecutionFunctionSemicolonSeparated())) {
                     case IDOK:
                         goto __EXIT;
                         break;
