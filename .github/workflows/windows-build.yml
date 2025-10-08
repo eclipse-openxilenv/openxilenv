@@ -1,0 +1,89 @@
+name: Build OpenXilEnv - Windows (Python 3.11 + MinGW 14.2 + Qt 6.9.2)
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:  # Allow manual triggers
+
+jobs:
+  windows-build:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        path: openxilenv
+    
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Download niXman MinGW-w64 GCC 14.2.0
+      run: |
+        cd D:/a/_temp/
+        curl -L -o D:/a/_temp/mingw.7z https://github.com/niXman/mingw-builds-binaries/releases/download/14.2.0-rt_v12-rev2/x86_64-14.2.0-release-win32-seh-ucrt-rt_v12-rev2.7z
+
+    - name: Extract & add to PATH
+      run: |
+        7z x D:/a/_temp/mingw.7z -oD:/a/_temp/mingw -y
+    
+    - name: Add MinGW to PATH
+      shell: bash
+      run: |
+        echo "D:/a/_temp/mingw/mingw64/bin" >> $GITHUB_PATH
+    
+    - name: Verify MinGW installation
+      shell: cmd
+      run: |
+        where gcc
+        gcc --version
+        where g++
+        g++ --version
+        where cmake
+        cmake --version
+        where ninja
+        ninja --version
+    
+    - name: Install Qt
+      uses: jurplel/install-qt-action@v4.3.0
+      with:
+        version: '6.9.2'
+        host: 'windows'
+        target: 'desktop'
+        arch: 'win64_mingw'
+
+    - name: Prepare OpenXilEnv Build
+      shell: cmd 
+      run: |
+        cd D:\a\openxilenv\openxilenv
+        mkdir openxilenv-build
+        cd openxilenv-build
+        cmake -G Ninja -DCMAKE_INSTALL_PREFIX=D:\a\tools\OpenXilEnv ..\openxilenv
+
+    - name: Build OpenXilEnv
+      shell: cmd 
+      run: |
+        cd D:\a\openxilenv\openxilenv\openxilenv-build
+        cmake --build .
+
+    - name: Install OpenXilEnv 
+      shell: cmd
+      run: |
+        cd D:\a\openxilenv\openxilenv\openxilenv-build
+        cmake --install .
+
+    - name: Deploy Qt DLLs with windeployqt
+      shell: pwsh
+      run: |
+        cd D:\a\tools\OpenXilEnv
+        windeployqt.exe XilEnvGui.exe
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: OpenXilEnv-Windows-Qt6_9_2
+        path: D:/a/tools/OpenXilEnv/**
