@@ -2169,23 +2169,36 @@ static EXTERN_PROCESS_TASK_INFOS_STRUCT *BuildAndAddNewTaskInfoStruct (const cha
 static char **BuildParameterArray(const char *par_StartExePath, const char *par_ParameterString)
 {
     char **Ret = NULL;
-    int Elements = 1;  // Null-Pointer
+    int Elements = 1;  // Start with 1 for program name
     int Pos = 0;
-    char *p = XilEnvInternal_malloc (6 + strlen(par_StartExePath) + 1 + strlen(par_ParameterString) + 1 + 1);
-    strcpy(p, "nohup ");
-    strcpy(p, par_StartExePath);
-    strcat(p, " ");
-    strcat(p, par_ParameterString);
+    int TotalLen = strlen(par_StartExePath) + 1 + strlen(par_ParameterString) + 1;
+    char *Buffer = XilEnvInternal_malloc(TotalLen);
+    char *p;
+    
+    // Build the command string
+    strcpy(Buffer, par_StartExePath);
+    strcat(Buffer, " ");
+    strcat(Buffer, par_ParameterString);
+    
+    // First element is the program name
+    Ret = XilEnvInternal_malloc(sizeof(char*) * 2);  // At least prog name + NULL
+    Ret[0] = (char*)par_StartExePath;
+    Pos = 1;
+    
+    // Parse additional parameters
+    p = Buffer + strlen(par_StartExePath);
     while (*p != 0) {
         while (isascii(*p) && isspace(*p)) p++;
         if (*p != 0) {
             Elements++;
-            Ret = XilEnvInternal_realloc(Ret, (size_t)Elements * sizeof(char*));
+            Ret = XilEnvInternal_realloc(Ret, (size_t)(Elements + 1) * sizeof(char*));
             Ret[Pos] = p;
             Pos++;
-            while (!(isascii(*p) && isspace(*p))) p++;
-            *p = 0;
-            p++;
+            while (*p != 0 && !(isascii(*p) && isspace(*p))) p++;
+            if (*p != 0) {
+                *p = 0;
+                p++;
+            }
         }
     }
     Ret[Pos] = NULL;
@@ -2390,8 +2403,7 @@ EXPORT_OR_IMPORT int __FUNC_CALL_CONVETION__ CheckIfConnectedToEx (EXTERN_PROCES
                     pid = fork();
                     if (pid == 0) {
                         // Child
-                        if (execv(StartExePath, BuildParameterArray(StartExePath, StartExeCmdLine)) < 0) {
-                            // The execv() functions only return if an error has occurred
+                        if (execvp(StartExePath, BuildParameterArray(StartExePath, StartExeCmdLine)) < 0) {
                             ThrowError(1, "cannot start \"%s\" \"%s\"", StartExePath, StartExeCmdLine);
                             KillExternProcessHimSelf();
                             exit(-1);
