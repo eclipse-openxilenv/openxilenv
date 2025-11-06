@@ -1,10 +1,29 @@
 # Install Dependencies on Windows
 
-This guide explains how to install the Windows build dependencies for OpenXilEnv and how to build **Qt 6.9 (qtbase)** from source with **MinGW 14.2 (UCRT)**. All commands are for **Windows CMD** (not PowerShell).
+This guide explains how to install the Windows build dependencies for OpenXilEnv and how to build **Qt 6.9.3 (qtbase)** from source with **MinGW 14.2 (UCRT)**. All commands are for **Windows CMD** (not PowerShell).
 
 **Choose your folders**
 
-Set these once and reuse them everywhere. Adjust to your preference.
+We recommend the following folder structure and will stick to it during this build manual.
+You can change the layout to your preference and adopt the command lines accordingly.
+
+```
+%SystemDrive%\dev\
+├── tools\                  # %TOOLS_ROOT%
+│   ├── mingw64\            # MinGW (niXman, 14.2.0, win32-seh-ucrt)
+│   ├── Qt6_9_3\            # Qt install prefix
+│   └── OpenXilEnv\         # OpenXilEnv install prefix
+│
+├── src\                    # %SRC_ROOT%
+│   ├── Qt6_9_3\            # Qt source code
+│   └── OpenXilEnv\         # OpenXilEnv source code
+│
+├── build\                  # %BUILD_ROOT%
+│   ├── Qt6_9_3\            # Qt build directory
+│   └── OpenXilEnv\         # OpenXilEnv build directory
+```
+
+Set these variables once and reuse them everywhere. Adjust to your preference.
 
 ```cmd
 set "TOOLS_ROOT=%SystemDrive%\dev\tools"
@@ -12,27 +31,11 @@ set "SRC_ROOT=%SystemDrive%\dev\src"
 set "BUILD_ROOT=%SystemDrive%\dev\build"
 ```
 
-**Folder layout example:**
-
-- `%TOOLS_ROOT%\mingw64` — MinGW (niXman, 14.2.0, win32-seh-ucrt)
-- `%TOOLS_ROOT%\Qt6_9` — Qt install prefix produced by the build below
-- `%TOOLS_ROOT%\OpenXilEnv` — OpenXilEnv install prefix produced by the build below
-- `%SRC_ROOT%\Qt6_9` — Qt source code
-- `%SRC_ROOT%\OpenXilEnv` — OpenXilEnv source code
-- `%BUILD_ROOT%\Qt6_9` — Qt build directory
-- `%BUILD_ROOT%\OpenXilEnv` — OpenXilEnv build directory
-
 ## 1. Prerequisites
 
 - **CMake** ≥ 3.20 (Kitware installer for Windows is fine)
 - **Python** ≥ 3.x (any recent 64‑bit build)
 - **7‑Zip** or compatible tool (to extract `.7z` archives)
-
-Verify versions:
-```cmd
-cmake --version
-python --version
-```
 
 ## 2. Install MinGW
 
@@ -48,22 +51,27 @@ Verify:
 ```cmd
 g++ --version
 where g++
+cmake --version
+where cmake
+python --version
+where python
 ```
 
-## 3. Build Qt 6.9 (qtbase) from source
+## 3. Build Qt 6.9.3 (qtbase) from source
 
-These steps use the **qtbase 6.9.3** source tree and install to `%TOOLS_ROOT%\Qt6_9`.
+These steps use the **qtbase 6.9.3** source tree and install to `%TOOLS_ROOT%\Qt6_9_3`.
 
 1. **Fetch sources** (download [ZIP file](https://github.com/qt/qtbase/archive/refs/tags/v6.9.3.zip) or git clone of `qtbase` 6.9.3) and extract to a short path, e.g.:
-   - Sources: `%SRC_ROOT%\qtbase_6_9_3`
+   - Sources: `%SRC_ROOT%\Qt6_9_3\qtbase-6.9.3`
 2. **Create build directory**:
 ```cmd
-mkdir %BUILD_ROOT%\Qt6_9
-cd %BUILD_ROOT%\Qt6_9
+mkdir %BUILD_ROOT%\Qt6_9_3
+cd %BUILD_ROOT%\Qt6_9_3
 ```
 3. **Ensure Ninja is available**:
 ```cmd
 ninja --version
+where ninja
 ```
 Some CMake installers ship Ninja; otherwise install it (download [ZIP file](https://github.com/ninja-build/ninja/releases/download/v1.13.1/ninja-win.zip) and unzip it) and add to PATH.
 
@@ -73,7 +81,7 @@ set PATH=%TOOLS_ROOT%\ninja-win;%PATH%
 
 4. **Configure** (Qt’s `configure.bat` will generate a CMake build tree):
 ```cmd
-%SRC_ROOT%\qtbase_6_9_3\configure.bat -debug-and-release -opensource -confirm-license -prefix %TOOLS_ROOT%\Qt6_9
+%SRC_ROOT%\Qt6_9_3\qtbase-6.9.3\configure.bat -debug-and-release -opensource -confirm-license -prefix %TOOLS_ROOT%\Qt6_9_3
 ```
 5. **Build**:
 ```cmd
@@ -89,7 +97,7 @@ cmake --install . --config Debug
 
 Before configuring OpenXilEnv, make Qt’s bin available in PATH for the session:
 ```cmd
-set PATH=%PATH%;%TOOLS_ROOT%\Qt6_9\bin
+set PATH=%PATH%;%TOOLS_ROOT%\Qt6_9_3\bin
 ```
 
 ## 5. Optional / Additional Dependencies
@@ -133,14 +141,14 @@ set "BUILD_ROOT=%SystemDrive%\dev\build"
 set PATH=%TOOLS_ROOT%\mingw64\bin;<path-to-cmake>;<path-to-python3>;%PATH%
 
 :: Configure, build, install Qt
-cd %BUILD_ROOT%\Qt6_9
-%SRC_ROOT%\qtbase_6_9_3\configure.bat -debug-and-release -opensource -confirm-license -prefix %TOOLS_ROOT%\Qt6_9
+cd %BUILD_ROOT%\Qt6_9_3
+%SRC_ROOT%\Qt6_9_3\qtbase-6.9.3\configure.bat -debug-and-release -opensource -confirm-license -prefix %TOOLS_ROOT%\Qt6_9_3
 cmake --build . --parallel
 cmake --install . --config Release
 cmake --install . --config Debug
 
 :: Add Qt to PATH
-set PATH=%PATH%;%TOOLS_ROOT%\Qt6_9\bin
+set PATH=%PATH%;%TOOLS_ROOT%\Qt6_9_3\bin
 ```
 
 ## With all dependencies installed, you can now [build OpenXilEnv](./WINDOWS_BUILD.md).

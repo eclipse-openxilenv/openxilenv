@@ -6,7 +6,26 @@ All commands are for **bash** shell.
 
 **Choose your folders**
 
-Set these once and reuse them everywhere. Adjust to your preference.
+We recommend the following folder structure and will stick to it during this build manual.
+You can change the layout to your preference and adopt the command lines accordingly.
+
+```
+$HOME/dev/
+├── tools/                  # $TOOLS_ROOT
+│   ├── mingw64/            # MinGW (niXman, 14.2.0, win32-seh-ucrt)
+│   ├── Qt6_9_3/            # Qt install prefix
+│   └── OpenXilEnv/         # OpenXilEnv install prefix
+│
+├── src/                    # $SRC_ROOT
+│   ├── Qt6_9_3/            # Qt source code
+│   └── OpenXilEnv/         # OpenXilEnv source code
+│
+├── build/                  # $BUILD_ROOT
+│   ├── Qt6_9_3/            # Qt build directory
+│   └── OpenXilEnv/         # OpenXilEnv build directory
+```
+
+Set these variables once and reuse them everywhere. Adjust to your preference.
 
 ```bash
 export TOOLS_ROOT="$HOME/dev/tools"

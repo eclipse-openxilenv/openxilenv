@@ -7,7 +7,7 @@ OpenXilEnv is a lightweight SiL/HiL environment. At the moment, OpenXilEnv focus
 With a **S**oftware **I**n the **L**oop system, it is possible to run and test embedded software without a target platform or compiler.
 XilEnv provides an environment to set up a SiL system on Windows or Linux hosts. It clearly separates its own components from the embedded software under test through a network layer. Each component can run in its own executable, providing memory protection between them.
 
-Communication between the software under test, models, and XilEnv is done via sockets or (on Windows) Named Pipes / (on Linux) local sockets. These are used for:
+Communication between the software under test, models, and XilEnv is done via sockets or (on Windows) named pipes / (on Linux) local sockets. These are used for:
 - Signal transfers
 - Virtual network (CAN and CAN FD) transfers
 
