@@ -33,6 +33,7 @@ extern "C" {
 #include "MyMemory.h"
 #include "StimulusReadFile.h"
 #include "StimulusReadMdfFile.h"
+#include "StimulusReadMdf4File.h"
 }
 
 StimuliConfiguration::StimuliConfiguration(QString &par_ConfigurationFileName, QWidget *parent) : Dialog(parent),
@@ -82,7 +83,9 @@ bool StimuliConfiguration::ReadStimuliVariablesFromHeader (QString par_StimuliFi
     ui->ToPlayVariableListWidget->clear();
     if (QFile(par_StimuliFileName).exists()) {
         char *VariableList;
-        if (IsMdfFormat(QStringToConstChar(par_StimuliFileName), nullptr)) {
+        if (IsMdf4Format(par_StimuliFileName.toLatin1().data(), nullptr)) {
+            VariableList = Mdf4ReadStimulHeaderVariabeles (par_StimuliFileName.toLatin1().data());
+        } else if (IsMdfFormat(QStringToConstChar(par_StimuliFileName), nullptr)) {
             VariableList = MdfReadStimulHeaderVariabeles (QStringToConstChar(par_StimuliFileName));
         } else {
             VariableList = ReadStimulHeaderVariabeles (QStringToConstChar(par_StimuliFileName));

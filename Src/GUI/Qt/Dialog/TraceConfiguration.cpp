@@ -218,6 +218,7 @@ int TraceConfiguration::StringToDialog (QString &par_CfgFileContent)
     // Which format() should be written
     bool DatFlag = GetCfgEntry (Stream, HDREC_TEXT_FORMAT, nullptr, 1);
     bool MdfFlag = GetCfgEntry (Stream, HDREC_MDF_FORMAT, nullptr, 1);
+    bool Mdf4Flag = GetCfgEntry (Stream, HDREC_MDF4_FORMAT, nullptr, 1);
 
     // If there is nothing defined use DAT
     if (!MdfFlag) {
@@ -225,6 +226,7 @@ int TraceConfiguration::StringToDialog (QString &par_CfgFileContent)
     }
     ui->FileFormatDatCheckBox->setChecked (DatFlag);
     ui->FileFormatMdfCheckBox->setChecked (MdfFlag);
+    ui->FileFormatMdf4CheckBox->setChecked (Mdf4Flag);
 
     if (GetCfgEntry (Stream, HDREC_DESCRIPTION_FILE, &Text, 1)) {
         ui->A2LFileNameLineEdit->setText (Text);
@@ -377,6 +379,7 @@ void TraceConfiguration::SetDefaultValues()
     ui->A2LCheckBox->setChecked (false);
     ui->FileFormatDatCheckBox->setChecked (true);
     ui->FileFormatMdfCheckBox->setChecked (false);
+    ui->FileFormatMdf4CheckBox->setChecked (false);
     ui->TriggerEventComboBox->setCurrentText (QString ("@trigger not active"));
     ui->TriggerEventComboBox->setCurrentText (QString (">"));
     ui->TriggerValueLineEdit->setText (QString ("0"));
@@ -437,6 +440,11 @@ QString TraceConfiguration::DialogToString()
         FormatSecCounter++;
         Stream << "; Generate MDF files\n";
         Stream << "   MDF_FORMAT\n";
+    }
+    if (ui->FileFormatMdf4CheckBox->isChecked()) {
+        FormatSecCounter++;
+        Stream << "; Generate MDF4 files\n";
+        Stream << "   MDF4_FORMAT\n";
     }
     if (ui->FileFormatDatCheckBox->isChecked()) {
         FormatSecCounter++;

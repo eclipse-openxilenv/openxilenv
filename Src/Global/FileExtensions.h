@@ -40,7 +40,7 @@
 #define EXEC_EXT      "Executable files (*.exe);;All files (*.*)"
 #define EXTERN_PROC_EXT "External process (*.exe *.fmu *.scq);;Executable files (*.exe);;Functional Mock-up Units files (*.fmu);;QEMU interface files (*.scq);;All files (*.*)"
 #define DATA_EXT      "Data files (*.dat);;All files (*.*)"
-#define MEASUREMENT_EXT "Measurement files (*.dat;*.mdf);;All files (*.*)"
+#define MEASUREMENT_EXT      "Measurement files (*.dat;*.mdf;*mf4);;All files (*.*)"
 #define BMP_EXT       "Bitmap files (*.bmp);;All files (*.*)"
 #define SVL_EXT       "Single value list (*.svl);;All files (*.*)"
 #define SAL_EXT       "Single address list (*.sal);;All files (*.*)"

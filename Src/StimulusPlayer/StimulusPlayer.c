@@ -34,7 +34,7 @@
 #include "ReadConfig.h"
 #include "BlackboardAccess.h"
 
-#define PING_LIMIT  64
+#define PING_LIMIT  100000
 
 typedef struct {
     int *vids;
@@ -85,7 +85,22 @@ static int WriteOnSamplesToFiFo(STIMULUS_PLAYER_DATA *StimulusData)
     int Mid;
 
     if (StimulusData->file_status != STIMULI_END_OF_FILE) {  // No file end
-        if ((StimulusData->sample_number & 0x3F) == 0x3F) {
+        uint32_t Mask;
+        int SamplesFitIntoQueue = 262144 / ((StimulusData->varicount * sizeof(VARI_IN_PIPE) + sizeof(FIFO_ENTRY_HEADER)));
+        if (SamplesFitIntoQueue > 0) {
+#ifdef _MSC_VER
+            unsigned long Index;
+            _BitScanReverse(&Index, SamplesFitIntoQueue);
+            Mask = ~(UINT32_MAX << Index);
+#else
+            uint32_t Index;
+            Index =  32 - __builtin_clz(SamplesFitIntoQueue);
+            Mask = ~(UINT32_MAX << Index);
+#endif
+        } else {
+            Mask = 0;
+        }
+        if ((StimulusData->sample_number & Mask) == Mask) {
             Mid = PLAY_DATA_MESSAGE_PING;
         } else {
             Mid = PLAY_DATA_MESSAGE;
@@ -318,7 +333,6 @@ void cyclic_hdplay (void)
 
                 /* Write some data messages immediately */
                 ReadNSamplesFromFileAndWriteItToFiFo(&StimulusData, PING_LIMIT);
-                ReadNSamplesFromFileAndWriteItToFiFo(&StimulusData, PING_LIMIT);
                 break;
             case HDPLAY_STOP_MESSAGE:  /* Terminate HD-Player without waiting
                                           for file end */
@@ -335,7 +349,10 @@ void cyclic_hdplay (void)
     if (CheckFiFo(StimulusData.ControlAckFiFo, &Header) > 0) {
         switch (Header.MessageId) {
         case PLAY_DATA_MESSAGE_PING:
-            RemoveOneMessageFromFiFo (StimulusData.ControlAckFiFo);
+            do {
+                RemoveOneMessageFromFiFo (StimulusData.ControlAckFiFo);
+            } while((CheckFiFo(StimulusData.ControlAckFiFo, &Header) > 0) &&
+                     (Header.MessageId == PLAY_DATA_MESSAGE_PING));
             ReadNSamplesFromFileAndWriteItToFiFo(&StimulusData, PING_LIMIT);
             break;
         case HDPLAY_ACK_MESSAGE:
