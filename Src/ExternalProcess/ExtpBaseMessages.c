@@ -2725,6 +2725,7 @@ EXTERN_PROCESS_TASK_HANDLE __FUNC_CALL_CONVETION__ BuildNewProcessAndConnectToEx
         XilEnvInternal_CStartupIsFinished();   // Now directly reference!
         InitAddReferenceToBlackboardAtEndOfFunction();  // this must be called one time
         if (XilEnvInternal_ConnectToAndLogin (Ret, loc_ErrorMsgFlag) == INVALID_HANDLE_VALUE) {
+            RemoveAndDeleteTaskInfoStruct(Ret);
             return NULL;
         }
     }

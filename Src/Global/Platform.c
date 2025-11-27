@@ -329,8 +329,8 @@ int GetRealPathForOnlyUpperCasePath (const char *SrcPath, char *DstPath, int Max
 
 MY_FILE_HANDLE my_open (const char *Name)
 {
-#ifdef _WIN32
     LogFileAccess (Name);
+#ifdef _WIN32
     return CreateFile (Name,
                        GENERIC_READ,
                        FILE_SHARE_READ,

@@ -137,15 +137,14 @@ KnobOrTachoWidget::~KnobOrTachoWidget()
 bool KnobOrTachoWidget::writeToIni()
 {
     QString SectionPath = GetIniSectionPath();
-    char loc_txt[INI_MAX_LINE_LENGTH], loc_variname[BBVARI_NAME_SIZE];
+    char loc_txt[INI_MAX_LINE_LENGTH];
     int Fd = GetMainFileDescriptor();
 
    ScQt_IniFileDataBaseWriteString(SectionPath, "type", QStringToConstChar(GetMdiWindowType()->GetWindowTypeName()), Fd);
 
     if (m_Vid > 0){
-        GetBlackboardVariableName (m_Vid, loc_variname, sizeof(loc_variname));
         sprintf (loc_txt, "%s, %f, %f, (%i,%i,%i), %s",
-                 loc_variname,
+                 m_VariableName.toLatin1().data(),
                  m_Attributes.m_LowerBound,
                  m_Attributes.m_UpperBound,
                  m_Attributes.m_Color.red(),

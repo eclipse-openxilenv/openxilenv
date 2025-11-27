@@ -135,7 +135,7 @@ STIMULI_FILE* DatOpenAndReadStimuliHeader (const char *par_Filename, const char 
     Dat->line_counter++;
 
     if ((read_next_word (Dat->fh, word, sizeof(word)-1) != END_OF_LINE) || (strcmp ("FORMAT", word))) {
-        ThrowError (1, "in Stimuli-Datei-Kopf fehlt 'FORMAT'");
+        ThrowError (1, "missing keyword 'FORMAT' inside \"%s\" file header", par_Filename);
         goto __ERROR;
     }
     Dat->line_counter++;
@@ -144,7 +144,7 @@ STIMULI_FILE* DatOpenAndReadStimuliHeader (const char *par_Filename, const char 
     } while (one_char != '\n' && one_char != EOF);
     Dat->line_counter++;
     if (read_next_word (Dat->fh, word, sizeof(word)-1) != END_OF_LINE) { /* Sample rate */
-        ThrowError (1, "missing sample rate inside stimuli file header");
+        ThrowError (1, "missing sample rate inside \"%s\" file header", par_Filename);
         goto __ERROR;
     }
     Dat->line_counter++;
