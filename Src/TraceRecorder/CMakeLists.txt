@@ -8,6 +8,7 @@ set(CommonFileList
     TraceRecorder.c
     TraceWriteFile.c
     TraceWriteMdfFile.c
+    TraceWriteMdf4File.c
 )
 
 target_sources(XilEnv  PRIVATE ${CommonFileList})

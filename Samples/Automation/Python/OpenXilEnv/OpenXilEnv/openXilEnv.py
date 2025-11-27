@@ -10,6 +10,8 @@ class OpenXilEnv:
 
     def __init__(self, xilEnvPath):
         self.__xilEnvDllPath = os.path.join(xilEnvPath, "XilEnvRpc.dll")
+        self.__xilEnvGuiExePath = os.path.join(xilEnvPath, "XilEnvGui.exe")
+
         self.__xilEnvExePath = os.path.join(xilEnvPath, "XilEnvGui.exe")
 
         self.__xilEnvProcess = None
@@ -58,7 +60,7 @@ class OpenXilEnv:
     def __start(self, iniFilePath, startWithGUI, timeoutInSec):
         try:
             if startWithGUI:
-                self.__xilEnvProcess = subprocess.Popen([self.__xilEnvExePath, "-ini", iniFilePath],
+                self.__xilEnvProcess = subprocess.Popen([self.__xilEnvGuiExePath, "-ini", iniFilePath],
                                                         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             else:
                 self.__xilEnvProcess = subprocess.Popen([self.__xilEnvExePath, "-ini", iniFilePath, "-nogui"],
@@ -183,3 +185,6 @@ class OpenXilEnv:
         remainingCycles = self.__xilEnv.WaitUntil(equation, cycleCount)
 
         return remainingCycles
+
+    def Connection(self):
+        return self.__xilEnv

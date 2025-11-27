@@ -54,6 +54,7 @@
 #define MDF_FORMAT_TOKEN                  285
 #define TEXT_FORMAT_TOKEN                 286
 #define HDRECORDER_PHYSICAL_TOKEN         287
+#define MDF4_FORMAT_TOKEN                 288
 
 #define HDRECORDER_CONFIG_FILE_TOKEN  300
 #define HDRECORDER_SAMPLERATE_TOKEN   301
@@ -80,6 +81,8 @@ extern TOKEN_LIST tokens[]
 			   {"TRIGGER",                 TRIGGER_TOKEN},
 			   {"HDPLAYER_FILE",           HDPLAYER_FILE_TOKEN},
 			   {"MDF_FORMAT",              MDF_FORMAT_TOKEN},
+               {"MDF3_FORMAT",             MDF_FORMAT_TOKEN},
+               {"MDF4_FORMAT",             MDF4_FORMAT_TOKEN},
                {"TEXT_FORMAT",             TEXT_FORMAT_TOKEN},
                {"ALL_LABEL_OF_PROCESS",    ALL_LABEL_OF_PROCESS_TOKEN},
                {"VARCOUNT",                VARCOUNT_TOKEN},

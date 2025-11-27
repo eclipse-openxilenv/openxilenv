@@ -35,6 +35,7 @@
 #include "BlackboardAccess.h"
 #include "ReadConfig.h"
 #include "TraceWriteMdfFile.h"
+#include "TraceWriteMdf4File.h"
 #include "TimeStamp.h"
 #include "ExportA2L.h"
 
@@ -259,6 +260,7 @@ static int BuildRecorderFileNames (RECORDER_STRUCT *Recorder)
 
     strcpy (Recorder->TextFileName, Recorder->StartMessage.Filename);
     strcpy (Recorder->MdfFileName, Recorder->StartMessage.Filename);
+    strcpy (Recorder->Mdf4FileName, Recorder->StartMessage.Filename);
 
     // If there would be writen more than oe file format the file extension will be ignored
     // and the default file extension would be used
@@ -277,6 +279,7 @@ static int BuildRecorderFileNames (RECORDER_STRUCT *Recorder)
         StartExt = (int)(p - Recorder->StartMessage.Filename);
         strcpy (Recorder->TextFileName + StartExt, ".dat"); 
         strcpy (Recorder->MdfFileName + StartExt, ".mdf");
+        strcpy (Recorder->Mdf4FileName + StartExt, ".mf4");
     }
     return 0;
 }
@@ -479,6 +482,10 @@ int read_recorder_configfile (MESSAGE_HEAD *mhead, RECORDER_STRUCT *Recorder)
                 Recorder->StartMessage.FormatFlags |= REC_FORMAT_FLAG_MDF;
                 Recorder->StartMessage.FormatCounter++;
                 break;
+            case MDF4_FORMAT_TOKEN:
+                Recorder->StartMessage.FormatFlags |= REC_FORMAT_FLAG_MDF4;
+                Recorder->StartMessage.FormatCounter++;
+                break;
             case TEXT_FORMAT_TOKEN:
                 Recorder->StartMessage.FormatFlags |= REC_FORMAT_FLAG_TEXT_STIMULI;
                 Recorder->StartMessage.FormatCounter++;
@@ -557,6 +564,11 @@ int WriteCommentToRecord (MESSAGE_HEAD *mhead, RECORDER_STRUCT *Recorder)
         if (!Recorder->MdfFileStatus) {
             if ((Recorder->StartMessage.FormatFlags & REC_FORMAT_FLAG_MDF) == REC_FORMAT_FLAG_MDF) {
                 WriteCommentToMdf (Recorder->MdfFile, mhead->timestamp, Comment);
+            }
+        }
+        if (!Recorder->Mdf4FileStatus) {
+            if ((Recorder->StartMessage.FormatFlags & REC_FORMAT_FLAG_MDF4) == REC_FORMAT_FLAG_MDF4) {
+                WriteCommentToMdf4 (Recorder->MdfFile, mhead->timestamp, Comment);
             }
         }
         if (!Recorder->TextFileStatus) {
@@ -763,6 +775,7 @@ int InitFileWriter (RECORDER_STRUCT *Recorder, uint32_t time_stamp, int elem_cou
 
     Recorder->TextFileStatus = 1;
     Recorder->MdfFileStatus = 1;
+    Recorder->Mdf4FileStatus = 1;
     Recorder->AllFileStatus = 0;
 
     Recorder->LineNumberCounter = 0;
@@ -773,6 +786,14 @@ int InitFileWriter (RECORDER_STRUCT *Recorder, uint32_t time_stamp, int elem_cou
             Recorder->AllFileStatus = Recorder->MdfFileStatus;
             Recorder->RecorderStatus = HDREC_SLEEP;
             return Recorder->MdfFileStatus;
+        }
+    }
+    if ((Recorder->StartMessage.FormatFlags & REC_FORMAT_FLAG_MDF4) == REC_FORMAT_FLAG_MDF4) {
+        strcpy (Recorder->StartMessage.Filename, Recorder->Mdf4FileName);
+        if ((Recorder->Mdf4FileStatus = OpenWriteMdf4Head (Recorder->StartMessage, Recorder->Vids, Recorder->PhysicalFlags, &Recorder->Mdf4File)) != 0) {
+            Recorder->AllFileStatus = Recorder->Mdf4FileStatus;
+            Recorder->RecorderStatus = HDREC_SLEEP;
+            return Recorder->Mdf4FileStatus;
         }
     }
     if ((Recorder->StartMessage.FormatFlags & REC_FORMAT_FLAG_TEXT_STIMULI) == REC_FORMAT_FLAG_TEXT_STIMULI) {
@@ -834,6 +855,14 @@ int TerminateFileWriter (RECORDER_STRUCT *Recorder)
                         break;   /* for loop */
                     }
                 }
+                if (!Recorder->Mdf4FileStatus &&
+                    ((Recorder->StartMessage.FormatFlags & REC_FORMAT_FLAG_MDF4) == REC_FORMAT_FLAG_MDF4)) {
+                    if (WriteRingbuffMdf4 (Recorder->Mdf4File, &Recorder->Stamp, Recorder->RingBufferVariableCount) == EOF) {
+                        Recorder->AllFileStatus = Recorder->Mdf4FileStatus = WRITE_FILE_ERROR;
+                        break;   /* for loop */
+                    }
+                }
+
                 if (!Recorder->TextFileStatus &&
                     ((Recorder->StartMessage.FormatFlags & REC_FORMAT_FLAG_TEXT_STIMULI) == REC_FORMAT_FLAG_TEXT_STIMULI)) {
                     if (write_ringbuff_stimuli (Recorder->StimuliFile, &Recorder->Stamp, Recorder->RingBufferVariableCount) == EOF) {
@@ -848,6 +877,11 @@ int TerminateFileWriter (RECORDER_STRUCT *Recorder)
         ((Recorder->StartMessage.FormatFlags & REC_FORMAT_FLAG_MDF) == REC_FORMAT_FLAG_MDF)) {
         Recorder->MdfFileStatus = 1;
         TailMdfFile (Recorder->MdfFile, Recorder->LineNumberCounter - 3, Recorder->RecordStartTime);
+    }
+    if (!Recorder->Mdf4FileStatus &&
+        ((Recorder->StartMessage.FormatFlags & REC_FORMAT_FLAG_MDF4) == REC_FORMAT_FLAG_MDF4)) {
+        Recorder->Mdf4FileStatus = 1;
+        TailMdf4File (Recorder->Mdf4File, Recorder->LineNumberCounter - 3, Recorder->RecordStartTime);
     }
     if (!Recorder->TextFileStatus &&
         ((Recorder->StartMessage.FormatFlags & REC_FORMAT_FLAG_TEXT_STIMULI) == REC_FORMAT_FLAG_TEXT_STIMULI)) {
@@ -915,6 +949,15 @@ int WriteWriter (RECORDER_STRUCT *Recorder, uint64_t time_stamp, int elem_count,
                         }
                     }
                 }
+                if (!Recorder->Mdf4FileStatus) {
+                    if ((Recorder->StartMessage.FormatFlags & REC_FORMAT_FLAG_MDF4) == REC_FORMAT_FLAG_MDF4) {
+                        if (WriteRingbuffMdf4 (Recorder->Mdf4File, &Recorder->Stamp, Recorder->RingBufferVariableCount) == EOF) {
+                            Recorder->AllFileStatus = Recorder->Mdf4FileStatus = WRITE_FILE_ERROR;
+                            break;  /* while loop */
+                        }
+                    }
+                }
+
                 if (!Recorder->TextFileStatus) {
                     if ((Recorder->StartMessage.FormatFlags & REC_FORMAT_FLAG_TEXT_STIMULI) == REC_FORMAT_FLAG_TEXT_STIMULI) {
 

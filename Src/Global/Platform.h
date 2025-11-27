@@ -227,7 +227,7 @@ typedef int MY_FILE_HANDLE;
 #define EnterCriticalSection(a)
 #define LeaveCriticalSection(a)
 
-#define MAX_PATH 260
+#define MAX_PATH PATH_MAX
 #define TRUE 1
 #define FALSE 0
 

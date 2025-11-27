@@ -36,6 +36,7 @@ extern "C" {
 #include "ConfigurablePrefix.h"
 #include "ThrowError.h"
 #include "MainValues.h"
+#include "FileExtensions.h"
 }
 
 
@@ -45,7 +46,7 @@ int IniFileDosNotExist::BuidANewIniFile()
 
     m_NewSelectedIniFile = QFileDialog::getSaveFileName(this, tr("Save File"),
                                                         "",
-                                                        tr("INI files (*.INI)"));
+                                                        INI_EXT);
     if (m_NewSelectedIniFile.isEmpty()) {
         return 0;
     }

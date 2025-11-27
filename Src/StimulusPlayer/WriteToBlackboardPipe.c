@@ -80,7 +80,9 @@ static void StopStimuli(WRPipeData *Data)
         /* empty message queue at next cycle */
         Data->flush_message_queue = 1;
         Data->status = WRPIPE_SLEEP_STATUS;
-        WriteToFiFoOrMessageQueue (HDPLAY_STOP_MESSAGE, 0, NULL);
+        if (WriteToFiFoOrMessageQueue (HDPLAY_STOP_MESSAGE, 0, NULL)) {
+            ThrowError(1, "cannot transmit HDPLAY_STOP_MESSAGE to fifo");
+        }
         /* wait that there is no more cycles */
         Data->wait = 0;
     }
@@ -113,17 +115,23 @@ void cyclic_wrpipe (void)
             else if ((Data.status == WRPIPE_WAIT_TRIGGER_LARGER) && (refvalue > Data.triggervalue)) {
                 Data.status = WRPIPE_PLAY_STATUS;
                 Data.time_offset = get_timestamp_counter ();
-                WriteToFiFoOrMessageQueue (HDPLAY_TRIGGER_MESSAGE, 0, NULL);
+                if (WriteToFiFoOrMessageQueue (HDPLAY_TRIGGER_MESSAGE, 0, NULL)) {
+                    ThrowError(1, "cannot transmit HDPLAY_TRIGGER_MESSAGE to fifo");
+                }
             }
         } else {
             Data.status = WRPIPE_PLAY_STATUS;
             Data.time_offset = get_timestamp_counter ();
-            WriteToFiFoOrMessageQueue (HDPLAY_TRIGGER_MESSAGE, 0, NULL);
+            if (WriteToFiFoOrMessageQueue (HDPLAY_TRIGGER_MESSAGE, 0, NULL)) {
+                ThrowError(1, "cannot transmit HDPLAY_TRIGGER_MESSAGE to fifo");
+            }
         }
     }
 
     if (Data.send_ack_pid) {
-        WriteToFiFoOrMessageQueue (WRPIPE_ACK, 0, NULL);
+        if (WriteToFiFoOrMessageQueue (WRPIPE_ACK, 0, NULL)) {
+            ThrowError(1, "cannot transmit WRPIPE_ACK to fifo");
+        }
         Data.send_ack_pid = 0;
     }
     if (Data.flush_message_queue) {
@@ -146,7 +154,9 @@ __READ_NEXT_MESSAGE:
 				} else if (Data.Header.MessageId == PLAY_DATA_MESSAGE_PING) {
 					Data.wait = 1;
                     // response with a ping
-                    WriteToFiFoOrMessageQueue (PLAY_DATA_MESSAGE_PING, sizeof(Data.Header.Timestamp), &(Data.Header.Timestamp));
+                    if (WriteToFiFoOrMessageQueue (PLAY_DATA_MESSAGE_PING, sizeof(Data.Header.Timestamp), &(Data.Header.Timestamp))) {
+                        ThrowError(1, "cannot transmit PLAY_DATA_MESSAGE_PING to fifo");
+                    }
                 } else if (Data.Header.MessageId == PLAY_NO_MORE_DATA_MESSAGE) {
                     StopStimuli (&Data);
 				} else {
@@ -232,7 +242,9 @@ __READ_NEXT_MESSAGE:
                 Data.triggervalue = trigg_info.trigger_value;
                 Data.status = WRPIPE_DEFINE_TRIGGER;
                 /* report to hdplay prozess that wrpipe prozess has get all data */
-                WriteToFiFoOrMessageQueue (HDPLAY_ACK_MESSAGE, 0, NULL);
+                if (WriteToFiFoOrMessageQueue (HDPLAY_ACK_MESSAGE, 0, NULL)) {
+                    ThrowError(1, "cannot transmit HDPLAY_ACK_MESSAGE to fifo");
+                }
                 break;
             default:
                 ThrowError (1, "unknown message %i send by %i",

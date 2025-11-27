@@ -41,6 +41,7 @@ typedef struct {           /* Message for starting the recorder */
     int FormatFlags; /* Recording format flag 0-> ASCII 1-> binaer */
 #define REC_FORMAT_FLAG_TEXT_STIMULI     0x00000001
 #define REC_FORMAT_FLAG_MDF              0x00000008
+#define REC_FORMAT_FLAG_MDF4             0x00000010
     int FormatCounter;
     char Filename[MAX_PATH];   /* File name */
     char Comment[MAX_PATH];    /* Comment */
@@ -77,6 +78,7 @@ typedef struct {
 typedef struct {
     FILE *StimuliFile;          /* Handle for recorder file */
     FILE *MdfFile;              /* Handle for recorder file */
+    FILE *Mdf4File;              /* Handle for recorder file */
     struct PIPE_VARI *MessageBuffer;  /* Pointer to the message buffer */
     int MessageBufferSize;              /* Size of the message buffer */
 
@@ -95,7 +97,8 @@ typedef struct {
 
     int TextFileStatus;       /* Status of the file */
     int MdfFileStatus;           /* Status of the file */
-    int AllFileStatus;           
+    int Mdf4FileStatus;           /* Status of the file */
+    int AllFileStatus;
 
     uint32_t LineNumberCounter;
     uint64_t CurrentTimeStamp;  /* zeigt immer aktuellstes Datum an */
@@ -113,7 +116,8 @@ typedef struct {
     int32_t *Vids;
     char *PhysicalFlags;
     char TextFileName[MAX_PATH];      /* Name of the recording file */
-    char MdfFileName[MAX_PATH];          /* Name of the recording file */
+    char MdfFileName[MAX_PATH];       /* Name of the recording file */
+    char Mdf4FileName[MAX_PATH];      /* Name of the recording file */
 
     int ReqFiFo;
     int AckFiFo;

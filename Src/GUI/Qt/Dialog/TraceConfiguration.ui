@@ -81,14 +81,21 @@
       <item>
        <widget class="QCheckBox" name="FileFormatDatCheckBox">
         <property name="text">
-         <string>Text format (DAT)</string>
+         <string>Text format (.DAT)</string>
         </property>
        </widget>
       </item>
       <item>
        <widget class="QCheckBox" name="FileFormatMdfCheckBox">
         <property name="text">
-         <string>MDF  (MDF)</string>
+         <string>MDF3  (.MDF)</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="FileFormatMdf4CheckBox">
+        <property name="text">
+         <string>MDF4  (.MF4)</string>
         </property>
        </widget>
       </item>

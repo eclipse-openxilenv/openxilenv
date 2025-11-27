@@ -493,6 +493,11 @@ int OpenWriteMdfHead (START_MESSAGE_DATA hdrec_data,
             }
         }
         BitOffsetInRecord += MdfCnBlock.NumberOfBits;
+        if((BitOffsetInRecord + MdfCnBlock.NumberOfBits) >= 0x10000) {
+            CLOSE_FILE_FREE_BUFFERS
+                ThrowError (1, "Try to record to many variables to MDF3 file \"%s\", max 65472 bits in one sample are allowed", hdrec_data);
+            return -1;
+        }
 
         MdfCnBlock.ValueRangeValidFlag = 1; 
         MdfCnBlock.MinimumSignalValue = get_bbvari_min (vids[Channel]); 

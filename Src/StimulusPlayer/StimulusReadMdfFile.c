@@ -31,6 +31,7 @@
 #include "Blackboard.h"
 #include "MyMemory.h"
 #include "StringMaxChar.h"
+#include "EnvironmentVariables.h"
 #include "ThrowError.h"
 #include "StimulusReadFile.h"
 #include "MdfStructs.h"
@@ -43,12 +44,15 @@ int IsMdfFormat(const char *par_Filename, int *ret_Version)
     MY_FILE_HANDLE fh;
     MDF_IDBLOCK MdfIdBlock;
     int ReadResult;
+    char Filename[MAX_PATH];
 
-    fh = my_open(par_Filename);
+    SearchAndReplaceEnvironmentStrings(par_Filename, Filename, sizeof(Filename));
+
+    fh = my_open(Filename);
     if (fh == MY_INVALID_HANDLE_VALUE) {
         return 0;
     }
-    LogFileAccess (par_Filename);
+    LogFileAccess (Filename);
     ReadResult = my_read (fh, &MdfIdBlock, sizeof (MdfIdBlock));
     if (ReadResult != sizeof (MdfIdBlock)) {
         my_close (fh);
@@ -58,17 +62,17 @@ int IsMdfFormat(const char *par_Filename, int *ret_Version)
         my_close (fh);
         return 0;
     }
-    if (!(!strncmp("3.10 ", MdfIdBlock.FormatTdentifier, 5) ||
+    if ((MdfIdBlock.VersionNumber < 300) || (MdfIdBlock.VersionNumber > 330) ||
+        !(!strncmp("3.10 ", MdfIdBlock.FormatTdentifier, 5) ||
           !strncmp("3.20 ", MdfIdBlock.FormatTdentifier, 5) ||
           !strncmp("3.30 ", MdfIdBlock.FormatTdentifier, 5))) {
-        ThrowError (1, "%s file has version %s only version 3.10...3.30 are supported\n", par_Filename, MdfIdBlock.FormatTdentifier);
         my_close (fh);
         return 0;
     }
     if (ret_Version != NULL) *ret_Version = MdfIdBlock.VersionNumber;
 
     if (MdfIdBlock.DefaultByteOrder != 0) {
-        ThrowError (1, "%s file are not in little endian (lsb first order)\n", par_Filename);
+        ThrowError (1, "%s file are not in little endian (lsb first order)\n", Filename);
         my_close (fh);
         return 0;
     }
@@ -187,6 +191,20 @@ static int IsValidDataType(int par_DataType, int par_BitSize)
     }
 }
 
+static int IsInsideList(const char *par_List, const char *par_Variable)
+{
+    if ((par_List != NULL) && (par_Variable != NULL)) {
+        const char *p = strstr(par_List, par_Variable);
+        if (p != NULL) {
+            p += strlen(par_Variable);
+            if ((*p == ';') || (*p == 0)) {
+                return 1;
+            }
+        }
+    }
+    return 0;
+}
+
 /* This will read all variable names from a stimulus files  (with ; separation) */
 char *MdfReadStimulHeaderVariabeles (const char *par_Filename)
 {
@@ -205,12 +223,15 @@ char *MdfReadStimulHeaderVariabeles (const char *par_Filename)
     uint32_t ChannelGroupBlockOffset;
     uint32_t ChannelBlockOffset;
     int ReadResult;
+    char Filename[MAX_PATH];
 
-    fh = my_open(par_Filename);
+    SearchAndReplaceEnvironmentStrings(par_Filename, Filename, sizeof(Filename));
+
+    fh = my_open(Filename);
     if (fh == MY_INVALID_HANDLE_VALUE) {
         return NULL;
     }
-    LogFileAccess (par_Filename);
+    LogFileAccess (Filename);
     ReadResult = my_read (fh, &MdfIdBlock, sizeof (MdfIdBlock));
     if (ReadResult != sizeof (MdfIdBlock)) {
         my_close (fh);
@@ -284,26 +305,29 @@ char *MdfReadStimulHeaderVariabeles (const char *par_Filename)
                                 SignalName = MdfCnBlock.ShortSignalName;
                             }
 
-                            Pos = LenOfRet;
-                            if (VariableCount) {
-                                LenOfRet += 1;   // ';'
+                            if (!IsInsideList(Ret, SignalName)) {
+                                Pos = LenOfRet;
+                                if (VariableCount) {
+                                    LenOfRet += 1;   // ';'
+                                }
+                                LenOfRet += (int)strlen (SignalName);
+                                Ret = my_realloc (Ret, LenOfRet + 1);
+                                if (Ret == NULL) {
+                                    ThrowError (1, "upps out of memory");
+                                    return NULL;
+                                }
+                                if (VariableCount) {
+                                    strcpy (Ret + Pos, ";");
+                                    Pos += 1;
+                                }
+                                strcpy (Ret + Pos, SignalName);
+                                Pos += (int)strlen (SignalName);
+                                VariableCount++;
                             }
-                            LenOfRet += (int)strlen (SignalName);
-                            Ret = my_realloc (Ret, LenOfRet + 1);
-                            if (Ret == NULL) {
-                                ThrowError (1, "Out of memory");
-                                return NULL;
-                            }
-                            if (VariableCount) {
-                                strcpy (Ret + Pos, ";");
-                                Pos += 1;
-                            }
-                            strcpy (Ret + Pos, SignalName);
-                            Pos += (int)strlen (SignalName);
+
                             if (SignalName != MdfCnBlock.ShortSignalName) {
                                 my_free(SignalName);
                             }
-                            VariableCount++;
                         }
                     } else {
                     }
@@ -745,6 +769,9 @@ STIMULI_FILE *MdfOpenAndReadStimuliHeader (const char *par_Filename, const char 
     int BlockNumber = 0;
     char DateString[11];
     char TimeString[9];
+    char Filename[MAX_PATH];
+
+    SearchAndReplaceEnvironmentStrings(par_Filename, Filename, sizeof(Filename));
 
     Ret = (STIMULI_FILE*)my_calloc(1, sizeof(STIMULI_FILE));
     if (Ret == NULL) {
@@ -760,9 +787,9 @@ STIMULI_FILE *MdfOpenAndReadStimuliHeader (const char *par_Filename, const char 
     Ret->File = (void*)Mdf;
     Ret->FileType = MDF_FILE;
 
-    Mdf->fh = my_open(par_Filename);
+    Mdf->fh = my_open(Filename);
     if (Mdf->fh == MY_INVALID_HANDLE_VALUE) {
-        ThrowError (1, "Unable to open %s file\n", par_Filename);
+        ThrowError (1, "Unable to open %s file\n", Filename);
         goto __ERROR;
     }
 

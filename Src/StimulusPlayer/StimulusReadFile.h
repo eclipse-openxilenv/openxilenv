@@ -24,7 +24,7 @@
 #define STIMULI_END_OF_FILE (-1)
 
 typedef struct{
-    enum {NO_FILE, DAT_FILE, MDF_FILE} FileType;
+    enum {NO_FILE, DAT_FILE, MDF_FILE, MDF4_FILE} FileType;
     void *File;
 } STIMULI_FILE;
 

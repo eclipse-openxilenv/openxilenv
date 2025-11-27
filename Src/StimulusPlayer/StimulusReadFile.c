@@ -31,13 +31,16 @@
 #include "ThrowError.h"
 #include "StimulusReadDatFile.h"
 #include "StimulusReadMdfFile.h"
+#include "StimulusReadMdf4File.h"
 #include "StimulusReadFile.h"
 
 
 /* This will read all variable names from a stimulus files  (with ; separation) */
 char *ReadStimulHeaderVariabeles (const char *par_Filename)
 {
-    if (IsMdfFormat(par_Filename, NULL)) {
+    if (IsMdf4Format(par_Filename, NULL)) {
+        return Mdf4ReadStimulHeaderVariabeles (par_Filename);
+    } else if (IsMdfFormat(par_Filename, NULL)) {
         return MdfReadStimulHeaderVariabeles (par_Filename);
     } else {
         return DatReadStimulHeaderVariabeles (par_Filename);
@@ -48,7 +51,9 @@ char *ReadStimulHeaderVariabeles (const char *par_Filename)
 /* or NULL on error */
 STIMULI_FILE* OpenAndReadStimuliHeader (const char *par_Filename, const char *vari_list)
 {
-    if (IsMdfFormat(par_Filename, NULL)) {
+    if (IsMdf4Format(par_Filename, NULL)) {
+        return Mdf4OpenAndReadStimuliHeader (par_Filename, vari_list);
+    } else if (IsMdfFormat(par_Filename, NULL)) {
         return MdfOpenAndReadStimuliHeader (par_Filename, vari_list);
     } else {
         return DatOpenAndReadStimuliHeader (par_Filename, vari_list);
@@ -57,7 +62,9 @@ STIMULI_FILE* OpenAndReadStimuliHeader (const char *par_Filename, const char *va
 
 int GetNumberOfStimuliVariables (STIMULI_FILE*par_File)
 {
-    if (par_File->FileType == MDF_FILE) {
+    if (par_File->FileType == MDF4_FILE) {
+        return Mdf4GetNumberOfStimuliVariables (par_File);
+    } else if (par_File->FileType == MDF_FILE) {
         return MdfGetNumberOfStimuliVariables (par_File);
     } else {
         return DatGetNumberOfStimuliVariables (par_File);
@@ -66,7 +73,9 @@ int GetNumberOfStimuliVariables (STIMULI_FILE*par_File)
 
 int *GetStimuliVariableIds (STIMULI_FILE*par_File)
 {
-    if (par_File->FileType == MDF_FILE) {
+    if (par_File->FileType == MDF4_FILE) {
+        return Mdf4GetStimuliVariableIds (par_File);
+    } else if (par_File->FileType == MDF_FILE) {
         return MdfGetStimuliVariableIds (par_File);
     } else {
         return DatGetStimuliVariableIds (par_File);
@@ -76,7 +85,9 @@ int *GetStimuliVariableIds (STIMULI_FILE*par_File)
 /* This will read one line from the simulus file and build a message */
 int ReadOneStimuliTimeSlot (STIMULI_FILE* par_File, VARI_IN_PIPE *pipevari_list, uint64_t *ret_t)
 {
-    if (par_File->FileType == MDF_FILE) {
+    if (par_File->FileType == MDF4_FILE) {
+        return Mdf4ReadOneStimuliTimeSlot (par_File, pipevari_list, ret_t);
+    } else if (par_File->FileType == MDF_FILE) {
         return MdfReadOneStimuliTimeSlot (par_File, pipevari_list, ret_t);
     } else {
         return DatReadOneStimuliTimeSlot (par_File, pipevari_list, ret_t);
@@ -85,7 +96,9 @@ int ReadOneStimuliTimeSlot (STIMULI_FILE* par_File, VARI_IN_PIPE *pipevari_list,
 
 void CloseStimuliFile(STIMULI_FILE *par_File)
 {
-    if (par_File->FileType == MDF_FILE) {
+    if (par_File->FileType == MDF4_FILE) {
+        Mdf4CloseStimuliFile (par_File);
+    } else if (par_File->FileType == MDF_FILE) {
         MdfCloseStimuliFile (par_File);
     } else {
         DatCloseStimuliFile (par_File);
