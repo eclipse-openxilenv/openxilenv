@@ -8,6 +8,7 @@ set(CommonFileList
     StimulusReadDatFile.c
     StimulusReadFile.c
     StimulusReadMdfFile.c
+    StimulusReadMdf4File.c
     WriteToBlackboardPipe.c
 )
 
