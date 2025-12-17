@@ -83,6 +83,15 @@ jobs:
         cd $GITHUB_WORKSPACE/openxilenv-build
         cmake --install .
 
+    -name: Test OpenXilEnv installation
+      run: |
+        python3 -m venv .venv
+        source .venv/bin/activate
+        python3 -m pip install --upgrade pip
+        python3 -m pip install -r ./requirements.txt
+        python3 -m pip install ./python-api
+        pytest -vv
+
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
@@ -162,6 +171,15 @@ jobs:
       run: |
         cd D:\a\tools\OpenXilEnv
         windeployqt.exe XilEnvGui.exe
+
+    - name: Test OpenXilEnv installation
+      run: |
+        python3 -m venv .venv
+        source .venv/bin/activate
+        python3 -m pip install --upgrade pip
+        python3 -m pip install -r ./requirements.txt
+        python3 -m pip install ./python-api
+        pytest -vv
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
