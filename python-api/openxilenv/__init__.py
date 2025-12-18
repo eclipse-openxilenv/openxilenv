@@ -12,3 +12,5 @@
 # under the License.
 #
 # SPDX-License-Identifier: Apache-2.0
+
+from openxilenv.xilEnv import XilEnv
