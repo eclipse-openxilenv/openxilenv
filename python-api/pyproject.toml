@@ -1,0 +1,22 @@
+[project]
+name = "openxilenv"
+version = "0.1.0"
+description = "A Python Bindings Wrapper for openXilEnv"
+authors = [
+    { name = "eb1234x"},
+    { name = "NikiWelik"},
+    { name = "wernertimothy"}
+]
+
+readme = "Readme.md"
+requires-python = ">=3.10"
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["openxilenv"]
+
+[tool.setuptools.package-dir]
+openxilenv = "openxilenv"

@@ -62,6 +62,39 @@ If not, use **LinuxRemoteMaster.out**.
 
 Ensure **RemoteStartServer** is installed and running on the Linux PC to allow remote execution.
 
+## Python API
+
+OpenXilEnv is distributed with a python bindings wrapper that allows full control over a runninx openXilEnv instance via python.
+
+The [functional tests](test/functional/) of openXilEnv are implemented in [pytest](https://docs.pytest.org/en/stable/) using the openXilEnv **python API** and provide an example usage.
+
+For a detailed description take a look at the [openXilenv python API refrence](docs/PYTHON_API_REFERENCE.md).
+
+## Test
+
+OpenXilEnv provides functionality tests, that validate the **openXilEnv** installation using pytest.
+
+The tests depend on the **openXilEnv Installation** path and the **openXilEnv Source** path.
+To make sure the paths are available, set the following variables
+
+on windows
+```cmd
+set OPENXILENV_INSTALLATION_PATH="%SystemDrive%\dev\tools"
+set OPENXILENV_SOURCE_PATH="%SystemDrive%\dev\src"
+```
+
+on linux
+```bash
+export OPENXILENV_SOURCE_PATH="$HOME/dev/src/openXilEnv"
+export OPENXILENV_INSTALLATION_PATH="$HOME/dev/tools/openXilEnv"
+```
+
+To run all tests, simply execute
+
+```bash
+pytest -vv
+```
+
 ## License
 This project is part of the Eclipse Foundation and licensed under the [Apache License 2.0](LICENSE.txt).
 
