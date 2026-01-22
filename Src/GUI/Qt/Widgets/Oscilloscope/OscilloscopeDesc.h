@@ -36,6 +36,7 @@ class OscilloscopeDesc : public QWidget
 public:
     explicit OscilloscopeDesc(OscilloscopeDescFrame *par_OscilloscopeDescFrame, OSCILLOSCOPE_DATA *par_Data, enum Side par_Side, int par_Number, QWidget *parent = nullptr);
     ~OscilloscopeDesc() Q_DECL_OVERRIDE;
+    void paint(QPainter &painter, bool border_flag);
 
 signals:
     void variableForStandardDialog(QStringList arg_variableName, bool arg_showAllVariable, bool arg_multiSelect, QColor arg_color, QFont arg_font = QFont());
@@ -56,11 +57,11 @@ protected:
 
     void mouseDoubleClickEvent(QMouseEvent *arg_event) Q_DECL_OVERRIDE;
 
-    int read_value_desc_txt (char *txt, int left_right, int pos, int *pcolor);
+    int read_value_desc_txt (char *txt, int maxc, int left_right, int pos, int *pcolor);
     int ValueToString (int Pos,
-                       const char *Prefix, int left_right, int Vid, double Value,
-                       int dec_phys_flag, int dec_hex_bin_flag, int Type,
-                       char *String, int *pcolor);
+                      const char *Prefix, int left_right, int Vid, double Value,
+                      int dec_phys_flag, int dec_hex_bin_flag, int Type,
+                      char *String, int maxc, int *pcolor);
     int CalcDiffEnumString (double Value, int left_right, int pos,
                             char *DiffEnumStr, int maxc,  int *pcolor);
     void BuildBinaryString (const char *Prefix, uint64_t Value, int Type, char *String);

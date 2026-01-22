@@ -15,23 +15,27 @@
  */
 
 
-#ifndef IMP_DBC_H
-#define IMP_DBC_H
+#ifndef IMPORT_DBC_H
+#define IMPORT_DBC_H
 
 int CANDB_GetAllBusMembers (const char *FileName, char **MemberNames);
 
 void CANDB_FreeMembersList (char *MemberNames);
 
-int CANDB_Import (const char *FileName, char *TxMemberList, char *RxMemberList,
-                  const char *Prefix, const char *Postfix,
-                  int TransferSettingsFlag,
-                  int VarianteNr,
-                  int ObjectAddEquFlag,
-                  int SortSigFlag,
-                  int SigDTypeFlag,
-                  int SigEquFlag,
-                  int SigInitValueFlag,
-                  int ObjectInitDataFlag,
-                  int ExtendSignalNameWithObjectNameFlag);
+int CANDB_Import (const char *FileName,
+                 char *OutputCanFileName,
+                 char *CanVariantName,
+                 char *TxMemberList, char *RxMemberList,
+                 const char *Prefix, const char *Postfix,
+                 int TransferSettingsFlag,
+                 int VarianteNr,
+                 int ObjectAddEquFlag,
+                 int SortSigFlag,
+                 int SigDTypeFlag,
+                 int SigEquFlag,
+                 int SigInitValueFlag,
+                 int ObjectInitDataFlag,
+                 int ExtendSignalNameWithObjectNameFlag,
+                 int ObjectNameDoublePointFlag);
 
 #endif

@@ -29,6 +29,7 @@
 #define NO_ERROR_FUNCTION_DECLARATION
 
 extern "C" {
+#include "PrintFormatToString.h"
 #include "ThrowError.h"
 #include "MyMemory.h"
 #include "ConfigurablePrefix.h"
@@ -110,7 +111,7 @@ static void Error2MessageOut(int par_Level, const char *par_HeaderString, const 
 {
     FILE *fh;
     char Path[2*MAX_PATH + 16];
-    sprintf (Path, "%s\\%s\\%s.err", s_main_ini_val.StartDirectory, s_main_ini_val.ScriptOutputFilenamesPrefix,
+    PrintFormatToString (Path, sizeof(Path), "%s\\%s\\%s.err", s_main_ini_val.StartDirectory, s_main_ini_val.ScriptOutputFilenamesPrefix,
              GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_ERROR_FILE));
     if ((fh = open_file (Path, "a")) != nullptr) {
         fprintf (fh, "%s\n  %s\n", par_HeaderString, par_ErrorString);

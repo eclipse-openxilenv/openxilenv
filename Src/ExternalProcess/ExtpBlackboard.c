@@ -20,6 +20,7 @@
 #include <string.h>
 #include "Platform.h"
 
+#include "StringMaxChar.h"
 #include "PipeMessagesShared.h"
 #include "XilEnvExtProc.h"
 #include "ExtpProcessAndTaskInfos.h"
@@ -47,19 +48,23 @@ static int XilEnvInternal_BbCacheGetOrAllocMemoryForDataAndName(EXTERN_PROCESS_T
         par_TaskInfo->BbCaches.Entrys[FoundIndex].AttachCounter++;
         return FoundIndex;
     } else {
-        if (FreeIndex >= 0) { 
+        int Len = strlen(par_Name) + 1;
+        if (FreeIndex >= 0) {
             par_TaskInfo->BbCaches.Entrys[FreeIndex].AttachCounter = 1;
+
+            par_TaskInfo->BbCaches.Entrys[FreeIndex].Buffer = (union SC_BB_VARI *)XilEnvInternal_realloc(par_TaskInfo->BbCaches.Entrys[FreeIndex].Buffer, sizeof(union SC_BB_VARI) + Len);
             if (par_TaskInfo->BbCaches.Entrys[FreeIndex].Buffer != NULL) {
-                par_TaskInfo->BbCaches.Entrys[FreeIndex].Buffer = (union SC_BB_VARI *)XilEnvInternal_malloc(sizeof(union SC_BB_VARI) + strlen(par_Name) + 1);
                 if (par_TaskInfo->BbCaches.Entrys[FreeIndex].Buffer == NULL) {
                     ThrowError (1, "out of memory");
                     return -1;
                 }
                 par_TaskInfo->BbCaches.Entrys[FreeIndex].Buffer->uqw = 0;
-                strcpy((char*)(par_TaskInfo->BbCaches.Entrys[FreeIndex].Buffer + 1), par_Name);
+                StringCopyMaxCharTruncate((char*)(par_TaskInfo->BbCaches.Entrys[FreeIndex].Buffer + 1), par_Name, Len);
                 par_TaskInfo->BbCaches.Entrys[FreeIndex].UniqueId = XilEnvInternal_BuildRefUniqueId (par_TaskInfo);
-            }              
-            return FreeIndex;
+                return FreeIndex;
+            } else {
+                return -1;
+            }
         } else {
             if (par_TaskInfo->BbCaches.Count == 0) par_TaskInfo->BbCaches.Count++;  // // dont use index 0
             FoundIndex = par_TaskInfo->BbCaches.Count;
@@ -83,13 +88,13 @@ static int XilEnvInternal_BbCacheGetOrAllocMemoryForDataAndName(EXTERN_PROCESS_T
                 }
             }
             par_TaskInfo->BbCaches.Entrys[FoundIndex].AttachCounter = 1;
-            par_TaskInfo->BbCaches.Entrys[FoundIndex].Buffer = (union SC_BB_VARI *)XilEnvInternal_malloc(sizeof(union SC_BB_VARI) + strlen(par_Name) + 1);
+            par_TaskInfo->BbCaches.Entrys[FoundIndex].Buffer = (union SC_BB_VARI *)XilEnvInternal_malloc(sizeof(union SC_BB_VARI) + Len);
             if (par_TaskInfo->BbCaches.Entrys[FoundIndex].Buffer == NULL) {
                 ThrowError (1, "out of memory");
                 return -1;
             }
             par_TaskInfo->BbCaches.Entrys[FoundIndex].Buffer->uqw = 0;
-            strcpy((char*)(par_TaskInfo->BbCaches.Entrys[FoundIndex].Buffer + 1), par_Name);
+            StringCopyMaxCharTruncate((char*)(par_TaskInfo->BbCaches.Entrys[FoundIndex].Buffer + 1), par_Name, Len);
             par_TaskInfo->BbCaches.Entrys[FoundIndex].UniqueId = XilEnvInternal_BuildRefUniqueId (par_TaskInfo);
             return FoundIndex;
         }
@@ -404,7 +409,7 @@ VID add_bbvari_dir (const char *name, int type, const char *unit, int dir, int *
     EXTERN_PROCESS_TASK_INFOS_STRUCT *TaskInfo;
     VID Ret;
 
-    memset (&Value, 0, sizeof(Value));
+    MEMSET (&Value, 0, sizeof(Value));
     type = XilEnvInternal_DataTypeConvert (dir, type);
     TaskInfo = XilEnvInternal_GetTaskPtr ();
 
@@ -440,7 +445,7 @@ EXPORT_OR_IMPORT VID __FUNC_CALL_CONVETION__ add_bbvari (const char *name, int t
         return WRONG_PARAMETER;
     }
 
-    memset (&Value, 0, sizeof (Value));
+    MEMSET (&Value, 0, sizeof (Value));
 
     VidIndex = XilEnvInternal_BbCacheGetOrAllocMemoryForDataAndName(TaskPtr, name);
 
@@ -483,7 +488,7 @@ VID add_bbvari_all_infos_dir (const char *name, int type, const char *unit, int 
         return WRONG_PARAMETER;
     }
 
-    memset (&Value, 0, sizeof (Value));
+    MEMSET (&Value, 0, sizeof (Value));
     type = XilEnvInternal_DataTypeConvert (dir, type);
     Ret = XilEnvInternal_PipeAddBlackboardVariableAllInfos (TaskPtr, name, type + 0x1000, unit, dir,    // +0x1000 -> All informations
                                                               convtype, (char*)conversion,

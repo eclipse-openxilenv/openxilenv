@@ -31,6 +31,7 @@
 #include "Scheduler.h"
 #include "ThrowError.h"
 #include "MyMemory.h"
+#include "IniDataBase.h"
 #include "StringMaxChar.h"
 #include "MainValues.h"
 #include "Blackboard.h"
@@ -831,7 +832,7 @@ BOOL WriteProcessToSVLOrSAL(const char *FileName,
 
     pid = get_pid_by_name(CurProcess);
     if (!IsExternProcessLinuxExecutable(pid) &&
-        lives_process_inside_dll(CurProcess, DllName) > 0) {
+        lives_process_inside_dll(CurProcess, DllName, sizeof(DllName)) > 0) {
         uint64_t ModuleBaseAddress;
         int Index;
         if (GetExternProcessBaseAddress(pid, &ModuleBaseAddress, DllName) != 0) { // besser waere die Basis-Adresse beim LOGIN mit zu uebertragen
@@ -990,7 +991,8 @@ BOOL ScriptWriteProcessToSVL(
                  )
 {
     PROCESS_APPL_DATA *pappldata;
-    SECTION_ADDR_RANGES_FILTER *GlobalSectionFilter; 
+    SECTION_ADDR_RANGES_FILTER *GlobalSectionFilter;
+    INCLUDE_EXCLUDE_FILTER *IncExcludeFilter;
     int UniqueNumber;
     int Pid;
     BOOL Ret;
@@ -1007,12 +1009,36 @@ BOOL ScriptWriteProcessToSVL(
         return(FALSE);
     }
     GlobalSectionFilter = BuildGlobalAddrRangeFilter (pappldata);
+    char *MainFilter = StringMalloc(filter);
+    if (MainFilter == NULL) {
+        return(FALSE);
+    }
+    char *FilterFileName = strstr(MainFilter, ";");
+    if (FilterFileName != NULL) {
+        char File[MAX_PATH];
+        *FilterFileName = 0;
+        FilterFileName++;
+        StringCopyMaxCharTruncate (File, FilterFileName, MAX_PATH);
+        int Fd = IniFileDataBaseOpen(File);
+        if (Fd <= 0) {
+            my_free(MainFilter);
+            return(FALSE);
+        } else {
+            IncExcludeFilter = BuildIncludeExcludeFilterFromIni ("IncludeExcludeFilter", "", Fd);
+        }
+        IniFileDataBaseClose (Fd);
+    } else {
+        IncExcludeFilter = NULL;
+    }
 
     Ret = WriteProcessToSVLOrSAL(SvlFileName, CurProcess, pappldata,
-                                 (filter[0] == 0) ? "*" : filter,
-                                 NULL, GlobalSectionFilter,
+                                 (MainFilter[0] == 0) ? "*" : MainFilter,
+                                 IncExcludeFilter, GlobalSectionFilter,
                                  WPTSOS_SVL, 0);
-
+    my_free(MainFilter);
+    if (IncExcludeFilter != NULL) {
+        FreeIncludeExcludeFilter(IncExcludeFilter);
+    }
     DeleteAddrRangeFilter (GlobalSectionFilter);
     RemoveConnectFromProcessDebugInfos (UniqueNumber);
     FreeUniqueNumber (UniqueNumber);
@@ -1029,7 +1055,8 @@ BOOL ScriptWriteProcessToSAL(
                  )
 {
     PROCESS_APPL_DATA *pappldata;
-    SECTION_ADDR_RANGES_FILTER *GlobalSectionFilter; 
+    SECTION_ADDR_RANGES_FILTER *GlobalSectionFilter;
+    INCLUDE_EXCLUDE_FILTER *IncExcludeFilter;
     int UniqueNumber;
     int Pid;
     BOOL Ret;
@@ -1046,13 +1073,37 @@ BOOL ScriptWriteProcessToSAL(
         return(FALSE);
     }
     GlobalSectionFilter = BuildGlobalAddrRangeFilter (pappldata);
+    char *MainFilter = StringMalloc(filter);
+    if (MainFilter == NULL) {
+        return(FALSE);
+    }
+    char *FilterFileName = strstr(MainFilter, ";");
+    if (FilterFileName != NULL) {
+        char File[MAX_PATH];
+        *FilterFileName = 0;
+        FilterFileName++;
+        StringCopyMaxCharTruncate (File, FilterFileName, MAX_PATH);
+        int Fd = IniFileDataBaseOpen(File);
+        if (Fd <= 0) {
+            my_free(MainFilter);
+            return(FALSE);
+        } else {
+            IncExcludeFilter = BuildIncludeExcludeFilterFromIni ("IncludeExcludeFilter", "", Fd);
+        }
+        IniFileDataBaseClose (Fd);
+    } else {
+        IncExcludeFilter = NULL;
+    }
 
     Ret = WriteProcessToSVLOrSAL(SalFileName, CurProcess, pappldata,
-                                 (filter[0] == 0) ? "*" : filter,
-                                 NULL, GlobalSectionFilter,
+                                 (MainFilter[0] == 0) ? "*" : MainFilter,
+                                 IncExcludeFilter, GlobalSectionFilter,
                                  WPTSOS_SAL,
                                  IncPointer);
- 
+    my_free(MainFilter);
+    if (IncExcludeFilter != NULL) {
+        FreeIncludeExcludeFilter(IncExcludeFilter);
+    }
     DeleteAddrRangeFilter (GlobalSectionFilter);
     RemoveConnectFromProcessDebugInfos (UniqueNumber);
     FreeUniqueNumber (UniqueNumber);
@@ -1068,6 +1119,7 @@ BOOL ScriptWriteProcessToSATVL(
 {
     PROCESS_APPL_DATA *pappldata;
     SECTION_ADDR_RANGES_FILTER *GlobalSectionFilter;
+    INCLUDE_EXCLUDE_FILTER *IncExcludeFilter;
     int UniqueNumber;
     int Pid;
     BOOL Ret;
@@ -1084,12 +1136,35 @@ BOOL ScriptWriteProcessToSATVL(
         return(FALSE);
     }
     GlobalSectionFilter = BuildGlobalAddrRangeFilter (pappldata);
-
+    char *MainFilter = StringMalloc(filter);
+    if (MainFilter == NULL) {
+        return(FALSE);
+    }
+    char *FilterFileName = strstr(MainFilter, ";");
+    if (FilterFileName != NULL) {
+        char File[MAX_PATH];
+        *FilterFileName = 0;
+        FilterFileName++;
+        StringCopyMaxCharTruncate (File, FilterFileName, MAX_PATH);
+        int Fd = IniFileDataBaseOpen(File);
+        if (Fd <= 0) {
+            my_free(MainFilter);
+            return(FALSE);
+        } else {
+            IncExcludeFilter = BuildIncludeExcludeFilterFromIni ("IncludeExcludeFilter", "", Fd);
+        }
+        IniFileDataBaseClose (Fd);
+    } else {
+        IncExcludeFilter = NULL;
+    }
     Ret = WriteProcessToSVLOrSAL(SatvlFileName, CurProcess, pappldata,
-                                 (filter[0] == 0) ? "*" : filter,
-                                 NULL, GlobalSectionFilter,
+                                 (MainFilter[0] == 0) ? "*" : MainFilter,
+                                 IncExcludeFilter, GlobalSectionFilter,
                                  WPTSOS_SATVL, 0);
-
+    my_free(MainFilter);
+    if (IncExcludeFilter != NULL) {
+        FreeIncludeExcludeFilter(IncExcludeFilter);
+    }
     DeleteAddrRangeFilter (GlobalSectionFilter);
     RemoveConnectFromProcessDebugInfos (UniqueNumber);
     FreeUniqueNumber (UniqueNumber);

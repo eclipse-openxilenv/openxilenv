@@ -27,6 +27,8 @@
 #include <linux/can/raw.h>
 #include <string.h>
 
+#include "StringMaxChar.h"
+#include "PrintFormatToString.h"
 #include "RemoteMasterGlobalData.h"
 
 #include "MapSocketCAN.h"
@@ -42,7 +44,7 @@ int SocketCANsInit(REMOTE_MASTER_GLOBAL_DATA *GloabalData)
         char CmdLine[256];
         int Status;
 
-        sprintf(CmdLine, "ip addr ls dev can%i", c);
+        PrintFormatToString (CmdLine, sizeof(CmdLine), "ip addr ls dev can%i", c);
         Status = system(CmdLine);
         if (Status != 0) break;
         CanSockets[c] = GloabalData->HwInfosSocketCANs.SocketCAN[c].Socket = c;
@@ -53,8 +55,8 @@ int SocketCANsInit(REMOTE_MASTER_GLOBAL_DATA *GloabalData)
 
         /* Locate the interface you wish to use */
         struct ifreq ifr;
-        sprintf(DeviceName, "can%i", c);
-        strcpy(ifr.ifr_name, DeviceName);
+        PrintFormatToString (DeviceName, sizeof(DeviceName), "can%i", c);
+        STRING_COPY_TO_ARRAY(ifr.ifr_name, DeviceName);
         Ret = ioctl(Socket, SIOCGIFINDEX, &ifr); /* ifr.ifr_ifindex gets filled
                                         * with that device's index */
         if (Ret != 0) {

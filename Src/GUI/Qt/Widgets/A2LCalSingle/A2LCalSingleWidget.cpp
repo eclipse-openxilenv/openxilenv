@@ -37,6 +37,7 @@
 #include "QtIniFile.h"
 
 extern "C" {
+#include "PrintFormatToString.h"
 #include "MainValues.h"
 #include "ThrowError.h"
 #include "Files.h"
@@ -148,7 +149,7 @@ bool A2LCalSingleWidget::writeToIni()
     ScQt_IniFileDataBaseWriteString(SectionPath, "process", QStringToConstChar(m_Model->GetProcessName()), Fd);
 
     int loc_FontSize = m_tableViewVariables->font().pointSize();
-    sprintf (loc_txt, "%s, %i", QStringToConstChar(m_tableViewVariables->font().family()), loc_FontSize);
+    PrintFormatToString (loc_txt, sizeof(loc_txt), "%s, %i", QStringToConstChar(m_tableViewVariables->font().family()), loc_FontSize);
     ScQt_IniFileDataBaseWriteString(SectionPath, "Font", loc_txt, Fd);
 
     ScQt_IniFileDataBaseWriteInt(SectionPath, "icon", m_icon, Fd);
@@ -156,7 +157,7 @@ bool A2LCalSingleWidget::writeToIni()
     loc_BkColor += loc_BkQColor.red();
     loc_BkColor += loc_BkQColor.green() << 8;
     loc_BkColor += loc_BkQColor.blue() << 16;
-    sprintf(loc_txt, "0x%08X", loc_BkColor);
+    PrintFormatToString (loc_txt, sizeof(loc_txt), "0x%08X", loc_BkColor);
     ScQt_IniFileDataBaseWriteString(SectionPath, "BgColor", loc_txt, Fd);
 
     QList<A2LCalSingleData*> loc_variableList = m_Model->getList();
@@ -166,13 +167,13 @@ bool A2LCalSingleWidget::writeToIni()
     // 2 -> bin, 3 -> phys
     for(i = 0; i < loc_variableList.size(); i++) {
         loc_logicalIndex = m_tableViewVariables->verticalHeader()->logicalIndex(i);
-        sprintf(loc_entry, "E%d", i + 1);
-        sprintf(loc_txt, "%d,%s", loc_variableList.at(loc_logicalIndex)->GetDisplayType(),
+        PrintFormatToString (loc_entry, sizeof(loc_entry), "E%d", i + 1);
+        PrintFormatToString (loc_txt, sizeof(loc_txt), "%d,%s", loc_variableList.at(loc_logicalIndex)->GetDisplayType(),
                 QStringToConstChar(loc_variableList.at(loc_logicalIndex)->GetCharacteristicName()));
         ScQt_IniFileDataBaseWriteString(SectionPath, loc_entry, loc_txt, Fd);
     }
     for(; ; i++) {
-        sprintf(loc_entry, "E%d", i + 1);
+        PrintFormatToString (loc_entry, sizeof(loc_entry), "E%d", i + 1);
         if (ScQt_IniFileDataBaseReadString(SectionPath, loc_entry, "", Fd).isEmpty()) break;
         ScQt_IniFileDataBaseWriteString(SectionPath, loc_entry, nullptr, Fd);
     }
@@ -220,7 +221,7 @@ bool A2LCalSingleWidget::readFromIni()
     char loc_text[INI_MAX_LINE_LENGTH];
     char loc_entry[INI_MAX_ENTRYNAME_LENGTH];
     for(int i = 1; ; i++) {
-        sprintf(loc_entry, "E%d", i);
+        PrintFormatToString (loc_entry, sizeof(loc_entry), "E%d", i);
         QString Line = ScQt_IniFileDataBaseReadString(SectionPath, loc_entry, "", Fd);
         if (!Line.isEmpty()) {
             QStringList loc_iniTextValues(Line.split(","));
@@ -279,7 +280,6 @@ int A2LCalSingleWidget::NotifiyGetDataFromLinkAck(void *par_IndexData, int par_F
     Q_UNUSED(par_FetchDataChannelNo)
     INDEX_DATA_BLOCK *IndexData = (INDEX_DATA_BLOCK*)par_IndexData;
     m_Model->UpdateValuesAck(IndexData);
-    FreeIndexDataBlock(IndexData);
     return 0;
 
 }
@@ -546,9 +546,15 @@ void A2LCalSingleWidget::AddCharacteristicToModel(QString par_CharacteristicName
     } else {
         loc_rowCount = arg_Row;
     }
+    int loc_displayType;
+    if (arg_displayType < 0) {
+        loc_displayType = 3; // default is physical
+    } else {
+        loc_displayType = arg_displayType;
+    }
     m_Model->insertRows(loc_rowCount, 1, QModelIndex());
     m_Model->SetCharacteristicName(loc_rowCount, par_CharacteristicName);
-    m_Model->SetDisplayType(loc_rowCount, arg_displayType);
+    m_Model->SetDisplayType(loc_rowCount, loc_displayType);
     m_Model->CheckExistanceOfOne(loc_rowCount, m_Model->GetLinkNo());
     m_Model->UpdateOneValueReq(loc_rowCount, true, true);  // this mus be called again after SetDisplayType
 }

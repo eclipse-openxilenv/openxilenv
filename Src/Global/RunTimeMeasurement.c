@@ -73,7 +73,7 @@ int BeginRuntimeMeassurement (const char *Name, int id)
             RuntimeInfosSize += 64;
             RuntimeInfos = (RUNTIME_INFOS*)my_realloc (RuntimeInfos, RuntimeInfosSize * sizeof (RUNTIME_INFOS));
         }
-        memset (&(RuntimeInfos[id]), 0, sizeof (RUNTIME_INFOS));
+        MEMSET (&(RuntimeInfos[id]), 0, sizeof (RUNTIME_INFOS));
     } 
     RuntimeInfos[id].CallCounter++;
     RuntimeInfos[id].Start = GetTimeStamp();
@@ -121,7 +121,7 @@ int GetRuntimeMeassurement (int id, char *line)
 		CPUClock = GetCPUFreqFromRegestry ();
 	}
     if (id >= RuntimeInfosCount) return 0;  // Ende
-    sprintf (line, "%s  %I64d Call(s)  %fs %fs/call",  //%I64d CPU-Clocks", 
+    PrintFormatToString (line, sizeof(line), "%s  %I64d Call(s)  %fs %fs/call",  //%I64d CPU-Clocks",
              RuntimeInfos[id].FunctionName,
              RuntimeInfos[id].CallCounter,
              (double)RuntimeInfos[id].Sum / CPUClock,

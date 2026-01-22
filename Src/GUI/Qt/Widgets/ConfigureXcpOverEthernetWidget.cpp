@@ -138,7 +138,7 @@ void ConfigureXCPOverEthernetWidget::on_pushButtonImport_clicked()
     QString fileName = FileDialog::getOpenFileName(this, QString ("Import"), QString(), QString (XCP_EXT));
 
     if(!fileName.isEmpty()) {
-        strcpy(txt, QStringToConstChar(fileName));
+        STRING_COPY_TO_ARRAY(txt, QStringToConstChar(fileName));
         if ((fh = open_file (txt, "rt")) == nullptr) {
             ThrowError (1, "cannot open file %s", txt);
             return;
@@ -165,7 +165,7 @@ void ConfigureXCPOverEthernetWidget::on_pushButtonExport_clicked()
     }
 
     for (int x = 0; x < ui->listWidgetMeasurementTasks->count(); x++) {
-        StringAppendMaxCharTruncate(Txt, QStringToConstChar(ui->listWidgetMeasurementTasks->item(x)->text()), sizeof(Txt));
+        STRING_APPEND_TO_ARRAY(Txt, QStringToConstChar(ui->listWidgetMeasurementTasks->item(x)->text()));
         fprintf(fh, "%s\n", Txt);
     }
     close_file (fh);
@@ -195,9 +195,6 @@ void ConfigureXCPOverEthernetWidget::on_pushButtonAddBehind_clicked()
 
 void ConfigureXCPOverEthernetWidget::on_pushButtonChange_clicked()
 {
-    char p[INI_MAX_ENTRYNAME_LENGTH];
-    int Len;
-
     if (ui->listWidgetMeasurementTasks->selectedItems().isEmpty()) {
         ThrowError (1, "Please select a label.");
         return;

@@ -24,6 +24,7 @@
 #include "ThrowError.h"
 #include "MyMemory.h"
 #include "StringMaxChar.h"
+#include "PrintFormatToString.h"
 #include "Scheduler.h"
 
 #include "IniDataBase.h"
@@ -314,7 +315,7 @@ int rm_get_bbvari_unit (VID vid, char *unit, int maxc)
     Req.max_c = maxc;
     TransactRemoteMaster (RM_BLACKBOARD_GET_BBVARI_UNIT_CMD, &Req, sizeof(Req), &Ack, sizeof(Ack));
     CHECK_ANSWER(Req, Ack);
-    strcpy (unit, Ack.Unit);
+    StringCopyMaxCharTruncate (unit, Ack.Unit, maxc);
     return Ack.Ack.Ret;
 }
 
@@ -347,7 +348,7 @@ int rm_set_bbvari_conversion (VID vid, int convtype, const char *conversion)
     if (convtype == BB_CONV_FORMULA) {
         char Name[BBVARI_NAME_SIZE];
         if (GetBlackboardVariableName(vid, Name, sizeof(Name))) {
-            StringAppendMaxCharTruncate (Name, "unknown", sizeof(Name));
+            STRING_APPEND_TO_ARRAY (Name, "unknown");
         }
         MEMCPY (((char*)(Req + 1) + LenConversion), ExecStack, (size_t)SizeOfExecStack);
         RegisterEquation (0, conversion, ExecStack,
@@ -375,7 +376,9 @@ int rm_get_bbvari_conversion (VID vid, char *conversion, int maxc)
     Ack = _alloca (SizeOfStruct);
     TransactRemoteMaster (RM_BLACKBOARD_GET_BBVARI_CONVERSION_CMD, &Req, sizeof(Req), Ack, (int)SizeOfStruct);
     CHECK_ANSWER(Req, Ack);
-    if (conversion != NULL) strcpy (conversion, (char*)(Ack + 1));
+    if (conversion != NULL) {
+        StringCopyMaxCharTruncate (conversion, (char*)(Ack + 1), maxc);
+    }
     return Ack->Ret;
 }
 
@@ -623,7 +626,7 @@ int rm_read_next_blackboard_vari (int index, char *ret_NameBuffer, int max_c)
     Req.max_c = max_c;
     TransactRemoteMaster (RM_BLACKBOARD_READ_NEXT_BLACKBOARD_VARI_CMD, &Req, sizeof(Req), Ack, (int)SizeOfStruct);
     CHECK_ANSWER(Req, Ack);
-    strcpy (ret_NameBuffer, (char*)(Ack + 1));
+    StringCopyMaxCharTruncate (ret_NameBuffer, (char*)(Ack + 1), max_c);
     return Ack->Ret;
 }
 
@@ -821,7 +824,7 @@ int rm_InitVariableSectionCache (void)
     }
 
     // Clear the cache
-    memset(Req, 0, sizeof(RM_BLACKBOARD_ADD_VARIABLE_SECTION_CACHE_ENTRY_REQ));
+    MEMSET(Req, 0, sizeof(RM_BLACKBOARD_ADD_VARIABLE_SECTION_CACHE_ENTRY_REQ));
     Req->Flags = INI_CACHE_CLEAR;
     SizeOfStruct = (int)sizeof(RM_BLACKBOARD_ADD_VARIABLE_SECTION_CACHE_ENTRY_REQ);
     TransactRemoteMaster (RM_BLACKBOARD_ADD_VARIABLE_SECTION_CACHE_ENTRY_CMD, Req, SizeOfStruct, &Ack, sizeof(Ack));
@@ -847,8 +850,8 @@ int rm_InitVariableSectionCache (void)
                 ThrowError (1, "cannot read blackboard INI entry to cache for variable %s", VariableName);
                 continue;
             }
-            memset (&BbVariElem, 0, sizeof (BbVariElem));
-            memset (&AdditionalInfos, 0, sizeof (AdditionalInfos));
+            MEMSET (&BbVariElem, 0, sizeof (BbVariElem));
+            MEMSET (&AdditionalInfos, 0, sizeof (AdditionalInfos));
             BbVariElem.pAdditionalInfos = &AdditionalInfos;
             set_default_varinfo (&BbVariElem, BB_UNKNOWN);
             set_varinfo_to_inientrys (&BbVariElem, Line);
@@ -927,7 +930,7 @@ int rm_WriteBackVariableSectionCache (void)
             } else {
                 Converstion = (char*)Ack + Ack->ConversionOffset;
             }
-            int len_first_part = sprintf (Line,
+            int len_first_part = PrintFormatToString (Line, sizeof(Line),
                                           "%d,%s,%.8g,%.8g,%d,%d,%d,%lf,%d,",
                                           (int)BB_UNKNOWN, Unit,
                                           Ack->Min,
@@ -949,7 +952,9 @@ int rm_WriteBackVariableSectionCache (void)
                         Converstion,
                         len_convertion);
             }
-            sprintf (Line + len_first_part + len_convertion, ",(%d,%d,%d)",
+            PrintFormatToString (Line + len_first_part + len_convertion,
+                    sizeof(Line) - (len_first_part + len_convertion),
+                     ",(%d,%d,%d)",
                      GetRValue(Ack->RgbColor),
                      GetGValue(Ack->RgbColor),
                      GetBValue(Ack->RgbColor));
@@ -1374,7 +1379,7 @@ int rm_read_bbvari_textreplace (VID vid, char *txt, int maxc, int *pcolor)
     TransactRemoteMaster (RM_BLACKBOARD_READ_BBVARI_TEXTREPLACE_CMD, &Req, sizeof(Req), Ack, (int)sizeof(RM_BLACKBOARD_READ_BBVARI_TEXTREPLACE_ACK) + maxc);
     CHECK_ANSWER(Req, Ack);
     if (pcolor != NULL) *pcolor = Ack->ret_color;
-    strcpy (txt, (char*)(Ack + 1));
+    StringCopyMaxCharTruncate (txt, (char*)(Ack + 1), maxc);
     return Ack->Ret;
 }
 
@@ -1391,7 +1396,7 @@ int rm_convert_value_textreplace (VID vid, int32_t value, char *txt, int maxc, i
     TransactRemoteMaster (RM_BLACKBOARD_CONVERT_TEXTREPLACE_CMD, &Req, sizeof(Req), Ack, StructSize);
     CHECK_ANSWER(Req, Ack);
     *pcolor = Ack->ret_color;
-    strcpy (txt, (char*)(Ack + 1));
+    StringCopyMaxCharTruncate (txt, (char*)(Ack + 1), maxc);
     return Ack->Ret;
 }
 
@@ -1483,20 +1488,26 @@ int rm_write_bbvari_by_name(PID pid, const char *name, union FloatOrInt64 value,
     return Ack.Ret;
 }
 
-int rm_read_bbvari_frame (VID *Vids, double *RetFrameValues, int Size)
+int rm_read_bbvari_frame (VID *Vids, int8_t *PhysOrRaw, double *RetFrameValues, int Size)
 {
     RM_BLACKBOARD_READ_BBVARI_FRAME_REQ *Req;
     RM_BLACKBOARD_READ_BBVARI_FRAME_ACK *Ack;
     size_t ReqStructSize;
     size_t AckStructSize;
 
-    ReqStructSize = sizeof(RM_BLACKBOARD_READ_BBVARI_FRAME_REQ) + (size_t)Size * sizeof (VID);
+    ReqStructSize = sizeof(RM_BLACKBOARD_READ_BBVARI_FRAME_REQ) + (size_t)Size * sizeof (VID) + (size_t)Size * sizeof (int8_t);
     AckStructSize = sizeof(RM_BLACKBOARD_READ_BBVARI_FRAME_ACK) + (size_t)Size * sizeof (double);
     Req = (RM_BLACKBOARD_READ_BBVARI_FRAME_REQ*)_alloca (ReqStructSize);
     Ack = (RM_BLACKBOARD_READ_BBVARI_FRAME_ACK*)_alloca (AckStructSize);
     Req->Size = Size;
     Req->OffsetVids = sizeof (RM_BLACKBOARD_READ_BBVARI_FRAME_REQ);
-    MEMCPY (Req+1, Vids, (size_t)Size * sizeof(VID));
+    Req->OffsetPhysOrRaw = Req->OffsetVids + (size_t)Size * sizeof (VID);
+    MEMCPY ((char*)Req + Req->OffsetVids, Vids, (size_t)Size * sizeof(VID));
+    if (PhysOrRaw == NULL) {
+        Req->OffsetPhysOrRaw = 0;
+    } else {
+        MEMCPY ((char*)Req + Req->OffsetPhysOrRaw, PhysOrRaw, (size_t)Size * sizeof(int8_t));
+    }
     TransactRemoteMaster (RM_BLACKBOARD_READ_BBVARI_FRAME_CMD, Req, (int)ReqStructSize, Ack, (int)AckStructSize);
     CHECK_ANSWER(Req, Ack);
     if (Ack->Ret == 0) {
@@ -1505,20 +1516,27 @@ int rm_read_bbvari_frame (VID *Vids, double *RetFrameValues, int Size)
     return Ack->Ret;
 }
 
-int rm_write_bbvari_frame (PID Pid, VID *Vids, double *FrameValues, int Size)
+int rm_write_bbvari_frame (PID Pid, VID *Vids, int8_t *PhysOrRaw, double *FrameValues, int Size)
 {
     RM_BLACKBOARD_WRITE_BBVARI_FRAME_REQ *Req;
     RM_BLACKBOARD_WRITE_BBVARI_FRAME_ACK Ack;
     size_t ReqStructSize;
 
-    ReqStructSize = sizeof(RM_BLACKBOARD_WRITE_BBVARI_FRAME_REQ) + (size_t)Size * sizeof (VID) + (size_t)Size * sizeof(double);
+    ReqStructSize = sizeof(RM_BLACKBOARD_WRITE_BBVARI_FRAME_REQ) + (size_t)Size * sizeof (VID) +  (size_t)Size * sizeof (int8_t) + (size_t)Size * sizeof(double);
     Req = (RM_BLACKBOARD_WRITE_BBVARI_FRAME_REQ*)_alloca (ReqStructSize);
     Req->Pid = Pid;
     Req->Size = Size;
     Req->OffsetVids = sizeof (RM_BLACKBOARD_WRITE_BBVARI_FRAME_REQ);
-    MEMCPY (Req+1, Vids, (size_t)Size * sizeof (VID));
-    Req->OffsetValues = (uint32_t)sizeof (RM_BLACKBOARD_WRITE_BBVARI_FRAME_REQ) + (uint32_t)Size * sizeof (VID);
-    MEMCPY ((char*)(Req+1) + Req->OffsetValues, FrameValues, (size_t)Size * sizeof(double));
+    if (PhysOrRaw == NULL) {
+        Req->OffsetPhysOrRaw = 0;
+        Req->OffsetValues = Req->OffsetVids + (uint32_t)Size * sizeof (int8_t);
+    } else {
+        Req->OffsetPhysOrRaw = Req->OffsetVids + (size_t)Size * sizeof (VID);
+        Req->OffsetValues = Req->OffsetPhysOrRaw + (uint32_t)Size * sizeof (int8_t);
+        MEMCPY ((char*)Req + Req->OffsetPhysOrRaw, PhysOrRaw, (size_t)Size * sizeof(int8_t));
+    }
+    MEMCPY ((char*)Req + Req->OffsetVids, Vids, (size_t)Size * sizeof(VID));
+    MEMCPY ((char*)Req + Req->OffsetValues, FrameValues, (size_t)Size * sizeof(double));
     TransactRemoteMaster (RM_BLACKBOARD_WRITE_BBVARI_FRAME_CMD, Req, (int)ReqStructSize, &Ack, sizeof(Ack));
     CHECK_ANSWER(Req, Ack);
     return Ack.Ret;
@@ -1580,8 +1598,8 @@ int rm_req_read_varinfos_from_ini (RM_BLACKBOARD_READ_BBVARI_FROM_INI_REQ *Req)
         BB_VARIABLE s_vari_elem;
         BB_VARIABLE_ADDITIONAL_INFOS AdditionalInfos;
 
-        memset (&s_vari_elem, 0, sizeof (s_vari_elem));
-        memset (&AdditionalInfos, 0, sizeof (AdditionalInfos));
+        MEMSET (&s_vari_elem, 0, sizeof (s_vari_elem));
+        MEMSET (&AdditionalInfos, 0, sizeof (AdditionalInfos));
         s_vari_elem.pAdditionalInfos = &AdditionalInfos;
 
         if ((tmp_var_str = IniFileDataBaseReadStringBufferNoDef (VARI_SECTION, Name, GetMainFileDescriptor())) == NULL) {

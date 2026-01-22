@@ -18,13 +18,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <memory.h>
-//#include <sys/stat.h>
 #include <fcntl.h>
 
 #include "Config.h"
 
-#include "ThrowError.h"
-#include "Files.h"
+#include "MemZeroAndCopy.h"
 #include "EnvironmentVariables.h"
 #include "Scheduler.h"
 #include "Blackboard.h"
@@ -45,7 +43,7 @@ static int RPCFunc_StartScript(RPC_CONNECTION *par_Connection, RPC_API_BASE_MESS
     int Vid;
     RPC_API_START_SCRIPT_MESSAGE *In = (RPC_API_START_SCRIPT_MESSAGE*)par_DataIn;
     RPC_API_START_SCRIPT_MESSAGE_ACK *Out = (RPC_API_START_SCRIPT_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_START_SCRIPT_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_START_SCRIPT_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_START_SCRIPT_MESSAGE_ACK);
 
 
@@ -69,7 +67,7 @@ static int RPCFunc_StopScript(RPC_CONNECTION *par_Connection, RPC_API_BASE_MESSA
     UNUSED(par_Connection);
     UNUSED(par_DataIn);
     RPC_API_STOP_SCRIPT_MESSAGE_ACK *Out = (RPC_API_STOP_SCRIPT_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_STOP_SCRIPT_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_STOP_SCRIPT_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_STOP_SCRIPT_MESSAGE_ACK);
 
     script_status_flag = 0;
@@ -103,7 +101,7 @@ static int RPCFunc_StartRecorder(RPC_CONNECTION *par_Connection, RPC_API_BASE_ME
 {
     RPC_API_START_RECORDER_MESSAGE *In = (RPC_API_START_RECORDER_MESSAGE*)par_DataIn;
     RPC_API_START_RECORDER_MESSAGE_ACK *Out = (RPC_API_START_RECORDER_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_START_RECORDER_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_START_RECORDER_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_START_RECORDER_MESSAGE_ACK);
 
     if (s_main_ini_val.DontWaitForResponseOfStartRecorderRPC) {
@@ -126,7 +124,7 @@ static int RPCFunc_RecorderAddComment(RPC_CONNECTION *par_Connection, RPC_API_BA
     char *Comment;
     RPC_API_RECORDER_ADD_COMMENT_MESSAGE *In = (RPC_API_RECORDER_ADD_COMMENT_MESSAGE*)par_DataIn;
     RPC_API_RECORDER_ADD_COMMENT_MESSAGE_ACK *Out = (RPC_API_RECORDER_ADD_COMMENT_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_RECORDER_ADD_COMMENT_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_RECORDER_ADD_COMMENT_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_RECORDER_ADD_COMMENT_MESSAGE_ACK);
 
     Comment = (char*)In + In->OffsetComment;
@@ -144,7 +142,7 @@ static int RPCFunc_StopRecorder(RPC_CONNECTION *par_Connection, RPC_API_BASE_MES
     UNUSED(par_DataIn);
     int Pid;
     RPC_API_STOP_RECORDER_MESSAGE_ACK *Out = (RPC_API_STOP_RECORDER_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_STOP_RECORDER_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_STOP_RECORDER_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_STOP_RECORDER_MESSAGE_ACK);
 
     Pid = get_pid_by_name (PN_TRACE_RECORDER);
@@ -161,7 +159,7 @@ static int RPCFunc_StartPlayer(RPC_CONNECTION *par_Connection, RPC_API_BASE_MESS
     char *CfgFile;
     RPC_API_START_PLAYER_MESSAGE *In = (RPC_API_START_PLAYER_MESSAGE*)par_DataIn;
     RPC_API_START_PLAYER_MESSAGE_ACK *Out = (RPC_API_START_PLAYER_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_START_PLAYER_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_START_PLAYER_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_START_PLAYER_MESSAGE_ACK);
 
     Pid = get_pid_by_name(PN_STIMULI_PLAYER);
@@ -178,7 +176,7 @@ static int RPCFunc_StopPlayer(RPC_CONNECTION *par_Connection, RPC_API_BASE_MESSA
     UNUSED(par_DataIn);
     int Pid;
     RPC_API_STOP_PLAYER_MESSAGE_ACK *Out = (RPC_API_STOP_PLAYER_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_STOP_PLAYER_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_STOP_PLAYER_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_STOP_PLAYER_MESSAGE_ACK);
 
     Pid = get_pid_by_name (PN_STIMULI_PLAYER);
@@ -195,7 +193,7 @@ static int RPCFunc_StartEquations(RPC_CONNECTION *par_Connection, RPC_API_BASE_M
     char *CfgFile;
     RPC_API_START_EQUATIONS_MESSAGE *In = (RPC_API_START_EQUATIONS_MESSAGE*)par_DataIn;
     RPC_API_START_EQUATIONS_MESSAGE_ACK *Out = (RPC_API_START_EQUATIONS_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_START_EQUATIONS_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_START_EQUATIONS_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_START_EQUATIONS_MESSAGE_ACK);
 
     Pid = get_pid_by_name (PN_EQUATION_COMPILER);
@@ -212,7 +210,7 @@ static int RPCFunc_StopEquations(RPC_CONNECTION *par_Connection, RPC_API_BASE_ME
     UNUSED(par_DataIn);
     int Pid;
     RPC_API_STOP_EQUATIONS_MESSAGE_ACK *Out = (RPC_API_STOP_EQUATIONS_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_STOP_EQUATIONS_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_STOP_EQUATIONS_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_STOP_EQUATIONS_MESSAGE_ACK);
 
     Pid =  get_pid_by_name (PN_EQUATION_COMPILER);
@@ -229,7 +227,7 @@ static int RPCFunc_StartGenerator(RPC_CONNECTION *par_Connection, RPC_API_BASE_M
     char *CfgFile;
     RPC_API_START_GENERATOR_MESSAGE *In = (RPC_API_START_GENERATOR_MESSAGE*)par_DataIn;
     RPC_API_START_GENERATOR_MESSAGE_ACK *Out = (RPC_API_START_GENERATOR_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_START_GENERATOR_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_START_GENERATOR_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_START_GENERATOR_MESSAGE_ACK);
 
     Pid = get_pid_by_name (PN_SIGNAL_GENERATOR_COMPILER);
@@ -246,7 +244,7 @@ static int RPCFunc_StopGenerator(RPC_CONNECTION *par_Connection, RPC_API_BASE_ME
     UNUSED(par_DataIn);
     int Pid;
     RPC_API_STOP_GENERATOR_MESSAGE_ACK *Out = (RPC_API_STOP_GENERATOR_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_STOP_GENERATOR_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_STOP_GENERATOR_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_STOP_GENERATOR_MESSAGE_ACK);
 
     Pid = get_pid_by_name (PN_SIGNAL_GENERATOR_COMPILER);

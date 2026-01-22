@@ -375,7 +375,7 @@ void* __my_realloc(char *file, int line, void* old_ptr, long new_size)
 {
     /*void * new_ptr = NULL;
     new_ptr = __my_malloc(file, line, new_size);
-    memset(new_ptr, 0, new_size);
+    MEMSET(new_ptr, 0, new_size);
     if (old_ptr != NULL) {
         MEMCPY(new_ptr, old_ptr, new_size);
         my_free(old_ptr);
@@ -389,7 +389,7 @@ void* __my_realloc_pid(int pid, char *file, int line, void* old_ptr, long new_si
     //return (realloc(old_ptr, new_size));
     void * new_ptr = NULL;
     new_ptr = __my_malloc_pid(pid, file, line, new_size);
-    memset(new_ptr, 0, new_size);
+    MEMSET(new_ptr, 0, new_size);
     if (old_ptr != NULL) {
 		struct MCB* mcb_ptr = NULL;
 		mcb_ptr = (struct MCB*)old_ptr - 1;
@@ -419,7 +419,7 @@ void* __my_calloc(char *file, int line, long num, long size)
     void * block_ptr = NULL;
     block_ptr = __my_malloc(file, line, num * size);
     if (block_ptr != NULL) {
-        memset(block_ptr, 0, num * size);
+        MEMSET(block_ptr, 0, num * size);
     }
     return block_ptr;
 }
@@ -430,99 +430,8 @@ void* __my_calloc_pid(int pid, char *file, int line, long num, long size)
     void * block_ptr = NULL;
     block_ptr = __my_malloc_pid(pid, file, line, num * size);
     if (block_ptr != NULL) {
-        memset(block_ptr, 0, num * size);
+        MEMSET(block_ptr, 0, num * size);
     }
     return block_ptr;
 }
 
-
-#if 0
-/*************************************************************************
-**
-**    Function    : get_next_allocated_rt_memory_block
-**
-**    Description :
-**    Parameter   :
-**    Returnvalues:
-**
-******************************************/
-int rt_get_next_allocated_rt_memory_block(int flag, GET_NEXT_ALLOCATED_RT_MEM_RUCKGABE *ret)
-{
-    static struct MCB* mcb_ptr;
-    __AcquireSpinlock(&MallocGlobalSpinlock);
-    if (!flag) mcb_ptr = first_mcb_ptr;
-    while ((mcb_ptr != NULL) && (!mcb_ptr->used)) mcb_ptr = mcb_ptr->next;
-    if (mcb_ptr == NULL) {
-        __ReleaseSpinlock(&MallocGlobalSpinlock);
-        return 0;     // keine weiteren Speicherbloecke
-    }
-    // error (1, "(%i) %p[%i] %s[%i]", (int)mcb_ptr->pid, mcb_ptr, mcb_ptr->length, mcb_ptr->file, mcb_ptr->line);
-    ret->pid = mcb_ptr->pid;
-    ret->ptr = mcb_ptr;
-    ret->size = mcb_ptr->length;
-    if (mcb_ptr->file != NULL) strcpy(ret->file, mcb_ptr->file);
-    else ret->file[0] = '\0';
-    ret->line = mcb_ptr->line;
-    mcb_ptr = mcb_ptr->next;
-    __ReleaseSpinlock(&MallocGlobalSpinlock);
-    return 1;
-}
-#endif
-
-#if 0
-static void CheckMemoryList(void)
-{
-    struct MCB* mcb_before;
-    struct MCB* mcb = (struct MCB*)BaseAddressOfRealtimeMemory;
-    mcb_before = mcb;
-    while (mcb != NULL) {
-        if (CheckOverwriteCheckBlock(mcb)) {
-            break;
-        }
-        if (mcb->next != NULL) {
-            uint64_t diff = (char*)mcb->next - (char*)mcb;
-            if (diff != mcb->length + sizeof(struct MCB)) {
-                ThrowError(1, "memmory corrupt\n");
-            }
-        }
-        mcb_before = mcb;  // Only for debugging to display
-        mcb = mcb->next;
-    }
-}
-
-static void PrintMemoryInfos(char *Postfix)
-{
-    static int FileNumber;
-    char Filename[64];
-    FILE* fh;
-    int x, Size;
-    struct MCB* mcb;
-
-    sprintf(Filename, "/tmp/alloc_%i_%s.txt", FileNumber, Postfix);
-    FileNumber++;
-    fh = fopen(Filename, "wt");
-    if (fh != NULL) {
-        fprintf (fh, "FreeLists:\n");
-        for (x = 0; x < 31; x++) {
-            Size = 1 << x;    // 1, 2, 4, 8, 16, 32, ...
-            if (FreeLists[x] != NULL) {
-                mcb = FreeLists[x];
-                fprintf(fh, "%i: ", Size);
-                while (mcb != NULL) {
-                    fprintf(fh, "%i, ", mcb->length);
-                    mcb = mcb->free_list_next;
-                }
-                fprintf(fh, "\n");
-            }
-        }
-        fprintf(fh, "BlockList:\n");
-        struct MCB* mcb = (struct MCB*)BaseAddressOfRealtimeMemory;
-
-        while (mcb != NULL) {
-            fprintf(fh, "%i(%i), ", mcb->length, mcb->used);
-            mcb = mcb->next;
-        }
-        fclose(fh);
-    }
-}
-#endif

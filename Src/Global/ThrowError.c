@@ -24,6 +24,7 @@
 #define NO_ERROR_FUNCTION_DECLARATION
 
 #include "MyMemory.h"
+#include "PrintFormatToString.h"
 #include "ConfigurablePrefix.h"
 #include "Scheduler.h"
 #include "ScriptMessageFile.h"
@@ -35,55 +36,49 @@
 int ThrowErrorString (int level, uint64_t Cycle, const char *MessageBuffer)
 {
     char *HeaderBuffer;
+    int SizeOfHeaderBuffer;
     char processname[MAX_PATH];
 
-    get_real_running_process_name (processname);
+    get_real_running_process_name (processname, sizeof(processname));
+
+    SizeOfHeaderBuffer = 20 + strlen (processname);
+    HeaderBuffer = (char*)my_malloc (SizeOfHeaderBuffer);
 
     switch(level) {
     default:
     case MESSAGE_STOP:
-        HeaderBuffer = (char*)(my_malloc (20 + strlen (processname)));
-        sprintf (HeaderBuffer, "Information from %s", processname);
+        PrintFormatToString (HeaderBuffer, SizeOfHeaderBuffer, "Information from %s", processname);
         break;
     case ERROR_NO_CRITICAL_STOP:
     case ERROR_OKCANCEL:
     case ERROR_OK_OKALL_CANCEL:
     case ERROR_OK_CANCEL_CANCELALL:
     case ERROR_OK_OKALL_CANCEL_CANCELALL:
-        HeaderBuffer =  (char*)(my_malloc (10 + strlen (processname)));
-        sprintf (HeaderBuffer, "Error in %s", processname);
+        PrintFormatToString (HeaderBuffer, SizeOfHeaderBuffer, "Error in %s", processname);
         break;
     case MESSAGE_OKCANCEL:
-        HeaderBuffer =  (char*)(my_malloc (20 + strlen (processname)));
-        sprintf (HeaderBuffer, "Message from %s", processname);
+        PrintFormatToString (HeaderBuffer, SizeOfHeaderBuffer, "Message from %s", processname);
         break;
     case QUESTION_OKCANCEL:
-        HeaderBuffer =  (char*)(my_malloc (20 + strlen (processname)));
-        sprintf (HeaderBuffer, "Question from %s", processname);
+        PrintFormatToString (HeaderBuffer, SizeOfHeaderBuffer, "Question from %s", processname);
         break;
     case ERROR_CRITICAL:
-        HeaderBuffer =  (char*)(my_malloc (20 + strlen (processname)));
-        sprintf (HeaderBuffer, "Critical error in %s", processname);
+        PrintFormatToString (HeaderBuffer, SizeOfHeaderBuffer, "Critical error in %s", processname);
         break;
     case ERROR_SYSTEM_CRITICAL:
-        HeaderBuffer =  (char*)(my_malloc (20 + strlen (processname)));
-        sprintf (HeaderBuffer, "Fatal error in %s", processname);
+        PrintFormatToString (HeaderBuffer, SizeOfHeaderBuffer, "Fatal error in %s", processname);
         break;
     case INFO_NO_STOP:
-        HeaderBuffer = (char*)(my_malloc (20 + strlen (processname)));
-        sprintf (HeaderBuffer, "Information from %s:", processname);
+        PrintFormatToString (HeaderBuffer, SizeOfHeaderBuffer, "Information from %s:", processname);
         break;
     case WARNING_NO_STOP:
-        HeaderBuffer =  (char*)(my_malloc (20 + strlen (processname)));
-        sprintf (HeaderBuffer, "Warnung from %s:", processname);
+        PrintFormatToString (HeaderBuffer, SizeOfHeaderBuffer, "Warning from %s:", processname);
         break;
     case ERROR_NO_STOP:
-        HeaderBuffer =  (char*)(my_malloc (20 + strlen (processname)));
-        sprintf (HeaderBuffer, "Error in %s:", processname);
+        PrintFormatToString (HeaderBuffer, SizeOfHeaderBuffer, "Error in %s:", processname);
         break;
     case INFO_NOT_WRITEN_TO_MSG_FILE:
-        HeaderBuffer =  (char*)(my_malloc (20 + strlen (processname)));
-        sprintf (HeaderBuffer, "Information from %s:", processname);
+        PrintFormatToString (HeaderBuffer, SizeOfHeaderBuffer, "Information from %s:", processname);
         break;
     }
 #ifdef NO_GUI
@@ -131,7 +126,7 @@ int ThrowError (int level, const char *format, ...)
     return Ret;
 }
 
-int ThrowErrorWiithCycle (int level, uint64_t Cycle, const char *format, ...)
+int ThrowErrorWithCycle (int level, uint64_t Cycle, const char *format, ...)
 {
     int Ret;
     int Size, Len;

@@ -26,6 +26,8 @@ extern "C" {
 #include "Scheduler.h"
 #include "ThrowError.h"
 #include "MyMemory.h"
+#include "StringMaxChar.h"
+#include "PrintFormatToString.h"
 #include "Files.h"
 
 #define IDM_WRITE_SECTION_TO_EXE_CMD        0xABF1
@@ -75,7 +77,7 @@ int XCPWriteSectionBackToExeFile (short Pid, char *Section)
     IDM_WRITE_SECTION_TO_EXE_DATA Data;
 
     Data.Pid = Pid;
-    strcpy (Data.Section, Section);
+    STRING_COPY_TO_ARRAY (Data.Section, Section);
     ThrowError (1, "todo!");
     return 0;
 }
@@ -94,18 +96,16 @@ void ReadXcpConfigsForOneLinkFromIni (int l)
     char Txt[INI_MAX_LINE_LENGTH];
     int Fd = GetMainFileDescriptor();
 
-    memset (&(XcpLinkConfigs[l]), 0, sizeof (XcpLinkConfigs[l]));
+    STRUCT_ZERO_INIT (XcpLinkConfigs[l], XCP_LINK_CONFIG);
 
-    sprintf (Section, "XCP over Ethernet Configuration for Target %i", l);
+    PrintFormatToString (Section, sizeof(Section), "XCP over Ethernet Configuration for Target %i", l);
     XcpLinkConfigs[l].ActiveFlag = IniFileDataBaseReadYesNo(Section, "Enable", 0, Fd);
     IniFileDataBaseReadString(Section, "Identification", "", XcpLinkConfigs[l].Identification, sizeof(XcpLinkConfigs[l].Identification), Fd);
     IniFileDataBaseReadString(Section, "AssociatedProcessName", "", XcpLinkConfigs[l].ProcessName, sizeof(XcpLinkConfigs[l].ProcessName), Fd);
     IniFileDataBaseReadString(Section, "CalibrationDataSegmentName", "", Txt, sizeof(Txt), Fd);
-    XcpLinkConfigs[l].DataSegment = static_cast<char*>(my_malloc (strlen(Txt)+1));
-    strcpy(XcpLinkConfigs[l].DataSegment, Txt);
+    XcpLinkConfigs[l].DataSegment = StringMalloc(Txt);
     IniFileDataBaseReadString(Section, "CodeSegmentName", "", Txt, sizeof(Txt), Fd);
-    XcpLinkConfigs[l].CodeSegment = static_cast<char*>(my_malloc(strlen(Txt)+1));
-    strcpy(XcpLinkConfigs[l].CodeSegment, Txt);
+    XcpLinkConfigs[l].CodeSegment = StringMalloc(Txt);
     XcpLinkConfigs[l].Port = static_cast<unsigned short>(IniFileDataBaseReadUInt(Section, "Port", 1802, Fd));
     XcpLinkConfigs[l].LoggingActive = IniFileDataBaseReadYesNo(Section, "DebugFile", 0, Fd);
     IniFileDataBaseReadString(Section, "DebugFileName", "", XcpLinkConfigs[l].LogFile, sizeof(XcpLinkConfigs[l].LogFile), Fd);
@@ -113,7 +113,7 @@ void ReadXcpConfigsForOneLinkFromIni (int l)
 
     int EventCount;
     for (EventCount = 0; EventCount < MAXEVENTCHANNELS; EventCount++) {
-        sprintf (Entry, "daq_%i", EventCount);
+        PrintFormatToString (Entry, sizeof(Entry), "daq_%i", EventCount);
         if (IniFileDataBaseReadString (Section, Entry, "", Txt, sizeof (Txt), Fd) <= 0) {
             break;
         }
@@ -144,8 +144,7 @@ void ReadXcpConfigsForOneLinkFromIni (int l)
         }
         XcpLinkConfigs[l].EventChannelSettings[EventCount].timeCycle = static_cast<unsigned char>(atol (c));
         XcpLinkConfigs[l].EventChannelSettings[EventCount].Prio = static_cast<unsigned char>(atol (pr));
-        XcpLinkConfigs[l].EventChannelSettings[EventCount].EventName = static_cast<char*>(my_malloc (strlen (n) + 1));
-        strcpy (XcpLinkConfigs[l].EventChannelSettings[EventCount].EventName, n);
+        XcpLinkConfigs[l].EventChannelSettings[EventCount].EventName = StringMalloc (n);
     }
     XcpLinkConfigs[l].NumOfEvents = EventCount;
 
@@ -194,14 +193,14 @@ void CleanUpXcpOneLinkLinkConfigs (int l)
         }
         if (XcpLinkConfigs[l].DataSegment != nullptr) my_free (XcpLinkConfigs[l].DataSegment);
         if (XcpLinkConfigs[l].CodeSegment != nullptr) my_free (XcpLinkConfigs[l].CodeSegment);
-        memset (&(XcpLinkConfigs[l]), 0, sizeof (XcpLinkConfigs[l]));
+        STRUCT_ZERO_INIT (XcpLinkConfigs[l], XCP_LINK_CONFIG);
     }
 #else
 #endif
 }
 
 
-int ConnectToProcess (int LinkNr, int *ret_Pid, char *ret_ProcessName)
+int ConnectToProcess (int LinkNr, int *ret_Pid, char *ret_ProcessName, int MaxChars)
 {
 #ifdef _WIN32
     if ((LinkNr < MAX_XCP_LINKS) && (LinkNr >= 0)) {
@@ -216,7 +215,7 @@ int ConnectToProcess (int LinkNr, int *ret_Pid, char *ret_ProcessName)
                         XcpLinkConfigs[LinkNr].ConnectedFlag = 1;
                         XcpLinkConfigs[LinkNr].ProcHandle = ProcHandle;
                         *ret_Pid = XcpLinkConfigs[LinkNr].Pid = Pid;
-                        strcpy (ret_ProcessName, XcpLinkConfigs[LinkNr].ProcessName);
+                        StringCopyMaxCharTruncate(ret_ProcessName, XcpLinkConfigs[LinkNr].ProcessName, MaxChars);
                     }
                     return 0;
                 }
@@ -343,14 +342,6 @@ void xcp_over_eth_cyclic (void)
     for (l = 0; l < MAX_XCP_LINKS; l++) {
         if (XcpLinkConfigs[l].ActiveFlag) {
             XcpLinkConfigs[l].XCPWrapper->IncrementCycleCounter ();
-            /*for (x = 0; x < XcpLinkConfigs[l].NumOfEvents; x++) {
-                if (XcpLinkConfigs[l].EventCycleCounters[x] >= XcpLinkConfigs[l].EventChannelSettings[x].timeCycle) {
-                    XcpLinkConfigs[l].XCPWrapper->XcpEvent (x);
-                    XcpLinkConfigs[l].EventCycleCounters[x] = 0;
-                } else {
-                    XcpLinkConfigs[l].EventCycleCounters[x]++;
-                }
-            }*/
         }
     }
 }

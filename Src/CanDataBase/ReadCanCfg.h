@@ -31,24 +31,10 @@
 #define MAX_SIGNALS_ONE_OBJECT        256
 
 typedef  struct {
-#ifdef _M_X64
     /* 8 */    uint8_t *Data;
     /* 8 */    uint8_t *OldData;
-    /* 8 */    uint8_t *DataPtr;   // ist bei nicht MultiPackage Botschaften immer gleich Data
-#else
-    /* 4 */    uint8_t *Data;
-    /* 4 */    uint8_t *Data_hdw;
-    /* 4 */    uint8_t *OldData;
-    /* 4 */    uint8_t *OldData_hdw;
-    /* 4 */    uint8_t *DataPtr;   // ist bei nicht MultiPackage Botschaften immer gleich Data
-    /* 4 */    uint8_t *DataPtr_hdw;   // ist bei nicht MultiPackage Botschaften immer gleich Data
-#endif
-#ifdef _M_X64
+    /* 8 */    uint8_t *DataPtr;   // same as Data
     /* 8 */    int16_t *signals_ptr;
-#else
-    /* 4 */    int16_t *signals_ptr;
-    /* 4 */    int16_t *signals_ptr_hdw;
-#endif
     /* 4 */    int32_t vid;
     /* 4 */    int32_t cycles;
     /* 4 */    int32_t delay;
@@ -57,118 +43,116 @@ typedef  struct {
     /* 4 */    int32_t EventOrCyclic;    // 0 -> Cyclic 1 -> Event
     /* 4 */    int32_t EventIdx;
 
-    // Equation vor dem Lesen/Schreiben der Variablen (wenn <= 0 keine)
+    // Struct offset to a list of offests for equations that should be calculated before the signals will be read/witten to/from blackboard
+    // The list must be 0 terminated
     /* 4 */    int32_t EquationBeforeIdx;
-    // Start einer Liste von Indexen, die mit 0 terminiert ist
-    // Equation nach dem Lesen/Schreiben der Variablen (wenn <= 0 keine)
+    // Struct offset to a list of offests for equations that should be calculated behind the signals will be read/witten to/from blackboard
+    // The list must be 0 terminated
     /* 4 */    int32_t EquationBehindIdx;
-
+    // Struct offset to a list of offests for additional signals
+    // The list must be 0 terminated
     /* 4 */    int32_t AdditionalVariablesIdx;
 
-    // wie sollen Bits vorinitiallisiert werden
+    // Struct offset where the init. value of the object is stored
     /* 4 */    int32_t InitDataIdx;
 
     /* 4 */    int32_t signal_count;
 
     /* 4 */    int32_t SignalsArrayIdx;
 
+    /* 4 */    uint32_t id;
+    /* 2 */    int16_t size;       // this can be > 8 byte (multi package messages, CANFD
+    /* 2 */    int16_t max_size;   // normaly the same as size except CAN FD multi PGs
 
-/* 4 */    uint32_t id;
-
-/* 2 */    int16_t size;       // kann bei Multipackage Botschaften auch > 8 sein
-/* 2 */    int16_t max_size;   // normaly the same as size except CAN FD multi PGs
-
-/* 1 */    int8_t ext;         // 0 standard ID's (11bit) 1 extended ID's (29bit)
+    /* 1 */    int8_t ext;         // 0 standard ID's (11bit) 1 extended ID's (29bit)
     #define STANDARD_ID     0
     #define EXTENDED_ID     1
     #define CAN_EXT_MASK    1
     #define CANFD_BTS_MASK  2
     #define CANFD_FDF_MASK  4
-/* 1 */    int8_t type;        // 0 normal
+    /* 1 */    int8_t type;        // 0 normal
     #define NORMAL_OBJECT 0
     #define MUX_OBJECT    1
     #define J1939_OBJECT  3
     #define J1939_22_MULTI_C_PG  4
     #define J1939_22_C_PG    5
-/* 1 */    int8_t dir;
+    /* 1 */    int8_t dir;
     #define READ_OBJECT   0
     #define WRITE_OBJECT  1
     #define WRITE_VARIABLE_ID_OBJECT  2
+    #define READ_STARTUP_VARIABLE_ID_OBJECT  3
 
-/* 1 */    int8_t byteorder;
-/* 1 */    int8_t flag;
+    /* 1 */    int8_t byteorder;
+    /* 1 */    int8_t flag;
 
-/* 1 */    int8_t empty_filler; //bit_rate_switch;
-/* 1 */    int8_t cycle_is_execst;
-/* 1 */    int8_t should_be_send;
+    /* 1 */    int8_t empty_filler;
+    /* 1 */    int8_t cycle_is_execst;
+    /* 1 */    int8_t should_be_send;
 
-           union {
-               struct {
-/* 4 */            uint32_t Mask;
-/* 4 */            int32_t Value;
-/* 4 */            int32_t next;
-/* 4 */            int32_t master;               // -1 Master sonst Index
-/* 4 */            int32_t token;
-/* 2 */            int16_t BitPos;
-/* 1 */            int8_t Size;
-/* 1 */            int8_t fill1;
-/*23 */        } Mux;
-               struct {
-/* 4 */            uint32_t C_PGs_ArrayIdx;
-/* 4 */            int32_t vid_dlc;   // if <= 0 than fixed
-/* 4 */            int32_t ret_dlc;
-/* 4 */            int32_t dst_addr_vid;
-/* 1 */            uint8_t dst_addr;
-/* 1 */            uint8_t status;
-               } J1939;
-/* 23 */   } Protocol;
-
-           //int8_t fill[256-232];
+               union {
+                   struct {
+    /* 4 */            uint32_t Mask;
+    /* 4 */            int32_t Value;
+    /* 4 */            int32_t next;
+    /* 4 */            int32_t master;               // -1 it is the master otherwise it is the index
+    /* 4 */            int32_t token;
+    /* 2 */            int16_t BitPos;
+    /* 1 */            int8_t Size;
+    /* 1 */            int8_t fill1;
+    /*23 */        } Mux;
+                   struct {
+    /* 4 */            uint32_t C_PGs_ArrayIdx;
+    /* 4 */            int32_t vid_dlc;   // if <= 0 than fixed
+    /* 4 */            int32_t ret_dlc;
+    /* 4 */            int32_t dst_addr_vid;
+    /* 1 */            uint8_t dst_addr;
+    /* 1 */            uint8_t status;
+                   } J1939;
+    /* 23 */   } Protocol;
            int8_t fill[128-120];
 }  NEW_CAN_SERVER_OBJECT;     /* 128 Bytes */
 
 typedef struct {
-/* 8 */    union FloatOrInt64 conv;
-/* 8 */    union FloatOrInt64 offset;
-/* 8 */    union FloatOrInt64 start_value;
-/* 8 */    uint64_t mask;
-/* 4 */    int32_t NameIdx;
-/* 4 */    int32_t UnitIdx;
-/* 4 */    int32_t type;        // 0 normal
+    /* 8 */    union FloatOrInt64 conv;
+    /* 8 */    union FloatOrInt64 offset;
+    /* 8 */    union FloatOrInt64 start_value;
+    /* 8 */    uint64_t mask;
+    /* 4 */    int32_t NameIdx;
+    /* 4 */    int32_t UnitIdx;
+    /* 4 */    int32_t type;        // 0 normal
     #define NORMAL_SIGNAL 0
     #define MUX_SIGNAL    1
     #define MUX_BY_SIGNAL 2
-/* 4 */    int32_t byteorder;
+    /* 4 */    int32_t byteorder;
     #define LSB_FISRT_BYTEORDER  0
     #define MSB_FIRST_BYTEORDER  1
-/* 4 */    int32_t bbtype;      // BB_BYTE, BB_UBYTE, ...
-/* 4 */    int32_t startbit;
-/* 4 */    int32_t bitsize;
-/* 4 */    int32_t mux_startbit;   // oder bei type == MUX_BY_SIGNAL ist hier die VID des Multiplexer Signals gespeichert
-/* 4 */    int32_t mux_bitsize;
-/* 4 */    int32_t mux_value;
-/* 4 */    int32_t mux_next;
-/* 4 */    int32_t mux_equ_sb_childs; 
-/* 4 */    int32_t mux_equ_v_childs; 
-/* 4 */    int32_t mux_token; 
-/* 4 */    uint32_t mux_mask;
-/* 4 */    int32_t vid;
-/* 4 */    int32_t start_value_flag;        // wenn 1 dann ist Start-Value ins BB zu uebernehmen wenn 0 dann nicht
-/* 4 */    int32_t sign;
-/* 4 */    int32_t ConvType;
-#define CAN_CONV_NONE       0
-#define CAN_CONV_FACTOFF    1
-#define CAN_CONV_EQU        2
-#define CAN_CONV_CURVE      3
-#define CAN_CONV_FACTOFF2   4
-#define CAN_CONV_REPLACED   5
-/* 4 */    int32_t ConvIdx;
-/* 4 */    int32_t float_type;
+    /* 4 */    int32_t bbtype;      // BB_BYTE, BB_UBYTE, ...
+    /* 4 */    int32_t startbit;
+    /* 4 */    int32_t bitsize;
+    /* 4 */    int32_t mux_startbit;   // if type == MUX_BY_SIGNAL this is the VID of the multiplexer signal
+    /* 4 */    int32_t mux_bitsize;
+    /* 4 */    int32_t mux_value;
+    /* 4 */    int32_t mux_next;
+    /* 4 */    int32_t mux_equ_sb_childs;
+    /* 4 */    int32_t mux_equ_v_childs;
+    /* 4 */    int32_t mux_token;
+    /* 4 */    uint32_t mux_mask;
+    /* 4 */    int32_t vid;
+    /* 4 */    int32_t start_value_flag;        // it 1 than takeover the start value to the blackboard otherwise ignore the start value
+    /* 4 */    int32_t sign;
+    /* 4 */    int32_t ConvType;
+    #define CAN_CONV_NONE       0
+    #define CAN_CONV_FACTOFF    1
+    #define CAN_CONV_EQU        2
+    #define CAN_CONV_CURVE      3
+    #define CAN_CONV_FACTOFF2   4
+    #define CAN_CONV_REPLACED   5
+    /* 4 */    int32_t ConvIdx;
+    /* 4 */    int32_t float_type;
 
-/* 4 */    int32_t conv_type;
-/* 4 */    int32_t offset_type;
-/* 4 */    int32_t start_value_type;
-//    int8_t fill[128-128];
+    /* 4 */    int32_t conv_type;
+    /* 4 */    int32_t offset_type;
+    /* 4 */    int32_t start_value_type;
 }  NEW_CAN_SERVER_SIGNAL;      /* 128 Bytes */
 
 typedef struct {
@@ -246,88 +230,44 @@ typedef struct NEW_CAN_SERVER_CONFIG_STRUCT {
     int32_t dont_use_units_for_bb; // do not use units in signal definitions for blackboard variable descriptions
     int32_t dont_use_init_values_for_existing_variables;
 
-    uint8_t j1939_flag; // ist gesetzt falls auf einem Kanal J1939 aktiv ist. Jeder Kanal hat noch ein eigenes Flag
+    uint8_t j1939_flag; // this will be set if on channel have j1939 acive
     uint8_t EnableGatewayDeviceDriver;
     uint8_t Fill1;
     uint8_t Fill2;
 
     struct {
-    /*4*/    int32_t enable;          // Kanal ist aktiv
+    /*4*/    int32_t enable;          // Channel is active
     /*4*/    int32_t bus_frq;
     /*4*/    int32_t can_fd_enabled;
     /*4*/    int32_t data_baud_rate;
     /*8*/    double sample_point;
     /*8*/    double data_sample_point;
-    /*4*/    uint32_t CardTypeNrChannel;  // Byte0 ist Kanal auf Karte, Byte1 Karten Nummer, Byte2 ist Karten-Type (zur Zeit ist Byte2 immer 0)
+    /*4*/    uint32_t CardTypeNrChannel;  // this will be used for lagacy hardware
 	/*4*/    int32_t Socket;
-#ifdef _M_X64
-    /*8*/    int (*read_can) (struct NEW_CAN_SERVER_CONFIG_STRUCT *csc, int channel, int o_pos);
-                    /* Funktionszeiger fuer Schreiben eines CAN-Objektes */
-    /*8*/    int (*write_can) (struct NEW_CAN_SERVER_CONFIG_STRUCT *csc, int channel, int o_pos);
-                /* Funktionszeiger zum Oeffnen eines CAN-Karten-Treibers */
-    /*8*/    int (*open_can) (struct NEW_CAN_SERVER_CONFIG_STRUCT *csc, int channel);
-               /* Funktionszeiger zum Schliessen des CAN-Karten-Treibers */
-    /*8*/    int (*close_can) (struct NEW_CAN_SERVER_CONFIG_STRUCT *csc, int channel);
-               /* Funktionszeiger zum Lessen Status des CAN-Karten-Treibers */
-    /*8*/    int (*status_can) (struct NEW_CAN_SERVER_CONFIG_STRUCT *csc, int channel);
 
-               /* Funktionszeiger zum Lessen Status des CAN-Karten-Treibers */
+    /*8*/    int (*read_can) (struct NEW_CAN_SERVER_CONFIG_STRUCT *csc, int channel, int o_pos);
+    /*8*/    int (*write_can) (struct NEW_CAN_SERVER_CONFIG_STRUCT *csc, int channel, int o_pos);
+    /*8*/    int (*open_can) (struct NEW_CAN_SERVER_CONFIG_STRUCT *csc, int channel);
+    /*8*/    int (*close_can) (struct NEW_CAN_SERVER_CONFIG_STRUCT *csc, int channel);
+    /*8*/    int (*status_can) (struct NEW_CAN_SERVER_CONFIG_STRUCT *csc, int channel);
     /*8*/    int (*queue_read_can) (struct NEW_CAN_SERVER_CONFIG_STRUCT *csc, int channel,
                                     uint32_t *pid, unsigned char* data,
                                     unsigned char* pext, unsigned char* psize,
                                     uint64_t *pTimeStamp);
-               /* Funktionszeiger zum Lessen Status des CAN-Karten-Treibers */
     /*8*/    int (*queue_write_can) (struct NEW_CAN_SERVER_CONFIG_STRUCT *csc, int Channel,
                                      uint32_t id, unsigned char* data,
                                      unsigned char ext, unsigned char size);
     /*8*/    int (*info_can) (struct NEW_CAN_SERVER_CONFIG_STRUCT *csc, int channel, 
                               int Info, int MaxReturnSize, void *Return);
-#else
-    /*4*/    int (*read_can) (struct NEW_CAN_SERVER_CONFIG_STRUCT *csc, int channel, int o_pos);
-    /*4*/    int (*read_can_hdw) (struct NEW_CAN_SERVER_CONFIG_STRUCT *csc, int channel, int o_pos);
-                    /* Funktionszeiger fuer Schreiben eines CAN-Objektes */
-    /*4*/    int (*write_can) (struct NEW_CAN_SERVER_CONFIG_STRUCT *csc, int channel, int o_pos);
-    /*4*/    int (*write_can_hdw) (struct NEW_CAN_SERVER_CONFIG_STRUCT *csc, int channel, int o_pos);
-                /* Funktionszeiger zum Oeffnen eines CAN-Karten-Treibers */
-    /*4*/    int (*open_can) (struct NEW_CAN_SERVER_CONFIG_STRUCT *csc, int channel);
-    /*4*/    int (*open_can_hdw) (struct NEW_CAN_SERVER_CONFIG_STRUCT *csc, int channel);
-               /* Funktionszeiger zum Schliessen des CAN-Karten-Treibers */
-    /*4*/    int (*close_can) (struct NEW_CAN_SERVER_CONFIG_STRUCT *csc, int channel);
-    /*4*/    int (*close_can_hdw) (struct NEW_CAN_SERVER_CONFIG_STRUCT *csc, int channel);
-               /* Funktionszeiger zum Lessen Status des CAN-Karten-Treibers */
-    /*4*/    int (*status_can) (struct NEW_CAN_SERVER_CONFIG_STRUCT *csc, int channel);
-    /*4*/    int (*status_can_hdw) (struct NEW_CAN_SERVER_CONFIG_STRUCT *csc, int channel);
-
-               /* Funktionszeiger zum Lessen Status des CAN-Karten-Treibers */
-    /*4*/    int (*queue_read_can) (struct NEW_CAN_SERVER_CONFIG_STRUCT *csc, int channel,
-                                    uint32_t *pid, unsigned char* data,
-                                    unsigned char* pext, unsigned char* psize,
-                                    uint64_t *pTimeStamp);
-    /*4*/    int (*queue_read_can_hdw) (struct NEW_CAN_SERVER_CONFIG_STRUCT *csc, int channel,
-                                    uint32_t *pid, unsigned char* data,
-                                    unsigned char* pext, unsigned char* psize,
-                                    uint64_t *pTimeStamp);
-               /* Funktionszeiger zum Lessen Status des CAN-Karten-Treibers */
-    /*4*/    int (*queue_write_can) (uint32_t CardTypeNrChannel,
-                                     uint32_t id, unsigned char* data,
-                                     unsigned char ext, unsigned char size);
-    /*4*/    int (*queue_write_can_hdw) (uint32_t CardTypeNrChannel,
-                                     uint32_t id, unsigned char* data,
-                                     unsigned char ext, unsigned char size);
-    /*4*/    int (*info_can) (struct NEW_CAN_SERVER_CONFIG_STRUCT *csc, int channel, 
-                              int Info, int MaxReturnSize, void *Return);
-    /*4*/    int (*info_can_hdw) (struct NEW_CAN_SERVER_CONFIG_STRUCT *csc, int channel, 
-                              int Info, int MaxReturnSize, void *Return);
-#endif
-#define CAN_CHANNEL_INFO_MIXED_IDS_ALLOWED  1
-#define CAN_CHANNEL_INFO_CAN_CARD_STRING    2
+    #define CAN_CHANNEL_INFO_MIXED_IDS_ALLOWED  1
+    #define CAN_CHANNEL_INFO_CAN_CARD_STRING    2
     /*4*/    int32_t object_count;
     /*2*/    int16_t rx_object_count;
     /*2*/    int16_t tx_object_count;
-    /*256*2*/int16_t objects[MAX_OBJECTS_ONE_CHANNEL];     // max. 256 Objekte je Kanal
-        // zur schnellern Suche der Objekte gibt es sortierte Arrays fuer TX und RX-Objekte.
-    /*256*8*/NEW_CAN_HASH_ARRAY_ELEM hash_rx[MAX_RX_OBJECTS_ONE_CHANNEL]; // max. 256 Objekte je Kanal (enthaelt aufsteigend sortierte Liste der RX-Objekte Mux nur Master)
-    /*256*8*/NEW_CAN_HASH_ARRAY_ELEM hash_tx[MAX_TX_OBJECTS_ONE_CHANNEL]; // max. 256 Objekte je Kanal (enthaelt aufsteigend sortierte Liste der TX-Objekte Mux nur Master)
+    /*256*2*/int16_t objects[MAX_OBJECTS_ONE_CHANNEL];
+        // This array will be used for quick search the objects inside this sorted by identifier arrays
+    /*256*8*/NEW_CAN_HASH_ARRAY_ELEM hash_rx[MAX_RX_OBJECTS_ONE_CHANNEL]; // sorted array for RX objects
+    /*256*8*/NEW_CAN_HASH_ARRAY_ELEM hash_tx[MAX_TX_OBJECTS_ONE_CHANNEL]; // sorted array for TX objects
     /*4*/    int32_t global_tx_enable_vid;
     /*4*/    int32_t fd_support;
     /*4*/    int32_t j1939_flag;
@@ -343,25 +283,21 @@ typedef struct NEW_CAN_SERVER_CONFIG_STRUCT {
 
     /*4*/    int32_t VirtualNetworkId;
     /*4*/    int32_t StartupState;   // 0 -> off 1, -> on
-             int8_t filler[8192-5296];
-    } channels[MAX_CAN_CHANNELS];            // max. 4 Kanaele    8192Bytes
+    /*4*/    int32_t BaudrateConfig;
+             int8_t filler[8192-5300];
+    } channels[MAX_CAN_CHANNELS];
 
-    NEW_CAN_SERVER_OBJECT objects[MAX_OBJECTS_ALL_CHANNELS];       // max. 512 CAN-Objekte fuer alle Kanal  131072Bytes
+    NEW_CAN_SERVER_OBJECT objects[MAX_OBJECTS_ALL_CHANNELS];
 
-    NEW_CAN_SERVER_SIGNAL bb_signals[MAX_SIGNALS_ALL_CHANNELS];       // max. 4096 Signale                    262144Bytes
+    NEW_CAN_SERVER_SIGNAL bb_signals[MAX_SIGNALS_ALL_CHANNELS];
 
-    // Startadresse der CAN-Objekt Daten-Buffers
-    // beinhaltet alle Puffer hintereinander
-#ifdef _M_X64
+    // Start address of the CAN object daten buffers
+    // Includes all buffer one behind the other
     int8_t *PtrDataBuffer;
-#else
-    int8_t *PtrDataBuffer;
-    int8_t *PtrDataBuffer_hdw;
-#endif
     int32_t CanServerPid;
     int32_t SymSize;
     int32_t SymPos;
-    char Symbols[1];  // nicht 1 sondern flexibel!!
+    char Symbols[1];  // This will be much more than 1 byte
 
 }  NEW_CAN_SERVER_CONFIG;
 

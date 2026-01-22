@@ -52,7 +52,7 @@ static int GetEnvironmentVariableA(const char *var, char *value, int maxc)
     if (v == (char*)0) return 0;
     int len = strlen(v);
     if (len < maxc) {
-        strcpy(value, v);
+        strncpy(value, v, maxc);
         return len;
     } else {
         strncpy(value, v, maxc - 1);
@@ -201,8 +201,7 @@ STUB_OUT:
                             if (!XilEnvInternal_strnicmp("-stub", p, 6)) {
                                 DllFunctionCache.StubFlag = 1;
                                 goto STUB_OUT;
-                            }
-                            else if (!XilEnvInternal_strnicmp("-dllpath ", p, 9)) {
+                            } else if (!XilEnvInternal_strnicmp("-dllpath ", p, 9)) {
                                 // path where to find the DLL are defined with parameter (can be include " chars)
                                 //const char *s = p + 2;
                                 char *d = DllFunctionCache.DllNameWithPath;
@@ -216,18 +215,21 @@ STUB_OUT:
                                 }
                                 *d = 0;
                                 break;  // while (*p != 0)
-                            }
-                            else if (((p[1] == 'w') || (p[1] == 'q')) && (strtoul(p + 2, &h, 0) > 0) && (h != NULL) && (*h == ' ')) {
-                                const char *s;
-                                while (*h == ' ') h++;
-                                if (((s = strstr(h, "XilEnv")) != NULL) || ((s = strstr(h, "XilEnvGui")) != NULL)) {
-                                    // path of XilEnv executable
-                                    if ((s - h) < (sizeof(DllFunctionCache.DllNameWithPath) - 25)) {
-                                        memcpy(DllFunctionCache.DllNameWithPath, h, s - h);
-                                        DllFunctionCache.DllNameWithPath[s - h] = 0;
-                                    }
-                                    break;  // while (*p != 0)
+                            } else if (((p[1] == 'w') || (p[1] == 'q')) && (strtoul(p + 2, &h, 0) > 0) && (h != NULL) && (*h == ' ')) {
+                                const char *s = h;
+                                const char *e;
+                                while (*s == ' ') s++;
+                                if (*s == '"') s++;
+                                e = s;
+                                while ((*e != 0) && (*e != ' ') && (*e != '"')) e++;
+                                while ((e > s) && (*e != '\\') && (*e != '/')) e--;
+                                // path of XilEnv executable
+                                if ((e - s) < (sizeof(DllFunctionCache.DllNameWithPath) - 25)) {
+                                    int Len = e - s;
+                                    memcpy(DllFunctionCache.DllNameWithPath, s, Len);
+                                    DllFunctionCache.DllNameWithPath[Len] = 0;
                                 }
+                                break;  // while (*p != 0)
                             }
                         }
                         p++;

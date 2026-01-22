@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-
+#include <inttypes.h>
 #include "Platform.h"
 #include "ThrowError.h"
 #include "MyMemory.h"

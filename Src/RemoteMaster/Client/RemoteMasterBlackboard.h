@@ -194,9 +194,9 @@ void rm_write_bbvari_convert_with_FloatAndInt64 (PID pid, VID vid, union FloatOr
 int rm_read_bbvari_by_name(const char *name, union FloatOrInt64 *ret_value, int *ret_byte_width, int read_type);
 int rm_write_bbvari_by_name(PID pid, const char *name, union FloatOrInt64 value, int type, int bb_type, int add_if_not_exist, int read_type);
 
-int rm_read_bbvari_frame (VID *Vids, double *RetFrameValues, int Size);
+int rm_read_bbvari_frame (VID *Vids, int8_t *PhysOrRaw, double *RetFrameValues, int Size);
 
-int rm_write_bbvari_frame (PID pid, VID *Vids, double *FrameValues, int Size);
+int rm_write_bbvari_frame (PID pid, VID *Vids, int8_t *PhysOrRaw, double *FrameValues, int Size);
 
 int rm_req_write_varinfos_to_ini (RM_BLACKBOARD_WRITE_BBVARI_INFOS_REQ *Req);
 

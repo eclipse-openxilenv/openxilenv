@@ -70,6 +70,7 @@ CFUNC SCRPCDLL_API int __STDCALL__ XilEnv_CopyFileToLocal (const char *SourceFil
 CFUNC SCRPCDLL_API int __STDCALL__ XilEnv_CopyFileFromLocal (const char *SourceFilename,
                                                             const char *DestinationFilename);
 CFUNC SCRPCDLL_API char* __STDCALL__ XilEnv_GetEnvironVar (const char *EnvironVar);
+CFUNC SCRPCDLL_API int __STDCALL__ XilEnv_GetEnvironVarOwnBuffer(const char* EnvironVar, char* buffer, int size);
 CFUNC SCRPCDLL_API int __STDCALL__ XilEnv_SetEnvironVar (const char *EnvironVar, const char *EnvironValue);
 CFUNC SCRPCDLL_API int __STDCALL__ XilEnv_ChangeSettings (const char *SettingName, const char *ValueString);
 CFUNC SCRPCDLL_API int __STDCALL__ XilEnv_TextOut (const char *TextOut);
@@ -108,6 +109,10 @@ CFUNC SCRPCDLL_API int __STDCALL__ XilEnv_StartProcessEx(const char* ProcessName
 #define A2L_LINK_ADDRESS_TRANSLATION_DLL_FLAG          0x8
 #define A2L_LINK_ADDRESS_TRANSLATION_MULTI_DLL_FLAG    0x10
 #define A2L_LINK_REMEMBER_REFERENCED_LABELS_FLAG       0x20
+#define A2L_LINK_IGNORE_MOD_COMMON_ALIGNMENTS_FLAG     0x40
+#define A2L_LINK_IGNORE_RECORD_LAYOUT_ALIGNMENTS_FLAG  0x80
+#define A2L_LINK_IGNORE_READ_ONLY_FLAG                 0x100
+#define A2L_LINK_DEFAUT_ALIGNMENT_FLAG                 0x200
 
 SCRPCDLL_API int __STDCALL__ XilEnv_StartProcessEx2(const char* ProcessName,
                                                 int Prio, 
@@ -135,6 +140,7 @@ CFUNC SCRPCDLL_API char* __STDCALL__ XilEnv_GetNextProcess (int flag, char* filt
 CFUNC SCRPCDLL_API int  __STDCALL__ XilEnv_GetProcessState(const char* name);
 CFUNC SCRPCDLL_API void __STDCALL__ XilEnv_DoNextCycles (int Cycles);
 CFUNC SCRPCDLL_API void __STDCALL__ XilEnv_DoNextCyclesAndWait (int Cycles);
+CFUNC SCRPCDLL_API void __STDCALL__ XilEnv_DoNextConditionsCyclesAndWait (const char *ConditionsEquation, int Cycles);
 CFUNC SCRPCDLL_API int __STDCALL__ XilEnv_AddBeforeProcessEquationFromFile(int Nr, const char *ProcName, const char *EquFile);
 CFUNC SCRPCDLL_API int __STDCALL__ XilEnv_AddBehindProcessEquationFromFile(int Nr, const char *ProcName, const char *EquFile);
 CFUNC SCRPCDLL_API void __STDCALL__ XilEnv_DelBeforeProcessEquations(int Nr, const char *ProcName);
@@ -209,22 +215,27 @@ CFUNC SCRPCDLL_API int __STDCALL__ XilEnv_SaveRefList(const char* reflist, const
 
 CFUNC SCRPCDLL_API int __STDCALL__ XilEnv_GetVariConversionType(int vid);
 CFUNC SCRPCDLL_API char* __STDCALL__ XilEnv_GetVariConversionString(int vid);
+CFUNC SCRPCDLL_API int __STDCALL__ XilEnv_GetVariConversionStringOwnBuffer(int vid, char* buffer, int size);
 CFUNC SCRPCDLL_API int __STDCALL__ XilEnv_SetVariConversion(int vid, int type, const char* conv_string);
 
 CFUNC SCRPCDLL_API int __STDCALL__ XilEnv_GetVariType(int vid);
 CFUNC SCRPCDLL_API char* __STDCALL__ XilEnv_GetVariUnit(int vid);
 CFUNC SCRPCDLL_API int __STDCALL__ XilEnv_SetVariUnit(int vid, char *unit);
+CFUNC SCRPCDLL_API int __STDCALL__ XilEnv_GetVariUnitOwnBuffer(int vid, char* buffer, int size);
 CFUNC SCRPCDLL_API double __STDCALL__ XilEnv_GetVariMin(int vid);
 CFUNC SCRPCDLL_API double __STDCALL__ XilEnv_GetVariMax(int vid);
 CFUNC SCRPCDLL_API int __STDCALL__ XilEnv_SetVariMin(int vid, double min);
 CFUNC SCRPCDLL_API int __STDCALL__ XilEnv_SetVariMax(int vid, double max);
 CFUNC SCRPCDLL_API char* __STDCALL__ XilEnv_GetNextVari (int flag, char* filter);
+CFUNC SCRPCDLL_API int __STDCALL__ XilEnv_GetNextVariOwnBuffer(int flag, char* filter, char* buffer, int size);
 CFUNC SCRPCDLL_API char* __STDCALL__ XilEnv_GetNextVariEx (int flag, char* filter, char *process, int AccessFlags);
+CFUNC SCRPCDLL_API int __STDCALL__ XilEnv_GetNextVariExOwnBuffer(int flag, char* filter, char* process, int AccessFlags, char* buffer, int size);
 #define XILENV_ACCESS_FLAG_ONLY_ENABLED  (0x1 << 0)
 #define XILENV_ACCESS_FLAG_ONLY_DISABLED (0x1 << 1)
 #define XILENV_ACCESS_FLAG_ENABLED_OR_DISABLED (0x3 << 0)
 
 CFUNC SCRPCDLL_API char* __STDCALL__ XilEnv_GetVariEnum (int vid, double value);
+CFUNC SCRPCDLL_API int __STDCALL__ XilEnv_GetVariEnumOwnBuffer(int vid, double value, char* buffer, int size);
 CFUNC SCRPCDLL_API int __STDCALL__ XilEnv_GetVariDisplayFormatWidth (int vid);
 CFUNC SCRPCDLL_API int __STDCALL__ XilEnv_GetVariDisplayFormatPrec (int vid);
 CFUNC SCRPCDLL_API int __STDCALL__ XilEnv_SetVariDisplayFormat (int vid, int width, int prec);
@@ -233,10 +244,10 @@ CFUNC SCRPCDLL_API int __STDCALL__ XilEnv_ImportVariProperties (const char* File
 CFUNC SCRPCDLL_API int __STDCALL__ XilEnv_EnableRangeControl (const char* ProcessNameFilter, const char* VariableNameFilter);
 CFUNC SCRPCDLL_API int __STDCALL__ XilEnv_DisableRangeControl (const char* ProcessNameFilter, const char* VariableNameFilter);
 
-CFUNC SCRPCDLL_API int __STDCALL__ XilEnv_WriteFrame (int *Vids, double *ValueFrame, int Size);
-CFUNC SCRPCDLL_API int __STDCALL__ XilEnv_GetFrame (int *Vids, double *RetValueFrame, int Size);
-CFUNC SCRPCDLL_API int __STDCALL__ XilEnv_WriteFrameWaitReadFrame (int *WriteVids, double *WriteValues, int WriteSize,
-                                                               int *ReadVids, double *ReadValuesRet, int ReadSize); 
+CFUNC SCRPCDLL_API int __STDCALL__ XilEnv_WriteFrame (int *Vids, signed char *PhysOrRaw, double *ValueFrame, int Size);
+CFUNC SCRPCDLL_API int __STDCALL__ XilEnv_GetFrame (int *Vids, signed char *PhysOrRaw, double *RetValueFrame, int Size);
+CFUNC SCRPCDLL_API int __STDCALL__ XilEnv_WriteFrameWaitReadFrame (int *WriteVids, signed char *WritePhysOrRaw, double *WriteValues, int WriteSize,
+                                                                   int *ReadVids, signed char *ReadPhysOrRaw, double *ReadValuesRet, int ReadSize);
 
 #ifndef COLOR_UNDEFINED
 #define COLOR_UNDEFINED        0xFFFFFFFFUL
@@ -512,5 +523,8 @@ CFUNC SCRPCDLL_API int __STDCALL__ XilEnv_GetLinkArrayValueUnit(XILENV_LINK_DATA
 CFUNC SCRPCDLL_API const char* __STDCALL__ XilEnv_GetLinkArrayValueUnitPtr(XILENV_LINK_DATA *Data, int ArrayNo, int Number);
 
 CFUNC SCRPCDLL_API void __STDCALL__ XilEnv_PrintLinkData(XILENV_LINK_DATA *par_Data);
+
+CFUNC SCRPCDLL_API int __STDCALL__ XilEnv_ExportA2lMeasurementList(const char* MeasureList, const char* Process);
+CFUNC SCRPCDLL_API int __STDCALL__ XilEnv_ImportA2lMeasurementList(const char* MeasureList, const char* Process);
 
 #endif

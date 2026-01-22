@@ -34,6 +34,7 @@
 extern "C" {
     #include "MyMemory.h"
     #include "StringMaxChar.h"
+    #include "PrintFormatToString.h"
     #include "ThrowError.h"
 }
 #include "XcpOverEthernet.h"
@@ -116,8 +117,8 @@ const char    swIdentification[] = "XilEnv";
 cXCPConnector::cXCPConnector(void)
 {
 #ifdef _WIN32
-    memset(&m_wsa,0,sizeof(m_wsa));
-    memset(&m_addr,0,sizeof(m_addr));
+    STRUCT_ZERO_INIT(m_wsa,WSADATA);
+    STRUCT_ZERO_INIT(m_addr,SOCKADDR_IN);
 #endif
     m_socket = 0;
     m_LoggingFlag = false;
@@ -139,23 +140,24 @@ cXCPConnector::cXCPConnector(void)
     m_CurMTAIsNotTragetAddr = 0;
 
     //Initialize Identification string
-    strcpy(m_Identification,swIdentification);
+    STRING_COPY_TO_ARRAY(m_Identification,swIdentification);
 
     //Initialize Logfile
-    strcpy(m_Logfile,"c:\\temp\\XilEnvXcp.log");
+    STRING_COPY_TO_ARRAY(m_Logfile,"c:\\temp\\XilEnvXcp.log");
     m_fh = nullptr;
 
     //Initializes DAQ Memory
     InitDAQ();
 
     //Initialize Eventlist
-    memset(&m_ptrEvents,0,sizeof(m_ptrEvents));
-    memset(&m_EventCycleCounters,0,sizeof(m_EventCycleCounters));
+    m_ptrEvents = nullptr;
+    m_EventCycleCounters = nullptr;
     m_AllocatedEvents = 0;
 
     //Initialize Request/Response
-    memset(&m_Request,0,sizeof(m_Request));
-    memset(&m_Response,0,sizeof(m_Response));
+    STRUCT_ZERO_INIT(m_Request,XCP_BASIC_REQUEST);
+     STRUCT_ZERO_INIT(m_Response, XCP_BASIC_RESPONSE);
+
     m_RspPackageCounter = 0;
     m_ExpectedElements = 0;
     m_ReceivedElements = 0;
@@ -289,26 +291,12 @@ bool cXCPConnector::TerminateCommunicateThreadFunction (void)
 
 void cXCPConnector::SetIdentificationString(char* cpId)
 {
-    if (strlen(cpId) > (MAX_ID_LEN -1)) {
-        //Given Id too long => cut to accepted len
-        memset(m_Identification,0,sizeof(m_Identification));
-        MEMCPY(m_Identification,cpId,(sizeof(m_Identification)-1));
-    } else {
-        strcpy(m_Identification,cpId);
-    }
+    StringCopyMaxCharTruncate(m_Identification, cpId, sizeof(m_Identification));
 }
 
 void cXCPConnector::SetLogfile(char* cpLogfile)
 {
-    if (m_fh != nullptr) fclose (m_fh);
-    m_fh = nullptr;
-    if (strlen(cpLogfile) > (sizeof(m_Logfile)-1)) {
-        //Given Id too long => cut to accepted len
-        memset(m_Logfile,0,sizeof(m_Logfile));
-        MEMCPY(m_Logfile,cpLogfile,(sizeof(m_Logfile)-1));
-    } else {
-        strcpy(m_Logfile,cpLogfile);
-    }
+    StringCopyMaxCharTruncate(m_Logfile, cpLogfile, sizeof(m_Logfile));
 }
 
 int cXCPConnector::SwitchPagesAllSegments(int Page)
@@ -353,10 +341,9 @@ bool cXCPConnector::Init(int LinkNr, unsigned short Port, char *Identification, 
     }
     m_LinkNr = LinkNr;
     m_Port = Port;
-    strcpy (m_Identification, Identification);
-    strcpy (m_ProcessName, ProcessName);
-
-    strcpy(m_Logfile,LogFile);
+    StringCopyMaxCharTruncate(m_Identification, Identification, sizeof(m_Identification));
+    StringCopyMaxCharTruncate (m_ProcessName, ProcessName, sizeof(m_ProcessName));
+    StringCopyMaxCharTruncate(m_Logfile, LogFile, sizeof (m_Logfile));
     m_LoggingFlag = (LoggingActive != 0);
 
     m_ptrEvents = new XCP_EVENT_DESC[ucAmEvents];
@@ -364,8 +351,8 @@ bool cXCPConnector::Init(int LinkNr, unsigned short Port, char *Identification, 
     if ((m_ptrEvents == nullptr) || (m_EventCycleCounters == nullptr)) {
         return false;
     }
-    memset(m_ptrEvents,0,ucAmEvents*sizeof(XCP_EVENT_DESC));
-    memset(m_EventCycleCounters,0,ucAmEvents*sizeof(int));
+    MEMSET(m_ptrEvents,0,ucAmEvents*sizeof(XCP_EVENT_DESC));
+    MEMSET(m_EventCycleCounters,0,ucAmEvents*sizeof(int));
     MEMCPY(m_ptrEvents,ptrEvents,ucAmEvents*sizeof(XCP_EVENT_DESC));
     m_AllocatedEvents = ucAmEvents;
 
@@ -415,14 +402,12 @@ bool cXCPConnector::Init(int LinkNr, unsigned short Port, char *Identification, 
     if (DataSegment == nullptr) {
         m_DataSegment = nullptr;
     } else {
-        m_DataSegment = static_cast<char*>(my_malloc (strlen (DataSegment) + 1));
-        strcpy (m_DataSegment, DataSegment);
+        m_DataSegment = StringMalloc (DataSegment);
     }
     if (CodeSegment == nullptr) {
         m_CodeSegment = nullptr;
     } else {
-        m_CodeSegment = static_cast<char*>(my_malloc (strlen (CodeSegment) + 1));
-        strcpy (m_CodeSegment, CodeSegment);
+        m_CodeSegment = StringMalloc (CodeSegment);
     }
     m_LoopSend = 0;
     m_WaitForNextCommand = 0;
@@ -698,7 +683,7 @@ bool cXCPConnector::Send(bool bLog)
                 }
                 if (e == m_AllocatedEvents) {
                     ThrowError (1, "try to upload data without setting MTA");
-                    memset (&CurrentResponse.xcpResponse.b[1],0,bcurLen);
+                    MEMSET (&CurrentResponse.xcpResponse.b[1],0,bcurLen);
                 }
             }
         } else {
@@ -733,7 +718,8 @@ bool cXCPConnector::Send(bool bLog)
         switch (m_SendState) {
         case XCP_TR_RESP_CTO: /* Statndard response to CTO Request */
             if (!m_CurMTA) {
-                memset(&m_Response,0,sizeof(m_Response));
+                STRUCT_ZERO_INIT(m_Response, XCP_BASIC_RESPONSE);
+
             }
             m_SendState = XCP_TR_IDLE;
             break;
@@ -746,7 +732,8 @@ bool cXCPConnector::Send(bool bLog)
             if (m_CurMTATransferred >= static_cast<uint32_t>(bcurLen)) {
                 // All data sended! => go to idle
                 m_SendState = XCP_TR_IDLE;
-                memset(&m_Response,0,sizeof(m_Response));
+                STRUCT_ZERO_INIT(m_Response, XCP_BASIC_RESPONSE);
+
                 m_CurMTATransferred = 0;
             }
             break;
@@ -893,7 +880,7 @@ bool cXCPConnector::Receive(void)
     bool                  Ret = false;    // This is true if at least one packet was received successful
 
     //Initialize Data
-    memset(&strHeader,0,sizeof(strHeader));
+    MEMSET(&strHeader,0,sizeof(strHeader));
 
     //Receive complete available inputs
     while (!telReceived) {
@@ -1012,7 +999,7 @@ void cXCPConnector::WriteLogString(const char *format, ...)
     char buffer[4096];
 
     va_start (args, format);
-    vsprintf (buffer, format, args);
+    VariableArgumentsListPrintFormatToString (buffer, sizeof(buffer), format, args);
     va_end (args);
 
     //File already open?
@@ -1053,7 +1040,7 @@ void cXCPConnector::HandleDisconnect()
 void cXCPConnector::PrepareConnectResponse()
 {
     if (!m_Connected) {
-        if (ConnectToProcess (m_LinkNr, &m_Pid, m_ProcessName) != 0) {
+        if (ConnectToProcess (m_LinkNr, &m_Pid, m_ProcessName, sizeof(m_ProcessName)) != 0) {
             return;
         }
         m_CopyPages.SetProcess (m_Pid, m_LinkNr);
@@ -1076,7 +1063,8 @@ void cXCPConnector::PrepareConnectResponse()
         m_Connected = 1;
     }
     //Reset response field
-    memset(&m_Response,0,sizeof(m_Response));
+    STRUCT_ZERO_INIT(m_Response, XCP_BASIC_RESPONSE);
+
 
     //Copy response
     m_Response.usLen = 8;
@@ -1109,7 +1097,8 @@ void cXCPConnector::PrepareConnectResponse()
 void cXCPConnector::PrepareCurrentStatus()
 {
     //Reset response field
-    memset(&m_Response,0,sizeof(m_Response));
+    STRUCT_ZERO_INIT(m_Response, XCP_BASIC_RESPONSE);
+
 
     //Set data
     m_Response.usLen = 6;
@@ -1135,7 +1124,8 @@ void cXCPConnector::PrepareCurrentStatus()
 void cXCPConnector::PrepareIdentification()
 {
     //Reset response field
-    memset(&m_Response,0,sizeof(m_Response));
+    STRUCT_ZERO_INIT(m_Response, XCP_BASIC_RESPONSE);
+
 
     //Set data
     m_Response.usLen = 8; //+ strlen(swIdentification)+1;
@@ -1165,7 +1155,8 @@ void cXCPConnector::PrepareIdentification()
 void cXCPConnector::PrepareErrResponse(unsigned char errCode)
 {
     //Reset response field
-    memset(&m_Response,0,sizeof(m_Response));
+    STRUCT_ZERO_INIT(m_Response, XCP_BASIC_RESPONSE);
+
 
     //Set data
     m_Response.usLen = 2;
@@ -1182,7 +1173,8 @@ void cXCPConnector::PrepareErrResponse(unsigned char errCode)
 void cXCPConnector::PreparePageProcessorInfo()
 {
     //Reset response field
-    memset(&m_Response,0,sizeof(m_Response));
+    STRUCT_ZERO_INIT(m_Response, XCP_BASIC_RESPONSE);
+
 
     //Set data
     m_Response.usLen = 3;
@@ -1209,7 +1201,8 @@ void cXCPConnector::PrepareSegmentInfo()
     struct _IMAGE_SECTION_HEADER*   ptrSegment;
 
     //Reset response field
-    memset(&m_Response,0,sizeof(m_Response));
+    STRUCT_ZERO_INIT(m_Response, XCP_BASIC_RESPONSE);
+
 
     //Fuellen des Response
     m_Response.xcpResponse.b[0] = PID_RES;
@@ -1294,7 +1287,8 @@ void cXCPConnector::PreparePageInfo()
     //unsigned char   Page;
 
     //Reset response field
-    memset(&m_Response,0,sizeof(m_Response));
+    STRUCT_ZERO_INIT(m_Response, XCP_BASIC_RESPONSE);
+
 
     //Get Request Data
     Segment = m_Request.xcpRequest.b[2];
@@ -1333,7 +1327,8 @@ void cXCPConnector::PreparePageInfo()
 void cXCPConnector::PrepareGetCalPage()
 {
     //Reset response field
-    memset(&m_Response,0,sizeof(m_Response));
+    STRUCT_ZERO_INIT(m_Response, XCP_BASIC_RESPONSE);
+
 
     //Set data
     m_Response.usLen = 4;
@@ -1351,7 +1346,8 @@ void cXCPConnector::PrepareGetCalPage()
 void cXCPConnector::TakeCurrentMTA()
 {
     //Reset response field
-    memset(&m_Response,0,sizeof(m_Response));
+    STRUCT_ZERO_INIT(m_Response, XCP_BASIC_RESPONSE);
+
 
     //Store MTA
     m_CurMTA = TranslateAddress (m_Request.xcpRequest.dw[1]);
@@ -1374,7 +1370,8 @@ void cXCPConnector::ShortUpload()
     uint64_t Address;
 
     //Reset response field
-    memset(&m_Response,0,sizeof(m_Response));
+    STRUCT_ZERO_INIT(m_Response, XCP_BASIC_RESPONSE);
+
 
     Size = m_Request.xcpRequest.b[1];
     Address = TranslateAddress(m_Request.xcpRequest.dw[1]);
@@ -1403,7 +1400,8 @@ void cXCPConnector::ShortDownload()
     uint64_t Address;
 
     //Reset response field
-    memset(&m_Response,0,sizeof(m_Response));
+    STRUCT_ZERO_INIT(m_Response, XCP_BASIC_RESPONSE);
+
 
     Size = m_Request.xcpRequest.b[1];
     Address = TranslateAddress(m_Request.xcpRequest.dw[1]);
@@ -1437,7 +1435,8 @@ void cXCPConnector::PrepareChecksum()
     uint32_t   ulBlocksize;
 
     //Reset response field
-    memset(&m_Response,0,sizeof(m_Response));
+    STRUCT_ZERO_INIT(m_Response, XCP_BASIC_RESPONSE);
+
 
     //Get Blocksize
     ulBlocksize = m_Request.xcpRequest.dw[1];
@@ -1548,7 +1547,8 @@ void cXCPConnector::TakeCalibrationPage()
     struct _IMAGE_SECTION_HEADER*   ptrSegment;
 
     //Reset response field
-    memset(&m_Response,0,sizeof(m_Response));
+    STRUCT_ZERO_INIT(m_Response, XCP_BASIC_RESPONSE);
+
 
     //Get Segment and Page
     Segment = m_Request.xcpRequest.b[2];
@@ -1613,7 +1613,8 @@ void cXCPConnector::TakeCalibrationPage()
 void cXCPConnector::PrepareDAQProcessorInfo()
 {
     //Reset response field
-    memset(&m_Response,0,sizeof(m_Response));
+    STRUCT_ZERO_INIT(m_Response, XCP_BASIC_RESPONSE);
+
 
     //Set data for Response
     m_Response.usLen = 8;
@@ -1648,7 +1649,8 @@ void cXCPConnector::TakeSegmentMode()
     m_curSegmentMode = m_Request.xcpRequest.b[1];
 
     //Reset response field
-    memset(&m_Response,0,sizeof(m_Response));
+    STRUCT_ZERO_INIT(m_Response, XCP_BASIC_RESPONSE);
+
 
     //Set data for Response
     m_Response.usLen = 1;
@@ -1671,7 +1673,8 @@ void cXCPConnector::TakeFirstBlockOfDownloadData()
     }
 
     //Reset response field
-    memset(&m_Response,0,sizeof(m_Response));
+    STRUCT_ZERO_INIT(m_Response, XCP_BASIC_RESPONSE);
+
 
     //Take Data => copy to MTA pointer and post- increment
     XCPWriteMemoryToExternProcess (m_LinkNr, m_CurMTA, &m_Request.xcpRequest.b[2], m_ReceivedElements);
@@ -1709,7 +1712,8 @@ void cXCPConnector::TakeNextBlockOfDownloadData()
     }
 
     //Reset response field
-    memset(&m_Response,0,sizeof(m_Response));
+    STRUCT_ZERO_INIT(m_Response, XCP_BASIC_RESPONSE);
+
 
     //Take Data => copy to MTA pointer and post- increment
     XCPWriteMemoryToExternProcess (m_LinkNr, m_CurMTA, &m_Request.xcpRequest.b[2], currentReceived);
@@ -1780,7 +1784,8 @@ void cXCPConnector::AllocateDAQList()
     m_dynAllocatedDAQs = uiDaqs2Allocate;
 
     //Reset response field
-    memset(&m_Response,0,sizeof(m_Response));
+    STRUCT_ZERO_INIT(m_Response, XCP_BASIC_RESPONSE);
+
 
     //Set data for Response
     m_Response.usLen = 1;
@@ -1808,7 +1813,8 @@ void cXCPConnector::ClearDAQList()
     }
 
     //Reset response field
-    memset(&m_Response,0,sizeof(m_Response));
+    STRUCT_ZERO_INIT(m_Response, XCP_BASIC_RESPONSE);
+
 
     //Set data for Response
     m_Response.usLen = 1;
@@ -1830,7 +1836,7 @@ void cXCPConnector::FreeDAQList()
     m_dynAllocatedDAQs = 0;
 
     //Reset response field
-    memset(&m_Response,0,sizeof(m_Response));
+    STRUCT_ZERO_INIT(m_Response, XCP_BASIC_RESPONSE);
 
     //Set data for Response
     m_Response.usLen = 1;
@@ -1859,7 +1865,7 @@ void cXCPConnector::AllocateODT2DAQ()
             //Object already existing
             if (m_Daq[daqListNumber].m_PtrODTs[iLoop] == nullptr) {
                 m_Daq[daqListNumber].m_PtrODTs[iLoop] = new XCP_ODT;
-                memset(m_Daq[daqListNumber].m_PtrODTs[iLoop],0,sizeof(XCP_ODT));
+                STRUCT_ZERO_INIT(*(m_Daq[daqListNumber].m_PtrODTs[iLoop]), XCP_ODT);
             } else {
                 //ODT already exists => Sequence error
                 PrepareErrResponse(ERR_SEQUENCE);
@@ -1878,7 +1884,8 @@ void cXCPConnector::AllocateODT2DAQ()
     }
 
     //Reset response field
-    memset(&m_Response,0,sizeof(m_Response));
+    STRUCT_ZERO_INIT(m_Response, XCP_BASIC_RESPONSE);
+
 
     //Set data for Response
     m_Response.usLen = 1;
@@ -1907,7 +1914,7 @@ void cXCPConnector::AllocateODTEntry2DAQ()
         //Valid Daq List and Valid ODT
         //=> Allocate space for ODT Entries
         m_Daq[daqListNumber].m_PtrODTs[odtNumber]->m_odtBasePtr = new XCP_ODT_ENTRY[odtEntriesCount];
-        memset(m_Daq[daqListNumber].m_PtrODTs[odtNumber]->m_odtBasePtr,0,sizeof(XCP_ODT_ENTRY)*odtEntriesCount);
+        MEMSET(m_Daq[daqListNumber].m_PtrODTs[odtNumber]->m_odtBasePtr,0,sizeof(XCP_ODT_ENTRY)*odtEntriesCount);
         m_Daq[daqListNumber].m_PtrODTs[odtNumber]->m_AllocatedElements = odtEntriesCount;
         m_Daq[daqListNumber].m_PtrODTs[odtNumber]->m_curODTPtr = m_Daq[daqListNumber].m_PtrODTs[odtNumber]->m_odtBasePtr;
     } else {
@@ -1923,7 +1930,8 @@ void cXCPConnector::AllocateODTEntry2DAQ()
     }
 
     //Reset response field
-    memset(&m_Response,0,sizeof(m_Response));
+    STRUCT_ZERO_INIT(m_Response, XCP_BASIC_RESPONSE);
+
 
     //Set data for Response
     m_Response.usLen = 1;
@@ -1984,7 +1992,8 @@ void cXCPConnector::SetDAQPointer()
     }
 
     //Reset response field
-    memset(&m_Response,0,sizeof(m_Response));
+    STRUCT_ZERO_INIT(m_Response, XCP_BASIC_RESPONSE);
+
 
     //Set data for Response
     m_Response.usLen = 1;
@@ -2028,7 +2037,8 @@ void cXCPConnector::WriteElement2ODTEntry()
     }
 
     //Reset response field
-    memset(&m_Response,0,sizeof(m_Response));
+    STRUCT_ZERO_INIT(m_Response, XCP_BASIC_RESPONSE);
+
 
     //Set data for Response
     m_Response.usLen = 1;
@@ -2068,7 +2078,8 @@ void cXCPConnector::SetDAQListMode()
     }
 
     //Reset response field
-    memset(&m_Response,0,sizeof(m_Response));
+    STRUCT_ZERO_INIT(m_Response, XCP_BASIC_RESPONSE);
+
 
     //Set data for Response
     m_Response.usLen = 1;
@@ -2090,7 +2101,8 @@ void cXCPConnector::HandleGetDAQListMode()
     //Gets the list mode to a existine DAQ Queue
     if (daqListNumber < m_dynAllocatedDAQs) {
         //Reset response field
-        memset(&m_Response,0,sizeof(m_Response));
+        STRUCT_ZERO_INIT(m_Response, XCP_BASIC_RESPONSE);
+
         m_Response.xcpResponse.b[0] = PID_RES;
         m_Response.usLen = 8;
 
@@ -2128,7 +2140,8 @@ void cXCPConnector::HandleStartStopDAQList()
     }
 
     //Reset response field
-    memset(&m_Response,0,sizeof(m_Response));
+    STRUCT_ZERO_INIT(m_Response, XCP_BASIC_RESPONSE);
+
 
     //Set data for Response
     m_Response.usLen = 2;
@@ -2197,7 +2210,8 @@ void cXCPConnector::PrepareDAQResolutionInfo()
     //No incomming data
 
     //Reset response field
-    memset(&m_Response,0,sizeof(m_Response));
+    STRUCT_ZERO_INIT(m_Response, XCP_BASIC_RESPONSE);
+
     m_Response.usLen = 8;
 
     //Fuellen des Response => Page / Segment Dependent
@@ -2245,7 +2259,8 @@ void cXCPConnector::PrepareDAQEventInfo()
     }
 
     //Reset response field
-    memset(&m_Response,0,sizeof(m_Response));
+    STRUCT_ZERO_INIT(m_Response, XCP_BASIC_RESPONSE);
+
     m_Response.usLen = 7;
 
     //Fuellen des Response => Page / Segment Dependent
@@ -2323,7 +2338,7 @@ void cXCPConnector::InitDAQ()
     m_adressedDAQList = 0;
     m_DaqClock = 0;
     m_DaqPackageCounter = 0;
-    memset(m_Daq,0,sizeof(m_Daq));
+    MEMSET(m_Daq,0,sizeof(m_Daq));
 }
 
 void cXCPConnector::ResetDynamicDAQMemory()
@@ -2351,7 +2366,7 @@ void cXCPConnector::ResetDynamicDAQMemory()
         //Reset next DAQ
         bLoop++;
     }
-    memset(m_Daq,0,sizeof(m_Daq));
+    MEMSET(m_Daq,0,sizeof(m_Daq));
 }
 
 void cXCPConnector::CreateOrResetDAQTransferBuffers()
@@ -2385,16 +2400,16 @@ void cXCPConnector::CreateOrResetDAQTransferBuffers()
                     delete [] m_Daq[bLoop].m_PtrODTs[bODT]->m_DAQTransferField;
                     m_Daq[bLoop].m_PtrODTs[bODT]->m_DAQTransferField = new unsigned char[desMemory];
                     m_Daq[bLoop].m_PtrODTs[bODT]->m_DAQTransferFieldAllocated = desMemory;
-                    memset(m_Daq[bLoop].m_PtrODTs[bODT]->m_DAQTransferField,0,m_Daq[bLoop].m_PtrODTs[bODT]->m_DAQTransferFieldAllocated);
+                    MEMSET(m_Daq[bLoop].m_PtrODTs[bODT]->m_DAQTransferField,0,m_Daq[bLoop].m_PtrODTs[bODT]->m_DAQTransferFieldAllocated);
                 } else {
                     if (m_Daq[bLoop].m_PtrODTs[bODT]->m_DAQTransferField == nullptr) {
                         //Dynamischer Speicher wurde noch nicht allociert
                         m_Daq[bLoop].m_PtrODTs[bODT]->m_DAQTransferField = new unsigned char[desMemory];
                         m_Daq[bLoop].m_PtrODTs[bODT]->m_DAQTransferFieldAllocated = desMemory;
-                        memset(m_Daq[bLoop].m_PtrODTs[bODT]->m_DAQTransferField,0,m_Daq[bLoop].m_PtrODTs[bODT]->m_DAQTransferFieldAllocated);
+                        MEMSET(m_Daq[bLoop].m_PtrODTs[bODT]->m_DAQTransferField,0,m_Daq[bLoop].m_PtrODTs[bODT]->m_DAQTransferFieldAllocated);
                     } else {
                         //Field alreadyExisting => Reset Data
-                        memset(m_Daq[bLoop].m_PtrODTs[bODT]->m_DAQTransferField,0,m_Daq[bLoop].m_PtrODTs[bODT]->m_DAQTransferFieldAllocated);
+                        MEMSET(m_Daq[bLoop].m_PtrODTs[bODT]->m_DAQTransferField,0,m_Daq[bLoop].m_PtrODTs[bODT]->m_DAQTransferFieldAllocated);
                     }
                 }
             }
@@ -2426,7 +2441,8 @@ void cXCPConnector::HandleGetDaqClock()
     //No incomming data
 
     //Reset response field
-    memset(&m_Response,0,sizeof(m_Response));
+    STRUCT_ZERO_INIT(m_Response, XCP_BASIC_RESPONSE);
+
     m_Response.usLen = 8;
 
     //Fuellen des Response => Page / Segment Dependent
@@ -2450,7 +2466,8 @@ void cXCPConnector::CopyCalPage (void)
     DstPageNo = m_Request.xcpRequest.b[4];
 
     //Reset response field
-    memset(&m_Response,0,sizeof(m_Response));
+    STRUCT_ZERO_INIT(m_Response, XCP_BASIC_RESPONSE);
+
     m_Response.usLen = 8;
 
     if ((SrcSegNo >= m_CopyPages.get_number_of_sections ()) ||
@@ -2475,7 +2492,8 @@ void cXCPConnector::CopyCalPage (void)
 void cXCPConnector::SetRequest (void)
 {
     //Reset response field
-    memset(&m_Response,0,sizeof(m_Response));
+    STRUCT_ZERO_INIT(m_Response, XCP_BASIC_RESPONSE);
+
     m_Response.usLen = 8;
     m_Response.xcpResponse.b[0] = PID_RES;
 
@@ -2527,7 +2545,8 @@ void cXCPConnector::HandleSendEvent2Server(unsigned char ucEventCode)
     //No incomming data
 
     //Reset response field
-    memset(&m_Response,0,sizeof(m_Response));
+    STRUCT_ZERO_INIT(m_Response, XCP_BASIC_RESPONSE);
+
     m_Response.usLen = 2;
 
     //Fuellen des Response => Page / Segment Dependent

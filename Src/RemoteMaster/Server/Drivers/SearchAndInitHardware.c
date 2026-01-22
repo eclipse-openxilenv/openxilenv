@@ -21,7 +21,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
-
+#include "StringMaxChar.h"
 #include "MapSocketCAN.h"
 #include "IrqCpuAffinity.h"
 
@@ -47,8 +47,8 @@ int SearchAndInitHardware(void)
     // All interrupts would be processed by CPU 0. Therefore CPU1...n should not have to process any interupts
 	ResetAllIrqToCpu0();
 
-    if (GetEthernetDeviceNameForIpAddress(eth_dev_name)) {
-        strcpy(eth_dev_name, "enp0s25");
+    if (GetEthernetDeviceNameForIpAddress(eth_dev_name, sizeof(eth_dev_name))) {
+        STRING_COPY_TO_ARRAY(eth_dev_name, "enp0s25");
     }
 
     SetIrqToCpu(eth_dev_name, 1);    // ethernet interface interrupt should be done by CPU 1

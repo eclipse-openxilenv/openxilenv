@@ -35,6 +35,7 @@
 
 extern "C" {
     #include "Config.h"
+    #include "PrintFormatToString.h"
     #include "EquationParser.h"
     #include "MyMemory.h"
     #include "ThrowError.h"
@@ -143,8 +144,9 @@ int A2LCalMapWidget::NotifiyGetDataFromLinkAck(void *par_IndexData, int par_Fetc
 {
     Q_UNUSED(par_FetchDataChannelNo)
     INDEX_DATA_BLOCK *IndexData = (INDEX_DATA_BLOCK*)par_IndexData;
-    m_Model->UpdateAck(IndexData->Data->Data);
-    FreeIndexDataBlock(IndexData);
+    m_Model->UpdateAck(IndexData->Data->LinkNo,
+                       IndexData->Data->Index,
+                       IndexData->Data->Data);
     return 0;
 }
 
@@ -589,35 +591,35 @@ bool A2LCalMapWidget::writeToIni(void)
 
     // Angle and zoom factor
     Entry = QString("trans3d.ax");
-    sprintf (Help, "%g", m_3DView->get_x_angle());
+    PrintFormatToString (Help, sizeof(Help), "%g", m_3DView->get_x_angle());
     Line = QString(Help);
     ScQt_IniFileDataBaseWriteString(WindowTitle, Entry, Line, Fd);
     Entry = QString("trans3d.ay");
-    sprintf (Help, "%g", m_3DView->get_y_angle());
+    PrintFormatToString (Help, sizeof(Help), "%g", m_3DView->get_y_angle());
     Line = QString(Help);
     ScQt_IniFileDataBaseWriteString(WindowTitle, Entry, Line, Fd);
     Entry = QString("trans3d.az");
-    sprintf (Help, "%g", m_3DView->get_z_angle());
+    PrintFormatToString (Help, sizeof(Help), "%g", m_3DView->get_z_angle());
     Line = QString(Help);
     ScQt_IniFileDataBaseWriteString(WindowTitle, Entry, Line, Fd);
     Entry = QString("trans3d.k_depth");
-    sprintf (Help, "%g", m_3DView->get_depth());
+    PrintFormatToString (Help, sizeof(Help), "%g", m_3DView->get_depth());
     Line = QString(Help);
     ScQt_IniFileDataBaseWriteString(WindowTitle, Entry, Line, Fd);
     Entry = QString("trans3d.scale");
-    sprintf (Help, "%g", m_3DView->get_scale());
+    PrintFormatToString (Help, sizeof(Help), "%g", m_3DView->get_scale());
     Line = QString(Help);
     ScQt_IniFileDataBaseWriteString(WindowTitle, Entry, Line, Fd);
     Entry = QString("trans3d.x_off");
-    sprintf (Help, "%g",  m_3DView->get_x_offset());
+    PrintFormatToString (Help, sizeof(Help), "%g",  m_3DView->get_x_offset());
     Line = QString(Help);
     ScQt_IniFileDataBaseWriteString(WindowTitle, Entry, Line, Fd);
     Entry = QString("trans3d.y_off");
-    sprintf (Help, "%g",  m_3DView->get_y_offset());
+    PrintFormatToString (Help, sizeof(Help), "%g",  m_3DView->get_y_offset());
     Line = QString(Help);
     ScQt_IniFileDataBaseWriteString(WindowTitle, Entry, Line, Fd);
     Entry = QString("trans3d.z_off");
-    sprintf (Help, "%g",  m_3DView->get_z_offset());
+    PrintFormatToString (Help, sizeof(Help), "%g",  m_3DView->get_z_offset());
     Line = QString(Help);
     ScQt_IniFileDataBaseWriteString(WindowTitle, Entry, Line, Fd);
 

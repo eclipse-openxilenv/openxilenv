@@ -55,6 +55,8 @@ struct EXEC_STACK_ELEM {
     union OP_PARAM param;
 };    /* 16 bytes */
 
+typedef int (*UserDefinedBuildinFunctionExecuteType) (EXECUTION_STACK *pStack, struct EXEC_STACK_ELEM *param);
+
 void init_stack(EXECUTION_STACK *Stack, double Parameter);
 int direct_execute_one_command (int Cmd, EXECUTION_STACK *Stack, union OP_PARAM Value);
 double get_current_stack_value(EXECUTION_STACK *Stack);
@@ -91,5 +93,7 @@ double execute_stack_replace_variable_with_parameter (struct EXEC_STACK_ELEM *st
 int FindFunctionByKey (int Key);
 
 int convert_to_stack_entry (union BB_VARI Value, int BBType, struct STACK_ENTRY *Ret);
+
+int AddUserDefinedBuildinFunctionToExecutor(int par_Number, UserDefinedBuildinFunctionExecuteType par_UserDefinedBuildinFunctionExecute);
 
 #endif

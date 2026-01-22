@@ -41,7 +41,8 @@
 #include <math.h>
 
 extern "C" {
-#include "Config.h"
+#include "StringMaxChar.h"
+#include "PrintFormatToString.h"
 #include "Files.h"
 #include "Compare2DoubleEqual.h"
 #include "Blackboard.h"
@@ -61,77 +62,61 @@ extern "C" {
 #define SHORTSCALE 6
 #define DEFAULT_SCALE_PIXEL_STEP  100
 
+
 KnobOrTachoWidget::KnobOrTachoWidget(QString par_WindowTitle, MdiSubWindow* par_SubWindow, MdiWindowType* par_Type,
                                      KnobOrTachoType par_KnobOrTachoType, QWidget* parent) :
     MdiWindowWidget(par_WindowTitle, par_SubWindow, par_Type, parent),
     m_ObserverConnection(this)
 {
-    //layout for Widged
-    QVBoxLayout *MyLayout = new QVBoxLayout();
-    this->setLayout(MyLayout);
-    VariableNameLabel = new QLabel("Test");
-    ValueLabel = new QLabel("0815");
-    Drawarea = new QWidget;
-    VariableNameLabel->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Maximum);
-    ValueLabel->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Maximum);
-    Drawarea->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Minimum);
-//    QPalette pal = QPalette();
-
-//    // set black background
-//    // Qt::black / "#000000" / "black"
-//    pal.setColor(QPalette::Window, Qt::red);
-
-//    Drawarea->setAutoFillBackground(true);
-//    Drawarea->setPalette(pal);
-
-    MyLayout->addWidget(VariableNameLabel,Qt::AlignTop);
-    MyLayout->addWidget(Drawarea);
-    //MyLayout->addSpacerItem(new QSpacerItem(1,1,QSizePolicy::Minimum,QSizePolicy::Expanding));
-    MyLayout->addWidget(ValueLabel,Qt::AlignBottom);
+    //layout for Widget
+    m_Layout = new QVBoxLayout();
+    m_Layout->setContentsMargins(0,0,0,0);
+    this->setLayout(m_Layout);
+    m_VariableNameLabel = new QLabel(this);
+    m_ValueLabel = new QLabel(this);
+    m_Drawarea = new DrawArea(par_KnobOrTachoType, &m_Attributes, this);
 
     m_KnobOrTachoType = par_KnobOrTachoType;
 
     m_FirstUpdate = true;
-
-    m_MoveFlag = false;
-    m_Overwind = false;
-
-    m_Vid = -1;
+    m_bitmapPathExist = false;
+    m_NewPixmapIsLoaded = false;
 
     m_Attributes.m_LowerBound = 0.0;
     m_Attributes.m_UpperBound = 1.0;
 
-    m_FontSizeDyn = -1;
-
     m_Attributes.m_Physical = false;
-
-    m_LastXpos = 0;
-    m_LastYpos = 0;
-    m_DebugAngle = 0.0;
 
     m_Attributes.m_TextAlign = 0;
     m_Attributes.m_NameAlign = 0;
 
     setAcceptDrops(true);
-    maxLabelSize = 0;
 
     m_ConfigAct = new QAction(tr("&config"), this);
     m_ConfigAct->setStatusTip(tr("configure knob"));
     connect(m_ConfigAct, SIGNAL(triggered()), this, SLOT(ConfigureSlot()));
 
     readFromIni();
+    ChangeLayout();
 }
 
 KnobOrTachoWidget::~KnobOrTachoWidget()
 {
+    int Vid = m_Drawarea->GetVid();
     writeToIni();
-    if (m_Vid > 0) {
-        remove_bbvari_unknown_wait(m_Vid);
-        m_ObserverConnection.RemoveObserveVariable(m_Vid);
+    if (Vid > 0) {
+        remove_bbvari_unknown_wait(Vid);
+        m_ObserverConnection.RemoveObserveVariable(Vid);
     }
-    if (m_DragStateVid > 0) {
-        remove_bbvari_unknown_wait(m_DragStateVid);
+    if (Vid > 0) {
+        remove_bbvari_unknown_wait(Vid);
     }
+    delete m_Drawarea;
+    delete m_VariableNameLabel;
+    delete m_ValueLabel;
+    delete m_Layout;
+    delete m_ConfigAct;
+
 }
 
 bool KnobOrTachoWidget::writeToIni()
@@ -142,9 +127,10 @@ bool KnobOrTachoWidget::writeToIni()
 
    ScQt_IniFileDataBaseWriteString(SectionPath, "type", QStringToConstChar(GetMdiWindowType()->GetWindowTypeName()), Fd);
 
-    if (m_Vid > 0){
-        sprintf (loc_txt, "%s, %f, %f, (%i,%i,%i), %s",
-                 m_VariableName.toLatin1().data(),
+    int Vid = m_Drawarea->GetVid();
+    if (Vid > 0){
+        PrintFormatToString (loc_txt, sizeof(loc_txt), "%s, %f, %f, (%i,%i,%i), %s",
+                 m_Drawarea->GetVariableName().toLatin1().data(),
                  m_Attributes.m_LowerBound,
                  m_Attributes.m_UpperBound,
                  m_Attributes.m_Color.red(),
@@ -163,7 +149,7 @@ bool KnobOrTachoWidget::writeToIni()
 bool KnobOrTachoWidget::readFromIni()
 {
     QString SectionPath = GetIniSectionPath();
-    char loc_VarStr[BBVARI_NAME_SIZE];
+    char loc_VarCfgStr[BBVARI_NAME_SIZE + 1024 + BBVARI_NAME_SIZE];   // can include 2 signal names aand some additional stuff
     int loc_red, loc_green, loc_blue;
     QString loc_Var;
     QStringList loc_VarList;
@@ -172,13 +158,15 @@ bool KnobOrTachoWidget::readFromIni()
     loc_red = 0;
     loc_green = 0;
     loc_blue = 0;
-    if(ScQt_IniFileDataBaseReadString(SectionPath, "variable", "", loc_VarStr, sizeof (loc_VarStr), Fd)) {
-        loc_Var = CharToQString(loc_VarStr);
+    if(ScQt_IniFileDataBaseReadString(SectionPath, "variable", "", loc_VarCfgStr, sizeof (loc_VarCfgStr), Fd)) {
+        loc_Var = CharToQString(loc_VarCfgStr);
         loc_VarList = loc_Var.split(",");
         parentWidget()->setToolTip(loc_VarList.at(0));
-        if ((m_Vid = add_bbvari(QStringToConstChar(loc_VarList.value(0)), BB_UNKNOWN_WAIT, nullptr)) > 0) {
-            m_ObserverConnection.AddObserveVariable(m_Vid, OBSERVE_CONFIG_ANYTHING_CHANGED);
-            m_VariableName = loc_VarList.at(0);
+        int Vid = add_bbvari(QStringToConstChar(loc_VarList.value(0)), BB_UNKNOWN_WAIT, nullptr);
+        m_Drawarea->SetVid(Vid);
+        if (Vid > 0) {
+            m_ObserverConnection.AddObserveVariable(m_Drawarea->GetVid(), OBSERVE_CONFIG_ANYTHING_CHANGED);
+            m_Drawarea->SetVariableName(loc_VarList.at(0));
             m_Attributes.m_LowerBound = loc_VarList.value(1).toDouble();
             m_Attributes.m_UpperBound = loc_VarList.value(2).toDouble();
             if (m_Attributes.m_UpperBound <= (m_Attributes.m_LowerBound + 0.0001)) m_Attributes.m_UpperBound = m_Attributes.m_LowerBound + 1.0;
@@ -195,28 +183,18 @@ bool KnobOrTachoWidget::readFromIni()
     }
     setFont(m_Attributes.m_Font);
     m_Attributes.readFromIni(SectionPath, m_KnobOrTachoType);
+    m_ValueLabel->setVisible(m_Attributes.m_TextFlag);
+    m_ValueLabel->setVisible(m_Attributes.m_NameFlag);
 
     if (m_Attributes.m_DragStateVarFlag) {
-        m_DragStateVid = add_bbvari (QStringToConstChar(m_Attributes.m_DragStateVariableName), BB_UNKNOWN_WAIT, nullptr);
+        m_Drawarea->SetDragStateVid(add_bbvari (QStringToConstChar(m_Attributes.m_DragStateVariableName), BB_UNKNOWN_WAIT, nullptr));
     }
 
-    QFileInfo loc_checkFile(m_Attributes.m_bitmap);
-    if(loc_checkFile.exists() && loc_checkFile.isFile()) {
-        m_bitmapPathExist = true;
-    } else {
-        m_bitmapPathExist = false;
-    }
-    if (m_bitmapPathExist) {
-        if (!m_PixmapOrginalSize.load(SearchAndReplaceEnvironmentVariables(m_Attributes.m_bitmap))) {
-            m_bitmapPathExist = false;
-        }
-        CheckBitmapWindowSizeBehaviour();
-    }
-    blackboardVariableConfigChanged(m_Vid, false);
+    LoadBackgroundPixmap();
 
-    // Observer Funktion setzen um zu erfahren wann sich die Variable im Blackboard anmeldet
-    //SetObserationCallbackFunction(observeVariable);
-    //SetBbvariObservation(m_vid, OBSERVE_ALL_CONFIG);
+    blackboardVariableConfigChanged(m_Drawarea->GetVid(), false);
+    UpdateNameAndValue();
+
     return true;
 }
 
@@ -282,25 +260,16 @@ void KnobOrTachoWidget::dropEvent(QDropEvent* event)
             event->setDropAction(Qt::MoveAction);
             event->accept();
         } else {
+            int Vid = m_Drawarea->GetVid();
             event->acceptProposedAction();
-            if (m_Vid > 0) {
-                remove_bbvari_unknown_wait(m_Vid);
-                m_ObserverConnection.RemoveObserveVariable(m_Vid);
+            if (Vid > 0) {
+                remove_bbvari_unknown_wait(Vid);
+                m_ObserverConnection.RemoveObserveVariable(Vid);
             }
-            m_VariableName = Infos.GetName();
-            m_Vid = add_bbvari(QStringToConstChar(Infos.GetName()), BB_UNKNOWN_WAIT, nullptr);
-            if (m_Vid > 0) m_ObserverConnection.AddObserveVariable(m_Vid, OBSERVE_CONFIG_ANYTHING_CHANGED);
-            //this->setWindowTitle(Infos.GetName());
-            double min, max;
-            if (Infos.GetMinMaxValue(&min, &max)) {
-                 // todo m_knob.setScale(min, max);
-            }
-            /*QColor color = Infos.GetColor();
-            if(color.isValid()) {
-                QPalette loc_palette;
-                loc_palette.setColor(QPalette::Button, color);
-                setPalette(loc_palette);
-            }*/
+            m_Drawarea->SetVariableName(Infos.GetName());
+            m_Drawarea->SetVid(add_bbvari(QStringToConstChar(Infos.GetName()), BB_UNKNOWN_WAIT, nullptr));
+            if (Vid > 0) m_ObserverConnection.AddObserveVariable(Vid, OBSERVE_CONFIG_ANYTHING_CHANGED);
+            UpdateNameAndValue();
         }
     } else {
         event->ignore();
@@ -318,9 +287,10 @@ void KnobOrTachoWidget::keyPressEvent(QKeyEvent* arg_event)
     switch(arg_event->key()) {
         case Qt::Key_I:
             if(arg_event->modifiers() == Qt::ControlModifier) {
-                if(m_Vid > 0) {
+                int Vid = m_Drawarea->GetVid();
+                if(Vid > 0) {
                     char loc_variableName[BBVARI_NAME_SIZE];
-                    GetBlackboardVariableName(m_Vid, loc_variableName, sizeof(loc_variableName));
+                    GetBlackboardVariableName(Vid, loc_variableName, sizeof(loc_variableName));
                     BlackboardInfoDialog Dlg;
                     Dlg.editCurrentVariable(QString(loc_variableName));
 
@@ -366,6 +336,11 @@ bool KnobOrTachoWidget::getUseBlackboardConfig()
 void KnobOrTachoWidget::setUseBlackboardConfig(bool arg_useConfig)
 {
     m_Attributes.m_BBCfgDirectFlag = arg_useConfig;
+    int Vid = m_Drawarea->GetVid();
+    if (Vid > 0) {
+        m_Attributes.m_UpperBound = get_bbvari_max(Vid);
+        m_Attributes.m_LowerBound = get_bbvari_min(Vid);
+    }
 }
 
 double KnobOrTachoWidget::getMin()
@@ -631,7 +606,10 @@ int KnobOrTachoWidget::getTextFlag()
 
 void KnobOrTachoWidget::setTextFlag(int arg_showText)
 {
-    m_Attributes.m_TextFlag = arg_showText;
+    if (m_Attributes.m_TextFlag != arg_showText) {
+        m_Attributes.m_TextFlag = arg_showText;
+        ChangeLayout();
+    }
 }
 
 double KnobOrTachoWidget::getTextPosX()
@@ -681,7 +659,10 @@ int KnobOrTachoWidget::getTextAlign()
 
 void KnobOrTachoWidget::SetTextAlign(int par_Align)
 {
-    m_Attributes.m_TextAlign = par_Align;
+    if (m_Attributes.m_TextAlign != par_Align) {
+        m_Attributes.m_TextAlign = par_Align;
+        ChangeLayout();
+    }
 }
 
 // Name
@@ -693,7 +674,10 @@ int KnobOrTachoWidget::getNameFlag()
 
 void KnobOrTachoWidget::setNameFlag(int arg_showName)
 {
-    m_Attributes.m_NameFlag = arg_showName;
+    if (m_Attributes.m_NameFlag != arg_showName) {
+        m_Attributes.m_NameFlag = arg_showName;
+        ChangeLayout();
+    }
 }
 
 double KnobOrTachoWidget::getNamePosX()
@@ -743,7 +727,10 @@ int KnobOrTachoWidget::getNameAlign()
 
 void KnobOrTachoWidget::SetNameAlign(int par_Align)
 {
-    m_Attributes.m_NameAlign = par_Align;
+    if (m_Attributes.m_NameAlign != par_Align) {
+        m_Attributes.m_NameAlign = par_Align;
+        ChangeLayout();
+    }
 }
 
 // Bitmap
@@ -772,12 +759,19 @@ void KnobOrTachoWidget::setBitmapPath(QString arg_path)
         m_bitmapPathExist = false;
     }
     m_Attributes.m_bitmap = arg_path;
+    ResetWindowSize();
+    LoadBackgroundPixmap();
+    CheckBitmapWindowSizeBehaviour();
+    update();
 }
 
 void KnobOrTachoWidget::setBitmapSizeBehaviour(KnobOrTachoWidget::BitmapWindowSizeBehaviour arg_behaviour)
 {
+    ResetWindowSize();
     m_Attributes.m_BitmapWindowSizeBehaviour = arg_behaviour;
     CheckBitmapWindowSizeBehaviour();
+    m_NewPixmapIsLoaded = true;
+    update();
 }
 
 // If release fallback to
@@ -834,17 +828,17 @@ void KnobOrTachoWidget::CheckChangeOfDragStatusSignal(bool par_DragStatusFlagOld
     if (m_Attributes.m_DragStateVarFlag) {
         if (m_Attributes.m_DragStateVariableName.compare(par_DragStatusNameOld)) {
             // Name has changed
-            if (m_DragStateVid > 0) {
-                remove_bbvari_unknown_wait(m_DragStateVid);
+            if (m_Drawarea->GetDragStateVid() > 0) {
+                remove_bbvari_unknown_wait(m_Drawarea->GetDragStateVid());
             }
-            m_DragStateVid = add_bbvari (QStringToConstChar(m_Attributes.m_DragStateVariableName), BB_UNKNOWN_WAIT, nullptr);
+            m_Drawarea->SetDragStateVid(add_bbvari (QStringToConstChar(m_Attributes.m_DragStateVariableName), BB_UNKNOWN_WAIT, nullptr));
         }
     } else {
         if (par_DragStatusFlagOld) {
-            if (m_DragStateVid > 0) {
-                remove_bbvari_unknown_wait(m_DragStateVid);
+            if (m_Drawarea->GetDragStateVid() > 0) {
+                remove_bbvari_unknown_wait(m_Drawarea->GetDragStateVid());
             }
-            m_DragStateVid = -1;
+            m_Drawarea->SetDragStateVid(-1);
         }
     }
 }
@@ -875,6 +869,47 @@ void KnobOrTachoWidget::CheckBitmapWindowSizeBehaviour()
     }
 }
 
+void KnobOrTachoWidget::ChangeLayout()
+{
+    m_Layout->removeWidget(m_VariableNameLabel);
+    m_Layout->removeWidget(m_Drawarea);
+    m_Layout->removeWidget(m_ValueLabel);
+    if (m_Attributes.m_NameFlag && (m_Attributes.m_NameAlign != 3)) {
+        m_Layout->addWidget(m_VariableNameLabel,Qt::AlignTop);
+        m_Layout->setStretchFactor(m_VariableNameLabel, 0);
+        m_VariableNameLabel->setVisible(true);
+    } else {
+        m_VariableNameLabel->setVisible(false);
+    }
+    m_Layout->addWidget(m_Drawarea);
+    m_Layout->setStretchFactor(m_Drawarea, 1);
+    if (m_Attributes.m_TextFlag && (m_Attributes.m_TextAlign != 3)) {
+        m_Layout->addWidget(m_ValueLabel,Qt::AlignBottom);
+        m_Layout->setStretchFactor(m_ValueLabel, 0);
+        m_ValueLabel->setVisible(true);
+    } else {
+        m_ValueLabel->setVisible(false);
+    }
+    UpdateNameAndValue();
+}
+
+void KnobOrTachoWidget::LoadBackgroundPixmap()
+{
+    QFileInfo loc_checkFile(m_Attributes.m_bitmap);
+    if(loc_checkFile.exists() && loc_checkFile.isFile()) {
+        m_bitmapPathExist = true;
+    } else {
+        m_bitmapPathExist = false;
+    }
+    if (m_bitmapPathExist) {
+        if (!m_PixmapOrginalSize.load(SearchAndReplaceEnvironmentVariables(m_Attributes.m_bitmap))) {
+            m_bitmapPathExist = false;
+        }
+        m_NewPixmapIsLoaded = true;
+        CheckBitmapWindowSizeBehaviour();
+    }
+}
+
 double KnobOrTachoWidget::minArcAngleForDial(const double arg_minArcIni) const
 {
     return arg_minArcIni -90.0;
@@ -895,101 +930,115 @@ double KnobOrTachoWidget::maxArcAngleForIni(const double arg_minArcDial, const d
     return arg_minArcDial + arg_maxArcDial + 90.0;
 }
 
-void KnobOrTachoWidget::openDialog() {
+void KnobOrTachoWidget::paintEvent(QPaintEvent *arg_event)
+{
+    QPainter Painter(this);
+    if(m_Attributes.m_BitmapFlag && m_bitmapPathExist) {
+        if (m_Attributes.m_BitmapWindowSizeBehaviour == ScaleBitMap) {
+            QSize Size = size();
+            if (((Size.width()) != m_Size.width()) || (Size.height() != m_Size .height()) ||
+                  m_NewPixmapIsLoaded) {
+                m_PixmapResized = m_PixmapOrginalSize.scaled(Size);
+                m_Size = Size;
+                m_NewPixmapIsLoaded = false;
+            }
+        }
+        if (m_Attributes.m_BitmapWindowSizeBehaviour == ScaleBitMap) {
+            Painter.drawPixmap(0, 0, m_PixmapResized);
+        } else {
+            Painter.drawPixmap(0, 0, m_PixmapOrginalSize);
+        }
+    }
+}
+
+void KnobOrTachoWidget::openDialog()
+{
     m_SavedAttributes = m_Attributes;
+    m_WindowSizeStored = size(); // so we can reconstruct the window size if cancel will be pressed
+
     QStringList List;
-    List.append(m_VariableName);
+    List.append(m_Drawarea->GetVariableName());
     emit openStandardDialog(List, true, false, m_Attributes.m_Color);
 }
 
 void KnobOrTachoWidget::CyclicUpdate()
 {
+#if 0
     if (m_FirstUpdate) {
         m_FirstUpdate = false;
         CheckBitmapWindowSizeBehaviour();
     }
-    if (m_Attributes.m_BitmapWindowSizeBehaviour == ScaleBitMap) {
-        QSize Size = size();
-        if (((Size.width()) != m_Size.width()) || (Size.height() != m_Size .height())) {
-            m_PixmapResized = m_PixmapOrginalSize.scaled(Size);
-            m_Size = Size;
-        }
-    }
-
+#endif
     bool HasChangdSomething = false;
-    if (m_Vid > 0) {
-        int loc_DataType = get_bbvaritype(m_Vid);
+    int Vid = m_Drawarea->GetVid();
+    if (Vid > 0) {
+        int loc_DataType = get_bbvaritype(Vid);
         if (m_DataType != loc_DataType) HasChangdSomething = true;
         m_DataType = loc_DataType;
         if (m_DataType != BB_UNKNOWN_WAIT) {
-            int loc_ConversionType = get_bbvari_conversiontype(m_Vid);
+            int loc_ConversionType = get_bbvari_conversiontype(Vid);
             if (m_ConversionType != loc_ConversionType) HasChangdSomething = true;
             m_ConversionType = loc_ConversionType;
             double loc_value;
             if(m_Attributes.m_Physical && (m_ConversionType == BB_CONV_FORMULA)) {
-                loc_value = read_bbvari_equ(m_Vid);
+                loc_value = read_bbvari_equ(Vid);
                 if (DisplayUnitForNonePhysicalValues) m_DisplayUnit = true;
                 else m_DisplayUnit = false;
             } else {
-                loc_value = read_bbvari_convert_double(m_Vid);
+                loc_value = read_bbvari_convert_double(Vid);
                 m_DisplayUnit = true;
             }
             if (loc_value > m_Attributes.m_UpperBound) loc_value = m_Attributes.m_UpperBound;
             if (loc_value < m_Attributes.m_LowerBound) loc_value = m_Attributes.m_LowerBound;
-            if(!CompareDoubleEqual_int(m_CurrentValue, loc_value)) {
+            if(!CompareDoubleEqual_int(m_Drawarea->GetCurrentValue(), loc_value)) {
                 HasChangdSomething = true;
-                m_CurrentValue = loc_value;
-            }
-            else
-            {
-                drawValue();
+                m_Drawarea->SetCurrentValue(loc_value);
+                UpdateNameAndValue();
+            } else {
+                ReadValueFromBlackboard();
             }
         }
-    } else if (m_VidLastUpdate != m_Vid) {
+    } else if (m_VidLastUpdate != Vid) {
         HasChangdSomething = true;
-        m_CurrentValue = 0.0;
+        m_Drawarea->SetCurrentValue(0.0);
         m_DisplayUnit = false;
     }
     if (HasChangdSomething) {
         update();
     }
-    m_VidLastUpdate = m_Vid;
+    m_VidLastUpdate = Vid;
 }
 
 void KnobOrTachoWidget::blackboardVariableConfigChanged(int arg_vid, unsigned int arg_observationFlag)
 {
     Q_UNUSED(arg_observationFlag)
-    if(m_Vid == arg_vid) {
-        if (m_Attributes.m_BBCfgDirectFlag) { //Informations locally stored
-            m_Attributes.m_UpperBound = get_bbvari_max(m_Vid);
-            m_Attributes.m_LowerBound = get_bbvari_min(m_Vid);
-            /*int loc_color = get_bbvari_color(m_vid);
-            QColor loc_backgroundColor = QColor(loc_color&0x000000FF, (loc_color&0x0000FF00)>>8, (loc_color&0x00FF0000)>>16); // Sh. Win Colors 0x00bbggrr
-            QPalette loc_palette;
-            loc_palette.setColor(QPalette::Text, getTextColorForBackground(loc_backgroundColor));
-            loc_palette.setColor(QPalette::Base, loc_backgroundColor);
-            setPalette(loc_palette);*/
+    int Vid = m_Drawarea->GetVid();
+    if(Vid == arg_vid) {
+        if (m_Attributes.m_BBCfgDirectFlag) { // is informations not stored local
+            m_Attributes.m_UpperBound = get_bbvari_max(Vid);
+            m_Attributes.m_LowerBound = get_bbvari_min(Vid);
         }
         char loc_unit[BBVARI_UNIT_SIZE];
-        get_bbvari_unit(m_Vid, loc_unit, BBVARI_UNIT_SIZE);
-        if(get_bbvaritype(m_Vid) != BB_UNKNOWN_WAIT) {
+        get_bbvari_unit(Vid, loc_unit, BBVARI_UNIT_SIZE);
+        if(get_bbvaritype(Vid) != BB_UNKNOWN_WAIT) {
             double loc_value;
-            if(m_Attributes.m_Physical && (get_bbvari_conversiontype(m_Vid) == BB_CONV_FORMULA)) {
-                loc_value = read_bbvari_equ(m_Vid);
+            if(m_Attributes.m_Physical && (get_bbvari_conversiontype(Vid) == BB_CONV_FORMULA)) {
+                loc_value = read_bbvari_equ(Vid);
             } else {
-                loc_value = read_bbvari_convert_double(m_Vid);
+                loc_value = read_bbvari_convert_double(Vid);
             }
-            m_CurrentValue = loc_value;
+            m_Drawarea->SetCurrentValue(loc_value);
         }
     }
 }
 
 void KnobOrTachoWidget::changeBlackboardValue(double arg_value)
 {
-    if (m_Attributes.m_Physical && (get_bbvari_conversiontype(m_Vid) == BB_CONV_FORMULA)) {
-        write_bbvari_phys_minmax_check(m_Vid, arg_value);
+    int Vid = m_Drawarea->GetVid();
+    if (m_Attributes.m_Physical && (get_bbvari_conversiontype(Vid) == BB_CONV_FORMULA)) {
+        write_bbvari_phys_minmax_check(Vid, arg_value);
     } else {
-        write_bbvari_minmax_check(m_Vid, arg_value);
+        write_bbvari_minmax_check(Vid, arg_value);
     }
 }
 
@@ -1011,16 +1060,18 @@ void KnobOrTachoWidget::changeWindowName(QString arg_name)
 
 void KnobOrTachoWidget::changeVariable(QString arg_variable, bool arg_visible)
 {
+    int Vid = m_Drawarea->GetVid();
     Q_UNUSED(arg_visible)
-    if(m_Vid > 0) {
-        m_ObserverConnection.RemoveObserveVariable(m_Vid);
-        remove_bbvari_unknown_wait(m_Vid);
+    if(Vid > 0) {
+        m_ObserverConnection.RemoveObserveVariable(Vid);
+        remove_bbvari_unknown_wait(Vid);
     }
-    m_VariableName = arg_variable;
-    m_Vid = add_bbvari(arg_variable.toLocal8Bit().data(), BB_UNKNOWN_WAIT, "");
-    if(m_Vid > 0) {
-        m_ObserverConnection.AddObserveVariable(m_Vid, OBSERVE_CONFIG_ANYTHING_CHANGED);
+    m_Drawarea->SetVariableName(arg_variable);
+    m_Drawarea->SetVid(add_bbvari(arg_variable.toLocal8Bit().data(), BB_UNKNOWN_WAIT, ""));
+    if(Vid > 0) {
+        m_ObserverConnection.AddObserveVariable(Vid, OBSERVE_CONFIG_ANYTHING_CHANGED);
     }
+    UpdateNameAndValue();
 }
 
 void KnobOrTachoWidget::changeVaraibles(QStringList arg_variables, bool arg_visible)
@@ -1031,17 +1082,23 @@ void KnobOrTachoWidget::changeVaraibles(QStringList arg_variables, bool arg_visi
 
 void KnobOrTachoWidget::resetDefaultVariables(QStringList arg_variables)
 {
-    if(m_Vid > 0) {
-        m_ObserverConnection.RemoveObserveVariable(m_Vid);
-        remove_bbvari_unknown_wait(m_Vid);
+    int Vid = m_Drawarea->GetVid();
+    if(Vid > 0) {
+        m_ObserverConnection.RemoveObserveVariable(Vid);
+        remove_bbvari_unknown_wait(Vid);
     }
     if(arg_variables.count() > 0) {
-        m_Vid = add_bbvari(arg_variables.first().toLocal8Bit().data(), BB_UNKNOWN_WAIT, "");
-        if(m_Vid > 0) {
-            m_ObserverConnection.AddObserveVariable(m_Vid, OBSERVE_CONFIG_ANYTHING_CHANGED);
+        m_Drawarea->SetVid(add_bbvari(arg_variables.first().toLocal8Bit().data(), BB_UNKNOWN_WAIT, ""));
+        if(Vid > 0) {
+            m_ObserverConnection.AddObserveVariable(Vid, OBSERVE_CONFIG_ANYTHING_CHANGED);
         }
     }
     m_Attributes = m_SavedAttributes;
+    ResetWindowSize();
+    ChangeLayout();
+    LoadBackgroundPixmap();
+    CheckBitmapWindowSizeBehaviour();
+    update();
 }
 
 void KnobOrTachoWidget::setBBConfigDirect(bool arg_value)
@@ -1064,7 +1121,7 @@ void KnobOrTachoWidget::ConfigureSlot()
     openDialog();
 }
 
-void KnobOrTachoWidget::mousePressEvent(QMouseEvent *event)
+void KnobOrTachoWidget::DrawArea::mousePressEvent(QMouseEvent *event)
 {
     if (m_KnobOrTachoType == KnobType) {
         if (event->button() == Qt::LeftButton) {
@@ -1076,8 +1133,8 @@ void KnobOrTachoWidget::mousePressEvent(QMouseEvent *event)
             int y = Pos.ry() - ydim/2;
             double RadiusQ;
 
-            if (m_Attributes.m_NeedleSizeFlag) {
-                KnobRadius = ((xdim < ydim) ? xdim : ydim) * m_Attributes.m_NeedleSize / 100.0;
+            if (m_Attributes->m_NeedleSizeFlag) {
+                KnobRadius = ((xdim < ydim) ? xdim : ydim) * m_Attributes->m_NeedleSize / 100.0;
             } else {
                 KnobRadius = ((xdim < ydim) ? xdim : ydim) * DEFAULT_KNOP_RADIUS_FACTOR;
             }
@@ -1089,7 +1146,7 @@ void KnobOrTachoWidget::mousePressEvent(QMouseEvent *event)
             }
             if (RadiusQ < (KnobRadius * KnobRadius)) {
                 m_MoveStartPoint = Pos;
-                if (m_Attributes.m_DragStateVarFlag &&
+                if (m_Attributes->m_DragStateVarFlag &&
                     m_DragStateVid > 0) {
                     write_bbvari_minmax_check (m_DragStateVid, 1.0);
                 }
@@ -1104,12 +1161,12 @@ void KnobOrTachoWidget::mousePressEvent(QMouseEvent *event)
     } else if (m_KnobOrTachoType == SliderType) {
         if (event->button() == Qt::LeftButton) {
             QPoint Pos = event->pos();
-            QRect Rect = QRect(0, Drawarea->y(),Drawarea->width(),Drawarea->height());// Drawarea->rect(); //CalcSliderRect(width(), height());
+            QRect Rect = QRect(0, 0,width(),height());// Drawarea->rect(); //CalcSliderRect(width(), height());
             if ((Pos.rx() >= Rect.left()) && (Pos.rx() <= Rect.right()) &&
                 (Pos.ry() >= Rect.top()) && (Pos.ry() <=  Rect.bottom())) {
                 m_MoveStartPoint = Pos;
-                m_DragValue = m_CurrentValue;
-                if (m_Attributes.m_DragStateVarFlag &&
+                m_DragValue =  m_CurrentValue;
+                if (m_Attributes->m_DragStateVarFlag &&
                     (m_DragStateVid > 0)) {
                     write_bbvari_minmax_check (m_DragStateVid, 1.0);
                 }
@@ -1121,32 +1178,32 @@ void KnobOrTachoWidget::mousePressEvent(QMouseEvent *event)
             }
         }
     }
-    MdiWindowWidget::mousePressEvent(event);
+    QWidget::mousePressEvent(event);
 }
 
-void KnobOrTachoWidget::mouseReleaseEvent(QMouseEvent *event)
+void KnobOrTachoWidget::DrawArea::mouseReleaseEvent(QMouseEvent *event)
 {
     if (m_MoveFlag) {
-        if (m_Attributes.m_IfReleaseFallbackFlag) {  // FallBack is active
+        if (m_Attributes->m_IfReleaseFallbackFlag) {  // FallBack is active
             if ((event->modifiers() & Qt::ShiftModifier) != Qt::ShiftModifier) { // FallBack if Shift is pressed
-                WriteSliderValue (m_Attributes.m_IfReleaseFallbackValue);
+                WriteSliderValue (m_Attributes->m_IfReleaseFallbackValue);
             }
         } else {                                     // FallBack is not active
             if ((event->modifiers() & Qt::ShiftModifier) == Qt::ShiftModifier) { // FallBack if Shift is not pressed
-                WriteSliderValue (m_Attributes.m_IfReleaseFallbackValue);
+                WriteSliderValue (m_Attributes->m_IfReleaseFallbackValue);
             }
         }
-        if (m_Attributes.m_DragStateVarFlag &&
+        if (m_Attributes->m_DragStateVarFlag &&
             (m_DragStateVid > 0)) {
             write_bbvari_minmax_check (m_DragStateVid, 0.0);
         }
         m_MoveFlag = false;
     } else {
-        MdiWindowWidget::mouseReleaseEvent(event);
+        QWidget::mouseReleaseEvent(event);
     }
 }
 
-void KnobOrTachoWidget::mouseMoveEvent(QMouseEvent *event)
+void KnobOrTachoWidget::DrawArea::mouseMoveEvent(QMouseEvent *event)
 {
     if (m_MoveFlag) {
         if (m_KnobOrTachoType == KnobType) {
@@ -1190,10 +1247,10 @@ void KnobOrTachoWidget::mouseMoveEvent(QMouseEvent *event)
                     } else {
                         Angle = 0.0;
                     }
-                    m_DebugAngle = Angle;
-                    NewValue = (Angle - m_Attributes.m_MinAngle) / (m_Attributes.m_MaxAngle - m_Attributes.m_MinAngle) * (m_Attributes.m_UpperBound - m_Attributes.m_LowerBound) + m_Attributes.m_LowerBound;
-                    if (NewValue < m_Attributes.m_LowerBound) NewValue = m_Attributes.m_LowerBound;
-                    if (NewValue > m_Attributes.m_UpperBound) NewValue = m_Attributes.m_UpperBound;
+                    //m_DebugAngle = Angle;
+                    NewValue = (Angle - m_Attributes->m_MinAngle) / (m_Attributes->m_MaxAngle - m_Attributes->m_MinAngle) * (m_Attributes->m_UpperBound - m_Attributes->m_LowerBound) + m_Attributes->m_LowerBound;
+                    if (NewValue < m_Attributes->m_LowerBound) NewValue = m_Attributes->m_LowerBound;
+                    if (NewValue > m_Attributes->m_UpperBound) NewValue = m_Attributes->m_UpperBound;
 
                     WriteSliderValue (NewValue);
                     update();
@@ -1204,10 +1261,10 @@ void KnobOrTachoWidget::mouseMoveEvent(QMouseEvent *event)
         } else if (m_KnobOrTachoType == SliderType) {
             double Len = CalcSliderLen(height());
             double Diff = m_MoveStartPoint.ry() - event->pos().ry();
-            double Range = m_Attributes.m_UpperBound - m_Attributes.m_LowerBound;
+            double Range = m_Attributes->m_UpperBound - m_Attributes->m_LowerBound;
             double new_value = m_DragValue + (Diff / Len) * Range;
-            if (new_value < m_Attributes.m_LowerBound) new_value = m_Attributes.m_LowerBound;
-            if (new_value > m_Attributes.m_UpperBound) new_value = m_Attributes.m_UpperBound;
+            if (new_value < m_Attributes->m_LowerBound) new_value = m_Attributes->m_LowerBound;
+            if (new_value > m_Attributes->m_UpperBound) new_value = m_Attributes->m_UpperBound;
 
             WriteSliderValue (new_value);
 
@@ -1220,29 +1277,41 @@ void KnobOrTachoWidget::mouseMoveEvent(QMouseEvent *event)
         if((GetEventGlobalPos(event) - m_startDragPosition).manhattanLength() < QApplication::startDragDistance()) {
             return;
         }
-        //enum DragAndDropAlignment Alignment;
         enum DragAndDropDisplayMode DisplayMode;
 
-        if (m_Attributes.m_Physical) {
+        if (m_Attributes->m_Physical) {
             DisplayMode = DISPLAY_MODE_PHYS;
         } else {
             DisplayMode = DISPLAY_MODE_DEC;
         }
-
         DragAndDropInfos Infos;
         Infos.SetName(m_VariableName);
-        Infos.SetColor(m_Attributes.m_Color);
-        Infos.SetMinMaxValue(m_Attributes.m_LowerBound, m_Attributes.m_UpperBound);
+        Infos.SetColor(m_Attributes->m_Color);
+        Infos.SetMinMaxValue(m_Attributes->m_LowerBound, m_Attributes->m_UpperBound);
         Infos.SetDisplayMode(DisplayMode);
-        //Infos.SetAlignment(Alignment);
         QDrag *loc_dragObject = buildDragObject(this, &Infos);
         loc_dragObject->exec(Qt::CopyAction | Qt::MoveAction, Qt::CopyAction);
 
-        MdiWindowWidget::mouseMoveEvent(event);
+        QWidget::mouseMoveEvent(event);
     }
 }
 
-double KnobOrTachoWidget::PaintRoundScale(QPainter &Painter, int par_Width, int par_Height, int par_Offset)
+KnobOrTachoWidget::DrawArea::DrawArea(enum KnobOrTachoType par_KnobOrTachoType, KnobAttributes *par_Attributes, QWidget *par_Parent) :
+    QWidget(par_Parent)
+{
+    m_KnobOrTachoType = par_KnobOrTachoType;
+    m_Attributes = par_Attributes;
+    m_FontSizeDyn = -1;
+    maxLabelSize = 0;
+    m_MoveFlag = false;
+    m_Overwind = false;
+    m_LastXpos = 0;
+    m_LastYpos = 0;
+    m_Vid = -1;
+    m_DragStateVid = -1;
+}
+
+double KnobOrTachoWidget::DrawArea::PaintRoundScale(QPainter &Painter, int par_Width, int par_Height)
 {
     QPen SavePen;
     double pixel_per_unit;
@@ -1251,20 +1320,25 @@ double KnobOrTachoWidget::PaintRoundScale(QPainter &Painter, int par_Width, int 
 
     double Diameter = ((par_Width < par_Height) ? par_Width : par_Height);
     double Radius = Diameter / 2.0;
-    double ValueRange = m_Attributes.m_UpperBound - m_Attributes.m_LowerBound; //range of Value
+    double ValueRange = m_Attributes->m_UpperBound - m_Attributes->m_LowerBound; //range of Value
     double Circumference = M_PI * Diameter;
-    double SegmentCircumference = Circumference / 360.0 * (m_Attributes.m_MaxAngle - m_Attributes.m_MinAngle); //length of drawing cicle in Pixel
+    double SegmentCircumference = Circumference / 360.0 * (m_Attributes->m_MaxAngle - m_Attributes->m_MinAngle); //length of drawing cicle in Pixel
 
     int x;
     int moduloforlabel = 10;
 
-    if (SegmentCircumference > 1000)
-    {
+    /* only for debuging
+    Painter.drawRect(0,0, par_Width-1, par_Height-1);
+    Painter.drawLine(0,0, par_Width-1, par_Height-1);
+    Painter.drawLine(par_Width-1, 0, 0, par_Height-1);
+    */
+
+    if (SegmentCircumference > 1000) {
          moduloforlabel = 20;
     }
 
-    ym = Drawarea->y() + (Drawarea->height()* m_Attributes.m_ScalePosY / 100.0);
-    xm = (int)((double)par_Width * m_Attributes.m_ScalePosX / 100.0);
+    int ym = (int)((double)par_Height * m_Attributes->m_ScalePosY / 100.0);
+    int xm = (int)((double)par_Width * m_Attributes->m_ScalePosX / 100.0);
 
     // adapt scale
     if (ValueRange <= 0.0) {
@@ -1274,8 +1348,8 @@ double KnobOrTachoWidget::PaintRoundScale(QPainter &Painter, int par_Width, int 
     }
     if (pixel_per_line <= 0.0) pixel_per_line = 1.0;
 
-    if (m_Attributes.m_ScaleStepFlag) {
-        pixel_per_line = SegmentCircumference / (m_Attributes.m_MaxAngle - m_Attributes.m_MinAngle) * m_Attributes.m_ScaleStep; //calc user Scale
+    if (m_Attributes->m_ScaleStepFlag) {
+        pixel_per_line = SegmentCircumference / (m_Attributes->m_MaxAngle - m_Attributes->m_MinAngle) * m_Attributes->m_ScaleStep; //calc user Scale
     } else {
         x = 0;
         if (pixel_per_line > DEFAULT_SCALE_PIXEL_STEP) {
@@ -1292,9 +1366,9 @@ double KnobOrTachoWidget::PaintRoundScale(QPainter &Painter, int par_Width, int 
             }
         }
     }
-    pixel_first_line = ceil (m_Attributes.m_LowerBound * pixel_per_unit / pixel_per_line) * pixel_per_line
-                           - m_Attributes.m_LowerBound * pixel_per_unit;
-    value_first_text = ceil (m_Attributes.m_LowerBound * pixel_per_unit / pixel_per_line) * pixel_per_line / pixel_per_unit;
+    pixel_first_line = ceil (m_Attributes->m_LowerBound * pixel_per_unit / pixel_per_line) * pixel_per_line
+                           - m_Attributes->m_LowerBound * pixel_per_unit;
+    value_first_text = ceil (m_Attributes->m_LowerBound * pixel_per_unit / pixel_per_line) * pixel_per_line / pixel_per_unit;
 
     pixel_first_line -= pixel_per_line;
     value_first_text -= pixel_per_line / pixel_per_unit;
@@ -1305,40 +1379,37 @@ double KnobOrTachoWidget::PaintRoundScale(QPainter &Painter, int par_Width, int 
     if (FontSize < 6) FontSize = 6;
     if (FontSize > 20) FontSize = 20;
     if (m_FontSizeDyn != FontSize) {
-        m_ScaleFont = QFont(m_Attributes.m_Font.family(), FontSize);
+        m_ScaleFont = QFont(m_Attributes->m_Font.family(), FontSize);
         m_FontSizeDyn = FontSize;
     }
     Painter.setFont(m_ScaleFont);
+
+    QFontMetrics FontMetrics(Painter.font(), Painter.device());
 
     double savepixel_first_line = pixel_first_line;
     double savevalue_first_text = value_first_text;
     x = 0;
     maxLabelSize = 0;
     maxLabelSizey = 0;
-    while (pixel_first_line < SegmentCircumference)
-    {
+    while (pixel_first_line < SegmentCircumference) {
         if (pixel_first_line >= 0.0) {
-            if (!(x%moduloforlabel))
-            {
+            if (!(x%moduloforlabel)) {
                 char txt[64];
                 if ((value_first_text > 1000000.0) || (value_first_text < -1000000.0)) {
-                    sprintf (txt, "%e", value_first_text);
+                    PrintFormatToString (txt, sizeof(txt), "%e", value_first_text);
                 } else if ((value_first_text < 0.0000001) && (value_first_text > -0.0000001)) {
-                    sprintf (txt, "0");
+                    PrintFormatToString (txt, sizeof(txt), "0");
                 } else {
-                    sprintf (txt, "%g", value_first_text);
+                    PrintFormatToString (txt, sizeof(txt), "%g", value_first_text);
                 }
                 QString ValueString(txt);
-                QFontMetrics FontMetrics(m_ScaleFont);
-                QRect Rect = FontMetrics.boundingRect(ValueString);
-                int Width = Rect.width();
-                int Height =Rect.height();
-                if (maxLabelSize < Width)
-                {
+                QSize Size = FontMetrics.size(Qt::TextSingleLine, ValueString);
+                int Width = Size.width();
+                int Height =Size.height();
+                if (maxLabelSize < Width) {
                     maxLabelSize = Width;
                 }
-                if (maxLabelSizey < Height)
-                {
+                if (maxLabelSizey < Height) {
                     maxLabelSizey = Height;
                 }
             }
@@ -1347,8 +1418,6 @@ double KnobOrTachoWidget::PaintRoundScale(QPainter &Painter, int par_Width, int 
         pixel_first_line += pixel_per_line;
         x++;
     }
-    maxLabelSize = maxLabelSize;
-    maxLabelSizey = maxLabelSizey;
 
     //new calculation of Radius with the know of label length and heigh
     double circlewidth = par_Width - (2 * maxLabelSize) - (3 * LONGSCALE);
@@ -1356,8 +1425,8 @@ double KnobOrTachoWidget::PaintRoundScale(QPainter &Painter, int par_Width, int 
     Diameter = ((circlewidth < circleheight) ? circlewidth : circleheight);
     Radius = Diameter / 2.0;
 
-    if (m_Attributes.m_ScaleSizeFlag) {
-        Radius = m_Attributes.m_ScaleSize * Radius / 100.0; //scaling from User
+    if (m_Attributes->m_ScaleSizeFlag) {
+        Radius = m_Attributes->m_ScaleSize * Radius / 100.0; //scaling from User
     }
 
     value_first_text = savevalue_first_text;
@@ -1366,7 +1435,7 @@ double KnobOrTachoWidget::PaintRoundScale(QPainter &Painter, int par_Width, int 
     x = 0;
     while (pixel_first_line < SegmentCircumference) {
         if (pixel_first_line >= 0.0) {
-            double Angle =  m_Attributes.m_MinAngle + (pixel_first_line / Circumference) * 360.0;
+            double Angle =  m_Attributes->m_MinAngle + (pixel_first_line / Circumference) * 360.0;
             int Len = ((x%5)?SHORTSCALE:(x%10)?10:LONGSCALE);
             double xp = sin((Angle / 360.0) * 2.0 * M_PI);
             double yp = cos((Angle / 360.0) * 2.0 * M_PI);
@@ -1376,93 +1445,92 @@ double KnobOrTachoWidget::PaintRoundScale(QPainter &Painter, int par_Width, int 
             int y2 = yp * (Radius + Len);
             Painter.drawLine (x1 + xm, ym - y1, x2 + xm, ym - y2);
             if (!(x%moduloforlabel)) {
-                {//if (!m_Attributes.m_TextFlag)  {//|| ((Angle < -30.0) || (Angle > 30.0))) {
-                    char txt[64];
-                    if ((value_first_text > 1000000.0) || (value_first_text < -1000000.0)) {
-                        sprintf (txt, "%e", value_first_text);
-                    } else if ((value_first_text < 0.0000001) && (value_first_text > -0.0000001)) {
-                            sprintf (txt, "0");
-                    } else {
-                        sprintf (txt, "%g", value_first_text);
-                    }
-                    double x3 = xp * (Radius + 1.5 * Len);
-                    double y3 = yp * (Radius + 1.5 * Len);
-                    QString ValueString(txt);
-                    QFontMetrics FontMetrics(m_ScaleFont);
-                    QRect Rect = FontMetrics.boundingRect(ValueString);
-                    int Width = Rect.width();
-                    int Height =Rect.height();
-                    Qt::AlignmentFlag Alignment;
-                    if (Angle > 30.0) {
-                        Alignment = Qt::AlignRight;
-                        Rect.setLeft(Rect.left() + xm + x3);
-                    } else if (Angle < -30.0) {
-                        Alignment = Qt::AlignLeft;
-                        Rect.setLeft(Rect.left() + xm + x3 - Width);
-                    } else {
-                        Alignment = Qt::AlignCenter;
-                        Rect.setLeft(Rect.left() + xm + x3 - Width/2);
-                    }
-                    Rect.setTop(Rect.top() + ym - y3);
-                    Rect.setWidth(Width);
-                    Rect.setHeight(Height);
-
-                    Painter.drawText (Rect, Alignment, ValueString);
+                char txt[64];
+                if ((value_first_text > 1000000.0) || (value_first_text < -1000000.0)) {
+                    PrintFormatToString (txt, sizeof(txt), "%e", value_first_text);
+                } else if ((value_first_text < 0.0000001) && (value_first_text > -0.0000001)) {
+                        PrintFormatToString (txt, sizeof(txt), "0");
+                } else {
+                    PrintFormatToString (txt, sizeof(txt), "%g", value_first_text);
                 }
+                double x3 = xp * (Radius + 1.5 * Len);
+                double y3 = yp * (Radius + 1.5 * Len);
+                QString ValueString(txt);
+                QSize Size = FontMetrics.size(Qt::TextSingleLine, ValueString);
+                int Width = Size.width();
+                int Height = Size.height();
+                int Height23 = (Height * 2) / 3;
+                QRect Rect;
+                Qt::AlignmentFlag Alignment;
+                if (Angle > 30.0) {
+                    Alignment = Qt::AlignRight;
+                    Rect.setLeft(xm + x3);
+                    Rect.setTop(ym - y3 - Height23);
+                } else if (Angle < -30.0) {
+                    Alignment = Qt::AlignLeft;
+                    Rect.setLeft(xm + x3 - Width);
+                    Rect.setTop(ym - y3 - Height23);
+                } else {
+                    Alignment = Qt::AlignCenter;
+                    Rect.setLeft(xm + x3 - Width/2);
+                    Rect.setTop(ym - y3 - Height);
+                }
+                Rect.setWidth(Width);
+                Rect.setHeight(Height);
+
+                Painter.drawText (Rect, Alignment, ValueString);
+                // only for debuging
+                //Painter.drawRect (Rect);
             }
         }
         value_first_text += pixel_per_line / pixel_per_unit;
         pixel_first_line += pixel_per_line;
         x++;
     }
-    if (m_Attributes.m_ScaleColorFlag) {
+    if (m_Attributes->m_ScaleColorFlag) {
         Painter.setPen(SavePen);
     }
 
-
-
     // drawing the round scale
     QRect Rectangle(xm - Radius, ym - Radius, Radius*2, Radius*2);
-    if (m_Attributes.m_ScaleColorFlag) {
+    if (m_Attributes->m_ScaleColorFlag) {
         SavePen = Painter.pen();
-        Painter.setPen(m_Attributes.m_ScaleColor);
+        Painter.setPen(m_Attributes->m_ScaleColor);
     }
-    Painter.drawArc(Rectangle, (90 - m_Attributes.m_MaxAngle) * 16, (m_Attributes.m_MaxAngle - m_Attributes.m_MinAngle) * 16);
+    Painter.drawArc(Rectangle, (90 - m_Attributes->m_MaxAngle) * 16, (m_Attributes->m_MaxAngle - m_Attributes->m_MinAngle) * 16);
 
     return Radius;
 }
 
-void KnobOrTachoWidget::PaintLinearSlopeScale(QPainter &Painter, int par_Width, int par_Height, int par_Offset)
+void KnobOrTachoWidget::DrawArea::PaintLinearSlopeScale(QPainter &Painter, int par_Width, int par_Height)
 {
     QPen SavePen;
     double pixel_per_unit, pixel_per_line;
     double pixel_first_line, value_first_text;
     int x;
-
-    //int xm = (int)((double)par_Width * m_Attributes.m_ScalePosX / 100.0);
     int SliderLen;
     int StartSlider;
     int EndSlider;
 
     if (m_KnobOrTachoType == BargraphType)
     {
-        if (m_Attributes.m_NeedleSizeFlag) {
-            SliderLen = (int)((double)(par_Height) * m_Attributes.m_NeedleSize / 100.0);
+        if (m_Attributes->m_NeedleSizeFlag) {
+            SliderLen = (int)((double)(par_Height) * m_Attributes->m_NeedleSize / 100.0);
         } else {
             SliderLen = par_Height - UPPERFRAMESPACE;
         }
     }
     else
     {
-        if (m_Attributes.m_NeedleSizeFlag) {
-            SliderLen = (int)((double)(par_Height - par_Height/8) * m_Attributes.m_NeedleSize / 100.0);
+        if (m_Attributes->m_NeedleSizeFlag) {
+            SliderLen = (int)((double)(par_Height - par_Height/8) * m_Attributes->m_NeedleSize / 100.0);
         } else {
             SliderLen = par_Height - par_Height/8;
         }
     }
 
     // adapt scale
-    double ValueRange = m_Attributes.m_UpperBound - m_Attributes.m_LowerBound;
+    double ValueRange = m_Attributes->m_UpperBound - m_Attributes->m_LowerBound;
     if (ValueRange <= 0.0) {
         pixel_per_line = pixel_per_unit = 1.0;
     } else {
@@ -1470,9 +1538,8 @@ void KnobOrTachoWidget::PaintLinearSlopeScale(QPainter &Painter, int par_Width, 
     }
     if (pixel_per_line <= 0.0) pixel_per_line = 1.0;
 
-    if (m_Attributes.m_ScaleStepFlag) {
-        pixel_per_line = (double)SliderLen * m_Attributes.m_ScaleStep / 100.0;
-        //pixel_per_unit = (double)SliderLen / ValueRange;
+    if (m_Attributes->m_ScaleStepFlag) {
+        pixel_per_line = (double)SliderLen * m_Attributes->m_ScaleStep / 100.0;
     } else {
         x = 0;
         if (pixel_per_line > DEFAULT_SCALE_PIXEL_STEP) {
@@ -1489,9 +1556,9 @@ void KnobOrTachoWidget::PaintLinearSlopeScale(QPainter &Painter, int par_Width, 
             }
         }
     }
-    pixel_first_line = ceil (m_Attributes.m_LowerBound * pixel_per_unit / pixel_per_line) * pixel_per_line
-                           - m_Attributes.m_LowerBound * pixel_per_unit;
-    value_first_text = ceil (m_Attributes.m_LowerBound * pixel_per_unit / pixel_per_line) * pixel_per_line / pixel_per_unit;
+    pixel_first_line = ceil (m_Attributes->m_LowerBound * pixel_per_unit / pixel_per_line) * pixel_per_line
+                           - m_Attributes->m_LowerBound * pixel_per_unit;
+    value_first_text = ceil (m_Attributes->m_LowerBound * pixel_per_unit / pixel_per_line) * pixel_per_line / pixel_per_unit;
 
     pixel_first_line -= pixel_per_line;
     value_first_text -= pixel_per_line / pixel_per_unit;
@@ -1504,7 +1571,7 @@ void KnobOrTachoWidget::PaintLinearSlopeScale(QPainter &Painter, int par_Width, 
     if (FontSize < 6) FontSize = 6;
     if (FontSize > (int)pixel_per_line*5) FontSize = (int)pixel_per_line*5;
     if (m_FontSizeDyn != FontSize) {
-        m_ScaleFont = QFont(m_Attributes.m_Font.family(), FontSize);
+        m_ScaleFont = QFont(m_Attributes->m_Font.family(), FontSize);
         m_FontSizeDyn = FontSize;
     }
     Painter.setFont(m_ScaleFont);
@@ -1519,14 +1586,14 @@ void KnobOrTachoWidget::PaintLinearSlopeScale(QPainter &Painter, int par_Width, 
             if (!(x%5)) { //every y you get a label
                 char txt[64];
                 if ((value_first_text > 1000000.0) || (value_first_text < -1000000.0)) {
-                    sprintf (txt, "%e", value_first_text);
+                    PrintFormatToString (txt, sizeof(txt), "%e", value_first_text);
                 } else if ((value_first_text < 0.0000001) && (value_first_text > -0.0000001)) {
-                    sprintf (txt, "0");
+                    PrintFormatToString (txt, sizeof(txt), "0");
                 } else {
-                    sprintf (txt, "%g", value_first_text);
+                    PrintFormatToString (txt, sizeof(txt), "%g", value_first_text);
                 }
                 QString ValueString(txt);
-                QFontMetrics FontMetrics(m_ScaleFont);
+                QFontMetrics FontMetrics(Painter.font(), Painter.device());
                 QRect Rect = FontMetrics.boundingRect(ValueString);
                 int Width = Rect.width();
                 if (Width > maxLabelSize)
@@ -1539,23 +1606,15 @@ void KnobOrTachoWidget::PaintLinearSlopeScale(QPainter &Painter, int par_Width, 
         pixel_first_line += pixel_per_line;
         x++;
     }
-    maxLabelSize + 17;
     value_first_text = savevalue_first_text;
     pixel_first_line = savepixel_first_line;
 
-    if (VariableNameLabel->isVisible())
-    {
-        StartSlider = par_Height - ((par_Height - SliderLen) / 2) + VariableNameLabel->height() + 5;
-    }
-    else
-    {
-        StartSlider = par_Height - ((par_Height - SliderLen) / 2);
-    }
+    StartSlider = par_Height - ((par_Height - SliderLen) / 2);
     EndSlider = StartSlider - SliderLen;
 
-    if (m_Attributes.m_ScaleColorFlag) {
+    if (m_Attributes->m_ScaleColorFlag) {
         SavePen = Painter.pen();
-        Painter.setPen(m_Attributes.m_ScaleColor);
+        Painter.setPen(m_Attributes->m_ScaleColor);
     }
     Painter.drawLine(QPoint(maxLabelSize + SPACE_BETWEEN_SCALETEXT, StartSlider), QPoint(maxLabelSize + SPACE_BETWEEN_SCALETEXT, EndSlider));
 
@@ -1572,14 +1631,14 @@ void KnobOrTachoWidget::PaintLinearSlopeScale(QPainter &Painter, int par_Width, 
             if (!(x%5)) { //every y you get a label
                 char txt[64];
                 if ((value_first_text > 1000000.0) || (value_first_text < -1000000.0)) {
-                    sprintf (txt, "%e", value_first_text);
+                    PrintFormatToString (txt, sizeof(txt), "%e", value_first_text);
                 } else if ((value_first_text < 0.0000001) && (value_first_text > -0.0000001)) {
-                        sprintf (txt, "0");
+                        PrintFormatToString (txt, sizeof(txt), "0");
                 } else {
-                    sprintf (txt, "%g", value_first_text);
+                    PrintFormatToString (txt, sizeof(txt), "%g", value_first_text);
                 }
                 QString ValueString(txt);
-                QFontMetrics FontMetrics(m_ScaleFont);
+                QFontMetrics FontMetrics(Painter.font(), Painter.device());
                 QRect Rect = FontMetrics.boundingRect(ValueString);
                 int Width = Rect.width();
                 int Height =Rect.height();
@@ -1596,32 +1655,34 @@ void KnobOrTachoWidget::PaintLinearSlopeScale(QPainter &Painter, int par_Width, 
         pixel_first_line += pixel_per_line;
         x++;
     }
-    if (m_Attributes.m_ScaleColorFlag) {
+    if (m_Attributes->m_ScaleColorFlag) {
         Painter.setPen(SavePen);
     }
 }
 
-void KnobOrTachoWidget::PaintKnob(QPainter &Painter, int par_Width, int par_Height, double par_Radius, int par_Offset)
+void KnobOrTachoWidget::DrawArea::PaintKnob(QPainter &Painter, int par_Width, int par_Height, double par_Radius)
 {
     QBrush SaveBrush = Painter.brush();
     QPen SavePen = Painter.pen();
 
-    if (m_Attributes.m_NeedleSizeFlag) {
-        par_Radius = m_Attributes.m_NeedleSize * par_Radius / 100.0;
+    if (m_Attributes->m_NeedleSizeFlag) {
+        par_Radius = m_Attributes->m_NeedleSize * par_Radius / 100.0;
     } else {
         par_Radius = DEFAULT_KNOP_RADIUS_FACTOR * par_Radius;
     }
-    if (m_Attributes.m_NeedleLineColorFlag) {
-        Painter.setPen(m_Attributes.m_NeedleLineColor);
+    if (m_Attributes->m_NeedleLineColorFlag) {
+        Painter.setPen(m_Attributes->m_NeedleLineColor);
     }
-    if (m_Attributes.m_NeedleFillColorFlag) {
-        Painter.setBrush(m_Attributes.m_NeedleFillColor);
+    if (m_Attributes->m_NeedleFillColorFlag) {
+        Painter.setBrush(m_Attributes->m_NeedleFillColor);
     } else {
         Painter.setBrush(QBrush(Qt::darkGray));
     }
     int Radius = (int)par_Radius;
+    int ym = (int)((double)par_Height * m_Attributes->m_ScalePosY / 100.0);
+    int xm = (int)((double)par_Width * m_Attributes->m_ScalePosX / 100.0);
     Painter.drawEllipse(QPoint(xm, ym), Radius, Radius);
-    double Angle = (m_CurrentValue - m_Attributes.m_LowerBound) / (m_Attributes.m_UpperBound - m_Attributes.m_LowerBound) * (m_Attributes.m_MaxAngle - m_Attributes.m_MinAngle) + m_Attributes.m_MinAngle;
+    double Angle = (m_CurrentValue - m_Attributes->m_LowerBound) / (m_Attributes->m_UpperBound - m_Attributes->m_LowerBound) * (m_Attributes->m_MaxAngle - m_Attributes->m_MinAngle) + m_Attributes->m_MinAngle;
     double xp = sin((Angle / 360.0) * 2.0 * M_PI);
     double yp = cos((Angle / 360.0) * 2.0 * M_PI);
     double x1 = xp * (par_Radius * 0.2);
@@ -1632,8 +1693,8 @@ void KnobOrTachoWidget::PaintKnob(QPainter &Painter, int par_Width, int par_Heig
     int Width = (int)(par_Radius * 0.1);
     if (Width <= 0) Width = 1;
     Pen.setWidth(Width);
-    if (m_Attributes.m_NeedleLineColorFlag) {
-        Pen.setColor(m_Attributes.m_NeedleLineColor);
+    if (m_Attributes->m_NeedleLineColorFlag) {
+        Pen.setColor(m_Attributes->m_NeedleLineColor);
     }
     Pen.setCapStyle(Qt::RoundCap);
     Painter.setPen(Pen);
@@ -1642,42 +1703,43 @@ void KnobOrTachoWidget::PaintKnob(QPainter &Painter, int par_Width, int par_Heig
     Painter.setPen(SavePen);
 }
 
-void KnobOrTachoWidget::PaintNeedle(QPainter &Painter, int par_Width, int par_Height, double par_Radius, int par_Offset)
+void KnobOrTachoWidget::DrawArea::PaintNeedle(QPainter &Painter, int par_Width, int par_Height, double par_Radius)
 {
     QBrush SaveBrush = Painter.brush();
     QPen SavePen = Painter.pen();
 
     int rn = par_Radius;
-    if (m_Attributes.m_NeedleSizeFlag) {
-        rn = static_cast<int>(par_Radius * m_Attributes.m_NeedleSize / 100.0);
+    if (m_Attributes->m_NeedleSizeFlag) {
+        rn = static_cast<int>(par_Radius * m_Attributes->m_NeedleSize / 100.0);
     }
     int rnm = static_cast<int>(par_Radius * 1.0 / 12.0);
     int rnn = static_cast<int>(par_Radius * 1.0 / 8.0);
 
-    int rns = static_cast<int>(par_Radius / 20.0);
-
     double value;
-    if (m_CurrentValue > m_Attributes.m_UpperBound) value = m_Attributes.m_UpperBound;
-    else if (m_CurrentValue < m_Attributes.m_LowerBound) value = m_Attributes.m_LowerBound;
+    if (m_CurrentValue > m_Attributes->m_UpperBound) value = m_Attributes->m_UpperBound;
+    else if (m_CurrentValue < m_Attributes->m_LowerBound) value = m_Attributes->m_LowerBound;
     else value = m_CurrentValue;
 
-    double w = 90.0 + m_Attributes.m_MinAngle +
-        ((value - m_Attributes.m_LowerBound) * (m_Attributes.m_MaxAngle - m_Attributes.m_MinAngle) / (m_Attributes.m_UpperBound - m_Attributes.m_LowerBound));
+    double w = 90.0 + m_Attributes->m_MinAngle +
+        ((value - m_Attributes->m_LowerBound) * (m_Attributes->m_MaxAngle - m_Attributes->m_MinAngle) / (m_Attributes->m_UpperBound - m_Attributes->m_LowerBound));
 
     w = w * ((2.0*M_PI) / 360.0);
     QPolygon Polygon;
     SaveBrush = Painter.brush();
-    if (m_Attributes.m_NeedleFillColorFlag) {
-        Painter.setBrush(QBrush(m_Attributes.m_NeedleFillColor));
+    if (m_Attributes->m_NeedleFillColorFlag) {
+        Painter.setBrush(QBrush(m_Attributes->m_NeedleFillColor));
     } else {
         Painter.setBrush(QBrush(Qt::red));         // if not user defined use red
     }
     SavePen = Painter.pen();
-    if (m_Attributes.m_NeedleLineColorFlag) {
-        Painter.setPen(m_Attributes.m_NeedleLineColor);
+    if (m_Attributes->m_NeedleLineColorFlag) {
+        Painter.setPen(m_Attributes->m_NeedleLineColor);
     } else {
         // if not user defined use default color
     }
+    int ym = (int)((double)par_Height * m_Attributes->m_ScalePosY / 100.0);
+    int xm = (int)((double)par_Width * m_Attributes->m_ScalePosX / 100.0);
+
     Polygon.append(QPoint(xm - static_cast<int>(cos (w) * rn), ym - static_cast<int>(sin (w) * rn)));
     Polygon.append(QPoint(xm + static_cast<int>(sin (w) * rnm), ym - static_cast<int>(cos (w) * rnm)));
     Polygon.append(QPoint(xm - static_cast<int>(sin (w) * rnm), ym + static_cast<int>(cos (w) * rnm)));
@@ -1687,39 +1749,35 @@ void KnobOrTachoWidget::PaintNeedle(QPainter &Painter, int par_Width, int par_He
     Painter.drawLine(QPoint(xm - static_cast<int>(cos (w) * rn), ym - static_cast<int>(sin (w) * rn)), QPoint(xm, ym));
     Painter.drawEllipse (QPoint(xm,ym), rnm, rnm); //  red cycle with 1/12 radius of the needle length
 
-    //Painter.drawEllipse (QPoint(xm - static_cast<int>(cos (w) * rn), ym - static_cast<int>(sin (w) * rn)), rns, rns); //  red cycle with 1/20 radius of the needle length
-
     Painter.setBrush(SaveBrush);
     Painter.setPen(SavePen);
 }
 
-void KnobOrTachoWidget::PaintSliderKnob(QPainter &Painter, int par_Width, int par_Height, int par_Offset)
+void KnobOrTachoWidget::DrawArea::PaintSliderKnob(QPainter &Painter, int par_Width, int par_Height)
 {
     QBrush SaveBrush = Painter.brush();
     QPen SavePen = Painter.pen();
-    //QRect Rect = CalcSliderRect(par_Width, par_Height);
     double Value;
-    if (m_CurrentValue > m_Attributes.m_UpperBound) Value = m_Attributes.m_UpperBound;
-    else if (m_CurrentValue < m_Attributes.m_LowerBound) Value = m_Attributes.m_LowerBound;
+    if (m_CurrentValue > m_Attributes->m_UpperBound) Value = m_Attributes->m_UpperBound;
+    else if (m_CurrentValue < m_Attributes->m_LowerBound) Value = m_Attributes->m_LowerBound;
     else Value = m_CurrentValue;
 
-    //int posscale = (int)((double)par_Width * m_Attributes.m_ScalePosX / 100.0) + SPACE_BETWEEN_SCALE; // possition of scala
     int posscale = maxLabelSize + SPACE_BETWEEN_SCALETEXT + SPACE_BETWEEN_SCALE; // possition of scala
 
     int SliderLen = 0;
     int SliderWidth;
     int StartSlider;
     int EndSlider;
-    if (m_Attributes.m_NeedleSizeFlag)
+    if (m_Attributes->m_NeedleSizeFlag)
     {
-        SliderLen = (int)((double)(par_Height - par_Height/8) * m_Attributes.m_NeedleSize / 100.0);
+        SliderLen = (int)((double)(par_Height - par_Height/8) * m_Attributes->m_NeedleSize / 100.0);
     }
     else
     {
         SliderLen = par_Height - par_Height/8;
     }
 
-    if (m_Attributes.m_ScaleFlag)
+    if (m_Attributes->m_ScaleFlag)
     {
         SliderWidth = par_Width - posscale; // width of slider
     }
@@ -1729,18 +1787,9 @@ void KnobOrTachoWidget::PaintSliderKnob(QPainter &Painter, int par_Width, int pa
         posscale = 0;
     }
 
-
-    //StartSlider = par_Height - ((par_Height -SliderLen) / 2) + (VariableNameLabel->height()*2);
-    if (VariableNameLabel->isVisible())
-    {
-        StartSlider = (par_Height + VariableNameLabel->height() + 5) + ((SliderLen - par_Height)/2);
-    }
-    else
-    {
-        StartSlider = par_Height + ((SliderLen - par_Height)/2);
-    }
+    StartSlider = par_Height + ((SliderLen - par_Height)/2);
     EndSlider = StartSlider - SliderLen;
-    int CurrentSliderPos = StartSlider - static_cast<int>(SliderLen * (Value - m_Attributes.m_LowerBound) / (m_Attributes.m_UpperBound - m_Attributes.m_LowerBound));
+    int CurrentSliderPos = StartSlider - static_cast<int>(SliderLen * (Value - m_Attributes->m_LowerBound) / (m_Attributes->m_UpperBound - m_Attributes->m_LowerBound));
 
     QRect Rect;
     Rect.setTop(CurrentSliderPos + par_Height/16);
@@ -1749,21 +1798,20 @@ void KnobOrTachoWidget::PaintSliderKnob(QPainter &Painter, int par_Width, int pa
     Rect.setRight((par_Width+posscale)/2 + (SliderWidth/2));
 
     SaveBrush = Painter.brush();
-    if (m_Attributes.m_NeedleFillColorFlag) {
-        Painter.setBrush(QBrush(m_Attributes.m_NeedleFillColor));
+    if (m_Attributes->m_NeedleFillColorFlag) {
+        Painter.setBrush(QBrush(m_Attributes->m_NeedleFillColor));
     } else {
         Painter.setBrush(Qt::lightGray);
     }
     SavePen = Painter.pen();
-    if (m_Attributes.m_NeedleLineColorFlag) {
-        Painter.setPen(m_Attributes.m_NeedleLineColor);
+    if (m_Attributes->m_NeedleLineColorFlag) {
+        Painter.setPen(m_Attributes->m_NeedleLineColor);
     } else {
         // if not user defined use default color
     }
 
 
     QPainterPath Path;
-    //Path.addRoundedRect(Rect, SliderWidth/5, SliderWidth/5);
     Path.addRoundedRect(Rect, 5, 5);
     Painter.drawPath(Path);
 
@@ -1773,60 +1821,56 @@ void KnobOrTachoWidget::PaintSliderKnob(QPainter &Painter, int par_Width, int pa
     Rect.setLeft((par_Width+posscale)/2  - (SliderWidth/3));
     Rect.setRight((par_Width+posscale)/2 + (SliderWidth/3));
 
-    Painter.setBrush(m_Attributes.m_Color); //Qt::black);
+    Painter.setBrush(m_Attributes->m_Color); //Qt::black);
     Painter.drawRect(Rect);
 
     Painter.setBrush(SaveBrush);
     Painter.setPen(SavePen);
 }
 
-void KnobOrTachoWidget::PaintBargraph(QPainter &Painter, int par_Width, int par_Height, int par_Offset)
+void KnobOrTachoWidget::DrawArea::PaintBargraph(QPainter &Painter, int par_Width, int par_Height)
 {
     QBrush SaveBrush = Painter.brush();
     QPen SavePen = Painter.pen();
     double Value;
-    if (m_CurrentValue > m_Attributes.m_UpperBound) Value = m_Attributes.m_UpperBound;
-    else if (m_CurrentValue < m_Attributes.m_LowerBound) Value = m_Attributes.m_LowerBound;
+    if (m_CurrentValue > m_Attributes->m_UpperBound) Value = m_Attributes->m_UpperBound;
+    else if (m_CurrentValue < m_Attributes->m_LowerBound) Value = m_Attributes->m_LowerBound;
     else Value = m_CurrentValue;
 
     int BargraphLen;
-    if (m_Attributes.m_NeedleSizeFlag) {
-        BargraphLen = (int)((double)(par_Height - par_Height/8) * m_Attributes.m_NeedleSize / 100.0);
+    if (m_Attributes->m_NeedleSizeFlag) {
+        BargraphLen = (int)((double)(par_Height - par_Height/8) * m_Attributes->m_NeedleSize / 100.0);
     } else {
         BargraphLen = par_Height - UPPERFRAMESPACE;// - par_Height/8;
     }
-    //int BargraphStart = (par_Height - BargraphLen) / 2 + (VariableNameLabel->height()*2);
-    int BargraphStart;
-    if (VariableNameLabel->isVisible())
-    {
-        BargraphStart = par_Height - ((par_Height - BargraphLen) / 2) + VariableNameLabel->height() + 5;
-    }
-    else
-    {
-        BargraphStart = par_Height - ((par_Height - BargraphLen) / 2);
-    }
+    int BargraphStart = par_Height - ((par_Height - BargraphLen) / 2);
     int BargraphEnd = BargraphStart - BargraphLen;
-    int CurrentPos = BargraphStart - static_cast<int>(BargraphLen * (Value - m_Attributes.m_LowerBound) / (m_Attributes.m_UpperBound - m_Attributes.m_LowerBound));
+    int CurrentPos = BargraphStart - static_cast<int>(BargraphLen * (Value - m_Attributes->m_LowerBound) / (m_Attributes->m_UpperBound - m_Attributes->m_LowerBound));
 
-    int LeftPos = maxLabelSize + SPACE_BETWEEN_SCALETEXT + SPACE_BETWEEN_SCALE; // possition of scalapar_Width/16;
-    int RightPos = par_Width;// - par_Width/16;
+    int LeftPos;
+    if (m_Attributes->m_ScaleFlag) {
+        LeftPos = maxLabelSize + SPACE_BETWEEN_SCALETEXT + SPACE_BETWEEN_SCALE;
+    } else {
+        LeftPos = par_Width/16;
+    }
+    int RightPos = par_Width - par_Width/16;
 
     QRect Rect;
     Rect.setTop(CurrentPos);
     Rect.setBottom(BargraphEnd);
     Rect.setLeft(LeftPos);
     Rect.setRight(RightPos);
-    Painter.setBrush(m_Attributes.m_Color);
+    Painter.setBrush(m_Attributes->m_Color);
     SavePen = Painter.pen();
-    if (m_Attributes.m_NeedleLineColorFlag) {
-        Painter.setPen(m_Attributes.m_NeedleLineColor);
+    if (m_Attributes->m_NeedleLineColorFlag) {
+        Painter.setPen(m_Attributes->m_NeedleLineColor);
     } else {
         // if not user defined use default color
     }
     Painter.drawRect(Rect);
     SaveBrush = Painter.brush();
-    if (m_Attributes.m_NeedleFillColorFlag) {
-        Painter.setBrush(QBrush(m_Attributes.m_NeedleFillColor));
+    if (m_Attributes->m_NeedleFillColorFlag) {
+        Painter.setBrush(QBrush(m_Attributes->m_NeedleFillColor));
     } else {
         Painter.setBrush(QBrush(Qt::darkGray));
     }
@@ -1839,7 +1883,57 @@ void KnobOrTachoWidget::PaintBargraph(QPainter &Painter, int par_Width, int par_
     Painter.setPen(SavePen);
 }
 
-void KnobOrTachoWidget::PaintSliderLine(QPainter &Painter, int par_Width, int par_Height, int par_Offset)
+void KnobOrTachoWidget::DrawArea::SetVid(int par_Vid)
+{
+    m_Vid = par_Vid;
+}
+
+int KnobOrTachoWidget::DrawArea::GetVid()
+{
+    return m_Vid;
+}
+
+void KnobOrTachoWidget::DrawArea::SetDragStateVid(int par_Vid)
+{
+    m_DragStateVid = par_Vid;
+}
+
+int KnobOrTachoWidget::DrawArea::GetDragStateVid()
+{
+    return m_DragStateVid;
+}
+
+double KnobOrTachoWidget::DrawArea::GetCurrentValue()
+{
+    return m_CurrentValue;
+}
+
+void KnobOrTachoWidget::DrawArea::SetCurrentValue(double par_Value)
+{
+    m_CurrentValue = par_Value;
+}
+
+void KnobOrTachoWidget::DrawArea::SetVariableName(QString par_Name)
+{
+    m_VariableName = par_Name;
+}
+
+QString KnobOrTachoWidget::DrawArea::GetVariableName()
+{
+    return m_VariableName;
+}
+
+void KnobOrTachoWidget::DrawArea::SetValueString(QString par_Name)
+{
+    m_ValueString = par_Name;
+}
+
+QString KnobOrTachoWidget::DrawArea::GetValueString()
+{
+    return m_ValueString;
+}
+
+void KnobOrTachoWidget::DrawArea::PaintSliderLine(QPainter &Painter, int par_Width, int par_Height)
 {
     QBrush SaveBrush = Painter.brush();
     int SliderLen;
@@ -1847,15 +1941,14 @@ void KnobOrTachoWidget::PaintSliderLine(QPainter &Painter, int par_Width, int pa
     int SliderStart;
     int SliderEnd;
 
-    //int posscale = (int)((double)par_Width * m_Attributes.m_ScalePosX / 100.0) + SPACE_BETWEEN_SCALE; // possition of scala
     int posscale = maxLabelSize + SPACE_BETWEEN_SCALETEXT + SPACE_BETWEEN_SCALE; // possition of scala
 
-    if (m_Attributes.m_NeedleSizeFlag) {
-        SliderLen = (int)((double)(par_Height - par_Height/8) * m_Attributes.m_NeedleSize / 100.0);
+    if (m_Attributes->m_NeedleSizeFlag) {
+        SliderLen = (int)((double)(par_Height - par_Height/8) * m_Attributes->m_NeedleSize / 100.0);
     } else {
         SliderLen = par_Height - par_Height/8;
     }
-    if (m_Attributes.m_ScaleFlag)
+    if (m_Attributes->m_ScaleFlag)
     {
         SliderWidth = par_Width - posscale; // width of slider
     }
@@ -1865,14 +1958,7 @@ void KnobOrTachoWidget::PaintSliderLine(QPainter &Painter, int par_Width, int pa
         posscale = 0;
     }
 
-    if (VariableNameLabel->isVisible())
-    {
-        SliderStart = par_Height - ((par_Height - SliderLen) / 2) + VariableNameLabel->height() + 5;
-    }
-    else
-    {
-        SliderStart = par_Height - ((par_Height - SliderLen) / 2);
-    }
+    SliderStart = par_Height - ((par_Height - SliderLen) / 2);
     SliderEnd = SliderStart - SliderLen;
     QRect Rect;
     Rect.setTop(SliderStart);
@@ -1904,28 +1990,19 @@ static QRect BoundingRect(QPainter &par_Painter, double par_PosX, double par_Pos
     return Rect;
 }
 
-void KnobOrTachoWidget::paintEvent(QPaintEvent *event)
+void KnobOrTachoWidget::DrawArea::paintEvent(QPaintEvent *event)
 {
     Q_UNUSED(event)
 
     QPainter Painter(this);
     Painter.setRenderHint(QPainter::Antialiasing);
     Painter.setRenderHint(QPainter::TextAntialiasing);
-    Painter.setFont(m_Attributes.m_Font);
+    Painter.setFont(m_Attributes->m_Font);
 
-    QSize Size = Drawarea->size();
+    QSize Size =size();
     int xdim = Size.width();
     int ydim = Size.height();
-    int Offset = 0;
     double Radius = 1;
-
-    if(m_Attributes.m_BitmapFlag && m_bitmapPathExist) {
-        if (m_Attributes.m_BitmapWindowSizeBehaviour == ScaleBitMap) {
-            Painter.drawPixmap(0, 0, m_PixmapResized);
-        } else {
-            Painter.drawPixmap(0, 0, m_PixmapOrginalSize);
-        }
-    }
 
     /* only for debuging
     Painter.drawText(0, 14, QString().number(m_LastXpos));
@@ -1933,47 +2010,94 @@ void KnobOrTachoWidget::paintEvent(QPaintEvent *event)
     Painter.drawText(0, 42, QString().number(m_DebugAngle));
     Painter.drawText(0, 56, QString().number(m_Overwind));*/
 
-    if (m_Attributes.m_ScaleFlag) {
+    if (m_Attributes->m_ScaleFlag) {
         maxLabelSize = 0;
         switch(m_KnobOrTachoType) {
         case KnobType:
         case TachoType:
-            Radius = PaintRoundScale(Painter, xdim, ydim, Offset);
+            Radius = PaintRoundScale(Painter, xdim, ydim);
             break;
         case SliderType:
         case BargraphType:
-            PaintLinearSlopeScale(Painter, xdim, ydim, Offset);
+            PaintLinearSlopeScale(Painter, xdim, ydim);
             break;
         }
-    }
-    else
-    {
+    } else {
         maxLabelSize = 0;
     }
 
-    if (m_Attributes.m_NeedleFlag) {
-        switch(m_KnobOrTachoType) {
-        case KnobType:
-            PaintKnob(Painter, xdim, ydim, Radius, Offset);
-            break;
-        case TachoType:
-            PaintNeedle(Painter, xdim, ydim, Radius, Offset);
-            break;
-        case SliderType:
-            PaintSliderLine(Painter, xdim, ydim, Offset);
-            PaintSliderKnob(Painter, xdim, ydim, Offset);
-            break;
-        case BargraphType:
-            PaintBargraph(Painter, xdim, ydim, Offset);
-            break;
+    // If the name should be displayed inside the scala
+    if (m_Attributes->m_NameFlag && (m_Attributes->m_NameAlign == 3)) {
+        QFont SaveFont;
+        if (m_Attributes->m_NameFontFlag) {
+            SaveFont = Painter.font();
+            Painter.setFont(m_Attributes->m_NameFont);
+        }
+        QFontMetrics FontMetrics(Painter.font(), Painter.device());
+        QSize Size = FontMetrics.size(Qt::TextSingleLine, m_VariableName);
+        //QRect Rect = FontMetrics.boundingRect(m_VariableName);
+        int TextWidth = Size.width();
+        int TextHeight =Size.height();
+        Qt::AlignmentFlag Alignment;
+        Alignment = Qt::AlignCenter;
+        QRect Rect;
+        Rect.setX((double)xdim * m_Attributes->m_NamePosX / 100.0 - TextWidth / 2);
+        Rect.setY((double)ydim * m_Attributes->m_NamePosY / 100.0 - TextHeight / 2);
+        Rect.setWidth(TextWidth);
+        Rect.setHeight(TextHeight);
+        Painter.drawText (Rect, Alignment, m_VariableName);
+        if (m_Attributes->m_NameFontFlag) {
+            Painter.setFont(SaveFont);
+        }
+    }
+    // If the value should be displayed inside the scala
+    if (m_Attributes->m_TextFlag && (m_Attributes->m_TextAlign == 3)) {
+        QFont SaveFont;
+        if (m_Attributes->m_TextFontFlag) {
+            SaveFont = Painter.font();
+            Painter.setFont(m_Attributes->m_TextFont);
+        }
+        QFontMetrics FontMetrics(Painter.font(), Painter.device());
+        //QRect Rect = FontMetrics.boundingRect(m_ValueString);
+        QSize Size = FontMetrics.size(Qt::TextSingleLine, m_ValueString);
+        int TextWidth = Size.width();
+        int TextHeight =Size.height();
+        Qt::AlignmentFlag Alignment;
+        Alignment = Qt::AlignCenter;
+        QRect Rect;
+        Rect.setX((double)xdim * m_Attributes->m_TextPosX / 100.0 - TextWidth / 2);
+        Rect.setY((double)ydim * m_Attributes->m_TextPosY / 100.0 - TextHeight / 2);
+        Rect.setWidth(TextWidth);
+        Rect.setHeight(TextHeight);
+        Painter.drawText (Rect, Alignment, m_ValueString);
+        if (m_Attributes->m_TextFontFlag) {
+            Painter.setFont(SaveFont);
         }
     }
 
-    /* only for debuging
-    Painter.drawPoint(m_MoveStartPoint);*/
+    if (m_Attributes->m_NeedleFlag) {
+        switch(m_KnobOrTachoType) {
+        case KnobType:
+            PaintKnob(Painter, xdim, ydim, Radius);
+            break;
+        case TachoType:
+            PaintNeedle(Painter, xdim, ydim, Radius);
+            break;
+        case SliderType:
+            PaintSliderLine(Painter, xdim, ydim);
+            PaintSliderKnob(Painter, xdim, ydim);
+            break;
+        case BargraphType:
+            PaintBargraph(Painter, xdim, ydim);
+            break;
+        }
+    }
+}
 
+ void KnobOrTachoWidget::UpdateNameAndValue()
+{
     if (m_Attributes.m_NameFlag) {
-        VariableNameLabel->setVisible(true);
+        //VariableNameLabel->setVisible(true);
         QFont Font;
         // Draw the signal name
         if (m_Attributes.m_NameFontFlag) {
@@ -1981,39 +2105,37 @@ void KnobOrTachoWidget::paintEvent(QPaintEvent *event)
         } else {
             Font = m_Attributes.m_Font;
         }
-        VariableNameLabel->setText(m_VariableName);
-        VariableNameLabel->setFont(Font);
+        m_VariableNameLabel->setText(m_Drawarea->GetVariableName());
+        m_VariableNameLabel->setFont(Font);
         switch (m_Attributes.m_NameAlign) {
         case 0:  // Center
         default:
-            VariableNameLabel->setAlignment(Qt::AlignCenter);
+            m_VariableNameLabel->setAlignment(Qt::AlignCenter);
             break;
         case 1:  // left
-            VariableNameLabel->setAlignment(Qt::AlignLeft);
+            m_VariableNameLabel->setAlignment(Qt::AlignLeft);
             break;
         case 2:  // right
-            VariableNameLabel->setAlignment(Qt::AlignRight);
+            m_VariableNameLabel->setAlignment(Qt::AlignRight);
+            break;
+        case 3:  // inside
             break;
         }
     }
-    else
-    {
-        VariableNameLabel->setVisible(false);
-    }
-    drawValue();
+    ReadValueFromBlackboard();
 }
 
-void KnobOrTachoWidget::drawValue()
+void KnobOrTachoWidget::ReadValueFromBlackboard()
 {
     char txt[512];
-    if (m_Attributes.m_TextFlag && (m_Vid > 0)) {
+    int Vid = m_Drawarea->GetVid();
+    if (m_Attributes.m_TextFlag && (Vid > 0)) {
         // Draw the signal value
-        ValueLabel->setVisible(true);
         double loc_value;
         if(m_Attributes.m_Physical && (m_ConversionType == BB_CONV_FORMULA)) {
-            loc_value = read_bbvari_equ(m_Vid);
+            loc_value = read_bbvari_equ(Vid);
         } else {
-            loc_value = read_bbvari_convert_double(m_Vid);
+            loc_value = read_bbvari_convert_double(Vid);
         }
         QFont Font;
         if (m_Attributes.m_TextFontFlag) {
@@ -2021,10 +2143,10 @@ void KnobOrTachoWidget::drawValue()
         } else {
             Font = m_Attributes.m_Font;
         }
-        ValueLabel->setFont(Font);
+        m_ValueLabel->setFont(Font);
         if ((m_ConversionType == BB_CONV_TEXTREP) && (m_Attributes.m_Physical)) {
             int color;
-            convert_value_textreplace (m_Vid, static_cast<int32_t>(loc_value), txt, sizeof (txt), &color);
+            convert_value_textreplace (Vid , static_cast<int32_t>(loc_value), txt, sizeof (txt), &color);
         } else {
             int DataType;
             if (m_Attributes.m_Physical && (((m_DataType >= BB_BYTE) && (m_DataType <= BB_DOUBLE)) ||
@@ -2036,71 +2158,76 @@ void KnobOrTachoWidget::drawValue()
             switch (DataType) {
             case BB_DOUBLE:
             case BB_FLOAT:
-                sprintf (txt, "%*.*lf",
-                        get_bbvari_format_width(m_Vid),
-                        get_bbvari_format_prec(m_Vid),
-                        //read_bbvari_convert_double(m_Vid));
+                PrintFormatToString (txt, sizeof(txt), "%*.*lf",
+                        get_bbvari_format_width(Vid),
+                        get_bbvari_format_prec(Vid),
                         loc_value);
                 break;
             case BB_UBYTE:
             case BB_UWORD:
             case BB_UDWORD:
             case BB_UQWORD:
-                sprintf (txt, "%" PRIu64 "", static_cast<uint64_t>(loc_value));
-                //sprintf (txt, "%" PRIu64 "", static_cast<uint64_t>(read_bbvari_convert_double(m_Vid)));
+                PrintFormatToString (txt, sizeof(txt), "%" PRIu64 "", static_cast<uint64_t>(loc_value));
                 break;
             case BB_BYTE:
             case BB_WORD:
             case BB_DWORD:
             case BB_QWORD:
-                sprintf (txt, "%" PRIi64 "", static_cast<int64_t>(loc_value));
-                //sprintf (txt, "%" PRIi64 "", static_cast<int64_t>(read_bbvari_convert_double(m_Vid)));
+                PrintFormatToString (txt, sizeof(txt), "%" PRIi64 "", static_cast<int64_t>(loc_value));
                 break;
             default:
-                sprintf (txt, "unknown data type");
+                PrintFormatToString (txt, sizeof(txt), "unknown data type");
                 break;
             }
         }
-        strcat(txt, "  ");
+        STRING_APPEND_TO_ARRAY(txt, "  ");
         if (m_DisplayUnit) {
-            get_bbvari_unit(m_Vid, txt+strlen(txt), static_cast<int>(sizeof(txt)-strlen(txt)));
+            get_bbvari_unit(Vid, txt+strlen(txt), static_cast<int>(sizeof(txt)-strlen(txt)));
         }
         QString ValueString(txt);
-        ValueLabel->setText(ValueString);
+        m_ValueLabel->setText(ValueString);
+        m_Drawarea->SetValueString(ValueString);
         switch (m_Attributes.m_TextAlign) {
         case 0:  // Center
         default:
-            ValueLabel->setAlignment(Qt::AlignCenter);
+            m_ValueLabel->setAlignment(Qt::AlignCenter);
             break;
         case 1:  // left
-            ValueLabel->setAlignment(Qt::AlignLeft);
+            m_ValueLabel->setAlignment(Qt::AlignLeft);
             break;
         case 2:  // right
-            ValueLabel->setAlignment(Qt::AlignRight);
+            m_ValueLabel->setAlignment(Qt::AlignRight);
+            break;
+        case 3:  // inside
             break;
         }
     }
-    else
-    {
-        ValueLabel->setVisible(false);
+}
+
+void KnobOrTachoWidget::ResetWindowSize()
+{
+    if (m_WindowSizeStored != size()) {
+        MdiSubWindow *MdiSubWidow = GetCustomMdiSubwindow();
+        MdiSubWidow->setMaximumSize(QSize(16777215,16777215));
+        MdiSubWidow->setMinimumSize(GetMdiWindowType()->GetMinSize());
+        MdiSubWidow->resize(m_WindowSizeStored);
     }
 }
 
-void KnobOrTachoWidget::WriteSliderValue(double arg_Value)
+void KnobOrTachoWidget::DrawArea::WriteSliderValue(double arg_Value)
 {
-    if (m_Attributes.m_Physical && (get_bbvari_conversiontype(m_Vid) == BB_CONV_FORMULA)) {
+    if (m_Attributes->m_Physical && (get_bbvari_conversiontype(m_Vid) == BB_CONV_FORMULA)) {
         int help;
         help = write_bbvari_phys_minmax_check (m_Vid, arg_Value);
         if (help) {
             m_MoveFlag = false;
             ThrowError (1, "a nonlinear conversion-function can't be used with a knob switch to raw value");
-            m_Attributes.m_Physical = 0;
+            m_Attributes->m_Physical = 0;
         }
     } else {
         write_bbvari_minmax_check (m_Vid, arg_Value);
     }
 }
-
 
 KnobOrTachoWidget::KnobAttributes::KnobAttributes()
 {
@@ -2155,9 +2282,9 @@ KnobOrTachoWidget::KnobAttributes::KnobAttributes()
     m_DragStateVarFlag = false;
 }
 
-static char *ColorToString(QColor par_Color, char *ret_String)
+static char *ColorToString(QColor par_Color, char *ret_String, int par_Maxc)
 {
-    sprintf (ret_String, "(%i,%i,%i)", par_Color.red(), par_Color.green(), par_Color.blue());
+    PrintFormatToString (ret_String, par_Maxc, "(%i,%i,%i)", par_Color.red(), par_Color.green(), par_Color.blue());
     return ret_String;
 }
 
@@ -2188,11 +2315,11 @@ void KnobOrTachoWidget::KnobAttributes::writeToIni(QString &par_SectionPath, Kno
     int Fd = GetMainFileDescriptor();
     // Basics
     // phys, color, ... will be save inside the widget class oneself
-   ScQt_IniFileDataBaseWriteYesNo(par_SectionPath, "BBCfgDirectFlag", m_BBCfgDirectFlag, Fd);
-   ScQt_IniFileDataBaseWriteInt(par_SectionPath, "FontSize", m_Font.pointSize(), Fd);
-   ScQt_IniFileDataBaseWriteString(par_SectionPath, "FontName",  QStringToConstChar(m_Font.family()), Fd);
+    ScQt_IniFileDataBaseWriteYesNo(par_SectionPath, "BBCfgDirectFlag", m_BBCfgDirectFlag, Fd);
+    ScQt_IniFileDataBaseWriteInt(par_SectionPath, "FontSize", m_Font.pointSize(), Fd);
+    ScQt_IniFileDataBaseWriteString(par_SectionPath, "FontName",  QStringToConstChar(m_Font.family()), Fd);
     // Scale
-   ScQt_IniFileDataBaseWriteYesNo(par_SectionPath, "ScaleFlag", m_ScaleFlag, Fd);
+    ScQt_IniFileDataBaseWriteYesNo(par_SectionPath, "ScaleFlag", m_ScaleFlag, Fd);
     if (m_ScaleFlag) {
        ScQt_IniFileDataBaseWriteFloat(par_SectionPath, "MinAngle", m_MinAngle, Fd);
        ScQt_IniFileDataBaseWriteFloat(par_SectionPath, "MaxAngle", m_MaxAngle, Fd);
@@ -2203,57 +2330,55 @@ void KnobOrTachoWidget::KnobAttributes::writeToIni(QString &par_SectionPath, Kno
        ScQt_IniFileDataBaseWriteFloat(par_SectionPath, "ScalePosX", m_ScalePosX, Fd);
        ScQt_IniFileDataBaseWriteFloat(par_SectionPath, "ScalePosY", m_ScalePosY, Fd);
        ScQt_IniFileDataBaseWriteYesNo(par_SectionPath, "ScaleColorFlag", m_ScaleColorFlag, Fd);
-       ScQt_IniFileDataBaseWriteString(par_SectionPath, "ScaleColor", ColorToString(m_ScaleColor, ColorString), Fd);
+       ScQt_IniFileDataBaseWriteString(par_SectionPath, "ScaleColor", ColorToString(m_ScaleColor, ColorString, sizeof(ColorString)), Fd);
     }
     // Knob or Needle
-    //if (par_KnobOrTachoType != BargraphType) {   // Bargraph has no needle/knob
-       ScQt_IniFileDataBaseWriteYesNo(par_SectionPath, "NeedleFlag", m_NeedleFlag, Fd);
-        if (m_NeedleFlag) {
-           ScQt_IniFileDataBaseWriteInt(par_SectionPath, "NeedlePosX", m_NeedlePosX, Fd);
-           ScQt_IniFileDataBaseWriteInt(par_SectionPath, "NeedlePosY", m_NeedlePosY, Fd);
-           ScQt_IniFileDataBaseWriteYesNo(par_SectionPath, "NeedleSizeFlag", m_NeedleSizeFlag, Fd);
-           ScQt_IniFileDataBaseWriteInt(par_SectionPath, "NeedleSize", m_NeedleSize, Fd);
-           ScQt_IniFileDataBaseWriteYesNo(par_SectionPath, "NeedleLineColorFlag", m_NeedleLineColorFlag, Fd);
-           ScQt_IniFileDataBaseWriteString(par_SectionPath, "NeedleLineColor", ColorToString(m_NeedleLineColor, ColorString), Fd);
-           ScQt_IniFileDataBaseWriteYesNo(par_SectionPath, "NeedleFillColorFlag", m_NeedleFillColorFlag, Fd);
-           ScQt_IniFileDataBaseWriteString(par_SectionPath, "NeedleFillColor", ColorToString(m_NeedleFillColor, ColorString), Fd);
-        }
-    //}
+    ScQt_IniFileDataBaseWriteYesNo(par_SectionPath, "NeedleFlag", m_NeedleFlag, Fd);
+    if (m_NeedleFlag) {
+        ScQt_IniFileDataBaseWriteInt(par_SectionPath, "NeedlePosX", m_NeedlePosX, Fd);
+        ScQt_IniFileDataBaseWriteInt(par_SectionPath, "NeedlePosY", m_NeedlePosY, Fd);
+        ScQt_IniFileDataBaseWriteYesNo(par_SectionPath, "NeedleSizeFlag", m_NeedleSizeFlag, Fd);
+        ScQt_IniFileDataBaseWriteInt(par_SectionPath, "NeedleSize", m_NeedleSize, Fd);
+        ScQt_IniFileDataBaseWriteYesNo(par_SectionPath, "NeedleLineColorFlag", m_NeedleLineColorFlag, Fd);
+        ScQt_IniFileDataBaseWriteString(par_SectionPath, "NeedleLineColor", ColorToString(m_NeedleLineColor, ColorString, sizeof(ColorString)), Fd);
+        ScQt_IniFileDataBaseWriteYesNo(par_SectionPath, "NeedleFillColorFlag", m_NeedleFillColorFlag, Fd);
+        ScQt_IniFileDataBaseWriteString(par_SectionPath, "NeedleFillColor", ColorToString(m_NeedleFillColor, ColorString, sizeof(ColorString)), Fd);
+    }
     // Value
-   ScQt_IniFileDataBaseWriteYesNo(par_SectionPath, "TextFlag", m_TextFlag, Fd);
+    ScQt_IniFileDataBaseWriteYesNo(par_SectionPath, "TextFlag", m_TextFlag, Fd);
     if (m_TextFlag) {
-       ScQt_IniFileDataBaseWriteInt(par_SectionPath, "TextPosX", m_TextPosX, Fd);
-       ScQt_IniFileDataBaseWriteInt(par_SectionPath, "TextPosY", m_TextPosY, Fd);
-       ScQt_IniFileDataBaseWriteYesNo(par_SectionPath, "TextFontFlag", m_TextFontFlag, Fd);
-       ScQt_IniFileDataBaseWriteString(par_SectionPath, "TextFont", QStringToConstChar(m_TextFont.family()), Fd);
-       ScQt_IniFileDataBaseWriteInt(par_SectionPath, "TextFontSize", m_TextFont.pointSize(), Fd);
-       ScQt_IniFileDataBaseWriteInt(par_SectionPath, "TextAlign", m_TextAlign, Fd);
+        ScQt_IniFileDataBaseWriteInt(par_SectionPath, "TextPosX", m_TextPosX, Fd);
+        ScQt_IniFileDataBaseWriteInt(par_SectionPath, "TextPosY", m_TextPosY, Fd);
+        ScQt_IniFileDataBaseWriteYesNo(par_SectionPath, "TextFontFlag", m_TextFontFlag, Fd);
+        ScQt_IniFileDataBaseWriteString(par_SectionPath, "TextFont", QStringToConstChar(m_TextFont.family()), Fd);
+        ScQt_IniFileDataBaseWriteInt(par_SectionPath, "TextFontSize", m_TextFont.pointSize(), Fd);
+        ScQt_IniFileDataBaseWriteInt(par_SectionPath, "TextAlign", m_TextAlign, Fd);
     }
     // Name
-   ScQt_IniFileDataBaseWriteYesNo(par_SectionPath, "NameFlag", m_NameFlag, Fd);
+    ScQt_IniFileDataBaseWriteYesNo(par_SectionPath, "NameFlag", m_NameFlag, Fd);
     if (m_NameFlag) {
-       ScQt_IniFileDataBaseWriteInt(par_SectionPath, "NamePosX", m_NamePosX, Fd);
-       ScQt_IniFileDataBaseWriteInt(par_SectionPath, "NamePosY", m_NamePosY, Fd);
-       ScQt_IniFileDataBaseWriteYesNo(par_SectionPath, "NameFontFlag", m_NameFontFlag, Fd);
-       ScQt_IniFileDataBaseWriteString(par_SectionPath, "NameFont", QStringToConstChar(m_NameFont.family()), Fd);
-       ScQt_IniFileDataBaseWriteInt(par_SectionPath, "NameFontSize", m_NameFont.pointSize(), Fd);
-       ScQt_IniFileDataBaseWriteInt(par_SectionPath, "NameAlign", m_NameAlign, Fd);
+        ScQt_IniFileDataBaseWriteInt(par_SectionPath, "NamePosX", m_NamePosX, Fd);
+        ScQt_IniFileDataBaseWriteInt(par_SectionPath, "NamePosY", m_NamePosY, Fd);
+        ScQt_IniFileDataBaseWriteYesNo(par_SectionPath, "NameFontFlag", m_NameFontFlag, Fd);
+        ScQt_IniFileDataBaseWriteString(par_SectionPath, "NameFont", QStringToConstChar(m_NameFont.family()), Fd);
+        ScQt_IniFileDataBaseWriteInt(par_SectionPath, "NameFontSize", m_NameFont.pointSize(), Fd);
+        ScQt_IniFileDataBaseWriteInt(par_SectionPath, "NameAlign", m_NameAlign, Fd);
     }
     // Bitmap
-   ScQt_IniFileDataBaseWriteYesNo(par_SectionPath, "BitmapFlag", m_BitmapFlag, Fd);
+    ScQt_IniFileDataBaseWriteYesNo(par_SectionPath, "BitmapFlag", m_BitmapFlag, Fd);
     if (m_BitmapFlag) {
-       ScQt_IniFileDataBaseWriteString(par_SectionPath, "Bitmap", QStringToConstChar(m_bitmap), Fd);
-       ScQt_IniFileDataBaseWriteInt(par_SectionPath, "BitmapScalingOrFixedSize", m_BitmapWindowSizeBehaviour, Fd);
-    }
+        ScQt_IniFileDataBaseWriteString(par_SectionPath, "Bitmap", QStringToConstChar(m_bitmap), Fd);
+        ScQt_IniFileDataBaseWriteInt(par_SectionPath, "BitmapScalingOrFixedSize", m_BitmapWindowSizeBehaviour, Fd);
+}
     if ((par_KnobOrTachoType == SliderType) ||
         (par_KnobOrTachoType == KnobType)) {
         char Buffer[2*BBVARI_NAME_SIZE];
         // if release fallback to
-        sprintf (Buffer, "%i, %g", m_IfReleaseFallbackFlag, m_IfReleaseFallbackValue);
-       ScQt_IniFileDataBaseWriteString(par_SectionPath, "IfReleaseFallback", Buffer, Fd);
+        PrintFormatToString (Buffer, sizeof(Buffer), "%i, %g", m_IfReleaseFallbackFlag, m_IfReleaseFallbackValue);
+        ScQt_IniFileDataBaseWriteString(par_SectionPath, "IfReleaseFallback", Buffer, Fd);
         // Drag status
-        sprintf (Buffer, "%i, %s", m_DragStateVarFlag, QStringToConstChar(m_DragStateVariableName));
-       ScQt_IniFileDataBaseWriteString(par_SectionPath, "DragStatusFlag", Buffer, Fd);
+        PrintFormatToString (Buffer, sizeof(Buffer), "%i, %s", m_DragStateVarFlag, QStringToConstChar(m_DragStateVariableName));
+        ScQt_IniFileDataBaseWriteString(par_SectionPath, "DragStatusFlag", Buffer, Fd);
     }
 }
 
@@ -2274,70 +2399,70 @@ void KnobOrTachoWidget::KnobAttributes::readFromIni(QString &par_SectionPath, en
     }
 
     // Basics
-    m_BBCfgDirectFlag =ScQt_IniFileDataBaseReadYesNo(par_SectionPath, "BBCfgDirectFlag", 0, Fd);
-    int FontSize =ScQt_IniFileDataBaseReadInt(par_SectionPath, "FontSize", 10, Fd);
+    m_BBCfgDirectFlag = ScQt_IniFileDataBaseReadYesNo(par_SectionPath, "BBCfgDirectFlag", 0, Fd);
+    int FontSize = ScQt_IniFileDataBaseReadInt(par_SectionPath, "FontSize", 10, Fd);
     if (ScQt_IniFileDataBaseReadString(par_SectionPath, "FontName", "", Buffer, sizeof (Buffer), Fd) > 0) {
         m_Font = QFont(QString(Buffer), FontSize);
     }
     // Scale
-    m_ScaleFlag =ScQt_IniFileDataBaseReadYesNo(par_SectionPath, "ScaleFlag", 1, Fd);
-    m_MinAngle =ScQt_IniFileDataBaseReadFloat(par_SectionPath, "MinAngle", -160.0, Fd);
-    m_MaxAngle =ScQt_IniFileDataBaseReadFloat(par_SectionPath, "MaxAngle", 160.0, Fd);
-    m_ScaleStepFlag =ScQt_IniFileDataBaseReadYesNo(par_SectionPath, "ScaleStepFlag", 0, Fd);
-    m_ScaleStep =ScQt_IniFileDataBaseReadFloat(par_SectionPath, "ScaleStep", 30.0, Fd);
-    m_ScaleSizeFlag =ScQt_IniFileDataBaseReadYesNo(par_SectionPath, "ScaleSizeFlag", 0, Fd);
-    m_ScaleSize =ScQt_IniFileDataBaseReadFloat(par_SectionPath, "ScaleSize", DefaultLen, Fd);
-    m_ScalePosX =ScQt_IniFileDataBaseReadFloat(par_SectionPath, "ScalePosX", DefaultPosX, Fd);
-    m_ScalePosY =ScQt_IniFileDataBaseReadFloat(par_SectionPath, "ScalePosY", 50.0, Fd);
-    m_ScaleColorFlag =ScQt_IniFileDataBaseReadYesNo(par_SectionPath, "ScaleColorFlag", 0, Fd);
+    m_ScaleFlag = ScQt_IniFileDataBaseReadYesNo(par_SectionPath, "ScaleFlag", 1, Fd);
+    m_MinAngle = ScQt_IniFileDataBaseReadFloat(par_SectionPath, "MinAngle", -160.0, Fd);
+    m_MaxAngle = ScQt_IniFileDataBaseReadFloat(par_SectionPath, "MaxAngle", 160.0, Fd);
+    m_ScaleStepFlag = ScQt_IniFileDataBaseReadYesNo(par_SectionPath, "ScaleStepFlag", 0, Fd);
+    m_ScaleStep = ScQt_IniFileDataBaseReadFloat(par_SectionPath, "ScaleStep", 30.0, Fd);
+    m_ScaleSizeFlag = ScQt_IniFileDataBaseReadYesNo(par_SectionPath, "ScaleSizeFlag", 0, Fd);
+    m_ScaleSize = ScQt_IniFileDataBaseReadFloat(par_SectionPath, "ScaleSize", DefaultLen, Fd);
+    m_ScalePosX = ScQt_IniFileDataBaseReadFloat(par_SectionPath, "ScalePosX", DefaultPosX, Fd);
+    m_ScalePosY = ScQt_IniFileDataBaseReadFloat(par_SectionPath, "ScalePosY", 50.0, Fd);
+    m_ScaleColorFlag = ScQt_IniFileDataBaseReadYesNo(par_SectionPath, "ScaleColorFlag", 0, Fd);
     if (m_ScaleColorFlag) {
-       ScQt_IniFileDataBaseReadString(par_SectionPath, "ScaleColor", "", Buffer, sizeof(Buffer), Fd);
+        ScQt_IniFileDataBaseReadString(par_SectionPath, "ScaleColor", "", Buffer, sizeof(Buffer), Fd);
         if (!StringToColor(Buffer, &m_ScaleColor)) {
             m_ScaleColorFlag = false;
         }
     }
     // Knob or Needle
-    m_NeedleFlag =ScQt_IniFileDataBaseReadYesNo(par_SectionPath, "NeedleFlag", 1, Fd);
-    m_NeedlePosX =ScQt_IniFileDataBaseReadFloat(par_SectionPath, "NeedlePosX", 50, Fd);
-    m_NeedlePosY =ScQt_IniFileDataBaseReadFloat(par_SectionPath, "NeedlePosY", 50, Fd);
-    m_NeedleSizeFlag =ScQt_IniFileDataBaseReadYesNo(par_SectionPath, "NeedleSizeFlag", 0, Fd);
-    m_NeedleSize =ScQt_IniFileDataBaseReadFloat(par_SectionPath, "NeedleSize", DefaultLen, Fd);
-    m_NeedleLineColorFlag =ScQt_IniFileDataBaseReadYesNo(par_SectionPath, "NeedleLineColorFlag", 0, Fd);
+    m_NeedleFlag = ScQt_IniFileDataBaseReadYesNo(par_SectionPath, "NeedleFlag", 1, Fd);
+    m_NeedlePosX = ScQt_IniFileDataBaseReadFloat(par_SectionPath, "NeedlePosX", 50, Fd);
+    m_NeedlePosY = ScQt_IniFileDataBaseReadFloat(par_SectionPath, "NeedlePosY", 50, Fd);
+    m_NeedleSizeFlag = ScQt_IniFileDataBaseReadYesNo(par_SectionPath, "NeedleSizeFlag", 0, Fd);
+    m_NeedleSize = ScQt_IniFileDataBaseReadFloat(par_SectionPath, "NeedleSize", DefaultLen, Fd);
+    m_NeedleLineColorFlag = ScQt_IniFileDataBaseReadYesNo(par_SectionPath, "NeedleLineColorFlag", 0, Fd);
     if (m_NeedleLineColorFlag) {
        ScQt_IniFileDataBaseReadString(par_SectionPath, "NeedleLineColor", "", Buffer, sizeof(Buffer), Fd);
         if (!StringToColor(Buffer, &m_NeedleLineColor)) {
             m_NeedleLineColorFlag = false;
         }
     }
-    m_NeedleFillColorFlag =ScQt_IniFileDataBaseReadYesNo(par_SectionPath, "NeedleFillColorFlag", 0, Fd);
+    m_NeedleFillColorFlag = ScQt_IniFileDataBaseReadYesNo(par_SectionPath, "NeedleFillColorFlag", 0, Fd);
     if (m_NeedleFillColorFlag) {
-       ScQt_IniFileDataBaseReadString(par_SectionPath, "NeedleFillColor", "", Buffer, sizeof(Buffer), Fd);
+        ScQt_IniFileDataBaseReadString(par_SectionPath, "NeedleFillColor", "", Buffer, sizeof(Buffer), Fd);
         if (!StringToColor(Buffer, &m_NeedleFillColor)) {
             m_NeedleFillColorFlag = false;
         }
     }
     // Value
-    m_TextFlag =ScQt_IniFileDataBaseReadYesNo(par_SectionPath, "TextFlag", 1, Fd);
-    m_TextPosX =ScQt_IniFileDataBaseReadFloat(par_SectionPath, "TextPosX", 50, Fd);
-    m_TextPosY =ScQt_IniFileDataBaseReadFloat(par_SectionPath, "TextPosY", 96, Fd);
-    m_TextFontFlag =ScQt_IniFileDataBaseReadYesNo(par_SectionPath, "TextFontFlag", 0, Fd);
-    FontSize =ScQt_IniFileDataBaseReadInt(par_SectionPath, "TextFontSize", 10, Fd);
+    m_TextFlag = ScQt_IniFileDataBaseReadYesNo(par_SectionPath, "TextFlag", 1, Fd);
+    m_TextPosX = ScQt_IniFileDataBaseReadFloat(par_SectionPath, "TextPosX", 50, Fd);
+    m_TextPosY = ScQt_IniFileDataBaseReadFloat(par_SectionPath, "TextPosY", 96, Fd);
+    m_TextFontFlag = ScQt_IniFileDataBaseReadYesNo(par_SectionPath, "TextFontFlag", 0, Fd);
+    FontSize = ScQt_IniFileDataBaseReadInt(par_SectionPath, "TextFontSize", 10, Fd);
     if (ScQt_IniFileDataBaseReadString(par_SectionPath, "TextFont", "", Buffer, sizeof (Buffer), Fd) > 0) {
         m_TextFont = QFont(QString(Buffer), FontSize);
     }
-    m_TextAlign =ScQt_IniFileDataBaseReadInt(par_SectionPath, "TextAlign", 0, Fd);
+    m_TextAlign = ScQt_IniFileDataBaseReadInt(par_SectionPath, "TextAlign", 0, Fd);
     // Name
-    m_NameFlag =ScQt_IniFileDataBaseReadYesNo(par_SectionPath, "NameFlag", 1, Fd);
-    m_NamePosX =ScQt_IniFileDataBaseReadFloat(par_SectionPath, "NamePosX", 50, Fd);
-    m_NamePosY =ScQt_IniFileDataBaseReadFloat(par_SectionPath, "NamePosY", 3, Fd);
-    m_NameFontFlag =ScQt_IniFileDataBaseReadYesNo(par_SectionPath, "NameFontFlag", 0, Fd);
-    FontSize =ScQt_IniFileDataBaseReadInt(par_SectionPath, "NameFontSize", 10, Fd);
+    m_NameFlag = ScQt_IniFileDataBaseReadYesNo(par_SectionPath, "NameFlag", 1, Fd);
+    m_NamePosX = ScQt_IniFileDataBaseReadFloat(par_SectionPath, "NamePosX", 50, Fd);
+    m_NamePosY = ScQt_IniFileDataBaseReadFloat(par_SectionPath, "NamePosY", 3, Fd);
+    m_NameFontFlag = ScQt_IniFileDataBaseReadYesNo(par_SectionPath, "NameFontFlag", 0, Fd);
+    FontSize = ScQt_IniFileDataBaseReadInt(par_SectionPath, "NameFontSize", 10, Fd);
     if (ScQt_IniFileDataBaseReadString(par_SectionPath, "NameFont", "", Buffer, sizeof (Buffer), Fd) > 0) {
         m_NameFont = QFont(QString(Buffer), FontSize);
     }
-    m_NameAlign =ScQt_IniFileDataBaseReadInt(par_SectionPath, "NameAlign", 0, Fd);
+    m_NameAlign = ScQt_IniFileDataBaseReadInt(par_SectionPath, "NameAlign", 0, Fd);
     // Bitmap
-    m_BitmapFlag =ScQt_IniFileDataBaseReadYesNo(par_SectionPath, "BitmapFlag", 0, Fd);
+    m_BitmapFlag = ScQt_IniFileDataBaseReadYesNo(par_SectionPath, "BitmapFlag", 0, Fd);
    ScQt_IniFileDataBaseReadString(par_SectionPath, "Bitmap", "", Buffer, sizeof(Buffer), Fd);
     m_bitmap = QString::fromLocal8Bit(Buffer);
     m_BitmapWindowSizeBehaviour = static_cast<BitmapWindowSizeBehaviour>(ScQt_IniFileDataBaseReadInt(par_SectionPath, "BitmapScalingOrFixedSize", 0, Fd));
@@ -2345,7 +2470,7 @@ void KnobOrTachoWidget::KnobAttributes::readFromIni(QString &par_SectionPath, en
     if ((par_KnobOrTachoType == SliderType) ||
         (par_KnobOrTachoType == KnobType)) {
         // if release fallback to
-       ScQt_IniFileDataBaseReadString(par_SectionPath, "IfReleaseFallback", "0, 0.00000", Buffer, sizeof(Buffer), Fd);
+        ScQt_IniFileDataBaseReadString(par_SectionPath, "IfReleaseFallback", "0, 0.00000", Buffer, sizeof(Buffer), Fd);
         char *a, *b;
         if (StringCommaSeparate (Buffer, &a, &b, nullptr) == 2) {
             if (atol (a)) {
@@ -2361,7 +2486,7 @@ void KnobOrTachoWidget::KnobAttributes::readFromIni(QString &par_SectionPath, en
         }
         // Drag status
         m_DragStateVarFlag = false;
-       ScQt_IniFileDataBaseReadString(par_SectionPath, "DragStatusFlag", "0,", Buffer, sizeof (Buffer), Fd);
+        ScQt_IniFileDataBaseReadString(par_SectionPath, "DragStatusFlag", "0,", Buffer, sizeof (Buffer), Fd);
         if (StringCommaSeparate (Buffer, &a, &b, nullptr) == 2) {
             if (atol (a)) m_DragStateVarFlag = true;
             if (m_DragStateVarFlag) {
@@ -2386,9 +2511,10 @@ QString KnobOrTachoWidget::SearchAndReplaceEnvironmentVariables(QString &par_Str
 QRect KnobOrTachoWidget::CalcSliderRect(int par_Width, int par_Height)
 {
     double Value;
-    if (m_CurrentValue > m_Attributes.m_UpperBound) Value = m_Attributes.m_UpperBound;
-    else if (m_CurrentValue < m_Attributes.m_LowerBound) Value = m_Attributes.m_LowerBound;
-    else Value = m_CurrentValue;
+    double CurrentValue = m_Drawarea->GetCurrentValue();
+    if (CurrentValue > m_Attributes.m_UpperBound) Value = m_Attributes.m_UpperBound;
+    else if (CurrentValue < m_Attributes.m_LowerBound) Value = m_Attributes.m_LowerBound;
+    else Value = CurrentValue;
 
     int SliderLen;
     int SliderWidth;
@@ -2413,11 +2539,11 @@ QRect KnobOrTachoWidget::CalcSliderRect(int par_Width, int par_Height)
     return Rect;
 }
 
-int KnobOrTachoWidget::CalcSliderLen(int par_Height)
+int KnobOrTachoWidget::DrawArea::CalcSliderLen(int par_Height)
 {
     int Len;
-    if (m_Attributes.m_NeedleSizeFlag) {
-        Len = (int)((double)par_Height * m_Attributes.m_NeedleSize / 100.0);
+    if (m_Attributes->m_NeedleSizeFlag) {
+        Len = (int)((double)par_Height * m_Attributes->m_NeedleSize / 100.0);
     } else {
         Len = (int)((double)par_Height * DEFAULT_SLIDER_LEGTH_FACTOR);
     }

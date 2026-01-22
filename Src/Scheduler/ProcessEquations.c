@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-
+#include "StringMaxChar.h"
 #include "tcb.h"
 #include "Scheduler.h"
 #include "ExecutionStack.h"
@@ -215,9 +215,9 @@ static int AppendErrorString(const char *par_OneErrString, char **ret_ErrString,
     }
     if (par_LenErrorString > 0) {
         (*ret_ErrString)[par_LenErrorString - 1] = '\n';
-        strcpy(*ret_ErrString + par_LenErrorString, par_OneErrString);
+        StringCopyMaxCharTruncate(*ret_ErrString + par_LenErrorString, par_OneErrString, Len);
     } else {
-        strcpy(*ret_ErrString, par_OneErrString);
+        StringCopyMaxCharTruncate(*ret_ErrString, par_OneErrString, Len);
     }
     return par_LenErrorString + Len;
 }

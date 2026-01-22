@@ -31,6 +31,7 @@ void A2LLinkInitCriticalSection (void);
 #define A2L_LINK_IGNORE_MOD_COMMON_ALIGNMENTS_FLAG     0x40
 #define A2L_LINK_IGNORE_RECORD_LAYOUT_ALIGNMENTS_FLAG  0x80
 #define A2L_LINK_IGNORE_READ_ONLY_FLAG                 0x100
+#define A2L_LINK_DEFAUT_ALIGNMENT_FLAG                 0x200
 
 int A2LLinkToExternProcess(const char *par_A2LFileName, int par_Pid, int par_Flags);
 int A2LCloseLink(int par_LinkNr, const char *par_ProcessName);
@@ -117,5 +118,8 @@ int A2LLoadAllReferencesForProcess(int par_LinkNr, const char *par_ProcessName);
 
 int A2LGetLinkedToPid(int par_LinkNr);
 int GetBaseAddressOf(int par_Pid, int par_Flags, uint64_t *ret_BaseAddress);
+
+int ImportMeasurementReferencesListForProcess (int pid, char *FileName);
+int ExportMeasurementReferencesListForProcess (int pid, char *FileName);
 
 #endif

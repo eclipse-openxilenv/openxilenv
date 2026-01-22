@@ -43,6 +43,9 @@ public:
 
     bool SetBackgroundImage(QString &FileName);
 
+    void paint(QPainter &painter);
+    void paint_cursor(QPainter *painter);
+
 public slots:
     void OnlineSlot (void);
     void OfflineSlot (void);
@@ -53,7 +56,9 @@ public slots:
     void ZoomOutSlot (void);
     void ZoomHistorySlot (void);
     void ZoomResetSlot (void);
+#ifdef QT_SVG_LIB
     void MetafileToClipboardSlot (void);
+#endif
     void SaveToFileSlot (void);
     void ResetReferencePointSlot (void);
     void DifferenceToReferencePointSlot (void);
@@ -78,11 +83,11 @@ protected:
     void mouseMoveEvent(QMouseEvent * event) Q_DECL_OVERRIDE;
 
     void PaintZoomRectangle (QPainter *painter);
-    void PaintCursor (QPainter *painter);
+    void PaintCursor (QPainter *painter, bool xor_flag);
 
 private:
-    void PaintTimeLineToPixmap(QRect par_Rec);
-    void PaintXYToPixmap();
+    void PaintTimeLineToPixmap(QPainter &painter, QRect par_Rec);
+    void PaintXYToPixmap(QPainter &painter);
     bool PickingXYPoint(int x, int y, uint64_t *ret_Time);
     QPen CursorPen;
     QPen RefCursorPen;

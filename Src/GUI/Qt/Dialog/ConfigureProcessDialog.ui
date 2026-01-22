@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>809</width>
-    <height>614</height>
+    <width>829</width>
+    <height>644</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -722,11 +722,29 @@
             </layout>
            </item>
            <item>
-            <widget class="QCheckBox" name="RememberReferencedCheckBox">
+            <widget class="QCheckBox" name="DefaultAlignmentCheckBox">
              <property name="text">
-              <string>Remember referenced labels</string>
+              <string>Default alignment: byte =1, word =2, long = 4, int64 = 8, float32 = 4, float64 = 8</string>
              </property>
             </widget>
+           </item>
+           <item>
+            <layout class="QHBoxLayout" name="horizontalLayout_55">
+             <item>
+              <widget class="QCheckBox" name="RememberReferencedCheckBox">
+               <property name="text">
+                <string>Remember referenced labels</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QCheckBox" name="IgnoreReadOnlyCheckBox">
+               <property name="text">
+                <string>Ignore READ_ONLY</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
            </item>
           </layout>
          </widget>

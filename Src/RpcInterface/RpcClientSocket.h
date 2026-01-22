@@ -23,6 +23,8 @@
 HANDLE ConnectToRemoteProcedureCallServer(char *par_ServerName, int par_Port);
 #ifdef _WIN32
 HANDLE NamedPipeConnectToRemoteProcedureCallServer(const char *par_ServerName, const char *par_Instance, int par_Timout_ms);
+#else
+HANDLE UnixDomainSocketConnectToRemoteProcedureCallServer(const char *par_ServerName, const char *par_Instance, int par_Timout_ms);
 #endif
 
 void DisconnectFromRemoteProcedureCallServer(int par_SocketOrNamedPipe, HANDLE par_Socket);

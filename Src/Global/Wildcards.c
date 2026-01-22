@@ -19,6 +19,7 @@
 #include <string.h>
 #include <ctype.h>
 #include "Platform.h"
+#include "PrintFormatToString.h"
 #include "MainValues.h"
 #include "IniDataBase.h"
 #include "MyMemory.h"
@@ -28,36 +29,37 @@
 
 #include "Wildcards.h"
 
-static int WildcardMatchInternal(const char* par_Pettern, const char* par_String)
+static int WildcardMatchInternal(const char* par_Pattern, const char* par_String)
 {
-    const char* Mask;
-    const char* Name;
+    int PosOfString = 0;
+    int PosOfPattern = 0;
+    int StartIndex = -1;
+    int Match = 0;
+    int LenOfString = strlen(par_String);
+    int LenOfPattern = strlen(par_Pattern);
 
-__RESTART:
-    Mask = par_Pettern;
-    for (Name = par_String; *Name != 0; Name++) {
-        if (*Mask == '*') {
-            par_Pettern = Mask + 1;
-            if (!*par_Pettern) {
-                return 1;
-            }
-            par_String = Name;
-            goto __RESTART;
+    while (PosOfString < LenOfString) {
+        if ((PosOfPattern < LenOfPattern) && ((par_Pattern[PosOfPattern] == '?') || (par_Pattern[PosOfPattern] == par_String[PosOfString]))) {
+            PosOfPattern++;
+            PosOfString++;
+        } else if ((PosOfPattern < LenOfPattern) && (par_Pattern[PosOfPattern] == '*')) {
+            StartIndex = PosOfPattern;
+            PosOfPattern++;
+            Match = PosOfString;
+        } else if (StartIndex != -1) {
+            Match++;
+            PosOfString = Match;
+            PosOfPattern = StartIndex + 1;
+        } else {
+            return 0;
         }
-        else if (*Mask != '?') {
-            if (*Name != *Mask) {
-                par_String++;
-                goto __RESTART;
-            }
-        }
-        Mask++;
     }
-    while (*Mask == '*') {
-        Mask++;
+    // Are there additional '*' at end of the pattern.
+    while ((PosOfPattern < LenOfPattern) && (par_Pattern[PosOfPattern] == '*')) {
+        PosOfPattern++;
     }
-    return (*Mask == 0);
+    return (PosOfPattern == LenOfPattern) && (PosOfString == LenOfString);
 }
-
 
 int Compare2StringsWithWildcardsAlwaysCaseSensitive(const char *par_String, const char *par_Pattern)
 {
@@ -91,11 +93,13 @@ int Compare2StringsWithWildcardsCaseSensitive (const char *string, const char *w
     } else {
         char *s1;
         char *s2;
-        s1 = (char*)_alloca(strlen (string)+1);
-        strcpy (s1, string);
+        int Len1 = strlen (string)+1;
+        int Len2 = strlen (wildcard)+1;
+        s1 = (char*)_alloca(Len1);
+        StringCopyMaxCharTruncate (s1, string, Len1);
         _strlwr (s1);
-        s2 = (char*)_alloca(strlen (wildcard)+1);
-        strcpy (s2, wildcard);
+        s2 = (char*)_alloca(Len2);
+        StringCopyMaxCharTruncate (s2, wildcard, Len2);
         _strlwr (s2);
         return Compare2StringsWithWildcardsAlwaysCaseSensitive (s1, s2);
     }
@@ -293,23 +297,22 @@ INCLUDE_EXCLUDE_FILTER *BuildIncludeExcludeFilterFromIni (const char *Section, c
     Ret = (INCLUDE_EXCLUDE_FILTER*)my_calloc (1, sizeof(INCLUDE_EXCLUDE_FILTER));
     if (Ret == NULL) goto __ERROR;
     // Main filter due to historic reasons.
-    sprintf (Entry, "%sfilter", Prefix);
+    PrintFormatToString (Entry, sizeof(Entry), "%sfilter", Prefix);
     if (IniFileDataBaseReadString (Section, Entry, "", Buffer, sizeof(Buffer), par_Fd)) {
-        Ret->MainFilter = (char*)my_malloc (strlen (Buffer) + 1);
+        Ret->MainFilter = StringMalloc (Buffer);
         if (Ret->MainFilter == NULL) goto __ERROR;
-        strcpy (Ret->MainFilter, Buffer);
     } else {
         Ret->MainFilter = NULL;
     }
 
     // Calculate the size of the filter
     for (x = 0; x < 100000; x++) {
-        sprintf (Entry, "%sIncludeFilter_%i", Prefix, x);
+        PrintFormatToString (Entry, sizeof(Entry), "%sIncludeFilter_%i", Prefix, x);
         if (!IniFileDataBaseReadString (Section, Entry, "", Buffer, sizeof(Buffer), par_Fd)) break;
     }
     Ret->IncludeSize = x;
     for (x = 0; x < 100000; x++) {
-        sprintf (Entry, "%sExcludeFilter_%i", Prefix, x);
+        PrintFormatToString (Entry, sizeof(Entry), "%sExcludeFilter_%i", Prefix, x);
         if (!IniFileDataBaseReadString (Section, Entry, "", Buffer, sizeof(Buffer), par_Fd)) break;
     }
     Ret->ExcludeSize = x;
@@ -318,19 +321,17 @@ INCLUDE_EXCLUDE_FILTER *BuildIncludeExcludeFilterFromIni (const char *Section, c
     if ((Ret->IncludeArray == NULL) || (Ret->ExcludeArray == NULL)) goto __ERROR;
     // Read the filters
     for (x = 0; x < Ret->IncludeSize; x++) {
-        sprintf (Entry, "%sIncludeFilter_%i", Prefix, x);
+        PrintFormatToString (Entry, sizeof(Entry), "%sIncludeFilter_%i", Prefix, x);
         if (!IniFileDataBaseReadString (Section, Entry, "", Buffer, sizeof(Buffer), par_Fd)) break;
-        Ret->IncludeArray[x] = (char*)my_malloc (strlen (Buffer) + 1);
+        Ret->IncludeArray[x] = StringMalloc (Buffer);
         if (Ret->IncludeArray[x] == NULL) goto __ERROR;
-        strcpy (Ret->IncludeArray[x], Buffer);
 
     }
     for (x = 0; x < Ret->ExcludeSize; x++) {
-        sprintf (Entry, "%sExcludeFilter_%i", Prefix, x);
+        PrintFormatToString (Entry, sizeof(Entry), "%sExcludeFilter_%i", Prefix, x);
         if (!IniFileDataBaseReadString (Section, Entry, "", Buffer, sizeof(Buffer), par_Fd)) break;
-        Ret->ExcludeArray[x] = (char*)my_malloc (strlen (Buffer) + 1);
+        Ret->ExcludeArray[x] = (char*)StringMalloc (Buffer);
         if (Ret->ExcludeArray[x] == NULL) goto __ERROR;
-        strcpy (Ret->ExcludeArray[x], Buffer);
     }
     BuildOnlyLabelFilter (Ret);
     return Ret;
@@ -347,12 +348,12 @@ int SaveIncludeExcludeListsToIni (INCLUDE_EXCLUDE_FILTER *Filter, const char *Se
     char Buffer[INI_MAX_LINE_LENGTH];
 
     if (Filter->MainFilter != NULL) {
-        sprintf (Entry, "%sfilter", Prefix);
+        PrintFormatToString (Entry, sizeof(Entry), "%sfilter", Prefix);
         IniFileDataBaseWriteString (Section, Entry, Filter->MainFilter, par_Fd);
     }
 
     for (i = 0; i < 10000; i++) {
-        sprintf (Entry, "%sIncludeFilter_%i", Prefix, i);
+        PrintFormatToString (Entry, sizeof(Entry), "%sIncludeFilter_%i", Prefix, i);
         if (i < Filter->IncludeSize) {
             IniFileDataBaseWriteString (Section, Entry, Filter->IncludeArray[i], par_Fd);
         } else {
@@ -365,7 +366,7 @@ int SaveIncludeExcludeListsToIni (INCLUDE_EXCLUDE_FILTER *Filter, const char *Se
         }
     }
     for (e = 0; e < 10000; e++) {
-        sprintf (Entry, "%sExcludeFilter_%i", Prefix, e);
+        PrintFormatToString (Entry, sizeof(Entry), "%sExcludeFilter_%i", Prefix, e);
         if (e < Filter->ExcludeSize) {
             IniFileDataBaseWriteString (Section, Entry, Filter->ExcludeArray[e], par_Fd);
         } else {
@@ -385,7 +386,6 @@ void SetMainFilterInsideIncludeExcludeFilter (INCLUDE_EXCLUDE_FILTER *Filter, co
     if (Filter->MainFilter != NULL) {
         my_free (Filter->MainFilter);
     }
-    Filter->MainFilter = my_malloc (strlen (MainFilter) + 1);
-    if (Filter->MainFilter != NULL) strcpy (Filter->MainFilter, MainFilter);
+    Filter->MainFilter = StringMalloc (MainFilter);
 }
 

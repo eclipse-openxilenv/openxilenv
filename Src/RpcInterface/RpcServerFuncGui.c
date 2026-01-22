@@ -15,15 +15,10 @@
  */
 
 
-#include <stdio.h>
-#include <stdlib.h>
 #include <memory.h>
 #include <fcntl.h>
 
-#include "Config.h"
-
-#include "ThrowError.h"
-#include "Files.h"
+#include "MemZeroAndCopy.h"
 #include "ImExportDskFile.h"
 #include "MainWinowSyncWithOtherThreads.h"
 #include "UtilsWindow.h"
@@ -38,7 +33,7 @@ static int RPCFunc_LoadDesktop(RPC_CONNECTION *par_Connection, RPC_API_BASE_MESS
     UNUSED(par_Connection);
     RPC_API_LOAD_DESKTOP_MESSAGE *In = (RPC_API_LOAD_DESKTOP_MESSAGE*)par_DataIn;
     RPC_API_LOAD_DESKTOP_MESSAGE_ACK *Out = (RPC_API_LOAD_DESKTOP_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_LOAD_DESKTOP_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_LOAD_DESKTOP_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_LOAD_DESKTOP_MESSAGE_ACK);
 
     Out->Header.ReturnValue = script_command_load_desktop_file ((char*)In + In->OffsetFile);
@@ -51,7 +46,7 @@ static int RPCFunc_SaveDesktop(RPC_CONNECTION *par_Connection, RPC_API_BASE_MESS
     UNUSED(par_Connection);
     RPC_API_SAVE_DESKTOP_MESSAGE *In = (RPC_API_SAVE_DESKTOP_MESSAGE*)par_DataIn;
     RPC_API_SAVE_DESKTOP_MESSAGE_ACK *Out = (RPC_API_SAVE_DESKTOP_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_SAVE_DESKTOP_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_SAVE_DESKTOP_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_SAVE_DESKTOP_MESSAGE_ACK);
 
     Out->Header.ReturnValue = script_command_save_desktop_file ((char*)In + In->OffsetFile);
@@ -65,7 +60,7 @@ static int RPCFunc_ClearDesktop(RPC_CONNECTION *par_Connection, RPC_API_BASE_MES
     UNUSED(par_DataIn);
     //RPC_API_CLEAR_DESKTOP_MESSAGE *In = (RPC_API_CLEAR_DESKTOP_MESSAGE*)par_DataIn;
     RPC_API_CLEAR_DESKTOP_MESSAGE_ACK *Out = (RPC_API_CLEAR_DESKTOP_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_CLEAR_DESKTOP_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_CLEAR_DESKTOP_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_CLEAR_DESKTOP_MESSAGE_ACK);
 
     Out->Header.ReturnValue = 0;
@@ -80,7 +75,7 @@ static int RPCFunc_CreateDialog(RPC_CONNECTION *par_Connection, RPC_API_BASE_MES
     UNUSED(par_Connection);
     RPC_API_CREATE_DIALOG_MESSAGE *In = (RPC_API_CREATE_DIALOG_MESSAGE*)par_DataIn;
     RPC_API_CREATE_DIALOG_MESSAGE_ACK *Out = (RPC_API_CREATE_DIALOG_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_CREATE_DIALOG_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_CREATE_DIALOG_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_CREATE_DIALOG_MESSAGE_ACK);
 
     Out->Header.ReturnValue = ScriptCreateDialogFromOtherThread((char*)In + In->OffsetDialogName);
@@ -93,7 +88,7 @@ static int RPCFunc_AddDialogItem(RPC_CONNECTION *par_Connection, RPC_API_BASE_ME
     UNUSED(par_Connection);
     RPC_API_ADD_DIALOG_ITEM_MESSAGE *In = (RPC_API_ADD_DIALOG_ITEM_MESSAGE*)par_DataIn;
     RPC_API_ADD_DIALOG_ITEM_MESSAGE_ACK *Out = (RPC_API_ADD_DIALOG_ITEM_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_ADD_DIALOG_ITEM_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_ADD_DIALOG_ITEM_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_ADD_DIALOG_ITEM_MESSAGE_ACK);
 
     Out->Header.ReturnValue = ScriptAddDialogItemFromOtherThread ((char*)In + In->OffsetDescription, (char*)In + In->OffsetVariName);
@@ -107,7 +102,7 @@ static int RPCFunc_ShowDialog(RPC_CONNECTION *par_Connection, RPC_API_BASE_MESSA
     UNUSED(par_DataIn);
     //RPC_API_SHOW_DIALOG_MESSAGE *In = (RPC_API_SHOW_DIALOG_MESSAGE*)par_DataIn;
     RPC_API_SHOW_DIALOG_MESSAGE_ACK *Out = (RPC_API_SHOW_DIALOG_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_SHOW_DIALOG_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_SHOW_DIALOG_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_SHOW_DIALOG_MESSAGE_ACK);
 
     ScriptShowDialogFromOtherThread();
@@ -121,7 +116,7 @@ static int RPCFunc_IsDialogClosed(RPC_CONNECTION *par_Connection, RPC_API_BASE_M
     UNUSED(par_DataIn);
     //RPC_API_IS_DIALOG_CLOSED_MESSAGE *In = (RPC_API_IS_DIALOG_CLOSED_MESSAGE*)par_DataIn;
     RPC_API_IS_DIALOG_CLOSED_MESSAGE_ACK *Out = (RPC_API_IS_DIALOG_CLOSED_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_IS_DIALOG_CLOSED_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_IS_DIALOG_CLOSED_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_IS_DIALOG_CLOSED_MESSAGE_ACK);
 
     Out->Header.ReturnValue = IsScriptDialogClosedFromOtherThread();
@@ -134,7 +129,7 @@ static int RPCFunc_SelectSheet(RPC_CONNECTION *par_Connection, RPC_API_BASE_MESS
     UNUSED(par_Connection);
     RPC_API_SELECT_SHEET_MESSAGE *In = (RPC_API_SELECT_SHEET_MESSAGE*)par_DataIn;
     RPC_API_SELECT_SHEET_MESSAGE_ACK *Out = (RPC_API_SELECT_SHEET_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_SELECT_SHEET_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_SELECT_SHEET_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_SELECT_SHEET_MESSAGE_ACK);
 
     Out->Header.ReturnValue = SelectSheetFromOtherThread ((char*)In + In->OffsetSheetName);
@@ -146,7 +141,7 @@ static int RPCFunc_AddSheet(RPC_CONNECTION *par_Connection, RPC_API_BASE_MESSAGE
     UNUSED(par_Connection);
     RPC_API_ADD_SHEET_MESSAGE *In = (RPC_API_ADD_SHEET_MESSAGE*)par_DataIn;
     RPC_API_ADD_SHEET_MESSAGE_ACK *Out = (RPC_API_ADD_SHEET_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_ADD_SHEET_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_ADD_SHEET_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_ADD_SHEET_MESSAGE_ACK);
 
     Out->Header.ReturnValue = AddSheetFromOtherThread ((char*)In + In->OffsetSheetName);
@@ -158,7 +153,7 @@ static int RPCFunc_DeleteSheet(RPC_CONNECTION *par_Connection, RPC_API_BASE_MESS
     UNUSED(par_Connection);
     RPC_API_DELETE_SHEET_MESSAGE *In = (RPC_API_DELETE_SHEET_MESSAGE*)par_DataIn;
     RPC_API_DELETE_SHEET_MESSAGE_ACK *Out = (RPC_API_DELETE_SHEET_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_DELETE_SHEET_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_DELETE_SHEET_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_DELETE_SHEET_MESSAGE_ACK);
 
     Out->Header.ReturnValue = DeleteSheetFromOtherThread ((char*)In + In->OffsetSheetName);
@@ -170,7 +165,7 @@ static int RPCFunc_RenameSheet(RPC_CONNECTION *par_Connection, RPC_API_BASE_MESS
     UNUSED(par_Connection);
     RPC_API_RENAME_SHEET_MESSAGE *In = (RPC_API_RENAME_SHEET_MESSAGE*)par_DataIn;
     RPC_API_RENAME_SHEET_MESSAGE_ACK *Out = (RPC_API_RENAME_SHEET_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_RENAME_SHEET_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_RENAME_SHEET_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_RENAME_SHEET_MESSAGE_ACK);
 
     Out->Header.ReturnValue = RenameSheetFromOtherThread ((char*)In + In->OffsetOldSheetName, (char*)In + In->OffsetNewSheetName);
@@ -182,7 +177,7 @@ static int RPCFunc_OpenWindow(RPC_CONNECTION *par_Connection, RPC_API_BASE_MESSA
     UNUSED(par_Connection);
     RPC_API_OPEN_WINDOW_MESSAGE *In = (RPC_API_OPEN_WINDOW_MESSAGE*)par_DataIn;
     RPC_API_OPEN_WINDOW_MESSAGE_ACK *Out = (RPC_API_OPEN_WINDOW_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_OPEN_WINDOW_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_OPEN_WINDOW_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_OPEN_WINDOW_MESSAGE_ACK);
 
     Out->Header.ReturnValue = OpenWindowByFilter ((char*)In + In->OffsetWindowName);
@@ -194,7 +189,7 @@ static int RPCFunc_CloseWindow(RPC_CONNECTION *par_Connection, RPC_API_BASE_MESS
     UNUSED(par_Connection);
     RPC_API_CLOSE_WINDOW_MESSAGE *In = (RPC_API_CLOSE_WINDOW_MESSAGE*)par_DataIn;
     RPC_API_CLOSE_WINDOW_MESSAGE_ACK *Out = (RPC_API_CLOSE_WINDOW_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_CLOSE_WINDOW_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_CLOSE_WINDOW_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_CLOSE_WINDOW_MESSAGE_ACK);
 
     Out->Header.ReturnValue = CloseWindowByFilter ((char*)In + In->OffsetWindowName);
@@ -206,7 +201,7 @@ static int RPCFunc_DeleteWindow(RPC_CONNECTION *par_Connection, RPC_API_BASE_MES
     UNUSED(par_Connection);
     RPC_API_DELETE_WINDOW_MESSAGE *In = (RPC_API_DELETE_WINDOW_MESSAGE*)par_DataIn;
     RPC_API_DELETE_WINDOW_MESSAGE_ACK *Out = (RPC_API_DELETE_WINDOW_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_DELETE_WINDOW_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_DELETE_WINDOW_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_DELETE_WINDOW_MESSAGE_ACK);
 
     Out->Header.ReturnValue = DeleteWindowByFilter ((char*)In + In->OffsetWindowName);
@@ -218,7 +213,7 @@ static int RPCFunc_ImportWindow(RPC_CONNECTION *par_Connection, RPC_API_BASE_MES
     UNUSED(par_Connection);
     RPC_API_IMPORT_WINDOW_MESSAGE *In = (RPC_API_IMPORT_WINDOW_MESSAGE*)par_DataIn;
     RPC_API_IMPORT_WINDOW_MESSAGE_ACK *Out = (RPC_API_IMPORT_WINDOW_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_IMPORT_WINDOW_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_IMPORT_WINDOW_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_IMPORT_WINDOW_MESSAGE_ACK);
 
     Out->Header.ReturnValue = ImportWindowByFilter ((char*)In + In->OffsetWindowName, (char*)In + In->OffsetFileName);
@@ -230,7 +225,7 @@ static int RPCFunc_ExportWindow(RPC_CONNECTION *par_Connection, RPC_API_BASE_MES
     UNUSED(par_Connection);
     RPC_API_EXPORT_WINDOW_MESSAGE *In = (RPC_API_EXPORT_WINDOW_MESSAGE*)par_DataIn;
     RPC_API_EXPORT_WINDOW_MESSAGE_ACK *Out = (RPC_API_EXPORT_WINDOW_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_EXPORT_WINDOW_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_EXPORT_WINDOW_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_EXPORT_WINDOW_MESSAGE_ACK);
 
     Out->Header.ReturnValue = ExportWindowByFilter ((char*)In + In->OffsetSheetName, (char*)In + In->OffsetWindowName, (char*)In + In->OffsetFileName);

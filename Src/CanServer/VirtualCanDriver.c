@@ -157,7 +157,7 @@ int CanInsertErrorHookFunction (int par_Handle,
                 if (VirualCanBitError.Id == (int32_t)par_Data->Data.CanFd.Id) {
                     switch (VirualCanBitError.Command) {
                     case OVERWRITE_DATA_BYTES:
-                        memcpy(ret_Data, par_Data, par_Data->Size);
+                        MEMCPY(ret_Data, par_Data, par_Data->Size);
                         int Size = par_Data->Size - (sizeof(VIRTUAL_NETWORK_PACKAGE) - 1);
                         if (Size > CAN_BIT_ERROR_MAX_SIZE) Size = CAN_BIT_ERROR_MAX_SIZE;
                         if (VirualCanBitError.ByteOrder) {
@@ -182,7 +182,7 @@ int CanInsertErrorHookFunction (int par_Handle,
                         break;
                     case CHANGE_DATA_LENGTH:
                         if (VirualCanBitError.Size < par_MaxSize) {
-                            memcpy(ret_Data, par_Data, par_Data->Size);
+                            MEMCPY(ret_Data, par_Data, par_Data->Size);
                             ret_Data->Size = (sizeof(VIRTUAL_NETWORK_PACKAGE) - 1) + VirualCanBitError.Size;
                             Ret = 1;    // Data has changed
                         }

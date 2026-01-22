@@ -23,6 +23,8 @@
 #include <ctype.h>
 
 #include "Config.h"
+#include "StringMaxChar.h"
+#include "PrintFormatToString.h"
 #include "MainValues.h"
 #include "Files.h"
 #include "Scheduler.h"
@@ -53,7 +55,7 @@ static void delete_all_window_of_one_type(char *type)
     int Fd = GetMainFileDescriptor();
 
     for (x = 0;;x++) {
-        sprintf (entry, "W%i", x);
+        PrintFormatToString (entry, sizeof(entry), "W%i", x);
         if (IniFileDataBaseReadString(type, entry, "", wname, sizeof (wname), Fd) == 0)
             break;
         else IniFileDataBaseWriteString (wname, NULL, NULL, Fd);
@@ -87,7 +89,7 @@ int clear_desktop_ini (void)
     delete_all_window_of_one_type("GUI/AllFlexrayMessageWindows");
 
     for (x = 0; x < 10000; x++) {
-        sprintf (section, "GUI/OpenWindowsForSheet%i", x);
+        PrintFormatToString (section, sizeof(section), "GUI/OpenWindowsForSheet%i", x);
         if (IniFileDataBaseReadString (section, "SheetName", "",
                                        wname, sizeof(wname), Fd) == 0) break;
         IniFileDataBaseWriteString (section, NULL, NULL, Fd);
@@ -105,17 +107,17 @@ static int copy_all_window_of_one_type(char *par_Type, int par_DstFile, int par_
     int Len;
     int x;
 
-    strcpy(SectionPath, "GUI/Widgets/");
+    STRING_COPY_TO_ARRAY(SectionPath, "GUI/Widgets/");
     Len = strlen(SectionPath);
     Name = SectionPath + Len;
 
     for (x = 0;;x++) {
-        sprintf (entry, "W%i", x);
+        PrintFormatToString (entry, sizeof(entry), "W%i", x);
         if (IniFileDataBaseReadString(par_Type, entry, "", Name, sizeof(SectionPath) - Len, par_SrcFile) == 0)
             break;
-        if (IniFileDataBaseCopySectionSameName(par_DstFile, par_SrcFile, SectionPath)) return -1;
+        IniFileDataBaseCopySectionSameName(par_DstFile, par_SrcFile, SectionPath);
     }
-    if (IniFileDataBaseCopySectionSameName(par_DstFile, par_SrcFile, par_Type)) return -1;
+    IniFileDataBaseCopySectionSameName(par_DstFile, par_SrcFile, par_Type);
     return 0;
 }
 
@@ -156,7 +158,7 @@ int load_desktop_file_ini (const char *fname)
         if (Fd > 0) {
             copy_all_window_of_all_type(GetMainFileDescriptor(), Fd);
             for (x = 0; x < 10000; x++) {
-                sprintf (section, "GUI/OpenWindowsForSheet%i", x);
+                PrintFormatToString (section, sizeof(section), "GUI/OpenWindowsForSheet%i", x);
                 if (IniFileDataBaseLookIfSectionExist(section, Fd)) {
                     IniFileDataBaseCopySectionSameName(GetMainFileDescriptor(), Fd, section);
                 } else if (x) break;
@@ -186,7 +188,7 @@ int save_desktop_file_ini (const char *fname)
         copy_all_window_of_all_type(Fd, GetMainFileDescriptor());
 
         for (x = 0; x < 10000; x++) {
-            sprintf (section, "GUI/OpenWindowsForSheet%i", x);
+            PrintFormatToString (section, sizeof(section), "GUI/OpenWindowsForSheet%i", x);
             if (IniFileDataBaseLookIfSectionExist(section, GetMainFileDescriptor())) {
                 IniFileDataBaseCopySectionSameName(Fd, GetMainFileDescriptor(), section);
             } else if (x) break;

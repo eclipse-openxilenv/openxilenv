@@ -20,6 +20,7 @@
 
 #include <QComboBox>
 #include <QButtonGroup>
+#include <QPushButton>
 
 #include "DialogFrame.h"
 #include "KnobOrTachoWidget.h"
@@ -117,6 +118,8 @@ private:
     void FillInheritFromComboBox();
     void FillAlignComboBox(QComboBox *par_ComboBox);
     void variableDirectConfig(bool arg_value);
+    void HideNamePos(bool par_Hide);
+    void HideTextPos(bool par_Hide);
 
     Ui::KnobDialogFrame *ui;
 

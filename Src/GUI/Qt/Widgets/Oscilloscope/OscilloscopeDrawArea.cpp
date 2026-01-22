@@ -29,13 +29,14 @@
 extern "C" {
     #include "my_udiv128.h"
     #include "ThrowError.h"
+    #include "PrintFormatToString.h"
     #include "MainValues.h"
     #include "Scheduler.h"
     #include "FileExtensions.h"
     #include "OscilloscopeFile.h"
 }
 
-#define DEBUG_PRINT_TO_FILE
+//#define DEBUG_PRINT_TO_FILE
 
 #ifdef DEBUG_PRINT_TO_FILE
 void OscilloscopeDrawAreaDebugPrint (OscilloscopeDrawArea *DrawArea, const char *txt, ...);
@@ -98,7 +99,7 @@ static QPen BuildPen(int par_LineWidth, int par_Color)
     return Pen;
 }
 
-void OscilloscopeDrawArea::PaintTimeLineToPixmap(QRect par_Rec)
+void OscilloscopeDrawArea::PaintTimeLineToPixmap(QPainter &painter, QRect par_Rec)
 {
     int i;
     int StartXPos = par_Rec.x() - 2;
@@ -106,8 +107,6 @@ void OscilloscopeDrawArea::PaintTimeLineToPixmap(QRect par_Rec)
     if (StartXPos < 0) {
         StartXPos = 0; // Otherwise there can be go to negative time
     }
-
-    QPainter painter(m_BufferPixMap);
 
     // Fill background
     DEBUG_PRINT (this, "fill background: rect.x()) = %" PRIi32 ", "
@@ -140,9 +139,12 @@ void OscilloscopeDrawArea::PaintTimeLineToPixmap(QRect par_Rec)
             if ((m_Data->vids_right[i] > 0) && (!m_Data->vars_disable_right[i])) {
                 // set the color
                 painter.setPen (BuildPen(m_Data->LineSize_right[i], m_Data->color_right[i]));
-
                 uint64_t t = StartXTime;
                 int x_m1, y_m1, valid_m1 = 0;
+                double ymax = -DBL_MAX;
+                double ymin = DBL_MAX;
+                bool ymaxflag = false;
+                bool yminflag = false;
                 for (;;) {
                     int x;
                     if (t >= m_Data->t_window_start) {
@@ -163,10 +165,32 @@ void OscilloscopeDrawArea::PaintTimeLineToPixmap(QRect par_Rec)
                                         if (x != x_m1) {  // Are the x changed?
                                             if ((x - x_m1) > 1) { // Are the x value change more as one pixel? Than we have to paint a _| otherwise only a |
                                                 painter.drawLine (x_m1, y_m1, x, y_m1);
+                                                painter.drawLine (x, y_m1, x, y);
+                                            } else {
+                                                double y1, y2;
+                                                // If some sample point are not drawn because the x axis is not changed
+                                                // we muss check against the min./max. value of the ignored samples.
+                                                y1 = (y_m1 > y) ? y_m1 : y;
+                                                y2 = (y_m1 < y) ? y_m1 : y;
+                                                if (ymaxflag) y1 = (y1 > ymax) ? y1 : ymax;
+                                                if (yminflag) y2 = (y2 < ymin) ? y2 : ymin;
+                                                painter.drawLine (x, y1, x, y2);
+                                                ymaxflag = false;
+                                                yminflag = false;
+                                                ymax = -DBL_MAX;
+                                                ymin = DBL_MAX;
                                             }
-                                            painter.drawLine (x, y_m1, x, y);
                                             x_m1 = x;
                                             y_m1 = y;
+                                        } else {
+                                            if (y > ymax) {
+                                                ymaxflag = true;
+                                                ymax = y;
+                                            }
+                                            if (y < ymin) {
+                                                yminflag = true;
+                                                ymin = y;
+                                            }
                                         }
                                     }
                                 } else {
@@ -214,9 +238,12 @@ void OscilloscopeDrawArea::PaintTimeLineToPixmap(QRect par_Rec)
             if ((m_Data->vids_left[i] > 0) && (!m_Data->vars_disable_left[i])) {
                 // set the color
                 painter.setPen (BuildPen(m_Data->LineSize_left[i], m_Data->color_left[i]));
-
                 uint64_t t = StartXTime;
                 int x_m1, y_m1, valid_m1 = 0;
+                double ymax = -DBL_MAX;
+                double ymin = DBL_MAX;
+                bool ymaxflag = false;
+                bool yminflag = false;
                 for (;;) {
                     int x;
                     if (t >= m_Data->t_window_start) {
@@ -237,10 +264,32 @@ void OscilloscopeDrawArea::PaintTimeLineToPixmap(QRect par_Rec)
                                         if (x != x_m1) {  //  Are the x changed?
                                             if ((x - x_m1) > 1) { // Are the x value change more as one pixel? Than we have to paint a _| otherwise only a |
                                                 painter.drawLine (x_m1, y_m1, x, y_m1);
+                                                painter.drawLine (x, y_m1, x, y);
+                                            } else {
+                                                double y1, y2;
+                                                // If some sample point are not drawn because the x axis is not changed
+                                                // we muss check against the min./max. value of the ignored samples.
+                                                y1 = (y_m1 > y) ? y_m1 : y;
+                                                y2 = (y_m1 < y) ? y_m1 : y;
+                                                if (ymaxflag) y1 = (y1 > ymax) ? y1 : ymax;
+                                                if (yminflag) y2 = (y2 < ymin) ? y2 : ymin;
+                                                painter.drawLine (x, y1, x, y2);
+                                                ymaxflag = false;
+                                                yminflag = false;
+                                                ymax = -DBL_MAX;
+                                                ymin = DBL_MAX;
                                             }
-                                            painter.drawLine (x, y_m1, x, y);
                                             x_m1 = x;
                                             y_m1 = y;
+                                        } else {
+                                            if (y > ymax) {
+                                                ymaxflag = true;
+                                                ymax = y;
+                                            }
+                                            if (y < ymin) {
+                                                yminflag = true;
+                                                ymin = y;
+                                            }
                                         }
                                     }
                                 } else {
@@ -287,10 +336,33 @@ void OscilloscopeDrawArea::PaintTimeLineToPixmap(QRect par_Rec)
     }
 }
 
+void OscilloscopeDrawArea::paint(QPainter &painter)
+{
+    QColor SaveColor = m_BackgroundColor;
+    m_BackgroundColor = Qt::white;
+    if (m_Data->xy_view_flag) {
+        PaintXYToPixmap(painter);
+    } else {
+        QRect Rect;
+        Rect.setX(0);
+        Rect.setY(0);
+        Rect.setWidth(width());
+        Rect.setHeight(height());
+        PaintTimeLineToPixmap(painter, Rect);
+    }
+    m_BackgroundColor = SaveColor;
+}
+
+void OscilloscopeDrawArea::paint_cursor(QPainter *painter)
+{
+    if (m_Data->state == 0) {
+        PaintCursor(painter, false);
+    }
+}
+
 void OscilloscopeDrawArea::paintEvent(QPaintEvent *event)
 {
     QPainter painter(this);
-
     if (m_OnlyUpdateZoomRectFlag) {
         painter.drawPixmap(this->rect(), *m_BufferPixMap);
         // Paint only the zoom frame
@@ -311,12 +383,14 @@ void OscilloscopeDrawArea::paintEvent(QPaintEvent *event)
         m_Data->t_current_buffer_end_diff = m_Data->t_current_buffer_end - m_Data->t_current_buffer_end_save;
         m_Data->t_current_to_update_end = m_Data->t_current_buffer_end;
         if (m_Data->xy_view_flag) {
-            PaintXYToPixmap();
+            QPainter painter (m_BufferPixMap);
+            PaintXYToPixmap(painter);
         } else {
-            PaintTimeLineToPixmap(event->rect());
+            QPainter painter (m_BufferPixMap);
+            PaintTimeLineToPixmap(painter, event->rect());
         }
         painter.drawPixmap(this->rect(), *m_BufferPixMap);
-        if (!m_Data->state) PaintCursor (&painter);
+        if (!m_Data->state) PaintCursor (&painter, true);
         m_Data->t_current_updated_end = m_Data->t_current_to_update_end;
         LeaveOsciWidgetCriticalSection (m_Data->CriticalSectionNumber);
     }
@@ -340,7 +414,7 @@ void OscilloscopeDrawArea::PaintZoomRectangle (QPainter *painter)
     painter->drawLine (m_x2, m_y1, m_x1, m_y1);
 }
 
-void OscilloscopeDrawArea::PaintCursor (QPainter *painter)
+void OscilloscopeDrawArea::PaintCursor (QPainter *painter, bool xor_flag)
 {
     double x_d, y_d;
     double Min, Max, Value, ValueX, MinX, MaxX;
@@ -421,7 +495,6 @@ void OscilloscopeDrawArea::PaintCursor (QPainter *painter)
                 x_d = (m_Data->t_cursor - m_Data->t_window_start) * Fac1;
             }
         }
-
         QPen SavePen = painter->pen();
         QColor Color(Qt::lightGray);
         QPen Pen(Color);
@@ -462,10 +535,9 @@ void OscilloscopeDrawArea::PaintCursor (QPainter *painter)
     }
 }
 
-void OscilloscopeDrawArea::PaintXYToPixmap()
+void OscilloscopeDrawArea::PaintXYToPixmap(QPainter &painter)
 {
-    QPainter painter (m_BufferPixMap);
-
+    QPen SavePen = painter.pen();
     if (m_ClearFlag) {
         // Fill background
         if (m_BackgroundImage != nullptr) {
@@ -594,6 +666,7 @@ void OscilloscopeDrawArea::PaintXYToPixmap()
         }
     }
     m_ClearFlag = false;
+    painter.setPen (SavePen);
 }
 
 bool OscilloscopeDrawArea::PickingXYPoint(int x, int y, uint64_t *ret_Time)
@@ -829,10 +902,12 @@ void OscilloscopeDrawArea::ZoomResetSlot (void)
     m_OscilloscopeWidget->ZoomReset();
 }
 
+#ifdef QT_SVG_LIB
 void OscilloscopeDrawArea::MetafileToClipboardSlot (void)
 {
-    // create_oszi_metafile (m_Data);
+    m_OscilloscopeWidget->PrintSvgToClipboard();
 }
+#endif
 
 void OscilloscopeDrawArea::SaveToFileSlot (void)
 {
@@ -991,7 +1066,9 @@ void OscilloscopeDrawArea::contextMenuEvent(QContextMenuEvent *event)
         menu.addAction (ZoomHistoryAct);
         menu.addAction (ZoomResetAct);
     }
+#ifdef QT_SVG_LIB
     menu.addAction (MetafileToClipboardAct);
+#endif
     menu.addAction (SaveToFileAct);
 
     if ((m_Data->state == 0) && !m_Data->xy_view_flag) {
@@ -1155,9 +1232,9 @@ void OscilloscopeDrawAreaDebugPrint (OscilloscopeDrawArea *DrawArea, const char 
     if (DrawArea->m_FileHandle == nullptr) {
         char Name[MAX_PATH];
 #ifdef _WIN32
-        sprintf (Name, "c:\\tmp\\%s_log.txt", DrawArea->GetOscilloscopeWidget()->GetWindowTitle().toLatin1().data());
+        PrintFormatToString (Name, sizeof(Name), "c:\\tmp\\%s_log.txt", DrawArea->GetOscilloscopeWidget()->GetWindowTitle().toLatin1().data());
 #else
-        sprintf (Name, "/tmp/%s_log.txt", DrawArea->GetOscilloscopeWidget()->GetWindowTitle().toLatin1().data());
+        PrintFormatToString (Name, sizeof(Name), "/tmp/%s_log.txt", DrawArea->GetOscilloscopeWidget()->GetWindowTitle().toLatin1().data());
 #endif
         DrawArea->m_FileHandle = fopen (Name, "w");
         if (DrawArea->m_FileHandle != nullptr) {

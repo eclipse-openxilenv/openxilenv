@@ -18,6 +18,8 @@
 #ifndef MAINWINOWSYNCWITHOTHERTHREADS_H
 #define MAINWINOWSYNCWITHOTHERTHREADS_H
 
+#include <inttypes.h>
+
 #ifdef __cplusplus
 #include <QObject>
 

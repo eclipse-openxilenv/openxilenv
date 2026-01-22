@@ -22,6 +22,7 @@
 #include <QTextStream>
 
 extern "C" {
+#include "PrintFormatToString.h"
 #include "EquationList.h"
 #include "MainValues.h"
 #include "Files.h"
@@ -183,7 +184,7 @@ QVariant ActiveEquationsModel::data(const QModelIndex &index, int role) const
                     Processes[0] = 0;
                     for (x = 0; x < 32; x++) {
                         if (m_ActiveEquationSnapShot[Row].Pids[x]) {
-                            sprintf (Processes + strlen (Processes), "%i ", m_ActiveEquationSnapShot[Row].Pids[x]);
+                            PrintFormatToString (Processes + strlen (Processes), sizeof(Processes) - strlen(Processes), "%i ", m_ActiveEquationSnapShot[Row].Pids[x]);
                         }
                     }
                     return QString(Processes);

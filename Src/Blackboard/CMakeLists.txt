@@ -1,8 +1,13 @@
 if(UNIX) 
-target_sources(LinuxRemoteMasterCore 
-    PRIVATE Blackboard.c BlackboardAccess.c BlackboardHashIndex.c
-            BlackboardIniCache.c EquationParser.c ExecutionStack.c      
-            TextReplace.c) 
+    target_sources(LinuxRemoteMasterCore PRIVATE
+                   Blackboard.c
+                   BlackboardAccess.c
+                   BlackboardHashIndex.c
+                   BlackboardIniCache.c
+                   BlackboardConversion.c
+                   EquationParser.c
+                   ExecutionStack.c
+                   TextReplace.c)
 endif()
 
 set(CommonFileList
@@ -15,6 +20,7 @@ set(CommonFileList
     Blackboard.c
     EquationList.c
     ExecutionStack.c
+    BlackboardConversion.c
 )
 
 target_sources(XilEnv PRIVATE ${CommonFileList})

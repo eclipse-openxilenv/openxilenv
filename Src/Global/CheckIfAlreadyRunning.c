@@ -17,6 +17,7 @@
 
 #include "Platform.h"
 #include <stdio.h>
+#include "PrintFormatToString.h"
 #include "ThrowError.h"
 #include "MainValues.h"
 #include "FileExtensions.h"
@@ -29,7 +30,7 @@ int TryToLockInstance (char *Instance)
     HGLOBAL hMap;
     char Name[MAX_PATH + 100];
 
-    sprintf (Name, "XilEnv_with_instance_%s_active", Instance);
+    PrintFormatToString (Name, sizeof(Name), "XilEnv_with_instance_%s_active", Instance);
     hMap = CreateFileMapping (INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, 0L, sizeof (HWND), Name);
     if (hMap == 0) {
         char *lpMsgBuf;
@@ -57,7 +58,7 @@ int TryToLockInstance (char *Instance)
 int TryToLockInstance (char *Instance)
 {
     char Name[MAX_PATH + 100];
-    if (CheckOpenIPCFile(Instance, "Lock", Name, DIR_CREATE_EXIST, FILENAME_CREATE_EXIST) == 0) {
+    if (CheckOpenIPCFile(Instance, "Lock", Name, sizeof(Name), DIR_CREATE_EXIST, FILENAME_CREATE_EXIST) == 0) {
         int fh = open(Name, O_RDWR);
         if (fh > 0) {
             if (lockf(fh, F_TLOCK, 1) == -1) {

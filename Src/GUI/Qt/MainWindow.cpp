@@ -65,6 +65,7 @@ extern "C" {
 #include "MyMemory.h"
 #include "ThrowError.h"
 #include "StringMaxChar.h"
+#include "PrintFormatToString.h"
 #include "ConfigurablePrefix.h"
 #include "InitProcess.h"
 #include "MainValues.h"
@@ -518,6 +519,7 @@ void MainWindow::AddNewScriptErrorMessageSlot(int par_ThreadId, int par_Level, i
 void MainWindow::CheckTerminatingSlot()
 {
     if (CheckIfAllSchedulerAreTerminated()) {  // If all scheduler are terminated send the close event again
+        s_main_ini_val.HideControlPanelLock = 1;
         this->close();
     } else {
         if (CheckTerminateAllSchedulerTimeout ()) {
@@ -526,6 +528,7 @@ void MainWindow::CheckTerminatingSlot()
                                 "following processe are not stopped:\n%s",
                                 GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_PROGRAM_NAME), ProcessNames = GetProcessInsideExecutionFunctionSemicolonSeparated())) {
             case IDOK:
+                s_main_ini_val.HideControlPanelLock = 1;
                 this->close();
                 break;
             default:
@@ -745,6 +748,7 @@ void MainWindow::populateToolbar()
         d_labelRtFactor = new QLabel("RT-Factor:\nunknown", this);
     }
     d_comboBoxSheets = new QComboBox(this);
+    d_comboBoxSheets->setMaximumWidth(200);
     ui->toolBar->addAction(ui->actionSave_INI);
     ui->toolBar->addSeparator();
     if (!s_main_ini_val.ConnectToRemoteMaster) {
@@ -768,6 +772,7 @@ void MainWindow::populateToolbar()
     ui->toolBar->addSeparator();
     ui->toolBar->addAction(ui->actionAbout);
     ui->toolBar->addSeparator();
+
     ui->toolBar->addWidget(d_comboBoxSheets);
     ui->toolBar->addSeparator();
     ui->toolBar->addAction(ui->actionAddSheet);
@@ -1030,7 +1035,7 @@ void MainWindow::ReadAllSheetsFromIni()
 
     // the current selected sheet would be stored into the BasicSettings section inside the INI file
     if (IniFileDataBaseReadString("BasicSettings", "SelectedSheet", "", SelectedSheet, sizeof(SelectedSheet), GetMainFileDescriptor()) <= 0) {
-        strcpy (SelectedSheet, "Default");
+        STRING_COPY_TO_ARRAY (SelectedSheet, "Default");
         SelectedSheetAreDefined = false;
     } else {
         SelectedSheetAreDefined = true;
@@ -1038,7 +1043,7 @@ void MainWindow::ReadAllSheetsFromIni()
 
     char loc_Sheet[INI_MAX_LINE_LENGTH];
     for (int x = 0; ; x++) {
-        sprintf(section, "GUI/OpenWindowsForSheet%i", x);
+        PrintFormatToString (section, sizeof(section), "GUI/OpenWindowsForSheet%i", x);
         if(x == 0) {
             // The first sheet named always Default
             StringCopyMaxCharTruncate (loc_Sheet, "Default", sizeof(loc_Sheet));
@@ -1727,7 +1732,7 @@ void MainWindow::toolbarStopScheduler()
 
 void MainWindow::toolbarNextOneScheduler()
 {
-    make_n_next_cycles(SCHEDULER_CONTROLED_BY_USER, 1, nullptr, nullptr);
+    make_n_next_cycles(SCHEDULER_CONTROLED_BY_USER, 1, nullptr, nullptr, nullptr);
 }
 
 void MainWindow::toolbarSuppressNonExistValues(bool existValue)
@@ -1798,10 +1803,15 @@ void MainWindow::toolbarSaveIniFile()
 void MainWindow::toolbarControlPanelShow(bool showPanel)
 {
     d_controlPanel->setVisible(showPanel);
-    showPanel ? s_main_ini_val.HideControlPanel = 0 : s_main_ini_val.HideControlPanel = 1;
     if (showPanel) {
+        if (!s_main_ini_val.HideControlPanelLock) {
+            s_main_ini_val.HideControlPanel = 0;
+        }
         SwitchToolboxShowHideControlPanelIcon(false);
     } else {
+        if (!s_main_ini_val.HideControlPanelLock) {
+            s_main_ini_val.HideControlPanel = 1;
+        }
         SwitchToolboxShowHideControlPanelIcon(true);
     }
 }
@@ -1840,7 +1850,7 @@ int LaunchEditor(const char *szFilename)
     char Editor[MAX_PATH];
 #ifdef _WIN32
     if (strlen(s_main_ini_val.Editor) == 0) {
-        strcpy(Editor, "NOTEPAD.EXE");
+        STRING_COPY_TO_ARRAY(Editor, "NOTEPAD.EXE");
     } else {
         SearchAndReplaceEnvironmentStrings (s_main_ini_val.Editor,
                                             Editor,
@@ -1852,10 +1862,10 @@ int LaunchEditor(const char *szFilename)
         if (Desktop != nullptr) {
             if (!strcmp("KDE", Desktop)) {
                 // start kate
-                strcpy(Editor, "kate");
+                STRING_COPY_TO_ARRAY(Editor, "kate");
             } else if (!strcmp("GNOME", Desktop)) {
                 // start gedit
-                strcpy(Editor, "gedit");
+                STRING_COPY_TO_ARRAY(Editor, "gedit");
             } else {
                 ThrowError (1, "unknown desktop %s", Desktop);
                 return -1;
@@ -1882,9 +1892,9 @@ void MainWindow::toolbarEditDebug()
 {
     char Path[MAX_PATH];
 #ifdef _WIN32
-    sprintf (Path, "%s\\%sscript.dbg", s_main_ini_val.StartDirectory, s_main_ini_val.ScriptOutputFilenamesPrefix);
+    PrintFormatToString (Path, sizeof(Path), "%s\\%sscript.dbg", s_main_ini_val.StartDirectory, s_main_ini_val.ScriptOutputFilenamesPrefix);
 #else
-    sprintf (Path, "%s/%sscript.dbg", s_main_ini_val.StartDirectory, s_main_ini_val.ScriptOutputFilenamesPrefix);
+    PrintFormatToString (Path, sizeof(Path), "%s/%sscript.dbg", s_main_ini_val.StartDirectory, s_main_ini_val.ScriptOutputFilenamesPrefix);
 #endif
     SearchAndReplaceEnvironmentStrings(Path, Path, sizeof(Path));
     if (access(Path, 0) == 0) {
@@ -1898,9 +1908,9 @@ void MainWindow::toolbarEditError()
 {
     char Path[2*MAX_PATH+16];
 #ifdef _WIN32
-    sprintf (Path, "%s\\%sscript.err", s_main_ini_val.StartDirectory, s_main_ini_val.ScriptOutputFilenamesPrefix);
+    PrintFormatToString (Path, sizeof(Path), "%s\\%sscript.err", s_main_ini_val.StartDirectory, s_main_ini_val.ScriptOutputFilenamesPrefix);
 #else
-    sprintf (Path, "%s/%sscript.err", s_main_ini_val.StartDirectory, s_main_ini_val.ScriptOutputFilenamesPrefix);
+    PrintFormatToString (Path, sizeof(Path), "%s/%sscript.err", s_main_ini_val.StartDirectory, s_main_ini_val.ScriptOutputFilenamesPrefix);
 #endif
     SearchAndReplaceEnvironmentStrings(Path, Path, sizeof(Path));
     if (access(Path, 0) == 0) {
@@ -1914,9 +1924,9 @@ void MainWindow::toolbarEditMessage()
 {
     char Path[2*MAX_PATH+16];
 #ifdef _WIN32
-    sprintf (Path, "%s\\%sscript.msg", s_main_ini_val.StartDirectory, s_main_ini_val.ScriptOutputFilenamesPrefix);
+    PrintFormatToString (Path, sizeof(Path), "%s\\%sscript.msg", s_main_ini_val.StartDirectory, s_main_ini_val.ScriptOutputFilenamesPrefix);
 #else
-    sprintf (Path, "%s/%sscript.msg", s_main_ini_val.StartDirectory, s_main_ini_val.ScriptOutputFilenamesPrefix);
+    PrintFormatToString (Path, sizeof(Path), "%s/%sscript.msg", s_main_ini_val.StartDirectory, s_main_ini_val.ScriptOutputFilenamesPrefix);
 #endif
     SearchAndReplaceEnvironmentStrings(Path, Path, sizeof(Path));
     if (access(Path, 0) == 0) {
@@ -1930,7 +1940,7 @@ void MainWindow::toolbarHTMLreport()
 {
     char Path[2*MAX_PATH+16];
 #ifdef _WIN32
-    sprintf (Path, "%s\\%sreport.html", s_main_ini_val.StartDirectory, s_main_ini_val.ScriptOutputFilenamesPrefix);
+    PrintFormatToString (Path, sizeof(Path), "%s\\%sreport.html", s_main_ini_val.StartDirectory, s_main_ini_val.ScriptOutputFilenamesPrefix);
     SearchAndReplaceEnvironmentStrings(Path, Path, sizeof(Path));
     if (access(Path, 0) == 0) {
         ShellExecute (nullptr, "open", Path, nullptr, "", SW_SHOW);
@@ -1938,7 +1948,7 @@ void MainWindow::toolbarHTMLreport()
         ThrowError (1, "cannot open html report file \"%s\"", Path);
     }
 #else
-    sprintf (Path, "%s/%sreport.html", s_main_ini_val.StartDirectory, s_main_ini_val.ScriptOutputFilenamesPrefix);
+    PrintFormatToString (Path, sizeof(Path), "%s/%sreport.html", s_main_ini_val.StartDirectory, s_main_ini_val.ScriptOutputFilenamesPrefix);
     QStringList Arguments;
     Arguments.append(Path);
     QProcess *Process = new QProcess();
@@ -1951,10 +1961,10 @@ void MainWindow::toolbarOpenErrorFileWithEditor()
 {
     char Path[2*MAX_PATH+16];
 #ifdef _WIN32
-    sprintf (Path, "%s\\%s\\%s.err", s_main_ini_val.StartDirectory, s_main_ini_val.ScriptOutputFilenamesPrefix,
+    PrintFormatToString (Path, sizeof(Path), "%s\\%s\\%s.err", s_main_ini_val.StartDirectory, s_main_ini_val.ScriptOutputFilenamesPrefix,
              GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_ERROR_FILE));
 #else
-    sprintf (Path, "%s/%s/%s.err", s_main_ini_val.StartDirectory, s_main_ini_val.ScriptOutputFilenamesPrefix,
+    PrintFormatToString (Path, sizeof(Path), "%s/%s/%s.err", s_main_ini_val.StartDirectory, s_main_ini_val.ScriptOutputFilenamesPrefix,
              GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_ERROR_FILE));
 #endif
     SearchAndReplaceEnvironmentStrings(Path, Path, sizeof(Path));
@@ -2178,27 +2188,6 @@ bool MainWindow::close()
     }
     return QMainWindow::close();
 }
-
-void MainWindow::loadPlugin()
-{
-    QFileDialog dialog(this, tr("Load Plugin"), QDir::currentPath(), tr("Plugins (*.dll)"));
-    if(dialog.exec()) {
-        foreach(QString loc_fileName, dialog.selectedFiles()) {
-            QPluginLoader pluginLoader(dialog.directory().absoluteFilePath(loc_fileName));
-            QObject *loc_plugin = pluginLoader.instance();
-            if(loc_plugin) {
-                // A Plugin must have the type MdiWindowType
-                MdiWindowType *loc_MdiWindowType = qobject_cast<MdiWindowType*>(loc_plugin);
-                if(loc_MdiWindowType) {
-                    ui->menuNew->addAction(loc_MdiWindowType->GetMenuEntryName(), this, SLOT(newElement()));
-                    ui->menuOpen->addAction(loc_MdiWindowType->GetMenuEntryName(), this, SLOT(openElement()));
-                    m_allWindowTypes->insert(loc_MdiWindowType->GetMenuEntryName(), loc_MdiWindowType);
-                }
-            }
-        }
-    }
-}
-
 
 void MainWindow::resizeEvent(QResizeEvent * event)
 {

@@ -30,6 +30,7 @@
 
 extern "C" {
 #include "Config.h"
+#include "StringMaxChar.h"
 #include "Blackboard.h"
 #include "ThrowError.h"
 #include "MyMemory.h"
@@ -164,7 +165,6 @@ void OscilloscopeConfigDialog::accept()
 
                     m_Data->name_left[20] = ReallocCopyString(m_Data->name_left[20], TriggerVariable);
                     m_Data->name_trigger = ReallocCopyString(m_Data->name_trigger, TriggerVariable);
-                    if (m_Data->name_trigger != nullptr) strcpy (m_Data->name_trigger, QStringToConstChar(TriggerVariable));
 
                     if (m_Data->buffer_left[20] == nullptr) {
                         EnterOsziCycleCS ();
@@ -371,7 +371,7 @@ void OscilloscopeConfigDialog::accept()
         QString BackgroundImage = ui->BackgroundImageLineEdit->text().trimmed();
         if ((BackgroundImage.length() > 0) &&
             (strlen(QStringToConstChar(BackgroundImage)) < sizeof(m_Data->BackgroundImage))) {
-            strcpy(m_Data->BackgroundImage, QStringToConstChar(BackgroundImage));
+            STRING_COPY_TO_ARRAY(m_Data->BackgroundImage, QStringToConstChar(BackgroundImage));
             m_Data->BackgroundImageLoaded = SHOULD_LOAD_BACKGROUND_IMAGE;
         } else {
             m_Data->BackgroundImage[0] = 0;

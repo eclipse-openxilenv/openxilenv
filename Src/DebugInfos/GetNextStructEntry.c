@@ -24,6 +24,7 @@
 #include "MyMemory.h"
 #include "ThrowError.h"
 #include "StringMaxChar.h"
+#include "PrintFormatToString.h"
 #include "MainValues.h"
 #include "Scheduler.h"
 #include "DebugInfoDB.h"
@@ -34,16 +35,16 @@
 
 static int GetNextStructEntryStruct (int pos,
                                      int it_is_a_bclass,
-                                     char *buffer,
+                                     char *buffer, int size_of_buffer,
                                      uint64_t *paddress,
                                      int *pbbtype,
                                      GET_NEXT_STRUCT_ENTRY_BUFFER *internal_data);
 
 static int GetNextStructEntryArray (int pos,
-                                    char *buffer,
-                                    uint64_t *paddress,
-                                    int *pbbtype,
-                                    GET_NEXT_STRUCT_ENTRY_BUFFER *internal_data);
+                                   char *buffer, int size_of_buffer,
+                                   uint64_t *paddress,
+                                   int *pbbtype,
+                                   GET_NEXT_STRUCT_ENTRY_BUFFER *internal_data);
 
 
 
@@ -101,6 +102,7 @@ int GetNextStructEntry (PROCESS_APPL_DATA *pappldata, // in  ...
         err = GetNextStructEntryStruct (pos,
                                         0,
                                         buffer,
+                                        maxc,
                                         paddress,
                                         pbbtype,
                                         internal_data);
@@ -114,6 +116,7 @@ int GetNextStructEntry (PROCESS_APPL_DATA *pappldata, // in  ...
         pos++;
         err = GetNextStructEntryArray (pos,
                                        buffer,
+                                       maxc,
                                        paddress,
                                        pbbtype,
                                        internal_data);
@@ -184,6 +187,7 @@ int GetNextStructEntryEx (PROCESS_APPL_DATA *pappldata, // in  ...
         err = GetNextStructEntryStruct (pos,
                                         0,
                                         buffer,
+                                        maxc,
                                         paddress,
                                         pbbtype,
                                         static_data);
@@ -197,6 +201,7 @@ int GetNextStructEntryEx (PROCESS_APPL_DATA *pappldata, // in  ...
         pos++;
         err = GetNextStructEntryArray (pos,
                                        buffer,
+                                       maxc,
                                        paddress,
                                        pbbtype,
                                        static_data);
@@ -226,6 +231,7 @@ int GetNextStructEntryEx (PROCESS_APPL_DATA *pappldata, // in  ...
 static int GetNextStructEntryStruct (int pos,
                                      int it_is_a_bclass,
                                      char *buffer,
+                                     int size_of_buffer,
                                      uint64_t *paddress,
                                      int *pbbtype,
                                      GET_NEXT_STRUCT_ENTRY_BUFFER *internal_data)
@@ -251,9 +257,9 @@ static int GetNextStructEntryStruct (int pos,
     if (entry == 0) flag = 1;  // first entry
     else flag = 0;
     if ((name = get_next_struct_entry (&typenr, &address_offset, &have_a_bclass, internal_data->typenrs[pos-1], flag, &entry, internal_data->pappldata)) != NULL) {
-        if (it_is_a_bclass) strcat (buffer, "::");
-        else strcat (buffer, ".");
-        strcat (buffer, name);
+        if (it_is_a_bclass) StringAppendMaxCharTruncate(buffer, "::", size_of_buffer);
+        else StringAppendMaxCharTruncate (buffer, ".", size_of_buffer);
+        StringAppendMaxCharTruncate (buffer, name, size_of_buffer);
         *paddress = *paddress + address_offset;
         if (get_struct_entry_typestr (&typenr, entry, &what, internal_data->pappldata) == NULL) {
             // ThrowError (1, "sanity check %s %li name = %s, pos = %i, buffer = %s", __FILE__, (long)__LINE__, name, pos, buffer);
@@ -280,6 +286,7 @@ static int GetNextStructEntryStruct (int pos,
             err = GetNextStructEntryStruct (pos,
                                             have_a_bclass,
                                             buffer,
+                                            size_of_buffer,
                                             paddress,
                                             pbbtype,
                                             internal_data);
@@ -295,6 +302,7 @@ static int GetNextStructEntryStruct (int pos,
             pos++;
             err = GetNextStructEntryArray (pos,
                                            buffer,
+                                           size_of_buffer,
                                            paddress,
                                            pbbtype,
                                            internal_data);
@@ -341,6 +349,7 @@ __OUT:
 
 static int GetNextStructEntryArray (int pos,
                                     char *buffer,
+                                    int size_of_buffer,
                                     uint64_t *paddress,
                                     int *pbbtype,
                                     GET_NEXT_STRUCT_ENTRY_BUFFER *internal_data)
@@ -375,7 +384,7 @@ static int GetNextStructEntryArray (int pos,
   NEXT_ARRAY_ELEMENT:
     *paddress = address_save;
     *paddress = *paddress + (uint64_t)(index * (array_size / array_elements));
-    sprintf (buffer + strlen(buffer), "[%li]", index);
+    PrintFormatToString (buffer + strlen(buffer), size_of_buffer - strlen(buffer), "[%li]", index);
     switch (arrayelem_of_what) {
     case 1:   // Base data type
         *pbbtype = get_base_type_bb_type_ex (arrayelem_typenr, internal_data->pappldata);
@@ -391,6 +400,7 @@ static int GetNextStructEntryArray (int pos,
         err = GetNextStructEntryStruct (pos,
                                         0,
                                         buffer,
+                                        size_of_buffer,
                                         paddress,
                                         pbbtype,
                                         internal_data);
@@ -411,6 +421,7 @@ static int GetNextStructEntryArray (int pos,
         pos++;
         err = GetNextStructEntryArray (pos,
                                        buffer,
+                                       size_of_buffer,
                                        paddress,
                                        pbbtype,
                                        internal_data);

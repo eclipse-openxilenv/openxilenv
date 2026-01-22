@@ -33,6 +33,7 @@
 #include "QtIniFile.h"
 
 extern "C" {
+#include "PrintFormatToString.h"
 #include "ThrowError.h"
 }
 
@@ -105,7 +106,7 @@ UserDrawElement *UserDrawParser::ParseOneLine(QString &par_Line, UserDrawElement
         }
     }
     //ParseParameters(par_Line, Pos, Elem, Len);
-    Elem->Init();
+    if (Elem != nullptr) Elem->Init();
     return Elem;
 }
 
@@ -166,7 +167,7 @@ bool UserDrawParser::ParseGroupRecusive(UserDrawElement *par_Parent, QString &pa
     for (int x = 0; x < 10000; x++) {  // max 10000 entrys inside one root/layer/group
         Entry = par_Entry;
         char Help[32];
-        sprintf(Help, "_%i", x);
+        PrintFormatToString (Help, sizeof(Help), "_%i", x);
         Entry.append(QString(Help));
         Line = ScQt_IniFileDataBaseReadString(par_WindowName, Entry, "", par_Fd);
         if (Line.isEmpty()) break;

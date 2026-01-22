@@ -156,9 +156,9 @@ static int LoadOnePeriode (int DspNr, int i, int *OnePeriode)
     char help[32];
     char *p;
 
-    sprintf (section, "DSP56K_DA_Channel_OnePeriode_%i_%i", DspNr, i);
+    PrintFormatToString (section, sizeof(section), "DSP56K_DA_Channel_OnePeriode_%i_%i", DspNr, i);
     for (x = 0; x < 1024/16; x++) {
-        sprintf (entry, "x%i", x);
+        PrintFormatToString (entry, sizeof(entry), "x%i", x);
         if (DBGetPrivateProfileString (section, entry, "", line, sizeof (line), INIFILE) > 0) {
             p = line;
             for (y = 0; y < 16; y++) {
@@ -190,11 +190,11 @@ static int SendOnePeriodeToDSP (int Nr, int Card)
 static void GetSectionName (int Card, int InOut, char *Section)
 {
     if (InOut) {
-        if (Card) sprintf (Section, "DSP56K_AD_Channel_Config Card(%i)", Card);
-        else sprintf (Section, "DSP56K_AD_Channel_Config");
+        if (Card) PrintFormatToString (Section, sizeof(Section), "DSP56K_AD_Channel_Config Card(%i)", Card);
+        else PrintFormatToString (Section, sizeof(Section), "DSP56K_AD_Channel_Config");
     } else {
-        if (Card) sprintf (Section, "DSP56K_DA_Channel_Config Card(%i)", Card);
-        else sprintf (Section, "DSP56K_DA_Channel_Config");
+        if (Card) PrintFormatToString (Section, sizeof(Section), "DSP56K_DA_Channel_Config Card(%i)", Card);
+        else PrintFormatToString (Section, sizeof(Section), "DSP56K_DA_Channel_Config");
     }
 }
 
@@ -290,9 +290,9 @@ static void SetDefaultValues (CONFIG_ONE_ANALOG_CHANNEL_DLG_STRUCT *pCoc)
     pCoc->OffsetOffset = 0.0;
     pCoc->OffsetConvString[0] = 0;
     // gltiger Datentyp-String
-    strcpy (pCoc->DataType, ConvertDataTypeIntToString (ConvertDataTypeStringToInt (pCoc->DataType)));
-    strcpy (pCoc->AmplDataType, ConvertDataTypeIntToString (ConvertDataTypeStringToInt (pCoc->AmplDataType)));
-    strcpy (pCoc->OffsetDataType, ConvertDataTypeIntToString (ConvertDataTypeStringToInt (pCoc->OffsetDataType)));
+    STRING_COPY_TO_ARRAY (pCoc->DataType, ConvertDataTypeIntToString (ConvertDataTypeStringToInt (pCoc->DataType)));
+    STRING_COPY_TO_ARRAY (pCoc->AmplDataType, ConvertDataTypeIntToString (ConvertDataTypeStringToInt (pCoc->AmplDataType)));
+    STRING_COPY_TO_ARRAY (pCoc->OffsetDataType, ConvertDataTypeIntToString (ConvertDataTypeStringToInt (pCoc->OffsetDataType)));
 }
 
 static int GetActiveChannelCount (int Card, int InOut)
@@ -312,12 +312,12 @@ static int ReadOneChannelFromIni (CONFIG_ONE_ANALOG_CHANNEL_DLG_STRUCT *pCoc, in
     char Help[32];
     char *p;
 
-    memset (pCoc, 0, sizeof (CONFIG_ONE_ANALOG_CHANNEL_DLG_STRUCT));
+    MEMSET (pCoc, 0, sizeof (CONFIG_ONE_ANALOG_CHANNEL_DLG_STRUCT));
     pCoc->Card = Card;
     pCoc->InOut = InOut;
     GetSectionName (Card, InOut, Section);
 
-    sprintf (Entry, "Channel_%i", Channel);
+    PrintFormatToString (entry, sizeof(entry), "Channel_%i", Channel);
     if (DBGetPrivateProfileString (Section, Entry, "", Line, sizeof (Line), INIFILE) > 0) {
         p = GetNextCommaSeperatedWord (Line, Help, sizeof (Help));
         pCoc->OnOff = atol (Help);
@@ -357,7 +357,7 @@ static int ReadOneChannelFromIni (CONFIG_ONE_ANALOG_CHANNEL_DLG_STRUCT *pCoc, in
         CheckFgAndD (&pCoc->Fg, &pCoc->D);
 
         // Entry_?_conv = UmrechnungTyp, Umrechnugnsstring
-        sprintf (Entry, "Channel_%i_conv", Channel);
+        PrintFormatToString (entry, sizeof(entry), "Channel_%i_conv", Channel);
         if (DBGetPrivateProfileString (Section, Entry, "", Line, sizeof (Line), INIFILE) > 0) {
             // UmrechnungTyp 0-> Faktor/Offset, 1 -> Curve, 2 -> Equation
             p = GetNextCommaSeperatedWord (Line, Help, sizeof (Help));
@@ -365,7 +365,7 @@ static int ReadOneChannelFromIni (CONFIG_ONE_ANALOG_CHANNEL_DLG_STRUCT *pCoc, in
             p = GetNextCommaSeperatedWord (p, pCoc->Conv.ConvString, sizeof (pCoc->Conv.ConvString));
         } else pCoc->Conv.ConvType = 0;
         // Entry_?_dds = Waveform, AmplFixedOrVari,AmplSignalName,AmplUnit,AmplDatentyp,AmplUmrechnungTyp,AmplUmrechnugnsstring
-        sprintf (Entry, "Channel_%i_dds", Channel);
+        PrintFormatToString (entry, sizeof(entry), "Channel_%i_dds", Channel);
         if (DBGetPrivateProfileString (Section, Entry, "", Line, sizeof (Line), INIFILE) > 0) {
             // WaveForm
             p = GetNextCommaSeperatedWord (Line, Help, sizeof (Help));
@@ -390,7 +390,7 @@ static int ReadOneChannelFromIni (CONFIG_ONE_ANALOG_CHANNEL_DLG_STRUCT *pCoc, in
             p = GetNextCommaSeperatedWord (p, pCoc->AmplConvString, sizeof (pCoc->AmplConvString));
         }
         // Entry_?_dds = OffsetFixedOrVari,OffsetSignalName,OffsetUnit,OffsetDatentyp,OffsetUmrechnungTyp,OffsetUmrechnugnsstring
-        sprintf (Entry, "Channel_%i_dds2", Channel);
+        PrintFormatToString (entry, sizeof(entry), "Channel_%i_dds2", Channel);
         if (DBGetPrivateProfileString (Section, Entry, "", Line, sizeof (Line), INIFILE) > 0) {
             // Offset Fixed Or Variable
             p = GetNextCommaSeperatedWord (Line, Help, sizeof (Help));
@@ -416,9 +416,9 @@ static int ReadOneChannelFromIni (CONFIG_ONE_ANALOG_CHANNEL_DLG_STRUCT *pCoc, in
         SetDefaultValues (pCoc);
     }
     // gltiger Datentyp-String
-    strcpy (pCoc->DataType, ConvertDataTypeIntToString (ConvertDataTypeStringToInt (pCoc->DataType)));
-    strcpy (pCoc->AmplDataType, ConvertDataTypeIntToString (ConvertDataTypeStringToInt (pCoc->AmplDataType)));
-    strcpy (pCoc->OffsetDataType, ConvertDataTypeIntToString (ConvertDataTypeStringToInt (pCoc->OffsetDataType)));
+    STRING_COPY_TO_ARRAY (pCoc->DataType, ConvertDataTypeIntToString (ConvertDataTypeStringToInt (pCoc->DataType)));
+    STRING_COPY_TO_ARRAY (pCoc->AmplDataType, ConvertDataTypeIntToString (ConvertDataTypeStringToInt (pCoc->AmplDataType)));
+    STRING_COPY_TO_ARRAY (pCoc->OffsetDataType, ConvertDataTypeIntToString (ConvertDataTypeStringToInt (pCoc->OffsetDataType)));
 
     // Anzahl der aktiven Kanle zurckgeben
     return 0;
@@ -776,8 +776,8 @@ int SaveAnalogSignalConfiguration (char *Filename)
 
     // Frequenz/PWM-Ausgnge
     for (x = 0; x < 4; x++) {
-        if (x) sprintf (Section, "DSP56K_FrqPwm_Channel_Config Card(%i)", x);
-        else sprintf (Section, "DSP56K_FrqPwm_Channel_Config");
+        if (x) PrintFormatToString (Section, sizeof(Section), "DSP56K_FrqPwm_Channel_Config Card(%i)", x);
+        else PrintFormatToString (Section, sizeof(Section), "DSP56K_FrqPwm_Channel_Config");
         if (LookIfSectionExist (Section, INIFILE)) {
             copy_ini_section (Filename, INIFILE, Section, Section);
         } else break;
@@ -785,8 +785,8 @@ int SaveAnalogSignalConfiguration (char *Filename)
 
     // Digitale-Ausgnge
     for (x = 0; x < 4; x++) {
-        if (x) sprintf (Section, "DSP56K_DigOut_Channel_Config Card(%i)", x);
-        else sprintf (Section, "DSP56K_DigOut_Channel_Config");
+        if (x) PrintFormatToString (Section, sizeof(Section), "DSP56K_DigOut_Channel_Config Card(%i)", x);
+        else PrintFormatToString (Section, sizeof(Section), "DSP56K_DigOut_Channel_Config");
         if (LookIfSectionExist (Section, INIFILE)) {
             copy_ini_section (Filename, INIFILE, Section, Section);
         } else break;
@@ -794,8 +794,8 @@ int SaveAnalogSignalConfiguration (char *Filename)
 
     // Digitale-Eingnge
     for (x = 0; x < 4; x++) {
-        if (x) sprintf (Section, "DSP56K_DigIn_Channel_Config Card(%i)", x);
-        else sprintf (Section, "DSP56K_DigIn_Channel_Config");
+        if (x) PrintFormatToString (Section, sizeof(Section), "DSP56K_DigIn_Channel_Config Card(%i)", x);
+        else PrintFormatToString (Section, sizeof(Section), "DSP56K_DigIn_Channel_Config");
         if (LookIfSectionExist (Section, INIFILE)) {
             copy_ini_section (Filename, INIFILE, Section, Section);
         } else break;
@@ -803,8 +803,8 @@ int SaveAnalogSignalConfiguration (char *Filename)
 
     // Analoge-Ausgnge
     for (x = 0; x < 4; x++) {
-        if (x) sprintf (Section, "DSP56K_DA_Channel_Config Card(%i)", x);
-        else sprintf (Section, "DSP56K_DA_Channel_Config");
+        if (x) PrintFormatToString (Section, sizeof(Section), "DSP56K_DA_Channel_Config Card(%i)", x);
+        else PrintFormatToString (Section, sizeof(Section), "DSP56K_DA_Channel_Config");
         if (LookIfSectionExist (Section, INIFILE)) {
             copy_ini_section (Filename, INIFILE, Section, Section);
         } else break;
@@ -812,8 +812,8 @@ int SaveAnalogSignalConfiguration (char *Filename)
 
     // Analoge-Eingnge
     for (x = 0; x < 4; x++) {
-        if (x) sprintf (Section, "DSP56K_AD_Channel_Config Card(%i)", x);
-        else sprintf (Section, "DSP56K_AD_Channel_Config");
+        if (x) PrintFormatToString (Section, sizeof(Section), "DSP56K_AD_Channel_Config Card(%i)", x);
+        else PrintFormatToString (Section, sizeof(Section), "DSP56K_AD_Channel_Config");
         if (LookIfSectionExist (Section, INIFILE)) {
             copy_ini_section (Filename, INIFILE, Section, Section);
         } else break;
@@ -821,8 +821,8 @@ int SaveAnalogSignalConfiguration (char *Filename)
 
     // Frequenz/PWM-Eingnge
     for (x = 0; x < 4; x++) {
-        if (x) sprintf (Section, "DSP56K_FrqPwm_Input_Channel_Config Card(%i)", x);
-        else sprintf (Section, "DSP56K_FrqPwm_Input_Channel_Config");
+        if (x) PrintFormatToString (Section, sizeof(Section), "DSP56K_FrqPwm_Input_Channel_Config Card(%i)", x);
+        else PrintFormatToString (Section, sizeof(Section), "DSP56K_FrqPwm_Input_Channel_Config");
         if (LookIfSectionExist (Section, INIFILE)) {
             copy_ini_section (Filename, INIFILE, Section, Section);
         } else break;
@@ -830,8 +830,8 @@ int SaveAnalogSignalConfiguration (char *Filename)
 
     // Digitale-Ausgnge der Flexcard
     for (x = 0; x < 4; x++) {
-        if (x) sprintf (Section, "Flexcard_Dig_IO_Channel_Config Card(%i)", x);
-        else sprintf (Section, "Flexcard_Dig_IO_Channel_Config");
+        if (x) PrintFormatToString (Section, sizeof(Section), "Flexcard_Dig_IO_Channel_Config Card(%i)", x);
+        else PrintFormatToString (Section, sizeof(Section), "Flexcard_Dig_IO_Channel_Config");
         if (LookIfSectionExist (Section, INIFILE)) {
             copy_ini_section (Filename, INIFILE, Section, Section);
         } else break;
@@ -839,8 +839,8 @@ int SaveAnalogSignalConfiguration (char *Filename)
 
     // Digitale-Eingnge der Flexcard
     for (x = 0; x < 4; x++) {
-        if (x) sprintf (Section, "Flexcard_FrqPwm_Input_Channel_Config Card(%i)", x);
-        else sprintf (Section, "Flexcard_FrqPwm_Input_Channel_Config");
+        if (x) PrintFormatToString (Section, sizeof(Section), "Flexcard_FrqPwm_Input_Channel_Config Card(%i)", x);
+        else PrintFormatToString (Section, sizeof(Section), "Flexcard_FrqPwm_Input_Channel_Config");
         if (LookIfSectionExist (Section, INIFILE)) {
             copy_ini_section (Filename, INIFILE, Section, Section);
         } else break;
@@ -848,8 +848,8 @@ int SaveAnalogSignalConfiguration (char *Filename)
 
     // Digitale-Eingnge der Flexcard
     for (x = 0; x < 4; x++) {
-        if (x) sprintf (Section, "Flexcard_FrqPwm_Input_Channel_Config Card(%i)", x);
-        else sprintf (Section, "Flexcard_FrqPwm_Input_Channel_Config");
+        if (x) PrintFormatToString (Section, sizeof(Section), "Flexcard_FrqPwm_Input_Channel_Config Card(%i)", x);
+        else PrintFormatToString (Section, sizeof(Section), "Flexcard_FrqPwm_Input_Channel_Config");
         if (LookIfSectionExist (Section, INIFILE)) {
             copy_ini_section (Filename, INIFILE, Section, Section);
         } else break;
@@ -876,8 +876,8 @@ int LoadAnalogSignalConfiguration (char *Filename)
     EnterIniDBCriticalSectionUser(__FILE__, __LINE__);
     // Frequenz/PWM-Ausgnge
     for (x = 0; x < 4; x++) {
-        if (x) sprintf (Section, "DSP56K_FrqPwm_Channel_Config Card(%i)", x);
-        else sprintf (Section, "DSP56K_FrqPwm_Channel_Config");
+        if (x) PrintFormatToString (Section, sizeof(Section), "DSP56K_FrqPwm_Channel_Config Card(%i)", x);
+        else PrintFormatToString (Section, sizeof(Section), "DSP56K_FrqPwm_Channel_Config");
         if (LookIfSectionExist (Section, Filename)) {
             copy_ini_section (INIFILE, Filename, Section, Section);
         } else break;
@@ -885,8 +885,8 @@ int LoadAnalogSignalConfiguration (char *Filename)
 
     // Digitale-Ausgnge
     for (x = 0; x < 4; x++) {
-        if (x) sprintf (Section, "DSP56K_DigOut_Channel_Config Card(%i)", x);
-        else sprintf (Section, "DSP56K_DigOut_Channel_Config");
+        if (x) PrintFormatToString (Section, sizeof(Section), "DSP56K_DigOut_Channel_Config Card(%i)", x);
+        else PrintFormatToString (Section, sizeof(Section), "DSP56K_DigOut_Channel_Config");
         if (LookIfSectionExist (Section, Filename)) {
             copy_ini_section (INIFILE, Filename, Section, Section);
         } else break;
@@ -894,8 +894,8 @@ int LoadAnalogSignalConfiguration (char *Filename)
 
     // Digitale-Eingnge
     for (x = 0; x < 4; x++) {
-        if (x) sprintf (Section, "DSP56K_DigIn_Channel_Config Card(%i)", x);
-        else sprintf (Section, "DSP56K_DigIn_Channel_Config");
+        if (x) PrintFormatToString (Section, sizeof(Section), "DSP56K_DigIn_Channel_Config Card(%i)", x);
+        else PrintFormatToString (Section, sizeof(Section), "DSP56K_DigIn_Channel_Config");
         if (LookIfSectionExist (Section, Filename)) {
             copy_ini_section (INIFILE, Filename, Section, Section);
         } else break;
@@ -903,8 +903,8 @@ int LoadAnalogSignalConfiguration (char *Filename)
 
     // Analoge-Ausgnge
     for (x = 0; x < 4; x++) {
-        if (x) sprintf (Section, "DSP56K_DA_Channel_Config Card(%i)", x);
-        else sprintf (Section, "DSP56K_DA_Channel_Config");
+        if (x) PrintFormatToString (Section, sizeof(Section), "DSP56K_DA_Channel_Config Card(%i)", x);
+        else PrintFormatToString (Section, sizeof(Section), "DSP56K_DA_Channel_Config");
         if (LookIfSectionExist (Section, Filename)) {
             copy_ini_section (INIFILE, Filename, Section, Section);
         } else break;
@@ -912,8 +912,8 @@ int LoadAnalogSignalConfiguration (char *Filename)
 
     // Analoge-Eingnge
     for (x = 0; x < 4; x++) {
-        if (x) sprintf (Section, "DSP56K_AD_Channel_Config Card(%i)", x);
-        else sprintf (Section, "DSP56K_AD_Channel_Config");
+        if (x) PrintFormatToString (Section, sizeof(Section), "DSP56K_AD_Channel_Config Card(%i)", x);
+        else PrintFormatToString (Section, sizeof(Section), "DSP56K_AD_Channel_Config");
         if (LookIfSectionExist (Section, Filename)) {
             copy_ini_section (INIFILE, Filename, Section, Section);
         } else break;
@@ -921,8 +921,8 @@ int LoadAnalogSignalConfiguration (char *Filename)
 
     // Frequenz/PWM-Eingnge
     for (x = 0; x < 4; x++) {
-        if (x) sprintf (Section, "DSP56K_FrqPwm_Input_Channel_Config Card(%i)", x);
-        else sprintf (Section, "DSP56K_FrqPwm_Input_Channel_Config");
+        if (x) PrintFormatToString (Section, sizeof(Section), "DSP56K_FrqPwm_Input_Channel_Config Card(%i)", x);
+        else PrintFormatToString (Section, sizeof(Section), "DSP56K_FrqPwm_Input_Channel_Config");
         if (LookIfSectionExist (Section, Filename)) {
             copy_ini_section (INIFILE, Filename, Section, Section);
         } else break;
@@ -930,8 +930,8 @@ int LoadAnalogSignalConfiguration (char *Filename)
 
     // Digitale-Ausgnge der Flexcard
     for (x = 0; x < 4; x++) {
-        if (x) sprintf (Section, "Flexcard_Dig_IO_Channel_Config Card(%i)", x);
-        else sprintf (Section, "Flexcard_Dig_IO_Channel_Config");
+        if (x) PrintFormatToString (Section, sizeof(Section), "Flexcard_Dig_IO_Channel_Config Card(%i)", x);
+        else PrintFormatToString (Section, sizeof(Section), "Flexcard_Dig_IO_Channel_Config");
         if (LookIfSectionExist (Section, Filename)) {
             copy_ini_section (INIFILE, Filename, Section, Section);
         } else break;
@@ -939,8 +939,8 @@ int LoadAnalogSignalConfiguration (char *Filename)
 
     // Digitale-Eingnge der Flexcard
     for (x = 0; x < 4; x++) {
-         if (x) sprintf (Section, "Flexcard_Dig_IO_Channel_Config Card(%i)", x);
-         else sprintf (Section, "Flexcard_Dig_IO_Channel_Config");
+         if (x) PrintFormatToString (Section, sizeof(Section), "Flexcard_Dig_IO_Channel_Config Card(%i)", x);
+         else PrintFormatToString (Section, sizeof(Section), "Flexcard_Dig_IO_Channel_Config");
          if (LookIfSectionExist (Section, Filename)) {
              copy_ini_section (INIFILE, Filename, Section, Section);
          } else break;
@@ -948,8 +948,8 @@ int LoadAnalogSignalConfiguration (char *Filename)
 
      // Digitale-Eingnge der Flexcard
      for (x = 0; x < 4; x++) {
-         if (x) sprintf (Section, "Flexcard_FrqPwm_Input_Channel_Config Card(%i)", x);
-         else sprintf (Section, "Flexcard_FrqPwm_Input_Channel_Config");
+         if (x) PrintFormatToString (Section, sizeof(Section), "Flexcard_FrqPwm_Input_Channel_Config Card(%i)", x);
+         else PrintFormatToString (Section, sizeof(Section), "Flexcard_FrqPwm_Input_Channel_Config");
          if (LookIfSectionExist (Section, Filename)) {
              copy_ini_section (INIFILE, Filename, Section, Section);
          } else break;
@@ -1053,7 +1053,7 @@ static char *ReadFrqPhaseOrPwm (char *p, FRQ_PWM_PHASE_CONFIG *pFppc, char *Sect
     // Entry_?_frq_conv = UmrechnungTyp, Umrechnugnsstring
     // Entry_?_pwm_conv = UmrechnungTyp, Umrechnugnsstring
     // Entry_?_phase_conv = UmrechnungTyp, Umrechnugnsstring
-    sprintf (ConvEntry, "%s_%s_conv", Entry, Postfix);
+    PrintFormatToString (ConvEntry, sizeof(ConvEntry), "%s_%s_conv", Entry, Postfix);
     if (DBGetPrivateProfileString (Section, ConvEntry, "", Line, sizeof (Line), INIFILE) > 0) {
         // UmrechnungTyp 0-> Faktor/Offset, 1 -> Curve, 2 -> Equation
         pp = GetNextCommaSeperatedWord (Line, Help, sizeof (Help));
@@ -1075,10 +1075,10 @@ static int ReadOneFrqChannelFromIni (CONFIG_ONE_CHANNEL_DLG_STRUCT *pCoc, int Ca
     char Help[32];
     char *p;
 
-    if (Card) sprintf (Section, "DSP56K_FrqPwm_Channel_Config Card(%i)", Card);
-    else sprintf (Section, "DSP56K_FrqPwm_Channel_Config");
+    if (Card) PrintFormatToString (Section, sizeof(Section), "DSP56K_FrqPwm_Channel_Config Card(%i)", Card);
+    else PrintFormatToString (Section, sizeof(Section), "DSP56K_FrqPwm_Channel_Config");
 
-    sprintf (Entry, "Channel_%i", Channel);
+    PrintFormatToString (entry, sizeof(entry), "Channel_%i", Channel);
     if (DBGetPrivateProfileString (Section, Entry, "", Line, sizeof (Line), INIFILE) > 0) {
         p = GetNextCommaSeperatedWord (Line, Help, sizeof (Help));
         pCoc->OnOff = atol (Help);
@@ -1269,14 +1269,14 @@ static int ReadOneDigChannelFromIni (CONFIG_ONE_CHANNEL_DIG_IN_STRUCT *pCoc, int
     pCoc->Card = Card;
     pCoc->InOut = InOut;
     if (InOut) {
-        if (Card) sprintf (Section, "DSP56K_DigIn_Channel_Config Card(%i)", Card);
-        else sprintf (Section, "DSP56K_DigIn_Channel_Config");
+        if (Card) PrintFormatToString (Section, sizeof(Section), "DSP56K_DigIn_Channel_Config Card(%i)", Card);
+        else PrintFormatToString (Section, sizeof(Section), "DSP56K_DigIn_Channel_Config");
     } else {
-        if (Card) sprintf (Section, "DSP56K_DigOut_Channel_Config Card(%i)", Card);
-        else sprintf (Section, "DSP56K_DigOut_Channel_Config");
+        if (Card) PrintFormatToString (Section, sizeof(Section), "DSP56K_DigOut_Channel_Config Card(%i)", Card);
+        else PrintFormatToString (Section, sizeof(Section), "DSP56K_DigOut_Channel_Config");
     }
 
-    sprintf (Entry, "Channel_%i", Channel);
+    PrintFormatToString (entry, sizeof(entry), "Channel_%i", Channel);
     if (DBGetPrivateProfileString (Section, Entry, "", Line, sizeof (Line), INIFILE) > 0) {
         p = GetNextCommaSeperatedWord (Line, Help, sizeof (Help));
         pCoc->OnOff = atol (Help);
@@ -1284,7 +1284,7 @@ static int ReadOneDigChannelFromIni (CONFIG_ONE_CHANNEL_DIG_IN_STRUCT *pCoc, int
         p = GetNextCommaSeperatedWord (p, pCoc->Unit, sizeof (pCoc->Unit));
         p = GetNextCommaSeperatedWord (p, pCoc->DataType, sizeof (pCoc->DataType));
         // Entry_?_conv = UmrechnungTyp, Umrechnugnsstring
-        sprintf (Entry, "Channel_%i_conv", Channel);
+        PrintFormatToString (entry, sizeof(entry), "Channel_%i_conv", Channel);
         if (DBGetPrivateProfileString (Section, Entry, "", Line, sizeof (Line), INIFILE) > 0) {
             // UmrechnungTyp 0-> Faktor/Offset, 1 -> Curve, 2 -> Equation
             p = GetNextCommaSeperatedWord (Line, Help, sizeof (Help));
@@ -1295,7 +1295,7 @@ static int ReadOneDigChannelFromIni (CONFIG_ONE_CHANNEL_DIG_IN_STRUCT *pCoc, int
         pCoc->OnOff = 0;
     }
     // gltiger Datentyp-String
-    strcpy (pCoc->DataType, ConvertDataTypeIntToString (ConvertDataTypeStringToInt (pCoc->DataType)));
+    STRING_COPY_TO_ARRAY (pCoc->DataType, ConvertDataTypeIntToString (ConvertDataTypeStringToInt (pCoc->DataType)));
 
     return 0;
 }
@@ -1367,15 +1367,15 @@ int ReadFrqPwmInputFromIni (CONFIG_FRQ_PWM_IN_DLG_STRUCT *pCoc, int Card, int Ch
     char Help[32];
     char *p;
 
-    if (Card) sprintf (Section, "DSP56K_FrqPwm_Input_Channel_Config Card(%i)", Card);
-    else sprintf (Section, "DSP56K_FrqPwm_Input_Channel_Config");
+    if (Card) PrintFormatToString (Section, sizeof(Section), "DSP56K_FrqPwm_Input_Channel_Config Card(%i)", Card);
+    else PrintFormatToString (Section, sizeof(Section), "DSP56K_FrqPwm_Input_Channel_Config");
 
-    sprintf (Entry, "Channel_%i", Channel);
+    PrintFormatToString (entry, sizeof(entry), "Channel_%i", Channel);
     if (DBGetPrivateProfileString (Section, Entry, "", Line, sizeof (Line), INIFILE) > 0) {
         p = GetNextCommaSeperatedWord (Line, Help, sizeof (Help));
         pCoc->OffFrqPwmFlag = atol (Help);
         p = ReadFrqPhaseOrPwm (p, &pCoc->Signal, Section, Entry, "sig");
-        sprintf (Entry, "Channel_%i_MinPeriodeTime", Channel);
+        PrintFormatToString (entry, sizeof(entry), "Channel_%i_MinPeriodeTime", Channel);
         pCoc->MinPeriodeTime = DBGetPrivateProfileFloat (Section, Entry, 0.0, INIFILE);
     } else {
         pCoc->OffFrqPwmFlag = 0;

@@ -14,13 +14,12 @@
  * limitations under the License.
  */
 
-
 #include "UserControlWidget.h"
 #include "MdiWindowType.h"
 #include "DragAndDrop.h"
 #include "QtIniFile.h"
 #include "StringHelpers.h"
-
+#include "PrintFormatToString.h"
 #include "UserControlConfigDialog.h"
 #include "UserControlParser.h"
 
@@ -39,19 +38,12 @@ UserControlWidget::UserControlWidget(QString par_WindowTitle, MdiSubWindow *par_
     m_ConfigAct->setStatusTip(tr("configure enums"));
     connect(m_ConfigAct, SIGNAL(triggered()), this, SLOT(ConfigureSlot()));
 
-    m_Root = nullptr; //new UserControlRoot(-1, Empty);
+    m_Root = nullptr;
 
     m_Layout = new QGridLayout();
     setLayout(m_Layout);
     m_Layout->setContentsMargins(0,0,0,0);
-/*
-    QGroupBox *Gp1 = new QGroupBox("group1");
-    m_Layout->addWidget(Gp1, 0, 0, 1, 1);
-    QGroupBox *Gp2 = new QGroupBox("group2");
-    m_Layout->addWidget(Gp2, 1, 1, 1, 1);
-*/
     m_ScriptState = -1;
-    //setAcceptDrops(true);
     readFromIni();
 }
 
@@ -70,7 +62,7 @@ bool UserControlWidget::writeToIni()
             UserControlElement *Child = m_Root->GetChild(x);
             QString ChildEntry("x");
             char Help[32];
-            sprintf(Help, "_%i", x);
+            PrintFormatToString (Help, sizeof(Help),"_%i", x);
             ChildEntry.append(QString(Help));
             Child->WriteToINI(WindowName, ChildEntry, ScQt_GetMainFileDescriptor());
         }
@@ -125,15 +117,15 @@ void UserControlWidget::ConfigureSlot(void)
             }
             writeToIni();
         } else {
-            // if cancle reload from INI file
+            // if cancel reload from INI file
             delete m_Root;
             UserControlParser Parser;
-            m_Root = Parser.Parse(WindowName, this);
+            QString WindowSection = GetIniSectionPath();
+            m_Root = Parser.Parse(WindowSection, this);
         }
         delete dialog;
     }
 }
-
 
 CustomDialogFrame*UserControlWidget::dialogSettings(QWidget* arg_parent) {
     arg_parent->setWindowTitle("Enum config");

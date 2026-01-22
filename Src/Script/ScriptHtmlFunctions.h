@@ -18,7 +18,7 @@
 #ifndef _SC_SCRIPT_HTMLFUNCTIONS_H
 #define _SC_SCRIPT_HTMLFUNCTIONS_H
 
-int get_html_strings(char *st1,char *st2,char *keywordstring);
+int get_html_strings(char *st1, int st1_maxc, char *st2, int st2_maxc, char *keywordstring);
 
 void init_html_strings(void);
 

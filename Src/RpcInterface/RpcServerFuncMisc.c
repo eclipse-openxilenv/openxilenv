@@ -21,7 +21,7 @@
 #include <fcntl.h>
 
 #include "Config.h"
-
+#include "StringMaxChar.h"
 #include "ThrowError.h"
 #include "Files.h"
 #include "EnvironmentVariables.h"
@@ -40,7 +40,7 @@ static int RPCFunc_CreateFileWithContent(RPC_CONNECTION *par_Connection, RPC_API
     char Path[MAX_PATH];
     RPC_API_CREATE_FILE_WITH_CONTENT_MESSAGE *In = (RPC_API_CREATE_FILE_WITH_CONTENT_MESSAGE*)par_DataIn;
     RPC_API_CREATE_FILE_WITH_CONTENT_MESSAGE_ACK *Out = (RPC_API_CREATE_FILE_WITH_CONTENT_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_CREATE_FILE_WITH_CONTENT_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_CREATE_FILE_WITH_CONTENT_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_CREATE_FILE_WITH_CONTENT_MESSAGE_ACK);
     SearchAndReplaceEnvironmentStrings ((char*)In + In->OffsetFilename, Path, sizeof (Path));
 
@@ -63,7 +63,7 @@ static int RPCFunc_GetEnvironmentVariable(RPC_CONNECTION *par_Connection, RPC_AP
     UNUSED(par_Connection);
     RPC_API_GET_ENVIRONMENT_VARIABLE_MESSAGE *In = (RPC_API_GET_ENVIRONMENT_VARIABLE_MESSAGE*)par_DataIn;
     RPC_API_GET_ENVIRONMENT_VARIABLE_MESSAGE_ACK *Out = (RPC_API_GET_ENVIRONMENT_VARIABLE_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_GET_ENVIRONMENT_VARIABLE_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_GET_ENVIRONMENT_VARIABLE_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_GET_ENVIRONMENT_VARIABLE_MESSAGE_ACK);
     Out->OffsetVariableValue = sizeof(RPC_API_GET_ENVIRONMENT_VARIABLE_MESSAGE_ACK) - 1;
 
@@ -72,9 +72,9 @@ static int RPCFunc_GetEnvironmentVariable(RPC_CONNECTION *par_Connection, RPC_AP
         return sizeof (RPC_API_GET_ENVIRONMENT_VARIABLE_MESSAGE_ACK);
     } else  {
         char Help[4096+2];
-        strcpy(Help, "%");
-        strcat(Help,(char*)In + In->OffsetVariableName);
-        strcat(Help, "%");
+        STRING_COPY_TO_ARRAY(Help, "%");
+        STRING_APPEND_TO_ARRAY(Help,(char*)In + In->OffsetVariableName);
+        STRING_APPEND_TO_ARRAY(Help, "%");
         Out->Header.ReturnValue = SearchAndReplaceEnvironmentStrings (Help, Out->Data, 4096);
         if (Out->Header.ReturnValue >= 0) {
             if (!strcmp (Help, Out->Data)) {
@@ -97,7 +97,7 @@ static int RPCFunc_SetEnvironmentVariable(RPC_CONNECTION *par_Connection, RPC_AP
     UNUSED(par_Connection);
     RPC_API_SET_ENVIRONMENT_VARIABLE_MESSAGE *In = (RPC_API_SET_ENVIRONMENT_VARIABLE_MESSAGE*)par_DataIn;
     RPC_API_SET_ENVIRONMENT_VARIABLE_MESSAGE_ACK *Out = (RPC_API_SET_ENVIRONMENT_VARIABLE_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_SET_ENVIRONMENT_VARIABLE_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_SET_ENVIRONMENT_VARIABLE_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_SET_ENVIRONMENT_VARIABLE_MESSAGE_ACK);
 
     Out->Header.ReturnValue = SetUserEnvironmentVariable((char*)In + In->OffsetVariableName, (char*)In + In->OffsetVariableValue);
@@ -110,7 +110,7 @@ static int RPCFunc_ChangeSettings(RPC_CONNECTION *par_Connection, RPC_API_BASE_M
     UNUSED(par_Connection);
     RPC_API_SET_CHANGE_SETTINGS_MESSAGE *In = (RPC_API_SET_CHANGE_SETTINGS_MESSAGE*)par_DataIn;
     RPC_API_SET_CHANGE_SETTINGS_MESSAGE_ACK *Out = (RPC_API_SET_CHANGE_SETTINGS_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_SET_CHANGE_SETTINGS_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_SET_CHANGE_SETTINGS_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_SET_CHANGE_SETTINGS_MESSAGE_ACK);
 
     Out->Header.ReturnValue = ScriptChangeBasicSettings (CHANGE_SETTINGS_COMMAND_SET, 0, (char*)In + In->OffseSettingName, (char*)In + In->OffsetSettingValue);
@@ -123,7 +123,7 @@ static int RPCFunc_OutText(RPC_CONNECTION *par_Connection, RPC_API_BASE_MESSAGE 
     UNUSED(par_Connection);
     RPC_API_TEXT_OUT_MESSAGE *In = (RPC_API_TEXT_OUT_MESSAGE*)par_DataIn;
     RPC_API_TEXT_OUT_MESSAGE_ACK *Out = (RPC_API_TEXT_OUT_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_TEXT_OUT_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_TEXT_OUT_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_TEXT_OUT_MESSAGE_ACK);
 
     AddScriptMessage ((char*)In + In->OffsetText);
@@ -138,7 +138,7 @@ static int RPCFunc_ErrorOutText(RPC_CONNECTION *par_Connection, RPC_API_BASE_MES
     UNUSED(par_Connection);
     RPC_API_ERROR_TEXT_OUT_MESSAGE *In = (RPC_API_ERROR_TEXT_OUT_MESSAGE*)par_DataIn;
     RPC_API_ERROR_TEXT_OUT_MESSAGE_ACK *Out = (RPC_API_ERROR_TEXT_OUT_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_ERROR_TEXT_OUT_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_ERROR_TEXT_OUT_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_ERROR_TEXT_OUT_MESSAGE_ACK);
 
     Out->Header.ReturnValue = ThrowError (In->ErrorLevel, (char*)In + In->OffsetText);
@@ -152,7 +152,7 @@ static int RPCFunc_CreateFile(RPC_CONNECTION *par_Connection, RPC_API_BASE_MESSA
     UNUSED(par_Connection);
     RPC_API_CREATE_FILE_MESSAGE *In = (RPC_API_CREATE_FILE_MESSAGE*)par_DataIn;
     RPC_API_CREATE_FILE_MESSAGE_ACK *Out = (RPC_API_CREATE_FILE_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_CREATE_FILE_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_CREATE_FILE_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_CREATE_FILE_MESSAGE_ACK);
 #ifdef _WIN32
     Out->Handle = (uint64_t)CreateFile ((char*)In + In->OffsetFilename, In->dwDesiredAccess, In->dwShareMode, NULL, In->dwCreationDisposition, In->dwFlagsAndAttributes, NULL);
@@ -185,7 +185,7 @@ static int RPCFunc_CloseHandle(RPC_CONNECTION *par_Connection, RPC_API_BASE_MESS
     UNUSED(par_Connection);
     RPC_API_CLOSE_HANDLE_MESSAGE *In = (RPC_API_CLOSE_HANDLE_MESSAGE*)par_DataIn;
     RPC_API_CLOSE_HANDLE_MESSAGE_ACK *Out = (RPC_API_CLOSE_HANDLE_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_CLOSE_HANDLE_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_CLOSE_HANDLE_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_CLOSE_HANDLE_MESSAGE_ACK);
 #ifdef _WIN32
     CloseHandle((HANDLE)In->Handle);
@@ -200,7 +200,7 @@ static int RPCFunc_ReadFile(RPC_CONNECTION *par_Connection, RPC_API_BASE_MESSAGE
     UNUSED(par_Connection);
     RPC_API_READ_FILE_MESSAGE *In = (RPC_API_READ_FILE_MESSAGE*)par_DataIn;
     RPC_API_READ_FILE_MESSAGE_ACK *Out = (RPC_API_READ_FILE_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_READ_FILE_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_READ_FILE_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_READ_FILE_MESSAGE_ACK);
     Out->Offset_uint8_NumberOfBytesRead_Buffer = sizeof(RPC_API_READ_FILE_MESSAGE_ACK) - 1;
 #ifdef _WIN32
@@ -221,7 +221,7 @@ static int RPCFunc_WriteFile(RPC_CONNECTION *par_Connection, RPC_API_BASE_MESSAG
     UNUSED(par_Connection);
     RPC_API_WRITE_FILE_MESSAGE *In = (RPC_API_WRITE_FILE_MESSAGE*)par_DataIn;
     RPC_API_WRITE_FILE_MESSAGE_ACK *Out = (RPC_API_WRITE_FILE_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_WRITE_FILE_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_WRITE_FILE_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_WRITE_FILE_MESSAGE_ACK);
 #ifdef _WIN32
     Out->Header.ReturnValue = WriteFile((HANDLE)In->Handle, (char*)In + In->Offset_uint8_nNumberOfBytesToWrite_Buffer, In->nNumberOfBytesToWrite, (LPDWORD)&(Out->NumberOfBytesWritten), NULL);

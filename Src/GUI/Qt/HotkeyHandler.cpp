@@ -22,6 +22,7 @@
 
 extern "C"
 {
+    #include "PrintFormatToString.h"
     #include "IniDataBase.h"
     #include "MainValues.h"
     #include "EquationParser.h"
@@ -59,7 +60,7 @@ cHotkeyHandler::cHotkeyHandler()
                 modifier = "Shift";
                 break;
             }
-            sprintf (entry, "%s F%i", modifier, y);
+            PrintFormatToString (entry, sizeof(entry), "%s F%i", modifier, y);
             IniFileDataBaseReadString ("GUI/FunctionHotkeys", entry, "",
                                        txt, sizeof(txt), Fd);
             func = strtol(txt, &endptr, 0);
@@ -73,11 +74,11 @@ cHotkeyHandler::cHotkeyHandler()
                 endptr++;
                 if (func)
                 {
-                    sprintf (line, "%sF%i", modifier, y);
+                    PrintFormatToString (line, sizeof(line), "%sF%i", modifier, y);
                     string.append(line);
-                    sprintf (line, "%s", TranslateFunctionNumber2String (func));
+                    PrintFormatToString (line, sizeof(line), "%s", TranslateFunctionNumber2String (func));
                     string.append(line);
-                    sprintf (line, "%s", endptr);
+                    PrintFormatToString (line, sizeof(line), "%s", endptr);
                     string.append(line);
                     shortcutStringList.append(string);
                     string.clear();
@@ -105,7 +106,7 @@ cHotkeyHandler::cHotkeyHandler()
                     modifier = "Control";
                     break;
                 }
-                sprintf (entry, "%s %c", modifier, static_cast<char>(y));
+                PrintFormatToString (entry, sizeof(entry), "%s %c", modifier, static_cast<char>(y));
                 IniFileDataBaseReadString ("GUI/FunctionHotkeys", entry, "",
                                            txt, sizeof(txt), Fd);
                 func = strtol(txt, &endptr, 0);
@@ -115,11 +116,11 @@ cHotkeyHandler::cHotkeyHandler()
                 while (isspace(*endptr)) endptr++;
                 if (func)
                 {
-                    sprintf (line, "%s%c", modifier, static_cast<char>(y-32));
+                    PrintFormatToString (line, sizeof(line), "%s%c", modifier, static_cast<char>(y-32));
                     string.append(line);
-                    sprintf (line, "%s", TranslateFunctionNumber2String (func));
+                    PrintFormatToString (line, sizeof(line), "%s", TranslateFunctionNumber2String (func));
                     string.append(line);
-                    sprintf (line, "%s", endptr);
+                    PrintFormatToString (line, sizeof(line), "%s", endptr);
                     string.append(line);
                     shortcutStringList.append(string);
                     string.clear();
@@ -229,16 +230,16 @@ bool cHotkeyHandler::saveHotkeys()
                 stringModifier = "Shift+";
                 break;
             }
-            sprintf (entry, "%s F%i", modifier, y);
-            sprintf(Data, "%sF%i", stringModifier, y);
+            PrintFormatToString (entry, sizeof(entry), "%s F%i", modifier, y);
+            PrintFormatToString (Data, sizeof(Data), "%sF%i", stringModifier, y);
             hotkeyEntry = QString::fromLocal8Bit(Data);
             idx = 0;
             while (idx < shortcutStringList.count()) {
                 tmp = shortcutStringList[idx];
                 if (!hotkeyEntry.compare(tmp.at(0), Qt::CaseInsensitive)) {
                     func = TranslateString2FunctionNumber(tmp.at(1));
-                    sprintf(Data, "%s", QStringToConstChar(tmp.at(2)));
-                    sprintf (txt, "%i,%s", func, Data);
+                    PrintFormatToString (Data, sizeof(Data), "%s", QStringToConstChar(tmp.at(2)));
+                    PrintFormatToString (txt, sizeof(txt), "%i,%s", func, Data);
                     IniFileDataBaseWriteString ("GUI/FunctionHotkeys", entry, txt, Fd);
                     found = true;
                     break;
@@ -246,7 +247,7 @@ bool cHotkeyHandler::saveHotkeys()
                 idx++;
             }
             if (!found) {
-                sprintf(txt, "%i,", 0);
+                PrintFormatToString (txt, sizeof(txt), "%i,", 0);
                 IniFileDataBaseWriteString ("GUI/FunctionHotkeys", entry, txt, Fd);
             }
             found = false;
@@ -274,22 +275,22 @@ bool cHotkeyHandler::saveHotkeys()
                     stringModifier = "Ctrl+";
                     break;
                 }
-                sprintf(Data, "%s%c", stringModifier, static_cast<char>(y-32));
+                PrintFormatToString (Data, sizeof(Data), "%s%c", stringModifier, static_cast<char>(y-32));
                 hotkeyEntry = QString::fromLocal8Bit(Data);
-                sprintf (entry, "%s %c", modifier, static_cast<char>(y));
+                PrintFormatToString (entry, sizeof(entry), "%s %c", modifier, static_cast<char>(y));
                 idx = 0;
                 while (idx < shortcutStringList.count()) {
                     tmp = shortcutStringList[idx];
                     if (!hotkeyEntry.compare(tmp.at(0), Qt::CaseInsensitive)) {
                         func = TranslateString2FunctionNumber(tmp.at(1));
-                        sprintf(txt, "%i,%*s", func, (int)sizeof(txt)-16, QStringToConstChar(tmp.at(2)));
+                        PrintFormatToString (txt, sizeof(txt), "%i,%*s", func, (int)sizeof(txt)-16, QStringToConstChar(tmp.at(2)));
                         IniFileDataBaseWriteString ("GUI/FunctionHotkeys", entry, txt, Fd);
                         found = true;
                     }
                     idx++;
                 }
                 if(!found) {
-                    sprintf (txt, "%i,", 0);
+                    PrintFormatToString (txt, sizeof(txt), "%i,", 0);
                     IniFileDataBaseWriteString ("GUI/FunctionHotkeys", entry, txt, Fd);
                 }
                 found = false;

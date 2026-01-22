@@ -26,6 +26,7 @@
 #include "Files.h"
 #include "ThrowError.h"
 #include "StringMaxChar.h"
+#include "PrintFormatToString.h"
 #include "MyMemory.h"
 #include "EnvironmentVariables.h"
 #include "LoadSaveToFile.h"
@@ -334,7 +335,7 @@ static char *CCPErrorNoToString(int err)
 
 static void FillCanObject (CCP_CRO_CAN_OBJECT *pCanObj, CCP_CONNECTTION *pCon)
 {
-    memset (pCanObj->Data, 0, 8);
+    MEMSET (pCanObj->Data, 0, 8);
     pCanObj->Channel = pCon->CcpConfig.Channel;
     pCanObj->Id = pCon->CcpConfig.CRO_id;
     pCanObj->ExtFlag = pCon->CcpConfig.ExtIds;
@@ -846,7 +847,7 @@ static int CcpReadConfigFromIni (int Connection)
     int Fd = GetMainFileDescriptor();
 
     pCon = &CcpConnections[Connection];
-    sprintf (Section, "CCP Configuration for Target %i", Connection);
+    PrintFormatToString (Section, sizeof(Section), "CCP Configuration for Target %i", Connection);
     IniFileDataBaseReadString (Section, "Debug", "no", txt, sizeof (txt), Fd);
     if (!strcmp ("yes", txt)) pCon->DebugMessages = 1;
     else pCon->DebugMessages = 0;
@@ -996,10 +997,9 @@ static int DeleteCalibrationList (int Connection)
     return -1;
 }
 
-
-static int BuildCalibrationList (int var_count, char **vars, int Connection)
+static int BuildCalibrationList (int par_ParamCount, char **par_Params, int par_Connection)
 {
-    int x, v;
+    int x, p;
     char Section[256];
     char txt[INI_MAX_LINE_LENGTH];
     char entry[32];
@@ -1012,37 +1012,65 @@ static int BuildCalibrationList (int var_count, char **vars, int Connection)
     uint32_t Offset = 0;
     char *Unit, *Conversion, *MinString, *MaxString;
     int Fd = GetMainFileDescriptor();
+    int *ParamIdxs = NULL;
+    int Ret = 0;
 
-    sprintf (Section, "%%XILENV_CCP%i_PARAM_OFFSET%%", Connection);
+    PrintFormatToString (Section, sizeof(Section), "%%XILENV_CCP%i_PARAM_OFFSET%%", par_Connection);
     SearchAndReplaceEnvironmentStrings (Section, txt, sizeof (txt));
-    if (!strcmp (Section, txt) && (Connection == 0)) {
-        sprintf (Section, "%%XILENV_CCP_PARAM_OFFSET%%");
+    if (!strcmp (Section, txt) && (par_Connection == 0)) {
+        PrintFormatToString (Section, sizeof(Section), "%%XILENV_CCP_PARAM_OFFSET%%");
         SearchAndReplaceEnvironmentStrings (Section, txt, sizeof (txt));
     }
     if (strcmp (Section, txt)) {
         Offset = strtoul (txt, NULL, 0);
     }
-    pCon = &CcpConnections[Connection];
-    sprintf (Section, "CCP Configuration for Target %i", Connection);
-    DeleteCalibrationList (Connection);
+    pCon = &CcpConnections[par_Connection];
+    PrintFormatToString (Section, sizeof(Section), "CCP Configuration for Target %i", par_Connection);
+    DeleteCalibrationList (par_Connection);
     /*if (CcpCalParamList != NULL) my_free (CcpCalParamList);
     CcpCalParamList = NULL;
     CcpCalParamListSize = 0;*/
-    pCon->CcpCalParamList = (CcpCalParamItem*)my_malloc ((size_t)var_count * sizeof (CcpCalParamItem));
+    pCon->CcpCalParamList = (CcpCalParamItem*)my_malloc ((size_t)par_ParamCount * sizeof (CcpCalParamItem));
     if (pCon->CcpCalParamList == NULL) {
         ThrowError (1, "out of memory");
         return -1;
     }
-    pCon->CcpCalParamListSize = var_count;
+    ParamIdxs = (int*)my_calloc ((size_t)par_ParamCount, sizeof (int));
+    if (ParamIdxs == NULL) {
+        ThrowError (1, "out of memory");
+        return -1;
+    }
+    for (x = 0; x < par_ParamCount; x++) {
+        ParamIdxs[x] = -1;
+    }
+
+    // first search all parameters and store it's index
+    for (p = 0; ; p++) {
+        PrintFormatToString (entry, sizeof(entry), "p%i", p);
+        if (IniFileDataBaseReadString(Section, entry, "", txt, sizeof (txt), Fd) == 0) {
+            break;
+        }
+        if (StringCommaSeparate (txt, &dtype_str, &name, NULL) == 2) {
+            for (x = 0; x < par_ParamCount; x++) {
+                if (!strcmp (name, par_Params[x])) {
+                    ParamIdxs[x] = p;
+                    break;
+                }
+            }
+        }
+    }
+
+    pCon->CcpCalParamListSize = par_ParamCount;
     pCon->CcpCalParamPos = 0;
-    for (x = 0; x < var_count; x++) {
+    for (x = 0; x < par_ParamCount; x++) {
         found = 0;
-        for (v = 0; ; v++) {
-            sprintf (entry, "p%i", v);
+        if (ParamIdxs[x] >= 0) {
+            p = ParamIdxs[x];
+            PrintFormatToString (entry, sizeof(entry), "p%i", p);
             if (IniFileDataBaseReadString(Section, entry, "", txt, sizeof (txt), Fd) == 0) break;
             Unit = Conversion = MinString = MaxString = NULL;
             if (StringCommaSeparate (txt, &dtype_str, &name, &address_str, &Unit, &Conversion, &MinString, &MaxString, NULL) >= 3) {
-                if (!strcmp (name, vars[x])) {
+                if (!strcmp (name, par_Params[x])) {
                     dtype = get_bbvari_type (dtype_str);
                     pCon->CcpCalParamList[x].Address = Offset + strtoul (address_str, NULL, 0);
                     pCon->CcpCalParamList[x].vid = add_bbvari (name, dtype, 
@@ -1068,16 +1096,18 @@ static int BuildCalibrationList (int var_count, char **vars, int Connection)
                 } 
             } else {
                 ThrowError (1, "missing parameter in string %s", txt);
-                return -1;
+                Ret = -1;
             }
         }
         if (!found) {
-            ThrowError (1, "CCP parameter \"%s\" is not configured and cannot calibrate", vars[x]); 
+            ThrowError (1, "CCP parameter \"%s\" is not configured and cannot calibrate", par_Params[x]);
             pCon->CcpCalParamList[x].Address = 0;
             pCon->CcpCalParamList[x].vid = -1;
+            Ret = -1;
         }
     }
-    return 0;
+    if (ParamIdxs != NULL) my_free(ParamIdxs);
+    return Ret;
 }
 
 static int DeleteDTOsBBVariable (CCP_VARIABLES_CONFIG *dto_conf)
@@ -1115,13 +1145,32 @@ static int BuildDTOs (CCP_VARIABLES_CONFIG *dto_conf, int var_count, char **vars
     char *Unit, *Conversion, *MinString, *MaxString;
     char *VariableFoundArray;
     int Fd = GetMainFileDescriptor();
+    int *VarIdxs;
 
     DeleteDTOsBBVariable (dto_conf);
-    sprintf (Section, "CCP Configuration for Target %i", Connection);
-    memset (used_bytes, 0, sizeof(used_bytes));
-    memset (dto_conf, 0, sizeof (CCP_VARIABLES_CONFIG));
-
-     VariableFoundArray = my_calloc ((size_t)var_count, sizeof (char));
+    PrintFormatToString (Section, sizeof(Section), "CCP Configuration for Target %i", Connection);
+    MEMSET (used_bytes, 0, sizeof(used_bytes));
+    MEMSET (dto_conf, 0, sizeof (CCP_VARIABLES_CONFIG));
+    VarIdxs = (int*)my_calloc ((size_t)var_count, sizeof (int));
+    for (x = 0; x < var_count; x++) {
+        VarIdxs[x] = -1;
+    }
+    VariableFoundArray = my_calloc ((size_t)var_count, sizeof (char));
+    // first search all signals and store it's index
+    for (v = 0; ; v++) {
+        PrintFormatToString (entry, sizeof(entry), "v%i", v);
+        if (IniFileDataBaseReadString(Section, entry, "", txt, sizeof (txt), Fd) == 0) {
+            break;
+        }
+        if (StringCommaSeparate (txt, &dtype_str, &name, NULL) == 2) {
+            for (x = 0; x < var_count; x++) {
+                if (!strcmp (name, vars[x])) {
+                    VarIdxs[x] = v;
+                    break;
+                }
+            }
+        }
+    }
     // 3 walkthroughs
     // inide first time running all 4 Byte-Variables
     // inide second time running all 2 Byte-Variables
@@ -1130,8 +1179,9 @@ static int BuildDTOs (CCP_VARIABLES_CONFIG *dto_conf, int var_count, char **vars
     for (run = 0; run < 3; run++) {
         pid = 0;
         for (x = 0; x < var_count; x++) {
-            for (v = 0; ; v++) {
-                sprintf (entry, "v%i", v);
+            if (VarIdxs[x] >= 0) {
+                v = VarIdxs[x];
+                PrintFormatToString (entry, sizeof(entry), "v%i", v);
                 if (IniFileDataBaseReadString(Section, entry, "", txt, sizeof (txt), Fd) == 0) {
                     break;
                 }
@@ -1170,6 +1220,7 @@ static int BuildDTOs (CCP_VARIABLES_CONFIG *dto_conf, int var_count, char **vars
                                 if (pid >= max_dto_packages) {
                                     ThrowError (1, "too many variables max. dto packages %i", max_dto_packages);
                                     my_free (VariableFoundArray);
+                                    my_free (VarIdxs);
                                     return -1;
                                 }
                             }
@@ -1187,8 +1238,14 @@ static int BuildDTOs (CCP_VARIABLES_CONFIG *dto_conf, int var_count, char **vars
                 } else {
                     ThrowError (1, "missing parameter in string %s", txt);
                     my_free (VariableFoundArray);
+                    my_free (VarIdxs);
                     return -1;
                 }
+            } else {
+                ThrowError (1, "cannot find variable \"%s\"", vars[x]);
+                my_free (VariableFoundArray);
+                my_free (VarIdxs);
+                return -1;
             }
         }
     }
@@ -1198,6 +1255,7 @@ static int BuildDTOs (CCP_VARIABLES_CONFIG *dto_conf, int var_count, char **vars
         }
     }
     my_free (VariableFoundArray);
+    my_free (VarIdxs);
     dto_conf->DTOPackagesCount = pid_max + 1;
     write_message (get_pid_by_name ("CANServer"), CPP_DTOS_DATA_STRUCTS, sizeof (CCP_VARIABLES_CONFIG), (char*)dto_conf);
     return 0;
@@ -1379,7 +1437,7 @@ static void ReadECUInfosCommandScheduer (CCP_CONNECTTION *pCon, int Connection)
     case CCP_DATA_UPLOAD_WAIT_ACK:
         if (CcpCheckAckMessage (&CanObject, pCon)) {
             PrintACKMessage (pCon, "UPLOAD", &CanObject);
-            MEMCPY (&(pCon->ccp_infos.TCU_ID[pCon->TCUStringPointer]), 
+            MEMCPY (&(pCon->ccp_infos.TargetIdentifier[pCon->TCUStringPointer]), 
                     &(CanObject.Data[3]), 
                     (size_t)x__MIN ((pCon->SizeOfTCUString - pCon->TCUStringPointer), 5));
             pCon->TCUStringPointer += x__MIN ((pCon->SizeOfTCUString - pCon->TCUStringPointer), 5);
@@ -1616,7 +1674,7 @@ static void StartMeasurement_CommandScheduer (CCP_CONNECTTION *pCon, int Connect
     case CCP_DATA_UPLOAD_WAIT_ACK:
         if (CcpCheckAckMessage (&CanObject, pCon)) {
             PrintACKMessage (pCon, "UPLOAD", &CanObject);
-            MEMCPY (&(pCon->ccp_infos.TCU_ID[pCon->TCUStringPointer]), 
+            MEMCPY (&(pCon->ccp_infos.TargetIdentifier[pCon->TCUStringPointer]), 
                     &(CanObject.Data[3]), 
                     (size_t)x__MIN ((pCon->SizeOfTCUString - pCon->TCUStringPointer), 5));
             pCon->TCUStringPointer += x__MIN ((pCon->SizeOfTCUString - pCon->TCUStringPointer), 5);
@@ -2057,7 +2115,7 @@ static void StartCalibration_CommandScheduer (CCP_CONNECTTION *pCon, int Connect
     case CCP_DATA_UPLOAD_WAIT_ACK:
         if (CcpCheckAckMessage (&CanObject, pCon)) {
             PrintACKMessage (pCon, "UPLOAD", &CanObject);
-            MEMCPY (&(pCon->ccp_infos.TCU_ID[pCon->TCUStringPointer]), 
+            MEMCPY (&(pCon->ccp_infos.TargetIdentifier[pCon->TCUStringPointer]), 
                     &(CanObject.Data[3]), 
                     (size_t)x__MIN ((pCon->SizeOfTCUString - pCon->TCUStringPointer), 5));
             pCon->TCUStringPointer += x__MIN ((pCon->SizeOfTCUString - pCon->TCUStringPointer), 5);
@@ -2428,22 +2486,22 @@ static int init_ccp_control (void)
         pCon->CcpCommandSequence = CCP_NO_COMMAND_SEQUENCE;
         pCon->CcpCommand = CCP_NO_COMMAND;
 
-        sprintf (txt, "%s.CCP[%i].Version", Prefix, x);
+        PrintFormatToString (txt, sizeof(txt), "%s.CCP[%i].Version", Prefix, x);
         pCon->CCPVersionVid = add_bbvari (txt, BB_UDWORD, "");
-        sprintf (txt, "%s.CCP[%i].Status", Prefix, x);
+        PrintFormatToString (txt, sizeof(txt), "%s.CCP[%i].Status", Prefix, x);
         pCon->CCPStatusVid = add_bbvari (txt, BB_UDWORD, "");
-        sprintf (txt, "%s.CCP[%i].Command", Prefix, x);
+        PrintFormatToString (txt, sizeof(txt), "%s.CCP[%i].Command", Prefix, x);
         pCon->CCPCommandVid = add_bbvari (txt, BB_UDWORD, "");
-        sprintf (txt, "%s.CCP[%i].CommandSequence", Prefix, x);
+        PrintFormatToString (txt, sizeof(txt), "%s.CCP[%i].CommandSequence", Prefix, x);
         pCon->CCPCommandSequenceVid = add_bbvari (txt, BB_UDWORD, "");
         if (x == 0) { // downward compatible
-            sprintf (txt, "%s.CCPVersion", Prefix);
+            PrintFormatToString (txt, sizeof(txt), "%s.CCPVersion", Prefix);
             pCon->CCPVersionVidOld = add_bbvari (txt, BB_UDWORD, "");
-            sprintf (txt, "%s.CCPStatus", Prefix);
+            PrintFormatToString (txt, sizeof(txt), "%s.CCPStatus", Prefix);
             pCon->CCPStatusVidOld = add_bbvari (txt, BB_UDWORD, "");
-            sprintf (txt, "%s.CCPCommand", Prefix);
+            PrintFormatToString (txt, sizeof(txt), "%s.CCPCommand", Prefix);
             pCon->CCPCommandVidOld = add_bbvari (txt, BB_UDWORD, "");
-            sprintf (txt, "%s.CCPCommandSequence", Prefix);
+            PrintFormatToString (txt, sizeof(txt), "%s.CCPCommandSequence", Prefix);
             pCon->CCPCommandSequenceVidOld = add_bbvari (txt, BB_UDWORD, "");
         }
         SetStatusVariableTextReplaces (pCon);
@@ -2483,7 +2541,7 @@ static void terminate_ccp_control (void)
     }
     for (x = 0; x < 4; x++) {
         CCP_CONNECTTION *pCon = &CcpConnections[x];
-        memset (pCon, 0, sizeof (CCP_CONNECTTION));
+        MEMSET (pCon, 0, sizeof (CCP_CONNECTTION));
         pCon->CcpCommandSequence = pCon->CcpCommandSequenceRequest = CCP_NO_COMMAND_SEQUENCE;
         pCon->CcpCommand = CCP_NO_COMMAND;
 	}
@@ -2524,7 +2582,7 @@ int Start_CCP (int ConnectionNo, int CalibOrMeasurment, int Count, char **Variab
             if ((pCon->CcpMeasurementLabelList = my_malloc ((size_t)Count * sizeof (char*))) != NULL) {
                 p = pCon->CcpMeasurementLabelListBuffer;
                 for (i = 0; i < Count; i++) {
-                    strcpy (p, Variables[i]);
+                    StringCopyMaxCharTruncate (p, Variables[i], BufferSize - (p - pCon->CcpMeasurementLabelListBuffer));
                     pCon->CcpMeasurementLabelList[i] = p;
                     p += strlen (p) + 1;
                 }
@@ -2636,19 +2694,19 @@ int GetECUInfos_CCP (int ConnectionNo, char *String, int maxc)
 
     if (((pCon->gCcpConnected & MEASUREMENT_RUNNING_MASK) == MEASUREMENT_RUNNING_MASK) ||
         ((pCon->gCcpConnected & CALIBRATION_ACTIVE_MASK) == CALIBRATION_ACTIVE_MASK)) { 
-        pCon->ccp_infos.TCU_ID[sizeof(pCon->ccp_infos.TCU_ID)-1] = 0;
-        sprintf (String, "CCP-Version = %i.%i TCU-String = \"%s\" AvailabilityMask = 0x%02X ProtectionMask = 0x%02X "
+        pCon->ccp_infos.TargetIdentifier[sizeof(pCon->ccp_infos.TargetIdentifier)-1] = 0;
+        PrintFormatToString (String, maxc, "CCP-Version = %i.%i TCU-String = \"%s\" AvailabilityMask = 0x%02X ProtectionMask = 0x%02X "
                 "DAQ Size = %i DAQ pid = %i",
                 (int)pCon->ccp_infos.major_version,
                 (int)pCon->ccp_infos.minor_version,
-                pCon->ccp_infos.TCU_ID,
+                pCon->ccp_infos.TargetIdentifier,
                 (int)pCon->ccp_infos.ResourceAvailabilityMask,
                 (int)pCon->ccp_infos.ResourceProtectionMask,
                 pCon->ccp_infos.DAQ_Size,
                 pCon->ccp_infos.DAQ_Pid);
         Ret = 0;
     } else {
-        sprintf (String, "CCP conection not active");
+        PrintFormatToString (String, maxc, "CCP conection not active");
         Ret = -1;
     }
     return Ret;
@@ -2668,11 +2726,11 @@ int GetECUString_CCP (int ConnectionNo, char *String, int maxc)
 
     if (((pCon->gCcpConnected & MEASUREMENT_RUNNING_MASK) == MEASUREMENT_RUNNING_MASK) ||
         ((pCon->gCcpConnected & CALIBRATION_ACTIVE_MASK) == CALIBRATION_ACTIVE_MASK)) { 
-        pCon->ccp_infos.TCU_ID[sizeof(pCon->ccp_infos.TCU_ID)-1] = 0;
-        sprintf (String, "%s", pCon->ccp_infos.TCU_ID);
+        pCon->ccp_infos.TargetIdentifier[sizeof(pCon->ccp_infos.TargetIdentifier)-1] = 0;
+        PrintFormatToString (String, maxc, "%s", pCon->ccp_infos.TargetIdentifier);
         Ret = 0;
     } else {
-        sprintf (String, "CCP conection not active");
+        PrintFormatToString (String, maxc, "CCP conection not active");
         Ret = -1;
     }
     return 0;
@@ -2691,8 +2749,8 @@ int LoadConfig_CCP (int ConnectionNo, const char *fname)
     if (Fd <= 0) {
         return -1;
     }
-    sprintf (SectionSrc, "CCP Configuration for Target"); 
-    sprintf (SectionDst, "CCP Configuration for Target %i", ConnectionNo);
+    PrintFormatToString (SectionSrc, sizeof(SectionSrc), "CCP Configuration for Target");
+    PrintFormatToString (SectionDst, sizeof(SectionDst), "CCP Configuration for Target %i", ConnectionNo);
 
     if (IniFileDataBaseCopySection(GetMainFileDescriptor(), Fd, SectionDst, SectionSrc)) {
         return -1;
@@ -2708,8 +2766,8 @@ int SaveConfig_CCP (int ConnectionNo, char *fname)
     char SectionDst[256];
     int Fd;
 
-    sprintf (SectionDst, "CCP Configuration for Target"); 
-    sprintf (SectionSrc, "CCP Configuration for Target %i", ConnectionNo);  
+    PrintFormatToString (SectionDst, sizeof(SectionDst), "CCP Configuration for Target");
+    PrintFormatToString (SectionSrc, sizeof(SectionSrc), "CCP Configuration for Target %i", ConnectionNo);
 
     remove (fname);
     Fd = IniFileDataBaseCreateAndOpenNewIniFile(fname);

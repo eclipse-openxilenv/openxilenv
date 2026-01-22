@@ -23,6 +23,7 @@
 
 extern "C"
 {
+    #include "StringMaxChar.h"
     #include "SectionFilter.h"
     #include "Scheduler.h"
     #include "DebugInfoDB.h"
@@ -64,13 +65,13 @@ globalsectionfilterdialog::globalsectionfilterdialog(QWidget *parent) : Dialog(p
     if (sfdp->AllProcsSelected) {
         for (x = 0; x < ui->listWidgetProcesses->count(); x++) {
             char ProcName[MAX_PATH];
-            strcpy(ProcName, QStringToConstChar(ui->listWidgetProcesses->item(x)->text()));
+            STRING_COPY_TO_ARRAY(ProcName, QStringToConstChar(ui->listWidgetProcesses->item(x)->text()));
             addSectionToListBox (ProcName);
         }
     } else {
         // Zuletzt ausgewaehlten Prozess selektieren
         char CurProcess[MAX_PATH];
-        strcpy(CurProcess, QStringToConstChar(ui->listWidgetProcesses->currentItem()->text()));
+        STRING_COPY_TO_ARRAY(CurProcess, QStringToConstChar(ui->listWidgetProcesses->currentItem()->text()));
         QListWidgetItem *ProcessItem = new QListWidgetItem;
         ProcessItem->setText(CurProcess);
         ui->listWidgetProcesses->setCurrentItem(ProcessItem);
@@ -255,11 +256,9 @@ void globalsectionfilterdialog::accept()
 void globalsectionfilterdialog::on_listWidgetProcesses_itemClicked(QListWidgetItem *item)
 {
     char CurProcess[MAX_PATH];
-    strcpy(CurProcess, QStringToConstChar(item->text()));
+    STRING_COPY_TO_ARRAY(CurProcess, QStringToConstChar(item->text()));
     ui->listWidgetProcesses->setCurrentItem(item);
     ui->listWidgetExcludeAvailableSection->clear();
-    //ui->listWidgetExcludeSection->clear();
     ui->listWidgetIncludeAvailableSection->clear();
-    //ui->listWidgetIncludeSection->clear();
     addSectionToListBox (CurProcess);
 }

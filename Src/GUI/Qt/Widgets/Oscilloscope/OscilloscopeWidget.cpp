@@ -17,10 +17,16 @@
 
 #include <math.h>
 #include <inttypes.h>
-
+#ifdef QT_SVG_LIB
+#include <QSvgGenerator>
+#include <QClipboard>
+#include <QDir>
+#include <QTextStream>
+#endif
 extern "C" {
 #include "Config.h"
 #include "MyMemory.h"
+#include "MemZeroAndCopy.h"
 #include "ThrowError.h"
 #include "Blackboard.h"
 #include "BlackboardAccess.h"
@@ -50,7 +56,7 @@ OscilloscopeWidget::OscilloscopeWidget(QString par_WindowTitle, MdiSubWindow* pa
 
     m_Data = &m_DataStore;
 
-    memset (m_Data, 0, sizeof (m_DataStore));
+    STRUCT_ZERO_INIT (m_DataStore, OSCILLOSCOPE_DATA);
 
     m_Data->NotANumber = GetNotANumber();
 
@@ -383,6 +389,137 @@ void OscilloscopeWidget::CheckIfSignalIsSelected()
     }
 }
 
+#ifdef QT_SVG_LIB
+void OscilloscopeWidget::PrintSvgToClipboard()
+{
+    int Width = width();
+    int Height = height();
+
+    // build a temp file name
+    QString FileNameTemplate = GetWindowTitle();
+    FileNameTemplate.remove(' ');
+    FileNameTemplate.truncate(20);
+    FileNameTemplate.append(".svg");
+    FileNameTemplate = QDir::tempPath() + "/" + FileNameTemplate;
+
+    // acquire the global clipboard
+    QClipboard *clipboard = QGuiApplication::clipboard();
+    if (clipboard != nullptr) {
+
+        // Print to svg to the tempfile
+        QMimeData* mimeData = new QMimeData();
+        QSvgGenerator generator;
+        generator.setFileName(FileNameTemplate);
+        generator.setSize(QSize(Width, Height));
+        generator.setViewBox(QRect(0, 0, Width, Height));
+        generator.setTitle(GetWindowTitle());
+        generator.setDescription("SVG export");
+        QPainter painter;
+        QTransform transform;
+        QPoint Pos;
+        QSize Size;
+
+        painter.begin(&generator);
+
+        Pos = m_DrawArea->pos();
+        Size = m_DrawArea->size();
+        transform.reset();
+        transform.translate(Pos.x(), Pos.y());
+        painter.setTransform(transform);
+        m_DrawArea->paint(painter);
+        m_DrawArea->paint_cursor (&painter);
+
+        painter.setWindow(0, 0, Width, Height);
+        Pos = m_TimeAxis->pos();
+        Size = m_TimeAxis->size();
+        transform.reset();
+        transform.translate(Pos.x(), Pos.y());
+        painter.setTransform(transform);
+        m_TimeAxis->paint(painter, false);
+
+        if (m_LeftYAxis != nullptr) {
+            Pos = m_LeftYAxis->pos();
+            Size = m_LeftYAxis->size();
+            transform.reset();
+            transform.translate(Pos.x(), Pos.y());
+            painter.setTransform(transform);
+            m_LeftYAxis->paint(painter, false);
+        }
+        if (m_LeftDescFrame != nullptr) {
+            for (int x = 0; x < MAX_SIGNALS_INSIDE_FRAME; x++) {
+                OscilloscopeDesc *Desc = m_LeftDescFrame->GetDesciption(x);
+                if (Desc != nullptr) {
+                    Pos = Desc->pos();
+                    Size = Desc->size();
+                    transform.reset();
+                    transform.translate(Pos.x(), Pos.y());
+                    painter.setTransform(transform);
+                    Desc->paint(painter, false);
+                }
+            }
+        }
+        if (m_LeftStatus != nullptr) {
+            Pos = m_LeftStatus->pos();
+            Size = m_LeftStatus->size();
+            transform.reset();
+            transform.translate(Pos.x(), Pos.y());
+            painter.setTransform(transform);
+            m_LeftStatus->paint(painter, false);
+        }
+
+        if (m_RightYAxis != nullptr) {
+            Pos = m_RightYAxis->pos();
+            Size = m_RightYAxis->size();
+            transform.reset();
+            transform.translate(Pos.x(), Pos.y());
+            painter.setTransform(transform);
+            m_RightYAxis->paint(painter, false);
+        }
+        if (m_RightDescFrame != nullptr) {
+            for (int x = 0; x < MAX_SIGNALS_INSIDE_FRAME; x++) {
+                OscilloscopeDesc *Desc = m_RightDescFrame->GetDesciption(x);
+                if (Desc != nullptr) {
+                    Pos = m_RightDescFrame->pos() + Desc->pos();
+                    Size = Desc->size();
+                    transform.reset();
+                    transform.translate(Pos.x(), Pos.y());
+                    painter.setTransform(transform);
+                    Desc->paint(painter, false);
+                }
+            }
+        }
+        if (m_RightStatus != nullptr) {
+            Pos = m_RightStatus->pos();
+            Size = m_RightStatus->size();
+            transform.reset();
+            transform.translate(Pos.x(), Pos.y());
+            painter.setTransform(transform);
+            m_RightStatus->paint(painter, false);
+        }
+
+        painter.end();
+#ifdef _WIN32
+        // Copy the svg tempfile to the clipboard
+        QFile f(FileNameTemplate);
+        if (f.open(QFile::ReadOnly | QFile::Text)) {
+            QTextStream in(&f);
+            QString Content = in.readAll();
+            QByteArray ByteArray = Content.toUtf8();
+            char *Char = ByteArray.data();
+            mimeData->setData("image/svg+xml", Char);
+            clipboard->setMimeData(mimeData);
+            f.close();
+        }
+#else
+        QString Content = QString("file://").append(FileNameTemplate);
+        QByteArray ByteArray = Content.toUtf8();
+        char *Char = ByteArray.data();
+        mimeData->setData("text/uri-list", Char);
+        clipboard->setMimeData(mimeData);
+#endif
+    }
+}
+#endif
 
 void OscilloscopeWidget::CyclicUpdate ()
 {

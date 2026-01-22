@@ -44,8 +44,10 @@ int cConvertA2lToXcpCmd::Execute (cParser *par_Parser, cExecutor *par_Executor)
     UNUSED(par_Executor);
     char ErrorString[1024];
     ErrorString[0] = 0;
-    int Flags;
-    par_Parser->SolveEquationForParameter (2, &Flags , -1);
+    int Flags = 0;
+    if (par_Parser->GetParameterCounter() == 3) {
+        par_Parser->SolveEquationForParameter (2, &Flags , -1);
+    }
     if (A2LConvertToXcpOrCpp(par_Parser->GetParameter (0), par_Parser->GetParameter (1), 1, Flags, ErrorString, sizeof(ErrorString))) {
         par_Parser->Error (SCRIPT_PARSER_FATAL_ERROR, "Unable to convert \"%s\" to \"%s\" because %s",
                            par_Parser->GetParameter (0), par_Parser->GetParameter (1), ErrorString);
@@ -64,7 +66,7 @@ int cConvertA2lToXcpCmd::Wait (cParser *par_Parser, cExecutor *par_Executor, int
 
 static cConvertA2lToXcpCmd ConvertA2lToXcpCmd ("CONVERT_A2L_TO_XCP",
                      2,
-                     2,
+                     3,
                      nullptr,
                      FALSE, 
                      FALSE, 
@@ -89,8 +91,10 @@ int cConvertA2lToCcpCmd::Execute (cParser *par_Parser, cExecutor *par_Executor)
     UNUSED(par_Executor);
     char ErrorString[1024];
     ErrorString[0] = 0;
-    int Flags;
-    par_Parser->SolveEquationForParameter (2, &Flags , -1);
+    int Flags = 0;
+    if (par_Parser->GetParameterCounter() == 3) {
+        par_Parser->SolveEquationForParameter (2, &Flags , -1);
+    }
     if (A2LConvertToXcpOrCpp(par_Parser->GetParameter (0), par_Parser->GetParameter (1), 0, Flags, ErrorString, sizeof(ErrorString))) {
         par_Parser->Error (SCRIPT_PARSER_FATAL_ERROR, "Unable to convert \"%s\" to \"%s\" because %s",
                            par_Parser->GetParameter (0), par_Parser->GetParameter (0), ErrorString);
@@ -109,7 +113,7 @@ int cConvertA2lToCcpCmd::Wait (cParser *par_Parser, cExecutor *par_Executor, int
 
 static cConvertA2lToCcpCmd ConvertA2lToCcpCmd ("CONVERT_A2L_TO_CCP",
                      2,
-                     2,
+                     3,
                      nullptr,
                      FALSE,
                      FALSE,

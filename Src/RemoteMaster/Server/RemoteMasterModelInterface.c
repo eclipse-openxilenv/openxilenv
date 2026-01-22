@@ -24,6 +24,7 @@
 #define WITH_EXIT_FUNCTION
 
 #include "MyMemory.h"
+#include "StringMaxChar.h"
 #include "Blackboard.h"
 #include "BlackboardAccess.h"
 #include "RealtimeScheduler.h"
@@ -49,7 +50,7 @@ int GetLabelAddressFromDbgInfo(void *Address, char *Name, int maxc)
 {
     UNUSED(Address);
     UNUSED(maxc);
-    strcpy(Name, "todo");
+    StringCopyMaxCharTruncate(Name, "todo", maxc);
     return 0;
 }
 
@@ -86,7 +87,7 @@ static int check_bbvari_ref_collect(void *address, unsigned char *bytes, int len
         //return -2;
     }
     // erst die Daten,
-    memcpy(&(FiFoBufferForWriteBytes[WrPosFiFoBufferForWriteBytes]), bytes, len);
+    MEMCPY(&(FiFoBufferForWriteBytes[WrPosFiFoBufferForWriteBytes]), bytes, len);
     // Dann die Adresse
     FiFoBufferForWriteAddress[WrPosFiFoBufferForWriteBytes] = address;
     // als letztes die Anzahl Bytes (1...8)
@@ -101,7 +102,7 @@ void transfer_write_bytes_at_end_of_cycles(void)
 {
     while (FiFoBufferForWriteLen[RdPosFiFoBufferForWriteBytes] != 0) {
         //error(1, "write");
-        memcpy(FiFoBufferForWriteAddress[RdPosFiFoBufferForWriteBytes], &(FiFoBufferForWriteBytes[RdPosFiFoBufferForWriteBytes]), FiFoBufferForWriteLen[RdPosFiFoBufferForWriteBytes]);
+        MEMCPY(FiFoBufferForWriteAddress[RdPosFiFoBufferForWriteBytes], &(FiFoBufferForWriteBytes[RdPosFiFoBufferForWriteBytes]), FiFoBufferForWriteLen[RdPosFiFoBufferForWriteBytes]);
         FiFoBufferForWriteLen[RdPosFiFoBufferForWriteBytes] = 0;
         if (RdPosFiFoBufferForWriteBytes < (SIZE_OF_WRITE_BYTES_FIFO - 1)) {
             RdPosFiFoBufferForWriteBytes++;
@@ -1202,7 +1203,7 @@ TASK_CONTROL_BLOCK ModelIntegration_tcb =
 
 void SetModelNameAndFunctionPointers(const char *par_Name, int par_Prio, MODEL_FUNCTION_POINTERS *par_FunctionPointers)
 {
-    memset(ModelIntegration_tcb.name, 0, sizeof(ModelIntegration_tcb.name));
+    MEMSET(ModelIntegration_tcb.name, 0, sizeof(ModelIntegration_tcb.name));
     strncpy(ModelIntegration_tcb.name, par_Name, sizeof(ModelIntegration_tcb.name) - 1);
     ModelIntegration_tcb.prio = par_Prio;
     ModelFunctionPointer = *par_FunctionPointers;

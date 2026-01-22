@@ -37,6 +37,8 @@
 #define BLACKBOARD_C
 
 #include "Config.h"
+#include "MemZeroAndCopy.h"
+#include "PrintFormatToString.h"
 #include "BlackboardHashIndex.h"
 #include "Blackboard.h"
 #include "BlackboardAccess.h"
@@ -194,7 +196,7 @@ int SetBbvariObservation (VID Vid, uint32_t ObservationFlags, uint32_t Observati
 {
     int vid_index;
 
-    // is blackboard exists here or inside the remote master or not at al
+    // is blackboard exists here or inside the remote master or not at all
     if (blackboard == NULL) {
 #ifndef REMOTE_MASTER
         if (s_main_ini_val.ConnectToRemoteMaster) {
@@ -203,20 +205,29 @@ int SetBbvariObservation (VID Vid, uint32_t ObservationFlags, uint32_t Observati
 #endif
         return NOT_INITIALIZED;
     }
+    EnterCriticalSection (&BlackboardCriticalSection);
     // Determine the vid index
     if ((vid_index = get_variable_index(Vid)) == -1) {
+        LeaveCriticalSection (&BlackboardCriticalSection);
         return -1;
     }
     blackboard[vid_index].ObservationFlags = ObservationFlags;
     if (blackboard[vid_index].pAdditionalInfos != NULL) {
-        blackboard[vid_index].pAdditionalInfos->ObservationData = ObservationData;
+        if ((ObservationData & OBSERVE_RESET_FLAGS) == OBSERVE_RESET_FLAGS) {
+            // Reset
+            blackboard[vid_index].pAdditionalInfos->ObservationData &= ~(ObservationData & ~OBSERVE_RESET_FLAGS);
+        } else {
+            // Set
+            blackboard[vid_index].pAdditionalInfos->ObservationData |= (ObservationData & ~OBSERVE_RESET_FLAGS);
+        }
     }
+    LeaveCriticalSection (&BlackboardCriticalSection);
     return 0;
 }
 
 int SetGlobalBlackboradObservation (uint32_t ObservationFlags, uint32_t ObservationData, int32_t **ret_Vids, int32_t *ret_Count)
 {
-    // is blackboard exists here or inside the remote master or not at al
+    // is blackboard exists here or inside the remote master or not at all
     if (blackboard == NULL) {
 #ifndef REMOTE_MASTER
         if (s_main_ini_val.ConnectToRemoteMaster) {
@@ -254,7 +265,6 @@ int init_blackboard (int blackboard_size, char CopyBB2ProcOnlyIfWrFlagSet, char 
     }
 #endif
 
-
     // Blackboard already exist
     if (blackboard != NULL) {
         return -1;
@@ -266,14 +276,13 @@ int init_blackboard (int blackboard_size, char CopyBB2ProcOnlyIfWrFlagSet, char 
     }
     // we alloc one element more as neccessary so we can detect write to blackboard with index -1!
     // Zeiger auf Speicherbereich ermitteln
-    blackboard = (BB_VARIABLE*)my_malloc ((size_t)(blackboard_size + 1) * sizeof (BB_VARIABLE));
+    blackboard = (BB_VARIABLE*)my_calloc ((size_t)(blackboard_size + 1), sizeof (BB_VARIABLE));
     if (blackboard == NULL) {
         return -1;
     }
-    memset (blackboard, 0, (size_t)(blackboard_size + 1) * sizeof (BB_VARIABLE));
-    memset (blackboard, 0xFF, sizeof (BB_VARIABLE));
+    MEMSET (blackboard, 0xFF, sizeof (BB_VARIABLE));
 
-    blackboard++; // use not the element 0 we have alloc one more as neccessary
+    blackboard++; // use not the element 0 we have allocated one more as neccessary
 
     blackboard_infos.Size = blackboard_size;
     blackboard_infos.NumOfVaris = 0;
@@ -295,6 +304,8 @@ int init_blackboard (int blackboard_size, char CopyBB2ProcOnlyIfWrFlagSet, char 
 #endif
     return 0;
 }
+
+#define MAX_COLOR_STRING_LEN  32
 
 int write_varinfos_to_ini (BB_VARIABLE *sp_vari_elem,
                            uint32_t WriteReqFlags)
@@ -319,7 +330,7 @@ int write_varinfos_to_ini (BB_VARIABLE *sp_vari_elem,
     char *tmp_var_str;
     size_t len_first_part;
     size_t len_convertion;
-    int HeapBufferFlag;
+    int HeapBufferFlag = 0;
     int Red, Green, Blue;
     int Ret;
 
@@ -331,50 +342,102 @@ int write_varinfos_to_ini (BB_VARIABLE *sp_vari_elem,
 
     tmp_var_str = stack_buffer;
     // Build a string with all variable informations
-    len_first_part = (size_t)sprintf (stack_buffer,
-                              "%d,%s,%.8g,%.8g,%d,%d,%d,%lf,%d,",
+    len_first_part = (size_t)PrintFormatToString (stack_buffer, sizeof(stack_buffer),
+                              "%d,%s,%.18g,%.18g,%d,%d,%d,%lf,%d,",
                               (int)sp_vari_elem->Type, sp_vari_elem->pAdditionalInfos->Unit,
                               sp_vari_elem->pAdditionalInfos->Min,
                               sp_vari_elem->pAdditionalInfos->Max,
                               (int)sp_vari_elem->pAdditionalInfos->Width, (int)sp_vari_elem->pAdditionalInfos->Prec,
                               (int)sp_vari_elem->pAdditionalInfos->StepType, sp_vari_elem->pAdditionalInfos->Step,
                               (int)sp_vari_elem->pAdditionalInfos->Conversion.Type);
-
-    if (((sp_vari_elem->pAdditionalInfos->Conversion.Type != BB_CONV_FORMULA) &&
-         (sp_vari_elem->pAdditionalInfos->Conversion.Type != BB_CONV_TEXTREP) &&
-         (sp_vari_elem->pAdditionalInfos->Conversion.Type != BB_CONV_REF)) ||
-        (sp_vari_elem->pAdditionalInfos->Conversion.Conv.Formula.FormulaString == NULL)) {
+    switch(sp_vari_elem->pAdditionalInfos->Conversion.Type) {
+    default:
+    case BB_CONV_NONE:
         len_convertion = 0;
-    } else {
-        len_convertion = strlen (sp_vari_elem->pAdditionalInfos->Conversion.Conv.Formula.FormulaString);
+        break;
+    case BB_CONV_FORMULA:
+    case BB_CONV_TEXTREP:
+    case BB_CONV_REF:
+        if (sp_vari_elem->pAdditionalInfos->Conversion.Conv.Formula.FormulaString == NULL) {
+            len_convertion = 0;
+        } else {
+            len_convertion = strlen (sp_vari_elem->pAdditionalInfos->Conversion.Conv.Formula.FormulaString);
+        }
+        if ((len_first_part + len_convertion + MAX_COLOR_STRING_LEN) < INI_MAX_LINE_LENGTH) {   // +32 for color value
+            // Fits into the stack buffer
+            HeapBufferFlag = 0;
+            tmp_var_str = stack_buffer;
+        } else {
+            // Do not fit into stack buffer setup an heap buffer
+            HeapBufferFlag = 1;
+            tmp_var_str = my_malloc (len_first_part + len_convertion + MAX_COLOR_STRING_LEN);
+            if (tmp_var_str == NULL) {
+                return -1;
+            }
+            MEMCPY (tmp_var_str, stack_buffer, len_first_part);
+        }
+        if (len_convertion > 0) {
+            MEMCPY (tmp_var_str + len_first_part,
+                   sp_vari_elem->pAdditionalInfos->Conversion.Conv.Formula.FormulaString,
+                   len_convertion);
+        }
+        break;
+    case BB_CONV_FACTOFF:
+        len_convertion = PrintFormatToString (tmp_var_str + len_first_part, sizeof(stack_buffer) - len_first_part, "%.18g:%.18g",
+                                  sp_vari_elem->pAdditionalInfos->Conversion.Conv.FactorOffset.Factor,
+                                  sp_vari_elem->pAdditionalInfos->Conversion.Conv.FactorOffset.Offset);
+        break;
+    case BB_CONV_OFFFACT:
+        len_convertion = PrintFormatToString (tmp_var_str + len_first_part, sizeof(stack_buffer) - len_first_part, "%.18g:%.18g",
+                                 sp_vari_elem->pAdditionalInfos->Conversion.Conv.FactorOffset.Offset,
+                                 sp_vari_elem->pAdditionalInfos->Conversion.Conv.FactorOffset.Factor);
+        break;
+    case BB_CONV_TAB_INTP:
+    case BB_CONV_TAB_NOINTP:
+    {
+        int x, MaxSize, Pos;
+        // calc the max. neede size
+        MaxSize = sp_vari_elem->pAdditionalInfos->Conversion.Conv.Table.Size * 64; // 64 chars for to double numbers
+        if ((len_first_part + MaxSize + MAX_COLOR_STRING_LEN) < INI_MAX_LINE_LENGTH) {   // +32 for color value
+            // Fits into the stack buffer
+            HeapBufferFlag = 0;
+            tmp_var_str = stack_buffer;
+        } else {
+            // Do not fit into stack buffer setup an heap buffer
+            HeapBufferFlag = 1;
+            tmp_var_str = my_malloc (len_first_part + MaxSize + MAX_COLOR_STRING_LEN);
+            if (tmp_var_str == NULL) {
+                return -1;
+            }
+            MEMCPY (tmp_var_str, stack_buffer, len_first_part);
+        }
+        len_convertion = 0;
+        for (x = 0; x < sp_vari_elem->pAdditionalInfos->Conversion.Conv.Table.Size; x++) {
+            len_convertion += PrintFormatToString (tmp_var_str + len_first_part + len_convertion, 64, (x == 0) ? "%.18g/%.18g" : ":%.18g/%.18g",
+                            sp_vari_elem->pAdditionalInfos->Conversion.Conv.Table.Values[x].Phys,
+                            sp_vari_elem->pAdditionalInfos->Conversion.Conv.Table.Values[x].Raw);
+        }
+        break;
+    }
+    case BB_CONV_RAT_FUNC:
+        len_convertion = PrintFormatToString (tmp_var_str + len_first_part, sizeof(stack_buffer) - len_first_part, "%.18g:%.18g:%.18g:%.18g:%.18g:%.18g",
+                                 sp_vari_elem->pAdditionalInfos->Conversion.Conv.RatFunc.a,
+                                 sp_vari_elem->pAdditionalInfos->Conversion.Conv.RatFunc.b,
+                                 sp_vari_elem->pAdditionalInfos->Conversion.Conv.RatFunc.c,
+                                 sp_vari_elem->pAdditionalInfos->Conversion.Conv.RatFunc.d,
+                                 sp_vari_elem->pAdditionalInfos->Conversion.Conv.RatFunc.e,
+                                 sp_vari_elem->pAdditionalInfos->Conversion.Conv.RatFunc.f);
+        break;
     }
 
-    if ((len_first_part + len_convertion + 16) < INI_MAX_LINE_LENGTH) {   // +16 for color value
-        // Passt alles in den Stack-Puffer
-        HeapBufferFlag = 0;
-        tmp_var_str = stack_buffer;
-    } else {
-        // Do not fit into stack buffer setup an heap buffer
-        HeapBufferFlag = 1;
-        tmp_var_str = my_malloc (len_first_part + len_convertion + 16);
-        if (tmp_var_str == NULL) {
-            return -1;
-        }
-        MEMCPY (tmp_var_str, stack_buffer, len_first_part);
-    }
-    if (len_convertion > 0) {
-        MEMCPY (tmp_var_str + len_first_part,
-                sp_vari_elem->pAdditionalInfos->Conversion.Conv.Formula.FormulaString,
-                len_convertion);
-    }
     if (sp_vari_elem->pAdditionalInfos->RgbColor < 0) {
-        Red = Green = Blue = - 1;
+        Red = Green = Blue = -1;
     } else {
         Red = GetRValue(sp_vari_elem->pAdditionalInfos->RgbColor);
         Green = GetGValue(sp_vari_elem->pAdditionalInfos->RgbColor);
         Blue = GetBValue(sp_vari_elem->pAdditionalInfos->RgbColor);
     }
-    sprintf (tmp_var_str + len_first_part + len_convertion, ",(%d,%d,%d)",
+    PrintFormatToString (tmp_var_str + len_first_part + len_convertion, MAX_COLOR_STRING_LEN, ",(%d,%d,%d)",
              Red, Blue, Green);
 
     // Write string to INI file
@@ -520,7 +583,7 @@ int get_bb_accessmask (PID pid, uint64_t *mask, char *BBPrefix)
 {
     int pid_index;
 
-    // is blackboard exists here or inside the remote master or not at al
+    // is blackboard exists here or inside the remote master or not at all
     if (blackboard == NULL) {
 #ifndef REMOTE_MASTER
         if (s_main_ini_val.ConnectToRemoteMaster) {
@@ -550,7 +613,7 @@ int free_bb_accessmask (PID pid, uint64_t mask)
 {
     int pid_index, i;
 
-    // is blackboard exists here or inside the remote master or not at al
+    // is blackboard exists here or inside the remote master or not at all
     if (blackboard == NULL) {
         return NOT_INITIALIZED;
     }
@@ -714,7 +777,7 @@ VID add_bbvari_pid_type (const char *name, enum BB_DATA_TYPES type, const char *
 #endif
 
     //BEGIN_RUNTIME_MEASSUREMENT ("add_bbvari_pid_type")
-    // is blackboard exists here or inside the remote master or not at al
+    // is blackboard exists here or inside the remote master or not at all
     if (blackboard == NULL) {
 #ifndef REMOTE_MASTER
         if (s_main_ini_val.ConnectToRemoteMaster) {
@@ -915,7 +978,7 @@ VID add_bbvari_pid_type (const char *name, enum BB_DATA_TYPES type, const char *
             blackboard_infos.VarCount++;
 
             // overwrite old data
-            memset (&(blackboard[index]), 0, sizeof (BB_VARIABLE));
+            STRUCT_ZERO_INIT (blackboard[index], BB_VARIABLE);
             blackboard[index].pAdditionalInfos = Save;
 
             cc = ((blackboard_infos.VarCount & 0x7F) << 1) | 1; // Vid should be never 0. Therefor the LSB is always 1
@@ -1352,7 +1415,7 @@ VID add_bbvari_all_infos (int Pid, const char *name, int type, const char *unit,
     if (GetBlackboarPrefixForProcess (Pid, labelp, sizeof(labelp))) {
         return UNKNOWN_PROCESS;
     }
-    strcat (labelp, name);
+    STRING_APPEND_TO_ARRAY(labelp, name);
 
     ReadFromIniReqMask = READ_ALL_INFOS_BBVARI_FROM_INI;
 #ifdef REMOTE_MASTER
@@ -1405,7 +1468,7 @@ static int __attach_bbvari (VID vid, int unknown_wait_flag, int cs, int pid)
     int pid_index;
     int Ret;
 
-    // Is blackboard exists here or inside the remote master or not at al
+    // Is blackboard exists here or inside the remote master or not at all
     if (blackboard == NULL) {
 #ifndef REMOTE_MASTER
         if (s_main_ini_val.ConnectToRemoteMaster) {
@@ -1483,7 +1546,7 @@ VID attach_bbvari_by_name (const char *name, int pid)
     uint64_t HashCode;
     int32_t P1, P2;
 #endif
-    // Is blackboard exists here or inside the remote master or not at al
+    // Is blackboard exists here or inside the remote master or not at all
     if (blackboard == NULL) {
 #ifndef REMOTE_MASTER
         if (s_main_ini_val.ConnectToRemoteMaster) {
@@ -1541,7 +1604,7 @@ void __free_all_additionl_info_memorys (BB_VARIABLE_ADDITIONAL_INFOS *pAdditiona
         my_free (pAdditionalInfos->Conversion.Conv.TextReplace.EnumString);
         pAdditionalInfos->Conversion.Type = BB_CONV_NONE;
     }
-    memset (pAdditionalInfos, 0, sizeof (BB_VARIABLE_ADDITIONAL_INFOS));
+    STRUCT_ZERO_INIT (*pAdditionalInfos, BB_VARIABLE_ADDITIONAL_INFOS);
 }
 
 void free_all_additionl_info_memorys (BB_VARIABLE_ADDITIONAL_INFOS *pAdditionalInfos)
@@ -1563,7 +1626,7 @@ static int __remove_bbvari (VID vid, int unknown_wait_flag, int cs, int pid)
         pid = GET_PID();
     }
 
-    // Is blackboard exists here or inside the remote master or not at al
+    // Is blackboard exists here or inside the remote master or not at all
     if (blackboard == NULL) {
 #ifndef REMOTE_MASTER
         if (s_main_ini_val.ConnectToRemoteMaster) {
@@ -1723,7 +1786,7 @@ int remove_all_bbvari (PID pid)
     int vid_index;
     int pid_index;
 
-    // Is blackboard exists here or inside the remote master or not at al
+    // Is blackboard exists here or inside the remote master or not at all
     if (blackboard == NULL) {
 #ifndef REMOTE_MASTER
         if (s_main_ini_val.ConnectToRemoteMaster) {
@@ -1825,7 +1888,7 @@ VID get_bbvarivid_by_name (const char *name)
     uint64_t HashCode;
     int32_t P1, P2;
 #endif
-    // Is blackboard exists here or inside the remote master or not at al
+    // Is blackboard exists here or inside the remote master or not at all
     if (blackboard == NULL) {
 #ifndef REMOTE_MASTER
         if (s_main_ini_val.ConnectToRemoteMaster) {
@@ -1863,7 +1926,7 @@ int get_bbvaritype_by_name (char *name)
 {
     int vid_index;
 
-    // Is blackboard exists here or inside the remote master or not at al
+    // Is blackboard exists here or inside the remote master or not at all
     if (blackboard == NULL) {
 #ifndef REMOTE_MASTER
         if (s_main_ini_val.ConnectToRemoteMaster) {
@@ -1890,7 +1953,7 @@ int get_bbvari_attachcount (VID vid)
 {
     int vid_index;
 
-    // Is blackboard exists here or inside the remote master or not at al
+    // Is blackboard exists here or inside the remote master or not at all
     if (blackboard == NULL) {
 #ifndef REMOTE_MASTER
         if (s_main_ini_val.ConnectToRemoteMaster) {
@@ -1910,7 +1973,7 @@ int get_bbvaritype (VID vid)
 {
     int vid_index;
 
-    // Is blackboard exists here or inside the remote master or not at al
+    // Is blackboard exists here or inside the remote master or not at all
     if (blackboard == NULL) {
 #ifndef REMOTE_MASTER
         if (s_main_ini_val.ConnectToRemoteMaster) {
@@ -1930,7 +1993,7 @@ int GetBlackboardVariableName (VID vid, char *txt, int maxc)
 {
     int vid_index;
 
-    // Is blackboard exists here or inside the remote master or not at al
+    // Is blackboard exists here or inside the remote master or not at all
     if (blackboard == NULL) {
 #ifndef REMOTE_MASTER
         if (s_main_ini_val.ConnectToRemoteMaster) {
@@ -1953,7 +2016,7 @@ int GetBlackboardVariableNameAndTypes (VID vid, char *txt, int maxc, enum BB_DAT
 {
     int vid_index;
 
-    // Is blackboard exists here or inside the remote master or not at al
+    // Is blackboard exists here or inside the remote master or not at all
     if (blackboard == NULL) {
 #ifndef REMOTE_MASTER
         if (s_main_ini_val.ConnectToRemoteMaster) {
@@ -1981,7 +2044,7 @@ int get_process_bbvari_attach_count_pid(VID vid, PID pid)
     int vid_index;
     int pid_index;
 
-    // Is blackboard exists here or inside the remote master or not at al
+    // Is blackboard exists here or inside the remote master or not at all
     if (blackboard == NULL) {
 #ifndef REMOTE_MASTER
         if (s_main_ini_val.ConnectToRemoteMaster) {
@@ -2013,7 +2076,7 @@ int set_bbvari_unit (VID vid, const char *unit)
 {
     int vid_index;
 
-    // Is blackboard exists here or inside the remote master or not at al
+    // Is blackboard exists here or inside the remote master or not at all
     if (blackboard == NULL) {
 #ifndef REMOTE_MASTER
         if (s_main_ini_val.ConnectToRemoteMaster) {
@@ -2054,7 +2117,7 @@ int get_bbvari_unit (VID vid, char *unit, int maxc)
     int Len;
     int Ret = -1;
 
-    // Is blackboard exists here or inside the remote master or not at al
+    // Is blackboard exists here or inside the remote master or not at all
     if (blackboard == NULL) {
 #ifndef REMOTE_MASTER
         if (s_main_ini_val.ConnectToRemoteMaster) {
@@ -2105,7 +2168,11 @@ int set_bbvari_conversion_x (VID vid, int convtype, const char *conversion, int 
         return -1;
     }
     //Is the conversion string too long
-    if (((convtype == BB_CONV_FORMULA) || (convtype == BB_CONV_TEXTREP)) && ((strlen(conversion) + 1) > BBVARI_CONVERSION_SIZE)) {
+    if (((convtype == BB_CONV_FORMULA) || (convtype == BB_CONV_TEXTREP) ||
+         (convtype == BB_CONV_FACTOFF) || (convtype == BB_CONV_OFFFACT) ||
+         (convtype == BB_CONV_TAB_INTP) || (convtype == BB_CONV_TAB_NOINTP) ||
+         (convtype == BB_CONV_RAT_FUNC) || (convtype == BB_CONV_REF)) &&
+        ((strlen(conversion) + 1) > BBVARI_CONVERSION_SIZE)) {
         return -1;
     }
     EnterCriticalSection (&BlackboardCriticalSection);
@@ -2126,12 +2193,12 @@ int set_bbvari_conversion_x (VID vid, int convtype, const char *conversion, int 
         blackboard[vid_index].pAdditionalInfos->Conversion.Type = BB_CONV_NONE;
         // transfer the translation to the variable
         if (BBWriteFormulaString(conversion, &blackboard[vid_index]) != 0) {
-          // No memory available
+            // No memory available
             ret_WriteToIniFlag = NULL;
             ret = BB_VAR_ADD_INFOS_MEM_ERROR;
         }
 #ifdef REMOTE_MASTER
-        // Gleichung ist schon uebersetzt
+        // Equation is aready translated
         if ((sizeof_exec_stack > 0) && (exec_stack != NULL)) {
             blackboard[vid_index].pAdditionalInfos->Conversion.Conv.Formula.FormulaByteCode = my_malloc(sizeof_exec_stack);
             if (blackboard[vid_index].pAdditionalInfos->Conversion.Conv.Formula.FormulaByteCode != NULL) {
@@ -2140,7 +2207,7 @@ int set_bbvari_conversion_x (VID vid, int convtype, const char *conversion, int 
                 break;  // switch()
             }
         } else {
-            // versuche es auch im Realtime Kern zu uerbsetzen
+            // Try to compile the equation on the remote master side
             if (equ_src_to_bin(&blackboard[vid_index]) == 0) {
                 blackboard[vid_index].pAdditionalInfos->Conversion.Type = BB_CONV_FORMULA;
                 break;  // switch()
@@ -2175,6 +2242,84 @@ int set_bbvari_conversion_x (VID vid, int convtype, const char *conversion, int 
         }
         break;
 
+    case BB_CONV_FACTOFF:
+    case BB_CONV_OFFFACT:
+    {
+        char *p;
+        ret = -1;
+        blackboard[vid_index].pAdditionalInfos->Conversion.Conv.FactorOffset.Factor = strtod(conversion, &p);
+        if (*p == ':') {
+            blackboard[vid_index].pAdditionalInfos->Conversion.Conv.FactorOffset.Offset = strtod(p + 1, &p);
+            if (*p == 0) {
+                blackboard[vid_index].pAdditionalInfos->Conversion.Type = convtype;
+                ret = 0;
+            }
+        }
+        break;
+    }
+    case BB_CONV_TAB_INTP:
+    case BB_CONV_TAB_NOINTP:
+    {
+        int x;
+        char *p;
+        int Size = 1;
+        const char *cc;
+        // first we count the number of points
+        cc = conversion;
+        while (*cc != 0) {
+            if (*cc == ':') Size++;
+            cc++;
+        }
+        blackboard[vid_index].pAdditionalInfos->Conversion.Conv.Table.Size = Size;
+        blackboard[vid_index].pAdditionalInfos->Conversion.Conv.Table.Values = (struct CONVERSION_TABLE_VALUE_PAIR*)my_malloc(Size * sizeof(struct CONVERSION_TABLE_VALUE_PAIR));
+        if (blackboard[vid_index].pAdditionalInfos->Conversion.Conv.Table.Values != NULL) {
+            p = (char*)conversion;
+            for (x = 0; x < Size; x++) {
+                blackboard[vid_index].pAdditionalInfos->Conversion.Conv.Table.Values[x].Phys = strtod(p , &p);
+                if (*p == '/') p++;
+                else break;
+                blackboard[vid_index].pAdditionalInfos->Conversion.Conv.Table.Values[x].Raw = strtod(p , &p);
+                if (*p == ':') p++;
+                else if (*p != 0) break;
+            }
+            if (x != Size) {
+                // an error occured
+                blackboard[vid_index].pAdditionalInfos->Conversion.Type = BB_CONV_NONE;
+                my_free(blackboard[vid_index].pAdditionalInfos->Conversion.Conv.Table.Values);
+                ret = -1;
+            } else {
+                blackboard[vid_index].pAdditionalInfos->Conversion.Type = convtype;
+                ret = 0;
+            }
+        }
+        break;
+    }
+    case BB_CONV_RAT_FUNC:
+    {
+        char *p;
+        ret = -1;
+        blackboard[vid_index].pAdditionalInfos->Conversion.Conv.RatFunc.a = strtod(conversion, &p);
+        if (*p == ':') {
+            blackboard[vid_index].pAdditionalInfos->Conversion.Conv.RatFunc.b = strtod(p + 1, &p);
+            if (*p == ':') {
+                blackboard[vid_index].pAdditionalInfos->Conversion.Conv.RatFunc.c = strtod(p + 1, &p);
+                if (*p == ':') {
+                    blackboard[vid_index].pAdditionalInfos->Conversion.Conv.RatFunc.d = strtod(p + 1, &p);
+                    if (*p == ':') {
+                        blackboard[vid_index].pAdditionalInfos->Conversion.Conv.RatFunc.e = strtod(p + 1, &p);
+                        if (*p == ':') {
+                            blackboard[vid_index].pAdditionalInfos->Conversion.Conv.RatFunc.f = strtod(p + 1, &p);
+                            if (*p == 0) {
+                                blackboard[vid_index].pAdditionalInfos->Conversion.Type = convtype;
+                                ret = 0;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        break;
+    }
     default:
         ret_WriteToIniFlag = NULL;
         ret = -1;
@@ -2204,7 +2349,7 @@ int set_bbvari_conversion_x (VID vid, int convtype, const char *conversion, int 
 
 int set_bbvari_conversion(VID vid, int convtype, const char *conversion)
 {
-    // Is blackboard exists here or inside the remote master or not at al
+    // Is blackboard exists here or inside the remote master or not at all
     if (blackboard == NULL) {
 #ifndef REMOTE_MASTER
         if (s_main_ini_val.ConnectToRemoteMaster) {
@@ -2223,7 +2368,7 @@ int get_bbvari_conversion (VID vid, char *conversion, int maxc)
     int Ret = -1;
     int Len;
 
-    // Is blackboard exists here or inside the remote master or not at al
+    // Is blackboard exists here or inside the remote master or not at all
     if (blackboard == NULL) {
 #ifndef REMOTE_MASTER
         if (s_main_ini_val.ConnectToRemoteMaster) {
@@ -2262,6 +2407,64 @@ int get_bbvari_conversion (VID vid, char *conversion, int maxc)
             MEMCPY (conversion, (const char*)blackboard[vid_index].pAdditionalInfos->Conversion.Conv.TextReplace.EnumString, (size_t)Len);
         }
         break;
+    case BB_CONV_FACTOFF:
+    case BB_CONV_OFFFACT:
+    {
+        char Help[64];
+        Len = PrintFormatToString (Help, sizeof(Help), "%.18g:%.18g",
+                       blackboard[vid_index].pAdditionalInfos->Conversion.Conv.FactorOffset.Factor,
+                       blackboard[vid_index].pAdditionalInfos->Conversion.Conv.FactorOffset.Offset) + 1;
+        if (Len > maxc) {
+            if (conversion != NULL) conversion[0] = 0;
+            Ret = -Len;
+        } else {
+            MEMCPY (conversion, (const char*)Help, (size_t)Len);
+        }
+        break;
+    }
+    case BB_CONV_TAB_INTP:
+    case BB_CONV_TAB_NOINTP:
+    {
+        int l, x;
+        char Help[64];
+        Len = 0;
+        for (x = 0; x < blackboard[vid_index].pAdditionalInfos->Conversion.Conv.Table.Size; x++) {
+            l = PrintFormatToString (Help, sizeof(Help), (x == 0) ? "%.18g/%.18g" : ":%.18g/%.18g",
+                         blackboard[vid_index].pAdditionalInfos->Conversion.Conv.Table.Values[x].Phys,
+                         blackboard[vid_index].pAdditionalInfos->Conversion.Conv.Table.Values[x].Raw);
+            if ((Len + l) < maxc) {
+                MEMCPY (conversion + Len, (const char*)Help, (size_t)l);
+            }
+            Len += l;
+        }
+        if (Len < maxc) {
+            conversion[Len] = 0;
+        }
+        Len++;
+        if (Len > maxc) {
+            if (conversion != NULL) conversion[0] = 0;
+            Ret = -Len;
+        }
+        break;
+    }
+    case BB_CONV_RAT_FUNC:
+    {
+        char Help[6*32];
+        Len = PrintFormatToString (Help, sizeof(Help), "%.18g:%.18g:%.18g:%.18g:%.18g:%.18g",
+                      blackboard[vid_index].pAdditionalInfos->Conversion.Conv.RatFunc.a,
+                      blackboard[vid_index].pAdditionalInfos->Conversion.Conv.RatFunc.b,
+                      blackboard[vid_index].pAdditionalInfos->Conversion.Conv.RatFunc.c,
+                      blackboard[vid_index].pAdditionalInfos->Conversion.Conv.RatFunc.d,
+                      blackboard[vid_index].pAdditionalInfos->Conversion.Conv.RatFunc.e,
+                      blackboard[vid_index].pAdditionalInfos->Conversion.Conv.RatFunc.f) + 1;
+        if (Len > maxc) {
+            if (conversion != NULL) conversion[0] = 0;
+            Ret = -Len;
+        } else {
+            MEMCPY (conversion, (const char*)Help, (size_t)Len);
+        }
+        break;
+    }
     default:
         Ret = -1;
     }
@@ -2275,7 +2478,7 @@ int get_bbvari_conversiontype (VID vid)
 {
     int vid_index;
 
-    // Is blackboard exists here or inside the remote master or not at al
+    // Is blackboard exists here or inside the remote master or not at all
     if (blackboard == NULL) {
 #ifndef REMOTE_MASTER
         if (s_main_ini_val.ConnectToRemoteMaster) {
@@ -2305,7 +2508,7 @@ int get_bbvari_infos (VID par_Vid, BB_VARIABLE *ret_BaseInfos, BB_VARIABLE_ADDIT
     size_t LenEnumString = 0;  // avoid waring
     size_t LenReferenceName = 0;  // avoid waring
 
-    // Is blackboard exists here or inside the remote master or not at al
+    // Is blackboard exists here or inside the remote master or not at all
     if (blackboard == NULL) {
 #ifndef REMOTE_MASTER
         if (s_main_ini_val.ConnectToRemoteMaster) {
@@ -2392,7 +2595,7 @@ static int set_bbvari_color_x (VID vid, int rgb_color, uint32_t *ret_WriteToIniF
 {
     int vid_index;
 
-    // Is blackboard exists here or inside the remote master or not at al
+    // Is blackboard exists here or inside the remote master or not at all
     if (blackboard == NULL) {
 #ifndef REMOTE_MASTER
         if (s_main_ini_val.ConnectToRemoteMaster) {
@@ -2435,7 +2638,7 @@ int get_bbvari_color (VID vid)
 {
     int vid_index;
 
-    // Is blackboard exists here or inside the remote master or not at al
+    // Is blackboard exists here or inside the remote master or not at all
     if (blackboard == NULL) {
 #ifndef REMOTE_MASTER
         if (s_main_ini_val.ConnectToRemoteMaster) {
@@ -2460,7 +2663,7 @@ static int set_bbvari_step_x (VID vid, unsigned char steptype, double step, uint
 {
     int vid_index;
 
-    // Is blackboard exists here or inside the remote master or not at al
+    // Is blackboard exists here or inside the remote master or not at all
     if (blackboard == NULL) {
 #ifndef REMOTE_MASTER
         if (s_main_ini_val.ConnectToRemoteMaster) {
@@ -2503,7 +2706,7 @@ int get_bbvari_step (VID vid, unsigned char *steptype, double *step)
 {
     int vid_index;
 
-    // Is blackboard exists here or inside the remote master or not at al
+    // Is blackboard exists here or inside the remote master or not at all
     if (blackboard == NULL) {
 #ifndef REMOTE_MASTER
         if (s_main_ini_val.ConnectToRemoteMaster) {
@@ -3073,11 +3276,11 @@ int bbvari_to_string (enum BB_DATA_TYPES type,
         switch (base) {
         default:
         case 10:
-            sprintf(target_string, "%d", (int)value.b);
+            PrintFormatToString(target_string, maxc, "%d", (int)value.b);
             break;
         case 16:
-            if (value.b < 0) sprintf(target_string, "-0x%" PRIX64 "", RemoveSign(value.b));
-            else sprintf(target_string, "0x%X", (int)value.b);
+            if (value.b < 0) PrintFormatToString(target_string, maxc, "-0x%" PRIX64 "", RemoveSign(value.b));
+            else PrintFormatToString(target_string, maxc, "0x%X", (int)value.b);
             break;
         case 2:
             if (value.b < 0) {
@@ -3094,10 +3297,10 @@ int bbvari_to_string (enum BB_DATA_TYPES type,
         switch (base) {
         default:
         case 10:
-            sprintf(target_string, "%u", (unsigned int)value.ub);
+            PrintFormatToString(target_string, maxc, "%u", (unsigned int)value.ub);
             break;
         case 16:
-            sprintf(target_string, "0x%X", (unsigned int)value.ub);
+            PrintFormatToString(target_string, maxc,  "0x%X", (unsigned int)value.ub);
             break;
         case 2:
             StringCopyMaxCharTruncate(target_string, "0b", maxc);
@@ -3109,11 +3312,11 @@ int bbvari_to_string (enum BB_DATA_TYPES type,
         switch (base) {
         default:
         case 10:
-            sprintf(target_string, "%d", (int)value.w);
+            PrintFormatToString(target_string, maxc, "%d", (int)value.w);
             break;
         case 16:
-            if (value.w < 0) sprintf(target_string, "-0x%" PRIX64 "", RemoveSign(value.w));
-            else sprintf(target_string, "0x%X", (int)value.w);
+            if (value.w < 0) PrintFormatToString(target_string, maxc, "-0x%" PRIX64 "", RemoveSign(value.w));
+            else PrintFormatToString(target_string, maxc, "0x%X", (int)value.w);
             break;
         case 2:
             if (value.w < 0) {
@@ -3130,10 +3333,10 @@ int bbvari_to_string (enum BB_DATA_TYPES type,
         switch (base) {
         default:
         case 10:
-            sprintf(target_string, "%u", (unsigned int)value.uw);
+            PrintFormatToString(target_string, maxc, "%u", (unsigned int)value.uw);
             break;
         case 16:
-            sprintf(target_string, "0x%X", (unsigned int)value.uw);
+            PrintFormatToString(target_string, maxc, "0x%X", (unsigned int)value.uw);
             break;
         case 2:
             StringCopyMaxCharTruncate(target_string, "0b", maxc);
@@ -3145,11 +3348,11 @@ int bbvari_to_string (enum BB_DATA_TYPES type,
         switch (base) {
         default:
         case 10:
-            sprintf(target_string, "%d", (int)value.dw);
+            PrintFormatToString(target_string, maxc, "%d", (int)value.dw);
             break;
         case 16:
-            if (value.dw < 0) sprintf(target_string, "-0x%" PRIX64 "", RemoveSign(value.dw));
-            else sprintf(target_string, "0x%X", (int)value.dw);
+            if (value.dw < 0) PrintFormatToString(target_string, maxc, "-0x%" PRIX64 "", RemoveSign(value.dw));
+            else PrintFormatToString(target_string, maxc, "0x%X", (int)value.dw);
             break;
         case 2:
             if (value.dw < 0) {
@@ -3166,10 +3369,10 @@ int bbvari_to_string (enum BB_DATA_TYPES type,
         switch (base) {
         default:
         case 10:
-            sprintf(target_string, "%u", (unsigned int)value.udw);
+            PrintFormatToString(target_string, maxc, "%u", (unsigned int)value.udw);
             break;
         case 16:
-            sprintf(target_string, "0x%X", (unsigned int)value.udw);
+            PrintFormatToString(target_string, maxc, "0x%X", (unsigned int)value.udw);
             break;
         case 2:
             StringCopyMaxCharTruncate(target_string, "0b", maxc);
@@ -3181,11 +3384,11 @@ int bbvari_to_string (enum BB_DATA_TYPES type,
         switch (base) {
         default:
         case 10:
-            sprintf(target_string, "%" PRId64 "", value.qw);
+            PrintFormatToString(target_string, maxc, "%" PRId64 "", value.qw);
             break;
         case 16:
-            if (value.qw < 0LL) sprintf(target_string, "-0x%" PRIX64 "", RemoveSign(value.qw));
-            else sprintf(target_string, "0x%" PRIX64 "", value.qw);
+            if (value.qw < 0LL) PrintFormatToString(target_string, maxc, "-0x%" PRIX64 "", RemoveSign(value.qw));
+            else PrintFormatToString(target_string, maxc, "0x%" PRIX64 "", value.qw);
             break;
         case 2:
             if (value.qw < 0LL) {
@@ -3202,10 +3405,10 @@ int bbvari_to_string (enum BB_DATA_TYPES type,
         switch (base) {
         default:
         case 10:
-            sprintf(target_string, "%" PRIu64 "", value.uqw);
+            PrintFormatToString(target_string, maxc, "%" PRIu64 "", value.uqw);
             break;
         case 16:
-            sprintf(target_string, "0x%" PRIX64 "", value.uqw);
+            PrintFormatToString(target_string, maxc, "0x%" PRIX64 "", value.uqw);
             break;
         case 2:
             StringCopyMaxCharTruncate(target_string, "0b", maxc);
@@ -3217,7 +3420,7 @@ int bbvari_to_string (enum BB_DATA_TYPES type,
         {
             int Prec = 15;
             while (1) {
-                sprintf (target_string, "%.*g", Prec, (double)value.f);
+                PrintFormatToString (target_string, maxc, "%.*g", Prec, (double)value.f);
                 if ((Prec++) == 18 || ((double)value.f == strtod (target_string, NULL))) break;
             }
         }
@@ -3226,7 +3429,7 @@ int bbvari_to_string (enum BB_DATA_TYPES type,
         {
             int Prec = 15;
             while (1) {
-                sprintf (target_string, "%.*g", Prec, value.d);
+                PrintFormatToString (target_string, maxc, "%.*g", Prec, value.d);
                 if ((Prec++) == 18 || (value.d == strtod (target_string, NULL))) break;
             }
         }
@@ -3415,7 +3618,7 @@ int string_to_bbvari (enum BB_DATA_TYPES type,
             }
         } else {
             if (double_value < INT64_MIN) ret_value->qw = INT64_MIN;
-            else if (double_value > INT64_MAX) ret_value->qw = INT64_MAX;
+            else if (double_value > (double)INT64_MAX) ret_value->qw = INT64_MAX;
             else {
                 double v = round(double_value);
                 ret_value->qw = (int64_t)v;
@@ -3432,7 +3635,7 @@ int string_to_bbvari (enum BB_DATA_TYPES type,
             }
         } else {
             if (double_value < 0.0) ret_value->uqw = 0;
-            else if (double_value > UINT64_MAX) ret_value->uqw = UINT64_MAX;
+            else if (double_value > (double)UINT64_MAX) ret_value->uqw = UINT64_MAX;
             else {
                 double v = round(double_value);
                 ret_value->uqw = (uint64_t)v;
@@ -3645,13 +3848,13 @@ int bbvari_to_int64 (enum BB_DATA_TYPES type,
         break;
     case BB_FLOAT:
         if (bb_var.f < INT64_MIN) *value = INT64_MIN;
-        else if (bb_var.f > INT64_MAX) *value = INT64_MAX;
+        else if (bb_var.f > (double)INT64_MAX) *value = INT64_MAX;
         else if (bb_var.f < 0.0f) *value = (int64_t)(bb_var.f - 0.5f);
         else *value = (int64_t)(bb_var.f + 0.5f);
         break;
     case BB_DOUBLE:
         if (bb_var.d < INT64_MIN) *value = INT64_MIN;
-        else if (bb_var.d > INT64_MAX) *value = INT64_MAX;
+        else if (bb_var.d > (double)INT64_MAX) *value = INT64_MAX;
         else if (bb_var.d < 0.0) *value = (int64_t)(bb_var.d - 0.5);
         else *value = (int64_t)(bb_var.d + 0.5);
         break;
@@ -3666,7 +3869,7 @@ int get_process_index (PID pid)
 {
     int i;
 
-    // Is blackboard exists here or inside the remote master or not at al
+    // Is blackboard exists here or inside the remote master or not at all
     if (blackboard == NULL) {
         return -1;
     }
@@ -3687,7 +3890,7 @@ int get_variable_index (VID vid)
 {
     int i;
 
-    // Is blackboard exists here or inside the remote master or not at al
+    // Is blackboard exists here or inside the remote master or not at all
     if (blackboard == NULL) {
         return -1;
     }
@@ -3919,7 +4122,7 @@ int set_varinfo_to_inientrys (BB_VARIABLE *sp_vari_elem,
     }
     // Is there something defined
     if (tmp_ptr[0]) {
-        if ((sp_vari_elem->pAdditionalInfos->Conversion.Type = atoi(tmp_ptr)) > BB_CONV_TEXTREP) {
+        if ((sp_vari_elem->pAdditionalInfos->Conversion.Type = atoi(tmp_ptr)) > BB_CONV_RAT_FUNC) {
             sp_vari_elem->pAdditionalInfos->Conversion.Type = BB_CONV_NONE;
         }
     } else {
@@ -3928,20 +4131,92 @@ int set_varinfo_to_inientrys (BB_VARIABLE *sp_vari_elem,
     }
 
     // Conversion string
-    if ((tmp_ptr = StringToken (NULL, &HelpPointer, ',', (sp_vari_elem->pAdditionalInfos->Conversion.Type == BB_CONV_FORMULA))) == NULL) {
+    if ((tmp_ptr = StringToken (NULL, &HelpPointer, ',', (sp_vari_elem->pAdditionalInfos->Conversion.Type == BB_CONV_FORMULA) ||
+                                                         (sp_vari_elem->pAdditionalInfos->Conversion.Type == BB_CONV_TEXTREP))) == NULL) {
         return WRONG_INI_ENTRY;
     }
     // Is there something defined
     // Is there a conversion type defined
     // Is the string not to huge
-    if ((tmp_ptr[0] != 0) &&
-        ((sp_vari_elem->pAdditionalInfos->Conversion.Type != BB_CONV_FORMULA) ||
-        (sp_vari_elem->pAdditionalInfos->Conversion.Type != BB_CONV_TEXTREP))) {
-        // otherwise copy the string
-        if (BBWriteFormulaString(tmp_ptr, sp_vari_elem) != 0) {
-          // No memory available
-          LeaveCriticalSection (&BlackboardCriticalSection);
-          return BB_VAR_ADD_INFOS_MEM_ERROR;
+    if (tmp_ptr[0] != 0) {
+        if ((sp_vari_elem->pAdditionalInfos->Conversion.Type == BB_CONV_FORMULA) ||
+            (sp_vari_elem->pAdditionalInfos->Conversion.Type == BB_CONV_TEXTREP)) {
+            // otherwise copy the string
+            if (BBWriteFormulaString(tmp_ptr, sp_vari_elem) != 0) {
+              // No memory available
+              LeaveCriticalSection (&BlackboardCriticalSection);
+              return BB_VAR_ADD_INFOS_MEM_ERROR;
+            }
+        } else if ((sp_vari_elem->pAdditionalInfos->Conversion.Type == BB_CONV_FACTOFF) ||
+                   (sp_vari_elem->pAdditionalInfos->Conversion.Type == BB_CONV_OFFFACT)) {
+            char *end;
+            sp_vari_elem->pAdditionalInfos->Conversion.Conv.FactorOffset.Factor = strtod(tmp_ptr, &end);
+            if (*end == ':') {
+                end++;
+                sp_vari_elem->pAdditionalInfos->Conversion.Conv.FactorOffset.Offset = strtod(end, &end);
+                if (*end != 0) {
+                    sp_vari_elem->pAdditionalInfos->Conversion.Type = BB_CONV_NONE;
+                }
+            } else {
+                sp_vari_elem->pAdditionalInfos->Conversion.Type = BB_CONV_NONE;
+            }
+        } else if ((sp_vari_elem->pAdditionalInfos->Conversion.Type == BB_CONV_TAB_INTP) ||
+                   (sp_vari_elem->pAdditionalInfos->Conversion.Type == BB_CONV_TAB_NOINTP)) {
+            int x;
+            char *p;
+            int Size = 1;
+            const char *cc;
+            // first we count the number of points
+            cc = tmp_ptr;
+            while (*cc != 0) {
+                if (*cc == ':') Size++;
+                cc++;
+            }
+            sp_vari_elem->pAdditionalInfos->Conversion.Conv.Table.Size = Size;
+            sp_vari_elem->pAdditionalInfos->Conversion.Conv.Table.Values = (struct CONVERSION_TABLE_VALUE_PAIR*)my_malloc(Size * sizeof(struct CONVERSION_TABLE_VALUE_PAIR));
+            if (sp_vari_elem->pAdditionalInfos->Conversion.Conv.Table.Values != NULL) {
+                p = tmp_ptr;
+                for (x = 0; x < Size; x++) {
+                    sp_vari_elem->pAdditionalInfos->Conversion.Conv.Table.Values[x].Phys = strtod(p , &p);
+                    if (*p == '/') p++;
+                    else break;
+                    sp_vari_elem->pAdditionalInfos->Conversion.Conv.Table.Values[x].Raw = strtod(p , &p);
+                    if (*p == ':') p++;
+                    else if (*p != 0) break;
+                }
+                if (x != Size) {
+                    // an error occured
+                    sp_vari_elem->pAdditionalInfos->Conversion.Type = BB_CONV_NONE;
+                    my_free(sp_vari_elem->pAdditionalInfos->Conversion.Conv.Table.Values);
+                    sp_vari_elem->pAdditionalInfos->Conversion.Type = BB_CONV_NONE;
+                }
+            }
+        } else if (sp_vari_elem->pAdditionalInfos->Conversion.Type == BB_CONV_RAT_FUNC) {
+            char *end;
+            sp_vari_elem->pAdditionalInfos->Conversion.Conv.RatFunc.a = strtod(tmp_ptr, &end);
+            if (*end == ':') {
+                sp_vari_elem->pAdditionalInfos->Conversion.Conv.RatFunc.b = strtod(end + 1, &end);
+                if (*end == ':') {
+                    sp_vari_elem->pAdditionalInfos->Conversion.Conv.RatFunc.c = strtod(end + 1, &end);
+                    if (*end == ':') {
+                        sp_vari_elem->pAdditionalInfos->Conversion.Conv.RatFunc.d = strtod(end + 1, &end);
+                        if (*end == ':') {
+                            sp_vari_elem->pAdditionalInfos->Conversion.Conv.RatFunc.e = strtod(end + 1, &end);
+                            if (*end == ':') {
+                                sp_vari_elem->pAdditionalInfos->Conversion.Conv.RatFunc.f = strtod(end + 1, &end);
+                                if (*end == 0) {
+                                    end = NULL;  // complete
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            if (end != NULL) {
+                sp_vari_elem->pAdditionalInfos->Conversion.Type = BB_CONV_NONE;
+            }
+        } else {
+            sp_vari_elem->pAdditionalInfos->Conversion.Type = BB_CONV_NONE;
         }
     } else {
         // If the string is empty use default value
@@ -4084,7 +4359,7 @@ int enable_bbvari_range_control (char *ProcessFilter, char *VariableFilter)
     int Pid;
     READ_NEXT_PROCESS_NAME *Buffer;
 
-    // Is blackboard exists here or inside the remote master or not at al
+    // Is blackboard exists here or inside the remote master or not at all
     if (blackboard == NULL) {
         return NOT_INITIALIZED;
     }
@@ -4112,7 +4387,7 @@ int disable_bbvari_range_control (char *ProcessFilter, char *VariableFilter)
     int Pid;
     READ_NEXT_PROCESS_NAME *Buffer;
 
-    // Is blackboard exists here or inside the remote master or not at al
+    // Is blackboard exists here or inside the remote master or not at all
     if (blackboard == NULL) {
         return NOT_INITIALIZED;
     }
@@ -4793,7 +5068,7 @@ int LimitToDataTypeRange(union BB_VARI par_In, enum BB_DATA_TYPES par_InType, en
             break;
         case 2:  // double
             if (value_double < INT64_MIN) { ret_Out->qw = INT64_MIN; ret = -1; }
-            else if (value_double > INT64_MAX) { ret_Out->qw = INT64_MAX; ret = 1; }
+            else if (value_double > (double)INT64_MAX) { ret_Out->qw = INT64_MAX; ret = 1; }
             else ret_Out->qw = (int64_t)value_double;
             break;
         }
@@ -4863,7 +5138,7 @@ int LimitToDataTypeRange(union BB_VARI par_In, enum BB_DATA_TYPES par_InType, en
             break;
         case 2:  // double
             if (value_double < 0.0) { ret_Out->uqw = 0; ret = -1; }
-            else if (value_double > UINT64_MAX) { ret_Out->uqw = UINT64_MAX; ret = 1; }
+            else if (value_double > (double)UINT64_MAX) { ret_Out->uqw = UINT64_MAX; ret = 1; }
             else ret_Out->uqw = (uint64_t)value_double;
             break;
         }
@@ -4912,7 +5187,7 @@ int close_blackboard (void)
          return rm_close_blackboard();
      }
 #endif
-    // is blackboard exists here or inside the remote master or not at al
+    // is blackboard exists here or inside the remote master or not at all
     if (blackboard != NULL) {
         int index;
         EnterCriticalSection (&BlackboardCriticalSection);

@@ -88,6 +88,7 @@ typedef struct
   int             StopEquationIfScriptStopped;
 
   int             HideControlPanel;
+  int             HideControlPanelLock;
 
   int             ShouldStopSchedulerWhileDialogOpen;
   int             StopSchedulerWhileDialogOpen; // 1 = Stop / 0 = Run

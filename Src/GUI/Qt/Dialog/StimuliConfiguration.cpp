@@ -31,6 +31,7 @@ extern "C" {
 #include "Blackboard.h"
 #include "ThrowError.h"
 #include "MyMemory.h"
+#include "EnvironmentVariables.h"
 #include "StimulusReadFile.h"
 #include "StimulusReadMdfFile.h"
 #include "StimulusReadMdf4File.h"
@@ -80,15 +81,17 @@ StimuliConfiguration::~StimuliConfiguration()
 
 bool StimuliConfiguration::ReadStimuliVariablesFromHeader (QString par_StimuliFileName)
 {
+    char Filename[MAX_PATH];
     ui->ToPlayVariableListWidget->clear();
-    if (QFile(par_StimuliFileName).exists()) {
+    SearchAndReplaceEnvironmentStrings(par_StimuliFileName.toLatin1().data(), Filename, sizeof(Filename));
+    if (access(Filename, R_OK) == 0) {
         char *VariableList;
         if (IsMdf4Format(par_StimuliFileName.toLatin1().data(), nullptr)) {
-            VariableList = Mdf4ReadStimulHeaderVariabeles (par_StimuliFileName.toLatin1().data());
-        } else if (IsMdfFormat(QStringToConstChar(par_StimuliFileName), nullptr)) {
-            VariableList = MdfReadStimulHeaderVariabeles (QStringToConstChar(par_StimuliFileName));
+            VariableList = Mdf4ReadStimulHeaderVariabeles (Filename);
+        } else if (IsMdfFormat(Filename, nullptr)) {
+            VariableList = MdfReadStimulHeaderVariabeles (Filename);
         } else {
-            VariableList = ReadStimulHeaderVariabeles (QStringToConstChar(par_StimuliFileName));
+            VariableList = ReadStimulHeaderVariabeles (Filename);
         }
         if (VariableList != nullptr) {
             char *p, *pp;

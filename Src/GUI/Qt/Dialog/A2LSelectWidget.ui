@@ -109,6 +109,13 @@
             </property>
            </spacer>
           </item>
+          <item>
+           <widget class="QPushButton" name="ExportPushButton">
+            <property name="text">
+             <string>Export</string>
+            </property>
+           </widget>
+          </item>
          </layout>
         </item>
         <item>
@@ -139,6 +146,13 @@
              </size>
             </property>
            </spacer>
+          </item>
+          <item>
+           <widget class="QPushButton" name="ImportPushButton">
+            <property name="text">
+             <string>Import</string>
+            </property>
+           </widget>
           </item>
          </layout>
         </item>

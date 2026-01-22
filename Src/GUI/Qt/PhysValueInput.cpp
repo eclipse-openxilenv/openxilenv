@@ -29,9 +29,11 @@
 extern "C" {
 #include "MyMemory.h"
 #include "StringMaxChar.h"
+#include "PrintFormatToString.h"
 #include "EquationParser.h"
 #include "Blackboard.h"
 #include "BlackboardAccess.h"
+#include "BlackboardConversion.h"
 #include "TextReplace.h"
 #include "ThrowError.h"
 }
@@ -43,10 +45,10 @@ PhysValueInput::PhysValueInput(QWidget *parent, int par_Vid, bool par_Raw, bool 
     m_DisplayRawValue = par_DisplayRawValue;
     m_ShowRaw = par_Raw;
     m_ShowPhys = par_Phys;
-    m_PysIsEnum = false;
+    m_ConvType = BB_CONV_NONE;
 
     m_AssignedVid = 0;
-    m_EnumString = nullptr;
+    m_ConvString = nullptr;
 
     m_RowValue = nullptr;
     m_PhysValue = nullptr;
@@ -58,7 +60,6 @@ PhysValueInput::PhysValueInput(QWidget *parent, int par_Vid, bool par_Raw, bool 
 
     m_Vid = 0;
     m_BlackboardVariableName = nullptr;
-    m_Formula = nullptr;
 
     m_RawPhysValueChangedPingPong = false;
 
@@ -78,8 +79,10 @@ PhysValueInput::PhysValueInput(QWidget *parent, int par_Vid, bool par_Raw, bool 
         m_ShowRaw = par_Raw;
         m_ShowPhys = par_Phys;
     }
-
+    m_SwapValueBetweeRaWPhys = false;
     ChangeStructureElem();
+    m_SwapValueBetweeRaWPhys = true;
+
     setFocusPolicy(Qt::WheelFocus);
 
     installEventFilter(this);
@@ -91,9 +94,8 @@ PhysValueInput::PhysValueInput(QWidget *parent, int par_Vid, bool par_Raw, bool 
 
 PhysValueInput::~PhysValueInput()
 {
-    if (m_EnumString != nullptr) my_free(m_EnumString);
     if (m_BlackboardVariableName != nullptr) my_free(m_BlackboardVariableName);
-    if (m_Formula != nullptr) my_free(m_Formula);
+    if (m_ConvString != nullptr) my_free(m_ConvString);
     if (m_Model != nullptr) delete(m_Model);
 }
 
@@ -127,35 +129,42 @@ void PhysValueInput::SetDisplayRawValue(bool par_State)
 
 void PhysValueInput::SetEnumString(const char *par_EnumString)
 {
-    if (m_EnumString != nullptr) my_free(m_EnumString);
+    if (m_ConvString != nullptr) my_free(m_ConvString);
     size_t Len = strlen(par_EnumString) + 1;
-    m_EnumString = static_cast<char*>(my_malloc (Len));
-    MEMCPY(m_EnumString, par_EnumString, Len);
-    m_PysIsEnum = true;
+    m_ConvString = static_cast<char*>(my_malloc (Len));
+    MEMCPY(m_ConvString, par_EnumString, Len);
+    m_ConvType = BB_CONV_TEXTREP;
     ChangeStructureElem();
     ChangeStructurePos(size());
 }
 
 void PhysValueInput::SetBlackboardVariableId(int par_Vid, bool par_ChangeRawPhys)
 {
+    int ConvType;
     bool SaveShowRaw = m_ShowRaw;
     bool SaveShowPhys = m_ShowPhys;
-    bool SavePysIsEnum = m_PysIsEnum;
+    enum BB_CONV_TYPES SaveConvType = m_ConvType;
     m_Vid = par_Vid;
-    switch(get_bbvari_conversiontype(m_Vid)) {
+    ConvType = get_bbvari_conversiontype(m_Vid);
+    switch(ConvType) {
     case BB_CONV_FORMULA:
+    case BB_CONV_FACTOFF:
+    case BB_CONV_OFFFACT:
+    case BB_CONV_TAB_INTP:
+    case BB_CONV_TAB_NOINTP:
+    case BB_CONV_RAT_FUNC:
         if (par_ChangeRawPhys) {
             m_ShowRaw = true;
             m_ShowPhys = true;
         }
-        m_PysIsEnum = false;
+        m_ConvType = (enum BB_CONV_TYPES)ConvType;
         break;
     case BB_CONV_TEXTREP:
         if (par_ChangeRawPhys) {
             m_ShowRaw = true;
             m_ShowPhys = true;
         }
-        m_PysIsEnum = true;
+        m_ConvType = BB_CONV_TEXTREP;
         FillComboBox();
         break;
     default:
@@ -163,13 +172,13 @@ void PhysValueInput::SetBlackboardVariableId(int par_Vid, bool par_ChangeRawPhys
             m_ShowRaw = true;
             m_ShowPhys = false;
         }
-        m_PysIsEnum = false;
+        m_ConvType = BB_CONV_NONE;
         break;
     }
     if (par_ChangeRawPhys) {
         if ((SaveShowRaw != m_ShowRaw) ||
             (SaveShowPhys != m_ShowPhys) ||
-            (SavePysIsEnum != m_PysIsEnum)) {
+            (SaveConvType != m_ConvType)) {
             ChangeStructureElem();
         }
     }
@@ -237,12 +246,24 @@ void PhysValueInput::SetBlackboardVariableName(char *par_VariableName)
     MEMCPY(m_BlackboardVariableName, par_VariableName, Len);
 }
 
+void PhysValueInput::SetConersionTypeAndString(BB_CONV_TYPES par_ConvType, const char *par_ConvString)
+{
+    if (m_ConvString != nullptr) my_free(m_ConvString);
+    size_t Len = strlen(par_ConvString) + 1;
+    m_ConvString = static_cast<char*>(my_malloc (Len));
+    MEMCPY(m_ConvString, par_ConvString, Len);
+    m_ConvType = par_ConvType;
+    ChangeStructureElem();
+    ChangeStructurePos(size());
+}
+
 void PhysValueInput::SetFormulaString(const char *par_Formula)
 {
-    if (m_Formula != nullptr) my_free(m_Formula);
+    if (m_ConvString != nullptr) my_free(m_ConvString);
     size_t Len = strlen(par_Formula) + 1;
-    m_Formula = static_cast<char*>(my_malloc (Len));
-    MEMCPY(m_Formula, par_Formula, Len);
+    m_ConvString = static_cast<char*>(my_malloc (Len));
+    MEMCPY(m_ConvString, par_Formula, Len);
+    m_ConvType = BB_CONV_FORMULA;
 }
 
 void PhysValueInput::SetRawValue(int par_Value, int par_Base)
@@ -483,11 +504,10 @@ double PhysValueInput::GetDoubleRawValue(bool *ret_Ok)
                 if (ret_Ok != nullptr) *ret_Ok = true;
                 return RawValue;
             }
-        } else if (m_Formula != nullptr) {
-            char *errstring;
-            if (calc_raw_value_for_phys_value (m_Formula, PhysValue, m_BlackboardVariableName, BB_DOUBLE, &RawValue, &RealPhysValue, &errstring)) {
-                ThrowError (1, "cannot convert physical to raw value because the formula \"%s\" has error \"%s\"", m_Formula, errstring);
-                FreeErrStringBuffer (&errstring);
+        } else if (m_ConvString != nullptr) {
+            bool Ok;
+            RawValue = ConvertPhysToRaw(PhysValue, &RealPhysValue, &Ok);
+            if (!Ok) {
                 if (ret_Ok != nullptr) *ret_Ok = false;
                 return PhysValue;
             } else {
@@ -524,11 +544,10 @@ int PhysValueInput::GetIntRawValue(bool *ret_Ok)
                 if (ret_Ok != nullptr) *ret_Ok = true;
                 return static_cast<int>(RawValue);
             }
-        } else if (m_Formula != nullptr) {
-            char *errstring;
-            if (calc_raw_value_for_phys_value (m_Formula, PhysValue, m_BlackboardVariableName, BB_DWORD, &RawValue, &RealPhysValue, &errstring)) {
-                ThrowError (1, "cannot convert physical to raw value because the formula \"%s\" has error \"%s\"", m_Formula, errstring);
-                FreeErrStringBuffer (&errstring);
+        } else if (m_ConvString != nullptr) {
+            bool Ok;
+            RawValue = ConvertPhysToRaw(PhysValue, &RealPhysValue, &Ok);
+            if (!Ok) {
                 if (ret_Ok != nullptr) *ret_Ok = false;
                 return static_cast<int>(PhysValue);
             } else {
@@ -565,11 +584,10 @@ unsigned int PhysValueInput::GetUIntRawValue(bool *ret_Ok)
                 if (ret_Ok != nullptr) *ret_Ok = true;
                 return static_cast<unsigned int>(RawValue);
             }
-        } else if (m_Formula != nullptr) {
-            char *errstring;
-            if (calc_raw_value_for_phys_value (m_Formula, PhysValue, m_BlackboardVariableName, BB_UDWORD, &RawValue, &RealPhysValue, &errstring)) {
-                ThrowError (1, "cannot convert physical to raw value because the formula \"%s\" has error \"%s\"", m_Formula, errstring);
-                FreeErrStringBuffer (&errstring);
+        } else if (m_ConvString != nullptr) {
+            bool Ok;
+            RawValue = ConvertPhysToRaw(PhysValue, &RealPhysValue, &Ok);
+            if (!Ok) {
                 if (ret_Ok != nullptr) *ret_Ok = false;
                 return static_cast<unsigned int>(PhysValue);
             } else {
@@ -606,11 +624,10 @@ unsigned long long PhysValueInput::GetUInt64RawValue(bool *ret_Ok)
                 if (ret_Ok != nullptr) *ret_Ok = true;
                 return static_cast<unsigned int>(RawValue);
             }
-        } else if (m_Formula != nullptr) {
-            char *errstring;
-            if (calc_raw_value_for_phys_value (m_Formula, PhysValue, m_BlackboardVariableName, BB_UDWORD, &RawValue, &RealPhysValue, &errstring)) {
-                ThrowError (1, "cannot convert physical to raw value because the formula \"%s\" has error \"%s\"", m_Formula, errstring);
-                FreeErrStringBuffer (&errstring);
+        } else if (m_ConvString != nullptr) {
+            bool Ok;
+            RawValue = ConvertPhysToRaw(PhysValue, &RealPhysValue, &Ok);
+            if (!Ok) {
                 if (ret_Ok != nullptr) *ret_Ok = false;
                 return static_cast<unsigned long long>(PhysValue);
             } else {
@@ -647,11 +664,10 @@ long long PhysValueInput::GetInt64RawValue(bool *ret_Ok)
                 if (ret_Ok != nullptr) *ret_Ok = true;
                 return static_cast<unsigned int>(RawValue);
             }
-        } else if (m_Formula != nullptr) {
-            char *errstring;
-            if (calc_raw_value_for_phys_value (m_Formula, PhysValue, m_BlackboardVariableName, BB_UDWORD, &RawValue, &RealPhysValue, &errstring)) {
-                ThrowError (1, "cannot convert physical to raw value because the formula \"%s\" has error \"%s\"", m_Formula, errstring);
-                FreeErrStringBuffer (&errstring);
+        } else if (m_ConvString != nullptr) {
+            bool Ok;
+            RawValue = ConvertPhysToRaw(PhysValue, &RealPhysValue, &Ok);
+            if (!Ok) {
                 if (ret_Ok != nullptr) *ret_Ok = false;
                 return static_cast<long long>(PhysValue);
             } else {
@@ -721,9 +737,11 @@ void PhysValueInput::SetRawMinMaxValue(double par_MinValue, double par_MaxValue)
 {
     if (m_RowValue != nullptr) m_RowValue->SetMinMaxValue(par_MinValue, par_MaxValue);
     if (m_PhysValue != nullptr) {
-        double MinPhysValue = ConvertRawToPhys(par_MinValue);
-        double MaxPhysValue = ConvertRawToPhys(par_MaxValue);
-        m_PhysValue->SetMinMaxValue(MinPhysValue, MaxPhysValue);
+        if (m_ConvType != BB_CONV_TEXTREP) {
+            double MinPhysValue = ConvertRawToPhys(par_MinValue);
+            double MaxPhysValue = ConvertRawToPhys(par_MaxValue);
+            m_PhysValue->SetMinMaxValue(MinPhysValue, MaxPhysValue);
+        }
     }
 }
 
@@ -791,41 +809,43 @@ void PhysValueInput::ChangeStructureElem()
                 printf ("connect error\n");
             }
             m_RowValue->CheckResizeSignalShouldSent();  // after connect!
-            if (m_PhysValue != nullptr) {
-                bool Ok;
-                double PhysValue = m_PhysValue->GetDoubleValue(&Ok);
-                double RawValue = ConvertPhysToRaw(PhysValue, &PhysValue, &Ok);
-                m_DataType = DATA_TYPE_DOUBLE;
-                m_RawDoubleValue = RawValue;
-                m_RowValue->SetValue(RawValue);
-            } else {
-                switch (m_DataType) {
-                case DATA_TYPE_INT:
-                    if (m_DisplayRawValue == DISPLAY_RAW_VALUE_HEXAMAL) {
-                        m_RowValue->SetValue(m_RawIntValue, 16);
-                    } else if (m_DisplayRawValue == DISPLAY_RAW_VALUE_BINARY) {
-                        m_RowValue->SetValue(m_RawIntValue, 2);
-                    } else {
-                        m_RowValue->SetValue(m_RawIntValue);
+            if (m_SwapValueBetweeRaWPhys) {
+                if (m_PhysValue != nullptr) {
+                    bool Ok;
+                    double PhysValue = m_PhysValue->GetDoubleValue(&Ok);
+                    double RawValue = ConvertPhysToRaw(PhysValue, &PhysValue, &Ok);
+                    m_DataType = DATA_TYPE_DOUBLE;
+                    m_RawDoubleValue = RawValue;
+                    m_RowValue->SetValue(RawValue);
+                } else {
+                    switch (m_DataType) {
+                    case DATA_TYPE_INT:
+                        if (m_DisplayRawValue == DISPLAY_RAW_VALUE_HEXAMAL) {
+                            m_RowValue->SetValue(m_RawIntValue, 16);
+                        } else if (m_DisplayRawValue == DISPLAY_RAW_VALUE_BINARY) {
+                            m_RowValue->SetValue(m_RawIntValue, 2);
+                        } else {
+                            m_RowValue->SetValue(m_RawIntValue);
+                        }
+                        break;
+                    case DATA_TYPE_UINT:
+                        if (m_DisplayRawValue == DISPLAY_RAW_VALUE_HEXAMAL) {
+                            m_RowValue->SetValue(m_RawUIntValue, 16);
+                        } else if (m_DisplayRawValue == DISPLAY_RAW_VALUE_BINARY) {
+                            m_RowValue->SetValue(m_RawUIntValue, 2);
+                        } else {
+                            m_RowValue->SetValue(m_RawUIntValue);
+                        }
+                        break;
+                    case DATA_TYPE_DOUBLE:
+                    //default:
+                        m_RowValue->SetValue(m_RawDoubleValue);
+                        break;
                     }
-                    break;
-                case DATA_TYPE_UINT:
-                    if (m_DisplayRawValue == DISPLAY_RAW_VALUE_HEXAMAL) {
-                        m_RowValue->SetValue(m_RawUIntValue, 16);
-                    } else if (m_DisplayRawValue == DISPLAY_RAW_VALUE_BINARY) {
-                        m_RowValue->SetValue(m_RawUIntValue, 2);
-                    } else {
-                        m_RowValue->SetValue(m_RawUIntValue);
-                    }
-                    break;
-                case DATA_TYPE_DOUBLE:
-                //default:
-                    m_RowValue->SetValue(m_RawDoubleValue);
-                    break;
                 }
+                m_RowValue->SetStepType(m_StepType);
+                m_RowValue->show();
             }
-            m_RowValue->SetStepType(m_StepType);
-            m_RowValue->show();
         }
     } else {
         if (m_RowValue != nullptr) {
@@ -834,7 +854,7 @@ void PhysValueInput::ChangeStructureElem()
         }
     }
     if (m_ShowPhys) {
-        if (m_PysIsEnum) {
+        if (m_ConvType == BB_CONV_TEXTREP) {
             if (m_EnumValue == nullptr) {
                 m_EnumValue = new EnumComboBox(this);
                 m_EnumValue->SetWideningSignalEnable(m_WideningSignal);
@@ -854,27 +874,29 @@ void PhysValueInput::ChangeStructureElem()
                     printf ("connect error\n");
                 }
                 m_EnumValue->CheckResizeSignalShouldSent();  // after connect!
-                if (m_RowValue != nullptr) {
-                    bool Ok;
-                    double RawValue = m_RowValue->GetDoubleValue(&Ok);
-                    m_DataType = DATA_TYPE_DOUBLE;
-                    m_RawDoubleValue = RawValue;
-                    m_EnumValue->SetValue(static_cast<int>(RawValue));
-                } else {
-                    double RawValue;
-                    switch (m_DataType) {
-                    case DATA_TYPE_INT:
-                        RawValue = m_RawIntValue;
-                        break;
-                    case DATA_TYPE_UINT:
-                        RawValue = m_RawUIntValue;
-                        break;
-                    case DATA_TYPE_DOUBLE:
-                    //default:
-                        RawValue = m_RawDoubleValue;
-                        break;
+                if (m_SwapValueBetweeRaWPhys) {
+                    if (m_RowValue != nullptr) {
+                        bool Ok;
+                        double RawValue = m_RowValue->GetDoubleValue(&Ok);
+                        m_DataType = DATA_TYPE_DOUBLE;
+                        m_RawDoubleValue = RawValue;
+                        m_EnumValue->SetValue(static_cast<int>(RawValue));
+                    } else {
+                        double RawValue;
+                        switch (m_DataType) {
+                        case DATA_TYPE_INT:
+                            RawValue = m_RawIntValue;
+                            break;
+                        case DATA_TYPE_UINT:
+                            RawValue = m_RawUIntValue;
+                            break;
+                        case DATA_TYPE_DOUBLE:
+                        //default:
+                            RawValue = m_RawDoubleValue;
+                            break;
+                        }
+                        m_EnumValue->SetValue(static_cast<int>(RawValue));
                     }
-                    m_EnumValue->SetValue(static_cast<int>(RawValue));
                 }
                 m_EnumValue->show();
             }
@@ -901,32 +923,34 @@ void PhysValueInput::ChangeStructureElem()
                     printf ("connect error\n");
                 }
                 m_PhysValue->CheckResizeSignalShouldSent();  // after connect!
-                if (m_RowValue != nullptr) {
-                    bool Ok;
-                    double RawValue = m_RowValue->GetDoubleValue(&Ok);
-                    double PhysValue = ConvertRawToPhys(RawValue, &Ok);
-                    m_DataType = DATA_TYPE_DOUBLE;
-                    m_RawDoubleValue = RawValue;
-                    m_PhysValue->SetValue(PhysValue);
-                } else {
-                    double RawValue;
-                    switch (m_DataType) {
-                    case DATA_TYPE_INT:
-                        RawValue = m_RawIntValue;
-                        break;
-                    case DATA_TYPE_UINT:
-                        RawValue = m_RawUIntValue;
-                        break;
-                    case DATA_TYPE_DOUBLE:
-                        RawValue = m_RawDoubleValue;
-                        break;
-                    default:
-                        RawValue = 0.0;
-                        break;
+                if (m_SwapValueBetweeRaWPhys) {
+                    if (m_RowValue != nullptr) {
+                        bool Ok;
+                        double RawValue = m_RowValue->GetDoubleValue(&Ok);
+                        double PhysValue = ConvertRawToPhys(RawValue, &Ok);
+                        m_DataType = DATA_TYPE_DOUBLE;
+                        m_RawDoubleValue = RawValue;
+                        m_PhysValue->SetValue(PhysValue);
+                    } else {
+                        double RawValue;
+                        switch (m_DataType) {
+                        case DATA_TYPE_INT:
+                            RawValue = m_RawIntValue;
+                            break;
+                        case DATA_TYPE_UINT:
+                            RawValue = m_RawUIntValue;
+                            break;
+                        case DATA_TYPE_DOUBLE:
+                            RawValue = m_RawDoubleValue;
+                            break;
+                        default:
+                            RawValue = 0.0;
+                            break;
+                        }
+                        bool Ok;
+                        double PhysValue = ConvertRawToPhys(RawValue, &Ok);
+                        m_PhysValue->SetValue(PhysValue);
                     }
-                    bool Ok;
-                    double PhysValue = ConvertRawToPhys(RawValue, &Ok);
-                    m_PhysValue->SetValue(PhysValue);
                 }
                 m_PhysValue->SetStepType(m_StepType);
                 m_PhysValue->show();
@@ -978,7 +1002,7 @@ void PhysValueInput::ChangeStructurePos(QSize Size)
     if (Width < Height) Width = Height;
     if (m_ShowRaw) {
         if (m_ShowPhys) {
-            if (m_PysIsEnum) {
+            if (m_ConvType == BB_CONV_TEXTREP) {
                 if (m_RowValue != nullptr) {
                     m_RowValue->resize(Width/3, Height);
                     m_RowValue->move(0, 0);
@@ -1004,7 +1028,7 @@ void PhysValueInput::ChangeStructurePos(QSize Size)
             }
         }
     } else if (m_ShowPhys) {
-        if (m_PysIsEnum) {
+        if (m_ConvType == BB_CONV_TEXTREP) {
             if (m_EnumValue != nullptr) {
                 m_EnumValue->resize(Width, Height);
                 m_EnumValue->move(0, 0);
@@ -1026,21 +1050,17 @@ double PhysValueInput::ConvertRawToPhys(double par_RawValue, bool *ret_Ok)
         if (ret_Ok != nullptr) *ret_Ok = (State == 0);
         return Ret;
     }
-    if (m_Formula != nullptr) {
-        if (m_BlackboardVariableName != nullptr) {
-            double Ret;
-            char *ErrString;
-            int State = direct_solve_equation_err_string_replace_var_value (m_Formula, m_BlackboardVariableName, par_RawValue, &Ret, &ErrString);
-            if (ret_Ok != nullptr) *ret_Ok = (State == 0);
-            // todo: ErrString output anf free!
-            return Ret;
+    if (m_ConvString != nullptr) {
+        double PhysValue;
+        char *ErrString;
+        if (Conv_RawToPhysFromString(m_ConvString, m_ConvType, m_BlackboardVariableName, par_RawValue, &PhysValue, &ErrString)) {
+            ThrowError (1, "cannot convert raw to physical value because the conversion \"%s\" has error \"%s\"", m_ConvString, ErrString);
+            FreeErrStringBuffer (&ErrString);
+            if (ret_Ok != nullptr) *ret_Ok = false;
+            return par_RawValue;
         } else {
-            double Ret;
-            char *ErrString;
-            int State = direct_solve_equation_err_string_replace_value (m_Formula, par_RawValue, &Ret, &ErrString);
-            if (ret_Ok != nullptr) *ret_Ok = (State == 0);
-            // todo: ErrString output anf free!
-            return Ret;
+            if (ret_Ok != nullptr) *ret_Ok = true;
+            return PhysValue;
         }
     }
     if (ret_Ok != nullptr) *ret_Ok = false;
@@ -1050,21 +1070,27 @@ double PhysValueInput::ConvertRawToPhys(double par_RawValue, bool *ret_Ok)
 double PhysValueInput::ConvertPhysToRaw(double par_PhysValue, double *ret_PhysValue, bool *ret_Ok)
 {
     if (m_Vid > 0) {
-        double Ret;
-        int State = get_raw_value_for_phys_value (m_Vid, par_PhysValue, &Ret, ret_PhysValue);
-        if (ret_Ok != nullptr) *ret_Ok = (State == 0);
-        return Ret;
-    }
-    if ((m_Formula != nullptr)) {
         double RawValue;
-        char *errstring;
-        if (calc_raw_value_for_phys_value (m_Formula, par_PhysValue, m_BlackboardVariableName, BB_DOUBLE, &RawValue, ret_PhysValue, &errstring)) {
-            ThrowError (1, "cannot convert physical to raw value because the formula \"%s\" has error \"%s\"", m_Formula, errstring);
-            FreeErrStringBuffer (&errstring);
+        if (get_raw_value_for_phys_value (m_Vid, par_PhysValue, &RawValue, ret_PhysValue)) {
             if (ret_Ok != nullptr) *ret_Ok = false;
             return par_PhysValue;
         } else {
+            if (ret_Ok != nullptr) *ret_Ok = true;
             return RawValue;
+        }
+    } else {
+        if ((m_ConvString != nullptr)) {
+            double RawValue;
+            char *ErrString;
+            if (Conv_PhysToRawFromString(m_ConvString, m_ConvType, m_BlackboardVariableName, par_PhysValue, &RawValue, ret_PhysValue, &ErrString)) {
+                ThrowError (1, "cannot convert physical to raw value because the conversion \"%s\" has error \"%s\"", m_ConvString, ErrString);
+                FreeErrStringBuffer (&ErrString);
+                if (ret_Ok != nullptr) *ret_Ok = false;
+                return par_PhysValue;
+            } else {
+                if (ret_Ok != nullptr) *ret_Ok = true;
+                return RawValue;
+            }
         }
     }
     if (ret_Ok != nullptr) *ret_Ok = false;
@@ -1074,17 +1100,17 @@ double PhysValueInput::ConvertPhysToRaw(double par_PhysValue, double *ret_PhysVa
 void PhysValueInput::FillComboBox()
 {
     if (m_EnumValue != nullptr) {
-        if (m_EnumString == nullptr) {
+        if (m_ConvString == nullptr) {
             if (m_Vid > 0) {
                 int Len = 0;
-                while ((Len = -get_bbvari_conversion(m_Vid, m_EnumString, Len)) > 0) {
-                    m_EnumString = static_cast<char*>(my_realloc (m_EnumString, static_cast<size_t>(Len)));
+                while ((Len = -get_bbvari_conversion(m_Vid, m_ConvString, Len)) > 0) {
+                    m_ConvString = static_cast<char*>(my_realloc (m_ConvString, static_cast<size_t>(Len)));
                 }
             }
         }
-        if (m_EnumString != nullptr) {
+        if (m_ConvString != nullptr) {
             if (m_Model == nullptr) {
-                m_Model = new EnumComboBoxModel(m_EnumString, m_EnumValue);
+                m_Model = new EnumComboBoxModel(m_ConvString, m_EnumValue);
                 m_EnumValue->setModel(m_Model);
             }
         }
@@ -1096,7 +1122,7 @@ QString PhysValueInput::DoubleToString(double par_Value)
     char Help[256];
     int Prec = 15;
     while (1) {
-        sprintf (Help, "%.*g", Prec, par_Value);
+        PrintFormatToString (Help, sizeof(Help), "%.*g", Prec, par_Value);
         if ((Prec++) == 18 || (par_Value == strtod(Help, nullptr))) break;
     }
     return QString(Help);
@@ -1274,10 +1300,10 @@ void PhysValueInput::RawValueChanged(double par_Value, bool par_OutOfRange)
                 }
             }
         } else if (m_EnumValue != nullptr) {
-            if (m_EnumString != nullptr) {
+            if (m_ConvString != nullptr) {
                 char Enum[1024];
                 int Color;
-                if (convert_value2textreplace (static_cast<int32_t>(par_Value), m_EnumString, Enum, sizeof(Enum), &Color) == 0) {
+                if (convert_value2textreplace (static_cast<int32_t>(par_Value), m_ConvString, Enum, sizeof(Enum), &Color) == 0) {
                     if (!m_RawPhysValueChangedPingPong) {
                         m_RawPhysValueChangedPingPong = true;
                         m_EnumValue->setCurrentText(QString(Enum));

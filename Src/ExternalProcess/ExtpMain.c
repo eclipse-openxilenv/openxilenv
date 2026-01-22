@@ -97,13 +97,10 @@ static DWORD WINAPI XilEnvInternal_WindowMainLoopThreadFunction (LPVOID lpParam)
     // and show it
     ShowWindow (hwnd, SW_MINIMIZE);
 
-    SetHwndMainWindow (hwnd);
-
     while (GetMessage(&msg, NULL, 0, 0)) {
         TranslateMessage (&msg) ;
         DispatchMessage (&msg) ;
     }
-    exit(0);
     return (DWORD)msg.wParam;
 }
 #endif

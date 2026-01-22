@@ -399,6 +399,7 @@ void A2LCalSingleModel::UpdateAllValuesReq(bool arg_updateAlways, bool arg_check
     INDEX_DATA_BLOCK *idb = GetIndexDataBlock(ElementCount);
     for(int x = 0; x < ElementCount; x++) {
         A2LCalSingleData *Variable = m_listOfElements.at(x);
+        idb->Data[x].LinkNo =  Variable->GetLinkNo();
         idb->Data[x].Index = Variable->GetIndex();
         idb->Data[x].Data = Variable->GetData();
         idb->Data[x].User = (uint64_t)x | ((uint64_t)arg_updateAlways << 32)  | ((uint64_t)arg_checkUnitColumnWidth << 33);
@@ -415,6 +416,7 @@ void A2LCalSingleModel::UpdateOneValueReq(int par_Row, bool arg_updateAlways, bo
         if ((par_Row >= 0) && (par_Row < size)) {
             INDEX_DATA_BLOCK *idb = GetIndexDataBlock(1);
             A2LCalSingleData *Variable = m_listOfElements.at(par_Row);
+            idb->Data->LinkNo = Variable->GetLinkNo();
             idb->Data->Index = Variable->GetIndex();
             idb->Data->Data = Variable->GetData();
             idb->Data->User = (uint64_t)par_Row | ((uint64_t)arg_updateAlways << 32)  | ((uint64_t)arg_checkUnitColumnWidth << 33);
@@ -433,18 +435,29 @@ void A2LCalSingleModel::UpdateValuesAck(void *par_IndexData)
     INDEX_DATA_BLOCK *IndexData = (INDEX_DATA_BLOCK*)par_IndexData;
     int ElementCount = IndexData->Size;
     for(int x = 0; x < ElementCount; x++) {
-        Row = (int)IndexData->Data[x].User;
-        UpdateAlways = (IndexData->Data[x].User >> 32) & 0x1;
-        CheckUnitColumnWidth = (IndexData->Data[x].User >> 33) & 0x1;
-        A2LCalSingleData *Variable = m_listOfElements.at(Row);
-        Variable->SetData((A2L_DATA*)IndexData->Data[x].Data);
-        if ((Variable != nullptr) && (Variable->GetIndex() >= 0)) {
-            ColumnUpdateFlags |= UpdateOneVariable(Variable, Row, UpdateAlways);
-        }
-        if (CheckUnitColumnWidth) {
-            if (calculateMinMaxColumnSize(Row, Row, CALC_PIXELWIDTH_OF_UNIT) == CALC_PIXELWIDTH_OF_UNIT) {
-                // The width of the unit column has changed
-                ColumnUpdateFlags |= CALC_PIXELWIDTH_OF_UNIT;
+        if(IndexData->Data[x].Data != NULL) {
+            // it must be a single characteristics
+            if(((A2L_DATA*)IndexData->Data[x].Data)->Type == A2L_DATA_TYPE_VALUE) {
+                // the row information will not be used
+                //Row = (int)IndexData->Data[x].User;
+                UpdateAlways = (IndexData->Data[x].User >> 32) & 0x1;
+                CheckUnitColumnWidth = (IndexData->Data[x].User >> 33) & 0x1;
+                for (Row = 0; Row < m_listOfElements.count(); Row++) {
+                    A2LCalSingleData *Variable = m_listOfElements.at(Row);
+                    if ((IndexData->Data[x].LinkNo == Variable->GetLinkNo()) &&
+                        (IndexData->Data[x].Index == Variable->GetIndex())) {
+                        Variable->SetData((A2L_DATA*)IndexData->Data[x].Data);
+                        if ((Variable != nullptr) && (Variable->GetIndex() >= 0)) {
+                            ColumnUpdateFlags |= UpdateOneVariable(Variable, Row, UpdateAlways);
+                        }
+                        if (CheckUnitColumnWidth) {
+                            if (calculateMinMaxColumnSize(Row, Row, CALC_PIXELWIDTH_OF_UNIT) == CALC_PIXELWIDTH_OF_UNIT) {
+                                // The width of the unit column has changed
+                                ColumnUpdateFlags |= CALC_PIXELWIDTH_OF_UNIT;
+                            }
+                        }
+                    }
+                }
             }
         }
     }

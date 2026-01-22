@@ -22,7 +22,7 @@
 #include <stdarg.h>
 #include "Config.h"
 #include "Platform.h"
-
+#include "StringMaxChar.h"
 #include "XilEnvExtProc.h"
 #include "ExtpBlackboard.h"
 #include "ExtpBaseMessages.h"
@@ -38,8 +38,8 @@ static void TerminateSelf (void)
     Len += strlen("exit");
     Len += 1;
     Buffer = (char*)XilEnvInternal_malloc(Len);
-    strcpy(Buffer, DEFAULT_PREFIX_TYPE_SHORT_BLACKBOARD);
-    strcat(Buffer, "exit");
+    StringCopyMaxCharTruncate(Buffer, DEFAULT_PREFIX_TYPE_SHORT_BLACKBOARD, Len);
+    StringAppendMaxCharTruncate(Buffer, "exit", Len);
     Vid = add_bbvari (Buffer, BB_UWORD, NULL);
     write_bbvari_uword (Vid, 1);}
 
@@ -53,9 +53,9 @@ static int OpenMessageFileDelayed (void)
     if (ProcessInfos->MessageOutputStreamConfig.pFilename != NULL) {
 
         if ((ProcessInfos->MessageOutputStreamConfig.Flags & APPEND_TO_EXISTING_FILE_FLAG) == APPEND_TO_EXISTING_FILE_FLAG) {
-            strcpy (Flags, "a");
+            StringCopyMaxCharTruncate (Flags, "a", sizeof(Flags));
         } else {
-            strcpy (Flags, "w");
+            StringCopyMaxCharTruncate (Flags, "w", sizeof(Flags));
         }
         if ((fh = fopen (ProcessInfos->MessageOutputStreamConfig.pFilename, Flags)) == NULL) {
             ProcessInfos->MessageOutputStreamConfig.MessageToFileFlag = 0;
@@ -92,9 +92,10 @@ EXPORT_OR_IMPORT int __FUNC_CALL_CONVETION__ init_message_output_stream (const c
     ProcessInfos->MessageOutputStreamConfig.ErrorMessageCounter = 0;
 
     if (para_HeaderText != NULL) {
-        ProcessInfos->MessageOutputStreamConfig.HeaderText = XilEnvInternal_malloc (strlen (para_HeaderText) + 1);
+        int Len = strlen (para_HeaderText) + 1;
+        ProcessInfos->MessageOutputStreamConfig.HeaderText = XilEnvInternal_malloc (Len);
         if (ProcessInfos->MessageOutputStreamConfig.HeaderText != NULL) {
-            strcpy (ProcessInfos->MessageOutputStreamConfig.HeaderText, para_HeaderText);
+            StringCopyMaxCharTruncate (ProcessInfos->MessageOutputStreamConfig.HeaderText, para_HeaderText, Len);
         }
     }
     if ((para_Flags & MESSAGE_COUNTER_FLAG) == MESSAGE_COUNTER_FLAG) {
@@ -164,7 +165,7 @@ static void message_popup (const char *par_Message, int par_Connected, int par_N
         } else {
 #if _WIN32
             char app_name[MAX_PATH + 32];
-            strcpy (app_name, "message from ");
+            STRING_COPY_TO_ARRAY (app_name, "message from ");
             GetModuleFileName (NULL, app_name + strlen (app_name), MAX_PATH);
             MessageBox (NULL,
                         par_Message,

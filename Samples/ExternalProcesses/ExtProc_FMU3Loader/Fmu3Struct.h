@@ -1,6 +1,7 @@
 #ifndef FMU3STRUCT_H
 #define FMU3STRUCT_H
 
+#include <stdio.h>
 #include "fmi3Functions.h"
 
 typedef struct {
@@ -133,6 +134,9 @@ Functions for FMI3 for Co-Simulation
 
    bool SyncParametersWithBlackboard;
    bool SyncLocalsWithBlackboard;
+   bool LoggingEnable;
+   char* LoggingFolder;
+   FILE* LoggingFile;
 
    Model_Variables Parameters;
 

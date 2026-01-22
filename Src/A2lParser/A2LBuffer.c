@@ -265,7 +265,7 @@ ASAP2_MODULE_DATA* AddEmptyModuleToBuffer (struct ASAP2_PARSER_STRUCT *Parser)
     ASAP2_MODULE_DATA* Ret;
     Ret = (ASAP2_MODULE_DATA*)AllocMemFromBuffer (&Parser->Data, sizeof (ASAP2_MODULE_DATA));
     if (Ret != NULL) {
-        memset (Ret, 0, sizeof (ASAP2_MODULE_DATA));
+        STRUCT_ZERO_INIT (*Ret, ASAP2_MODULE_DATA);
         Ret->StructType = BUFFER_STRUCT_TYPE_MODULE_DATA;
         Parser->Data.ModuleCounter++;
         if (Parser->Data.ModuleCounter >= Parser->Data.ModuleSize) {
@@ -290,7 +290,7 @@ ASAP2_MEASUREMENT* AddEmptyMeasurementToBuffer (struct ASAP2_PARSER_STRUCT *Pars
 
     Ret = (ASAP2_MEASUREMENT*)AllocMemFromBuffer (&Parser->Data, sizeof (ASAP2_MEASUREMENT));
     if (Ret != NULL) {
-        memset (Ret, 0, sizeof (ASAP2_MEASUREMENT));
+        STRUCT_ZERO_INIT (*Ret, ASAP2_MEASUREMENT);
         Ret->StructType = BUFFER_STRUCT_TYPE_MEASUREMENT;
         Module = Parser->Data.Modules[Parser->Data.ModuleCounter - 1];
         Module->MeasurementCounter++;
@@ -315,7 +315,7 @@ ASAP2_CHARACTERISTIC_AXIS_DESCR* AddEmptyAxisDescrToBuffer (struct ASAP2_PARSER_
 
     Ret = (ASAP2_CHARACTERISTIC_AXIS_DESCR*)AllocMemFromBuffer (&Parser->Data, sizeof (ASAP2_CHARACTERISTIC_AXIS_DESCR));
     if (Ret != NULL) {
-        memset (Ret, 0, sizeof (ASAP2_CHARACTERISTIC_AXIS_DESCR));
+        STRUCT_ZERO_INIT (*Ret, ASAP2_CHARACTERISTIC_AXIS_DESCR);
         Module = Parser->Data.Modules[Parser->Data.ModuleCounter - 1];
         Module->AxisDescrCounter++;
         if (Module->AxisDescrCounter >= Module->AxisDescrSize) {
@@ -338,7 +338,7 @@ ASAP2_CHARACTERISTIC* AddEmptyCharacteristicToBuffer (struct ASAP2_PARSER_STRUCT
 
     Ret = (ASAP2_CHARACTERISTIC*)AllocMemFromBuffer (&Parser->Data, sizeof (ASAP2_CHARACTERISTIC));
     if (Ret != NULL) {
-        memset (Ret, 0, sizeof (ASAP2_CHARACTERISTIC));
+        STRUCT_ZERO_INIT (*Ret, ASAP2_CHARACTERISTIC);
         Ret->StructType = BUFFER_STRUCT_TYPE_CHARACTERISTIC;
         Module = Parser->Data.Modules[Parser->Data.ModuleCounter - 1];
         Module->CharacteristicCounter++;
@@ -362,7 +362,7 @@ ASAP2_AXIS_PTS* AddEmptyAxisPtsToBuffer (struct ASAP2_PARSER_STRUCT *Parser)
 
     Ret = (ASAP2_AXIS_PTS*)AllocMemFromBuffer (&Parser->Data, sizeof (ASAP2_AXIS_PTS));
     if (Ret != NULL) {
-        memset (Ret, 0, sizeof (ASAP2_AXIS_PTS));
+        STRUCT_ZERO_INIT (*Ret, ASAP2_AXIS_PTS);
         Ret->StructType = BUFFER_STRUCT_TYPE_AXIS_PTS;
         Module = Parser->Data.Modules[Parser->Data.ModuleCounter - 1];
         Module->AxisPtsCounter++;
@@ -385,7 +385,7 @@ ASAP2_IF_DATA_CANAPE_EXT* AddEmptyCanapeExtToBuffer(struct ASAP2_PARSER_STRUCT *
 
     Ret = (ASAP2_IF_DATA_CANAPE_EXT*)AllocMemFromBuffer(&Parser->Data, sizeof(ASAP2_IF_DATA_CANAPE_EXT));
     if (Ret != NULL) {
-        memset(Ret, 0, sizeof(ASAP2_IF_DATA_CANAPE_EXT));
+        STRUCT_ZERO_INIT(*Ret, ASAP2_IF_DATA_CANAPE_EXT);
     }
     return Ret;
 }
@@ -399,7 +399,7 @@ ASAP2_RECORD_LAYOUT* AddEmptyRecordLayoutToBuffer (struct ASAP2_PARSER_STRUCT *P
 
     Ret = (ASAP2_RECORD_LAYOUT*)AllocMemFromBuffer (&Parser->Data, sizeof (ASAP2_RECORD_LAYOUT));
     if (Ret != NULL) {
-        memset (Ret, 0, sizeof (ASAP2_RECORD_LAYOUT));
+        STRUCT_ZERO_INIT (*Ret, ASAP2_RECORD_LAYOUT);
         Ret->StructType = BUFFER_STRUCT_TYPE_RECORD_LAYOUT;
         Module = Parser->Data.Modules[Parser->Data.ModuleCounter - 1];
         Module->RecordLayoutCounter++;
@@ -423,7 +423,7 @@ ASAP2_COMPU_METHOD* AddEmptyCompuMethodToBuffer (struct ASAP2_PARSER_STRUCT *Par
 
     Ret = (ASAP2_COMPU_METHOD*)AllocMemFromBuffer (&Parser->Data, sizeof (ASAP2_COMPU_METHOD));
     if (Ret != NULL) {
-        memset (Ret, 0, sizeof (ASAP2_COMPU_METHOD));
+        STRUCT_ZERO_INIT (*Ret, ASAP2_COMPU_METHOD);
         Ret->StructType = BUFFER_STRUCT_TYPE_COMPU_METHOD;
         Module = Parser->Data.Modules[Parser->Data.ModuleCounter - 1];
         Module->CompuMethodCounter++;
@@ -447,7 +447,7 @@ ASAP2_COMPU_TAB* AddEmptyCompuTabToBuffer (struct ASAP2_PARSER_STRUCT *Parser)
 
     Ret = (ASAP2_COMPU_TAB*)AllocMemFromBuffer (&Parser->Data, sizeof (ASAP2_COMPU_TAB));
     if (Ret != NULL) {
-        memset (Ret, 0, sizeof (ASAP2_COMPU_TAB));
+        STRUCT_ZERO_INIT (*Ret, ASAP2_COMPU_TAB);
         Ret->StructType = BUFFER_STRUCT_TYPE_COMPU_TAB;
         Module = Parser->Data.Modules[Parser->Data.ModuleCounter - 1];
         Module->CompuTabCounter++;
@@ -471,7 +471,7 @@ ASAP2_FUNCTION* AddEmptyFunctionToBuffer (struct ASAP2_PARSER_STRUCT *Parser)
 
     Ret = (ASAP2_FUNCTION*)AllocMemFromBuffer (&Parser->Data, sizeof (ASAP2_FUNCTION));
     if (Ret != NULL) {
-        memset (Ret, 0, sizeof (ASAP2_FUNCTION));
+        STRUCT_ZERO_INIT (*Ret, ASAP2_FUNCTION);
         Ret->StructType = BUFFER_STRUCT_TYPE_FUNCTION;
         Module = Parser->Data.Modules[Parser->Data.ModuleCounter - 1];
         Module->FunctionCounter++;

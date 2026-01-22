@@ -40,7 +40,7 @@ static int RPCFunc_LoadCanVariant(RPC_CONNECTION *par_Connection, RPC_API_BASE_M
     UNUSED(par_Connection);
     RPC_API_LOAD_CAN_VARIANTE_MESSAGE *In = (RPC_API_LOAD_CAN_VARIANTE_MESSAGE*)par_DataIn;
     RPC_API_LOAD_CAN_VARIANTE_MESSAGE_ACK *Out = (RPC_API_LOAD_CAN_VARIANTE_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_LOAD_CAN_VARIANTE_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_LOAD_CAN_VARIANTE_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_LOAD_CAN_VARIANTE_MESSAGE_ACK);
     Out->Header.ReturnValue = LoadCANVarianteScriptCommand ((char*)In + In->OffsetCanFile, In->Channel);
     return Out->Header.StructSize;
@@ -51,7 +51,7 @@ static int RPCFunc_LoadAndSelCanVariant(RPC_CONNECTION *par_Connection, RPC_API_
     UNUSED(par_Connection);
     RPC_API_LOAD_AND_SEL_CAN_VARIANTE_MESSAGE *In = (RPC_API_LOAD_AND_SEL_CAN_VARIANTE_MESSAGE*)par_DataIn;
     RPC_API_LOAD_AND_SEL_CAN_VARIANTE_MESSAGE_ACK *Out = (RPC_API_LOAD_AND_SEL_CAN_VARIANTE_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_LOAD_AND_SEL_CAN_VARIANTE_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_LOAD_AND_SEL_CAN_VARIANTE_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_LOAD_AND_SEL_CAN_VARIANTE_MESSAGE_ACK);
     Out->Header.ReturnValue = 0;
     LoadAndSelectCANNodeScriptCommand ((char*)In + In->OffsetCanFile, In->Channel);
@@ -63,7 +63,7 @@ static int RPCFunc_AppendCanVariant(RPC_CONNECTION *par_Connection, RPC_API_BASE
     UNUSED(par_Connection);
     RPC_API_APPEND_CAN_VARIANTE_MESSAGE *In = (RPC_API_APPEND_CAN_VARIANTE_MESSAGE*)par_DataIn;
     RPC_API_APPEND_CAN_VARIANTE_MESSAGE_ACK *Out = (RPC_API_APPEND_CAN_VARIANTE_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_APPEND_CAN_VARIANTE_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_APPEND_CAN_VARIANTE_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_APPEND_CAN_VARIANTE_MESSAGE_ACK);
     Out->Header.ReturnValue = 0;
     AppendCANVarianteScriptCommand ((char*)In + In->OffsetCanFile, In->Channel);
@@ -76,7 +76,7 @@ static int RPCFunc_DelAllCanVariant(RPC_CONNECTION *par_Connection, RPC_API_BASE
     UNUSED(par_DataIn);
     //RPC_API_DEL_ALL_CAN_VARIANTE_MESSAGE *In = (RPC_API_DEL_ALL_CAN_VARIANTE_MESSAGE*)par_DataIn;
     RPC_API_DEL_ALL_CAN_VARIANTE_MESSAGE_ACK *Out = (RPC_API_DEL_ALL_CAN_VARIANTE_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_DEL_ALL_CAN_VARIANTE_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_DEL_ALL_CAN_VARIANTE_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_DEL_ALL_CAN_VARIANTE_MESSAGE_ACK);
     Out->Header.ReturnValue = 0;
     DeleteAllCANVariantesScriptCommand ();
@@ -93,7 +93,7 @@ static int RPCFunc_TransmitCAN(RPC_CONNECTION *par_Connection, RPC_API_BASE_MESS
     int CanFiFoHandle;
     RPC_API_TRANSMIT_CAN_MESSAGE *In = (RPC_API_TRANSMIT_CAN_MESSAGE*)par_DataIn;
     RPC_API_TRANSMIT_CAN_MESSAGE_ACK *Out = (RPC_API_TRANSMIT_CAN_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_TRANSMIT_CAN_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_TRANSMIT_CAN_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_TRANSMIT_CAN_MESSAGE_ACK);
 
     // Is the CAN message queue already exists?
@@ -113,7 +113,7 @@ static int RPCFunc_OpenCanQueue(RPC_CONNECTION *par_Connection, RPC_API_BASE_MES
 {
     RPC_API_OPEN_CAN_QUEUE_MESSAGE *In = (RPC_API_OPEN_CAN_QUEUE_MESSAGE*)par_DataIn;
     RPC_API_OPEN_CAN_QUEUE_MESSAGE_ACK *Out = (RPC_API_OPEN_CAN_QUEUE_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_OPEN_CAN_QUEUE_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_OPEN_CAN_QUEUE_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_OPEN_CAN_QUEUE_MESSAGE_ACK);
     par_Connection->CanFifoHandle = CreateCanFifos (In->Depth, 0);
     if (par_Connection->CanFifoHandle > 0) Out->Header.ReturnValue = 0;
@@ -125,7 +125,7 @@ static int RPCFunc_SetCANAcceptanceWindows(RPC_CONNECTION *par_Connection, RPC_A
 {
     RPC_API_SET_CAN_ACCEPTANCE_WINDOWS_MESSAGE *In = (RPC_API_SET_CAN_ACCEPTANCE_WINDOWS_MESSAGE*)par_DataIn;
     RPC_API_SET_CAN_ACCEPTANCE_WINDOWS_MESSAGE_ACK *Out = (RPC_API_SET_CAN_ACCEPTANCE_WINDOWS_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_SET_CAN_ACCEPTANCE_WINDOWS_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_SET_CAN_ACCEPTANCE_WINDOWS_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_SET_CAN_ACCEPTANCE_WINDOWS_MESSAGE_ACK);
     Out->Header.ReturnValue = SetAcceptMask4CanFifo (par_Connection->CanFifoHandle,
                                                      (CAN_ACCEPT_MASK*)((char*)In + In->Offset_CanAcceptance_Size_Windows),
@@ -137,7 +137,7 @@ static int RPCFunc_FlushCanQueue(RPC_CONNECTION *par_Connection, RPC_API_BASE_ME
 {
     RPC_API_FLUSH_CAN_QUEUE_MESSAGE *In = (RPC_API_FLUSH_CAN_QUEUE_MESSAGE*)par_DataIn;
     RPC_API_FLUSH_CAN_QUEUE_MESSAGE_ACK *Out = (RPC_API_FLUSH_CAN_QUEUE_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_FLUSH_CAN_QUEUE_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_FLUSH_CAN_QUEUE_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_FLUSH_CAN_QUEUE_MESSAGE_ACK);
     FlushCanFifo(par_Connection->CanFifoHandle, In->Flags);
     Out->Header.ReturnValue = FlushCanFifo(par_Connection->CanFifoHandle, In->Flags);
@@ -151,7 +151,7 @@ static int RPCFunc_ReadCANQueue(RPC_CONNECTION *par_Connection, RPC_API_BASE_MES
 
     RPC_API_READ_CAN_QUEUE_MESSAGE *In = (RPC_API_READ_CAN_QUEUE_MESSAGE*)par_DataIn;
     RPC_API_READ_CAN_QUEUE_MESSAGE_ACK *Out = (RPC_API_READ_CAN_QUEUE_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_READ_CAN_QUEUE_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_READ_CAN_QUEUE_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_READ_CAN_QUEUE_MESSAGE_ACK);
     Out->Offset_CanObject_ReadElements_Messages = sizeof(*Out) - 1;
     if (In->ReadMaxElements < 0) Max = 0;
@@ -177,7 +177,7 @@ static int RPCFunc_TransmitCANQueue(RPC_CONNECTION *par_Connection, RPC_API_BASE
     CAN_FIFO_ELEM* Help;
     RPC_API_TRANSMIT_CAN_QUEUE_MESSAGE *In = (RPC_API_TRANSMIT_CAN_QUEUE_MESSAGE*)par_DataIn;
     RPC_API_TRANSMIT_CAN_QUEUE_MESSAGE_ACK *Out = (RPC_API_TRANSMIT_CAN_QUEUE_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_TRANSMIT_CAN_QUEUE_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_TRANSMIT_CAN_QUEUE_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_TRANSMIT_CAN_QUEUE_MESSAGE_ACK);
 
     Help = (CAN_FIFO_ELEM*)((char*)In + In->Offset_CanObject_WriteElements_Messages);
@@ -191,7 +191,7 @@ static int RPCFunc_CloseCANQueue(RPC_CONNECTION *par_Connection, RPC_API_BASE_ME
     UNUSED(par_DataIn);
     //RPC_API_CLOSE_CAN_QUEUE_MESSAGE *In = (RPC_API_CLOSE_CAN_QUEUE_MESSAGE*)par_DataIn;
     RPC_API_CLOSE_CAN_QUEUE_MESSAGE_ACK *Out = (RPC_API_CLOSE_CAN_QUEUE_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_CLOSE_CAN_QUEUE_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_CLOSE_CAN_QUEUE_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_CLOSE_CAN_QUEUE_MESSAGE_ACK);
     Out->Header.ReturnValue = DeleteCanFifos (par_Connection->CanFifoHandle);
     par_Connection->CanFifoHandle = 0;
@@ -203,7 +203,7 @@ static int RPCFunc_SetCanErr(RPC_CONNECTION *par_Connection, RPC_API_BASE_MESSAG
     UNUSED(par_Connection);
     RPC_API_SET_CAN_ERR_MESSAGE *In = (RPC_API_SET_CAN_ERR_MESSAGE*)par_DataIn;
     RPC_API_SET_CAN_ERR_MESSAGE_ACK *Out = (RPC_API_SET_CAN_ERR_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_SET_CAN_ERR_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_SET_CAN_ERR_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_SET_CAN_ERR_MESSAGE_ACK);
     Out->Header.ReturnValue = ScriptSetCanErr (In->Channel, In->Id, In->Startbit, In->Bitsize,
                                                (char*)In + In->OffsetByteorder, In->Cycles, In->BitErrValue);
@@ -215,7 +215,7 @@ static int RPCFunc_SetCanErrSignalName(RPC_CONNECTION *par_Connection, RPC_API_B
     UNUSED(par_Connection);
     RPC_API_SET_CAN_ERR_SIGNAL_NAME_MESSAGE *In = (RPC_API_SET_CAN_ERR_SIGNAL_NAME_MESSAGE*)par_DataIn;
     RPC_API_SET_CAN_ERR_SIGNAL_NAME_MESSAGE_ACK *Out = (RPC_API_SET_CAN_ERR_SIGNAL_NAME_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_SET_CAN_ERR_SIGNAL_NAME_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_SET_CAN_ERR_SIGNAL_NAME_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_SET_CAN_ERR_SIGNAL_NAME_MESSAGE_ACK);
     Out->Header.ReturnValue = ScriptSetCanErrSignalName (In->Channel, In->Id, (char*)In + In->OffsetSignalName,
                                                          In->Cycles, In->BitErrValue);
@@ -228,7 +228,7 @@ static int RPCFunc_ClearCanErr(RPC_CONNECTION *par_Connection, RPC_API_BASE_MESS
     UNUSED(par_DataIn);
     // RPC_API_CLEAR_CAN_ERR_MESSAGE *In = (RPC_API_CLEAR_CAN_ERR_MESSAGE*)par_DataIn;
     RPC_API_CLEAR_CAN_ERR_MESSAGE_ACK *Out = (RPC_API_CLEAR_CAN_ERR_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_CLEAR_CAN_ERR_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_CLEAR_CAN_ERR_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_CLEAR_CAN_ERR_MESSAGE_ACK);
     Out->Header.ReturnValue = ScriptClearCanErr ();
     return Out->Header.StructSize;
@@ -257,7 +257,7 @@ static int RPCFunc_SetCanSignalConvertion(RPC_CONNECTION *par_Connection, RPC_AP
     int UseCANData;
     RPC_API_SET_CAN_SIGNAL_CONVERTION_MESSAGE *In = (RPC_API_SET_CAN_SIGNAL_CONVERTION_MESSAGE*)par_DataIn;
     RPC_API_SET_CAN_SIGNAL_CONVERTION_MESSAGE_ACK *Out = (RPC_API_SET_CAN_SIGNAL_CONVERTION_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_SET_CAN_SIGNAL_CONVERTION_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_SET_CAN_SIGNAL_CONVERTION_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_SET_CAN_SIGNAL_CONVERTION_MESSAGE_ACK);
 
 
@@ -303,7 +303,7 @@ static int RPCFunc_ResetCanSignalConvertion(RPC_CONNECTION *par_Connection, RPC_
 {
     RPC_API_RESET_CAN_SIGNAL_CONVERTION_MESSAGE *In = (RPC_API_RESET_CAN_SIGNAL_CONVERTION_MESSAGE*)par_DataIn;
     RPC_API_RESET_CAN_SIGNAL_CONVERTION_MESSAGE_ACK *Out = (RPC_API_RESET_CAN_SIGNAL_CONVERTION_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_RESET_CAN_SIGNAL_CONVERTION_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_RESET_CAN_SIGNAL_CONVERTION_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_RESET_CAN_SIGNAL_CONVERTION_MESSAGE_ACK);
     Out->Header.ReturnValue = ScriptClearCanErr ();
 
@@ -343,7 +343,7 @@ static int RPCFunc_ResetAllCanSignalConvertion(RPC_CONNECTION *par_Connection, R
 {
     RPC_API_RESET_CAN_SIGNAL_CONVERTION_MESSAGE *In = (RPC_API_RESET_CAN_SIGNAL_CONVERTION_MESSAGE*)par_DataIn;
     RPC_API_RESET_CAN_SIGNAL_CONVERTION_MESSAGE_ACK *Out = (RPC_API_RESET_CAN_SIGNAL_CONVERTION_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_RESET_CAN_SIGNAL_CONVERTION_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_RESET_CAN_SIGNAL_CONVERTION_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_RESET_CAN_SIGNAL_CONVERTION_MESSAGE_ACK);
     Out->Header.ReturnValue = ScriptClearCanErr ();
 
@@ -368,7 +368,7 @@ static int RPCFunc_SetCanChannelCount(RPC_CONNECTION *par_Connection, RPC_API_BA
     UNUSED(par_Connection);
     RPC_API_SET_CAN_CHANNEL_COUNT_MESSAGE *In = (RPC_API_SET_CAN_CHANNEL_COUNT_MESSAGE*)par_DataIn;
     RPC_API_SET_CAN_CHANNEL_COUNT_MESSAGE_ACK *Out = (RPC_API_SET_CAN_CHANNEL_COUNT_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_SET_CAN_CHANNEL_COUNT_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_SET_CAN_CHANNEL_COUNT_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_SET_CAN_CHANNEL_COUNT_MESSAGE_ACK);
     Out->Header.ReturnValue = ScriptSetCANChannelCount (In->ChannelCount);
     return Out->Header.StructSize;
@@ -380,7 +380,7 @@ static int RPCFunc_SetCanChannelStartupState(RPC_CONNECTION *par_Connection, RPC
     //UNUSED(par_DataIn);
     RPC_API_SET_CAN_CHANNEL_STARTUP_STATE_MESSAGE *In = (RPC_API_SET_CAN_CHANNEL_STARTUP_STATE_MESSAGE*)par_DataIn;
     RPC_API_SET_CAN_CHANNEL_STARTUP_STATE_MESSAGE_ACK *Out = (RPC_API_SET_CAN_CHANNEL_STARTUP_STATE_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_SET_CAN_CHANNEL_STARTUP_STATE_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_SET_CAN_CHANNEL_STARTUP_STATE_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_SET_CAN_CHANNEL_STARTUP_STATE_MESSAGE_ACK);
     Out->Header.ReturnValue = ScriptSetCANChannelStartupState (In->Channel, In->StartupState);
     return Out->Header.StructSize;
@@ -397,7 +397,7 @@ static int RPCFunc_TransmitCANFd(RPC_CONNECTION *par_Connection, RPC_API_BASE_ME
     int CanFiFoHandle;
     RPC_API_TRANSMIT_CAN_FD_MESSAGE *In = (RPC_API_TRANSMIT_CAN_FD_MESSAGE*)par_DataIn;
     RPC_API_TRANSMIT_CAN_FD_MESSAGE_ACK *Out = (RPC_API_TRANSMIT_CAN_FD_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_TRANSMIT_CAN_FD_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_TRANSMIT_CAN_FD_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_TRANSMIT_CAN_FD_MESSAGE_ACK);
 
     // Is the CAN message queue already exists?
@@ -417,7 +417,7 @@ static int RPCFunc_OpenCanFdQueue(RPC_CONNECTION *par_Connection, RPC_API_BASE_M
 {
     RPC_API_OPEN_CAN_FD_QUEUE_MESSAGE *In = (RPC_API_OPEN_CAN_FD_QUEUE_MESSAGE*)par_DataIn;
     RPC_API_OPEN_CAN_FD_QUEUE_MESSAGE_ACK *Out = (RPC_API_OPEN_CAN_FD_QUEUE_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_OPEN_CAN_FD_QUEUE_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_OPEN_CAN_FD_QUEUE_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_OPEN_CAN_FD_QUEUE_MESSAGE_ACK);
     par_Connection->CanFifoHandle = CreateCanFifos (In->Depth, In->FdFlag);
     if (par_Connection->CanFifoHandle > 0) Out->Header.ReturnValue = 0;
@@ -432,7 +432,7 @@ static int RPCFunc_ReadCANFdQueue(RPC_CONNECTION *par_Connection, RPC_API_BASE_M
 
     RPC_API_READ_CAN_FD_QUEUE_MESSAGE *In = (RPC_API_READ_CAN_FD_QUEUE_MESSAGE*)par_DataIn;
     RPC_API_READ_CAN_FD_QUEUE_MESSAGE_ACK *Out = (RPC_API_READ_CAN_FD_QUEUE_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_READ_CAN_FD_QUEUE_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_READ_CAN_FD_QUEUE_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_READ_CAN_FD_QUEUE_MESSAGE_ACK);
     Out->Offset_CanFdObject_ReadElements_Messages = sizeof(*Out) - 1;
     if (In->ReadMaxElements < 0) Max = 0;
@@ -458,7 +458,7 @@ static int RPCFunc_TransmitCANFdQueue(RPC_CONNECTION *par_Connection, RPC_API_BA
     CAN_FD_FIFO_ELEM* Help;
     RPC_API_TRANSMIT_CAN_FD_QUEUE_MESSAGE *In = (RPC_API_TRANSMIT_CAN_FD_QUEUE_MESSAGE*)par_DataIn;
     RPC_API_TRANSMIT_CAN_FD_QUEUE_MESSAGE_ACK *Out = (RPC_API_TRANSMIT_CAN_FD_QUEUE_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_TRANSMIT_CAN_FD_QUEUE_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_TRANSMIT_CAN_FD_QUEUE_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_TRANSMIT_CAN_FD_QUEUE_MESSAGE_ACK);
 
     Help = (CAN_FD_FIFO_ELEM*)((char*)In + In->Offset_CanFdObject_WriteElements_Messages);
@@ -471,7 +471,7 @@ static int RPCFunc_StartCANRecorder(RPC_CONNECTION *par_Connection, RPC_API_BASE
 {
     RPC_API_START_CAN_RECORDER_MESSAGE *In = (RPC_API_START_CAN_RECORDER_MESSAGE*)par_DataIn;
     RPC_API_START_CAN_RECORDER_MESSAGE_ACK *Out = (RPC_API_START_CAN_RECORDER_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_START_CAN_RECORDER_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_START_CAN_RECORDER_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_START_CAN_RECORDER_MESSAGE_ACK);
     if (par_Connection->CanRecorderHandle != NULL) {
         Out->Header.ReturnValue = -1;
@@ -500,7 +500,7 @@ static int RPCFunc_StopCANRecorder(RPC_CONNECTION *par_Connection, RPC_API_BASE_
     UNUSED(par_DataIn);
     //RPC_API_STOP_CAN_RECORDER_MESSAGE *In = (RPC_API_STOP_CAN_RECORDER_MESSAGE*)par_DataIn;
     RPC_API_STOP_CAN_RECORDER_MESSAGE_ACK *Out = (RPC_API_STOP_CAN_RECORDER_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_STOP_CAN_RECORDER_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_STOP_CAN_RECORDER_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_STOP_CAN_RECORDER_MESSAGE_ACK);
     if (par_Connection->CanRecorderHandle != NULL) {
         StopCanRecorder (par_Connection->CanRecorderHandle);

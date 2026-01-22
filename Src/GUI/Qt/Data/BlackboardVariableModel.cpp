@@ -23,10 +23,6 @@
 #include "DragAndDrop.h"
 extern "C" {
 #include "Blackboard.h"
-#include "ThrowError.h"
-#include "MainValues.h"
-#define FKTCALL_PROTOCOL
-#include "RunTimeMeasurement.h"
 }
 
 BlackboardVariableModel::BlackboardVariableModel(QObject* arg_parent) : QAbstractListModel(arg_parent), m_ObserverConnection(this)
@@ -49,7 +45,6 @@ int BlackboardVariableModel::rowCount(const QModelIndex& arg_parent) const
 QVariant BlackboardVariableModel::data(const QModelIndex& arg_index, int arg_role) const
 {
     QVariant Ret = QVariant();
-    BEGIN_RUNTIME_MEASSUREMENT ("BlackboardVariableModel::data")
     if(arg_index.isValid()) {
         switch(arg_role) {
             case Qt::DisplayRole:
@@ -123,7 +118,6 @@ QVariant BlackboardVariableModel::data(const QModelIndex& arg_index, int arg_rol
                 break;
         }
     }
-    END_RUNTIME_MEASSUREMENT
     return Ret;
 }
 
@@ -226,7 +220,6 @@ BlackboardVariableModel *BlackboardVariableModel::MakeASnapshotCopy()
 
 void BlackboardVariableModel::InsertVid(int arg_vid)
 {
-    BEGIN_RUNTIME_MEASSUREMENT ("BlackboardVariableModel::InsertVid")
     int Size = m_Elements.size();
     VariableElemente NewElement;
     NewElement.m_Vid = arg_vid;
@@ -239,80 +232,53 @@ void BlackboardVariableModel::InsertVid(int arg_vid)
     this->beginInsertRows(QModelIndex(), Size, Size);
     m_Elements.append(NewElement);
     this->endInsertRows();
-    END_RUNTIME_MEASSUREMENT
 }
 
 void BlackboardVariableModel::RemoveVid(int arg_vid)
 {
     int Pos;
-    BEGIN_RUNTIME_MEASSUREMENT ("BlackboardVariableModel::RemoveVid")
     VariableElemente Element;
     Element.m_Vid = arg_vid;
-    BEGIN_RUNTIME_MEASSUREMENT ("BlackboardVariableModel::RemoveVid.indexOf")
     Pos = m_Elements.indexOf(Element);
-    END_RUNTIME_MEASSUREMENT
     if (Pos >= 0) {
-        BEGIN_RUNTIME_MEASSUREMENT ("BlackboardVariableModel::RemoveVid.beginRemoveRows")
         this->beginRemoveRows(QModelIndex(), Pos, Pos);
-        END_RUNTIME_MEASSUREMENT
-        BEGIN_RUNTIME_MEASSUREMENT ("BlackboardVariableModel::RemoveVid.removeAt")
         m_Elements.removeAt(Pos);
-        END_RUNTIME_MEASSUREMENT
-        BEGIN_RUNTIME_MEASSUREMENT ("BlackboardVariableModel::RemoveVid.endRemoveRows")
         this->endRemoveRows();
-        END_RUNTIME_MEASSUREMENT
     }
-    END_RUNTIME_MEASSUREMENT
 }
 
 void BlackboardVariableModel::ChangeDataType(int arg_vid)
 {
     int Pos;
-    BEGIN_RUNTIME_MEASSUREMENT ("BlackboardVariableModel::ChangeDataType")
     VariableElemente Element;
     Element.m_Vid = arg_vid;
-    BEGIN_RUNTIME_MEASSUREMENT ("BlackboardVariableModel::ChangeDataType.indexOf")
     Pos = m_Elements.indexOf(Element);
-    END_RUNTIME_MEASSUREMENT
     if (Pos >= 0) {
         VariableElemente ChangedElemnet = m_Elements.at(Pos);
         ChangedElemnet.m_DataType = static_cast<enum BB_DATA_TYPES>(get_bbvaritype (arg_vid));
-        BEGIN_RUNTIME_MEASSUREMENT ("BlackboardVariableModel::ChangeDataType.replace")
         m_Elements.replace(Pos, ChangedElemnet);
-        END_RUNTIME_MEASSUREMENT
-        BEGIN_RUNTIME_MEASSUREMENT ("BlackboardVariableModel::ChangeDataType.endRemoveRows")
         QVector<int> Role;
         Role.append(Qt::BackgroundRole);
         QModelIndex Index = index(Pos);
         this->dataChanged(Index, Index, Role);
-        END_RUNTIME_MEASSUREMENT
     }
-    END_RUNTIME_MEASSUREMENT
 }
 
 void BlackboardVariableModel::ChangeConvertionType(int arg_vid)
 {
     int Pos;
-    BEGIN_RUNTIME_MEASSUREMENT ("BlackboardVariableModel::ChangeDataType")
     VariableElemente Element;
     Element.m_Vid = arg_vid;
-    BEGIN_RUNTIME_MEASSUREMENT ("BlackboardVariableModel::ChangeDataType.indexOf")
     Pos = m_Elements.indexOf(Element);
-    END_RUNTIME_MEASSUREMENT
     if (Pos >= 0) {
         VariableElemente ChangedElemnet = m_Elements.at(Pos);
         ChangedElemnet.m_ConversionType = static_cast<enum BB_CONV_TYPES>(get_bbvari_conversiontype(arg_vid));
-        BEGIN_RUNTIME_MEASSUREMENT ("BlackboardVariableModel::ChangeDataType.replace")
         m_Elements.replace(Pos, ChangedElemnet);
-        END_RUNTIME_MEASSUREMENT
-        BEGIN_RUNTIME_MEASSUREMENT ("BlackboardVariableModel::ChangeDataType.endRemoveRows")
         QVector<int> Role;
         Role.append(Qt::BackgroundRole);
         QModelIndex Index = index(Pos);
         this->dataChanged(Index, Index, Role);
-        END_RUNTIME_MEASSUREMENT
     }
-    END_RUNTIME_MEASSUREMENT
 }
 
 void BlackboardVariableModel::blackboardVariableConfigChanged(int vid, unsigned int flags)
@@ -320,7 +286,8 @@ void BlackboardVariableModel::blackboardVariableConfigChanged(int vid, unsigned 
     if (vid > 0) {
         if ((flags & OBSERVE_ADD_VARIABLE) == OBSERVE_ADD_VARIABLE) {
             InsertVid(vid);
-        } else if ((flags & OBSERVE_REMOVE_VARIABLE) == OBSERVE_REMOVE_VARIABLE) {
+        }
+        if ((flags & OBSERVE_REMOVE_VARIABLE) == OBSERVE_REMOVE_VARIABLE) {
             RemoveVid(vid);
         }
         if ((flags & OBSERVE_TYPE_CHANGED) == OBSERVE_TYPE_CHANGED) {

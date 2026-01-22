@@ -26,6 +26,7 @@
 extern "C" {
 #include "MyMemory.h"
 #include "StringMaxChar.h"
+#include "PrintFormatToString.h"
 #include "ThrowError.h"
 #include "MainValues.h"
 #include "IniDataBase.h"
@@ -253,8 +254,9 @@ void ScriptErrorDialog::ScriptErrorMsgDlgAddMsgGuiThread(int par_Level, int par_
 {
     if (GetError2MessageFlag()) {
         if (par_Message != nullptr) {
-            char *MessageBuffer = (char*)my_malloc(strlen(par_Message) + 32);
-            sprintf (MessageBuffer, "Scipt error: %s", par_Message);
+            int Len = strlen(par_Message) + 32;
+            char *MessageBuffer = (char*)my_malloc(Len);
+            PrintFormatToString (MessageBuffer, Len, "Scipt error: %s", par_Message);
             AddScriptMessageOnlyMessageFile(MessageBuffer);
             my_free(MessageBuffer);
         }
@@ -283,13 +285,13 @@ void ScriptErrorDialog::OpenFileAtLineNr(char *par_Filename, int par_LineNr)
 #ifdef _WIN32
     int Ret;
     char CommandLine[2048];
-    STARTUPINFO         sStartInfo;
-    SECURITY_ATTRIBUTES sa;
-    PROCESS_INFORMATION sProcInfo;
+    STARTUPINFO StartInfo = {0};
+    SECURITY_ATTRIBUTES Attributes;
+    PROCESS_INFORMATION ProcInfo;
 
     char loc_Filename[MAX_PATH];
     if (expand_filename (par_Filename, loc_Filename, sizeof (loc_Filename)) != 0) {
-        strcpy (loc_Filename, par_Filename);
+        StringCopyMaxCharTruncate(loc_Filename, par_Filename, sizeof(loc_Filename));
     }
 
     char *p = CommandLine;
@@ -305,21 +307,19 @@ void ScriptErrorDialog::OpenFileAtLineNr(char *par_Filename, int par_LineNr)
         }
     }
 
-    sprintf (p, "code.exe -g %s:%i", loc_Filename, par_LineNr);
-    //sprintf (p, "cmd.exe");
+    PrintFormatToString (p, sizeof(CommandLine) - (p - CommandLine), "code.exe -g %s:%i", loc_Filename, par_LineNr);
 
-    memset (&sStartInfo, 0, sizeof (sStartInfo));
-    sStartInfo.cb            = sizeof(STARTUPINFO);
-    sStartInfo.dwFlags       = STARTF_USESHOWWINDOW;
-    sStartInfo.wShowWindow   = SW_SHOWDEFAULT;
-    sStartInfo.lpReserved    = nullptr;
-    sStartInfo.lpDesktop     = nullptr;
-    sStartInfo.lpTitle       = nullptr;
-    sStartInfo.cbReserved2   = 0;
-    sStartInfo.lpReserved2   = nullptr;
-    sa.nLength              = sizeof(SECURITY_ATTRIBUTES);
-    sa.lpSecurityDescriptor = nullptr;
-    sa.bInheritHandle       = TRUE;
+    StartInfo.cb = sizeof(STARTUPINFO);
+    StartInfo.dwFlags = STARTF_USESHOWWINDOW;
+    StartInfo.wShowWindow = SW_SHOWDEFAULT;
+    StartInfo.lpReserved = nullptr;
+    StartInfo.lpDesktop = nullptr;
+    StartInfo.lpTitle = nullptr;
+    StartInfo.cbReserved2 = 0;
+    StartInfo.lpReserved2 = nullptr;
+    Attributes.nLength = sizeof(SECURITY_ATTRIBUTES);
+    Attributes.lpSecurityDescriptor = nullptr;
+    Attributes.bInheritHandle       = TRUE;
 
     Ret = CreateProcessA (nullptr,
                          CommandLine,
@@ -329,8 +329,8 @@ void ScriptErrorDialog::OpenFileAtLineNr(char *par_Filename, int par_LineNr)
                          CREATE_NEW_CONSOLE,
                          nullptr,
                          nullptr,
-                         &sStartInfo,
-                         &sProcInfo);
+                         &StartInfo,
+                         &ProcInfo);
 
     if (!Ret) {
         char *lpMsgBuf = NULL;
@@ -346,8 +346,8 @@ void ScriptErrorDialog::OpenFileAtLineNr(char *par_Filename, int par_LineNr)
         ThrowError (1, "cannot start visual code \"%s\" (%s)", CommandLine, lpMsgBuf);
         LocalFree (lpMsgBuf);
     } else {
-        CloseHandle(sProcInfo.hThread);
-        CloseHandle(sProcInfo.hProcess);
+        CloseHandle(ProcInfo.hThread);
+        CloseHandle(ProcInfo.hProcess);
     }
 #else
     UNUSED(par_Filename);

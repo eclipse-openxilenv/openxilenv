@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #ifdef _WIN32
 #include <windows.h>
 #else
@@ -10,11 +11,56 @@ extern "C" {
 }
 #include "Fmu3Struct.h"
 
+// The logger will rise a popup message except fmi2OK.
+// If the environment variable FMU_LOGGING_FOLDER is set to a folder, the logger will write a log file (name is <model name>.log)
 void loggerFunction(fmi3InstanceEnvironment instanceEnvironment, fmi3Status status, fmi3String category, fmi3String message)
 {
-	//ignore *instanceEnvironment
-	//ignore status
-	//ignore category
+    FMU* Fmu = (FMU*)instanceEnvironment;
+
+    if (Fmu != NULL) {
+        if (Fmu->LoggingEnable) {
+            if (Fmu->LoggingFile == nullptr) {
+                char* LoggingPath = (char*)malloc(strlen(Fmu->LoggingFolder) + strlen(Fmu->ModelName) + 6);
+                strcpy(LoggingPath, Fmu->LoggingFolder);
+#ifdef _WIN32
+                strcat(LoggingPath, "\\");
+#else
+                strcat(LoggingPath, "/");
+#endif
+                strcat(LoggingPath, Fmu->ModelName);
+                strcat(LoggingPath, ".log");
+                Fmu->LoggingFile = fopen(LoggingPath, "wt");
+                if (Fmu->LoggingFile == nullptr) {
+                    ThrowError(1, "cannot open logging file \"%s\" -> logging disabled", LoggingPath);
+                    Fmu->LoggingEnable = false;
+                }
+            }
+            if (Fmu->LoggingFile != nullptr) {
+                switch (status) {
+                case fmi3OK:
+                    fprintf(Fmu->LoggingFile, "fmi3OK: ");
+                    break;
+                case fmi3Warning:
+                    fprintf(Fmu->LoggingFile, "fmi3Warning: ");
+                    break;
+                case fmi3Discard:
+                    fprintf(Fmu->LoggingFile, "fmi3Discard: ");
+                    break;
+                case fmi3Error:
+                    fprintf(Fmu->LoggingFile, "fmi3Error: ");
+                    break;
+                case fmi3Fatal:
+                    fprintf(Fmu->LoggingFile, "fmi3Fatal: ");
+                    break;
+                default:
+                    fprintf(Fmu->LoggingFile, "unknown: ");
+                    break;
+                }
+                fprintf(Fmu->LoggingFile, "%s", message);
+                fprintf(Fmu->LoggingFile, "\n");
+            }
+        }
+    }
     if (status != fmi3OK) {
         ThrowErrorNoVariableArguments(1, message);
     }
@@ -112,18 +158,19 @@ int FmuInit(FMU *par_Fmu)
 {
     int Vid;
     bool SyncParametersWithBlackboardSave;
+    long long  SchedulerPeriod;
 
     //Instantiate
     fmi3Instance Instance = par_Fmu->fmi3InstantiateCoSimulation(par_Fmu->ModelName,
                                                                  par_Fmu->instantiationToken,
                                                                  par_Fmu->ResourceDirectory,
                                                                  fmi3False,  // visible
-                                                                 fmi3True,   // loggingOn
+                                                                 par_Fmu->LoggingEnable,   // loggingOn
                                                                  fmi3False,  // eventModeUsed
                                                                  fmi3False,  // earlyReturnAllowed
                                                                  NULL,       // requiredIntermediateVariables
                                                                  0,          // nRequiredIntermediateVariables
-                                                                 NULL,       // instanceEnvironment,
+                                                                 par_Fmu,    // instanceEnvironment,
                                                                  loggerFunction,
                                                                  intermediateUpdateCallback);
     if (Instance == NULL) {
@@ -138,7 +185,6 @@ int FmuInit(FMU *par_Fmu)
     par_Fmu->SyncParametersWithBlackboard = SyncParametersWithBlackboardSave;
 
     //Initialize slaves
-    //par_Fmu->Status = par_Fmu->fmi3SetupExperiment(par_Fmu->Instance, fmi2False, 0.0, 0.0, fmi2False, 0.0);  // Startzeit 0.0 und keine Stopzeit!
     par_Fmu->Status = par_Fmu->fmi3EnterInitializationMode(par_Fmu->Instance,
                                                            fmi3False, // toleranceDefined,
                                                            0.0,       // tolerance,
@@ -152,9 +198,9 @@ int FmuInit(FMU *par_Fmu)
     par_Fmu->Status = par_Fmu->fmi3ExitInitializationMode(par_Fmu->Instance);
 
     //communication step size
-    Vid = attach_bbvari("abt_per");
-    par_Fmu->TimeStep = read_bbvari_double(Vid);
-    remove_bbvari(Vid);
+    SchedulerPeriod = 0;
+    GetSchedulingInformation(nullptr, nullptr, &SchedulerPeriod, nullptr, nullptr, nullptr, nullptr);
+    par_Fmu->TimeStep = (double)SchedulerPeriod * 0.000000001; // convert from ns to s
 
     par_Fmu->SimTime = 0.0;
 
@@ -186,9 +232,7 @@ int FmuOneCycle(FMU *par_Fmu)
                 ThrowError(1, "FMU %s wants to terminate simulation.", par_Fmu->ModelName);
             }
             break;
-        case fmi3Error:
-        case fmi3Fatal:
-            //return -1;
+        default:
             break;
         }
         SyncAllOutputVariables(par_Fmu);

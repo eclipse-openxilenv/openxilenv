@@ -19,7 +19,6 @@
 #define TEXTVALUEINPUT_H
 
 #include <QLineEdit>
-//#include <QRegExpValidator>
 #include <QRegularExpressionValidator>
 
 extern "C" {

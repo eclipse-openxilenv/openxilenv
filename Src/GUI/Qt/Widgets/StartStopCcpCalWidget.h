@@ -52,7 +52,7 @@ private:
     static int Connection;
     int curConnection;
     CCPCFGDLG_SHEET_DATA *ccpconfig_data;
-    void FillListBoxes(const char *Filter);
+    void FillListBoxes(const char *Filter, bool UpdateSelected);
 };
 
 #endif // STARTSTOPCCPCALWIDGET_H

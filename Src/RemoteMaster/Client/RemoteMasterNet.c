@@ -36,9 +36,10 @@
 #endif
 #include <stdlib.h>
 #include <stdio.h>
-
+#include "StringMaxChar.h"
 #include "ThrowError.h"
 #include "MyMemory.h"
+#include "PrintFormatToString.h"
 #include "MainValues.h"
 #include "RemoteMasterBlackboard.h"
 #include "RemoteMasterScheduler.h"
@@ -511,30 +512,30 @@ int InitRemoteMaster(char *par_RemoteMasterAddr, int par_RemoteMasterPort)
         RemoteMasterRemoveVarLogMessages(s_main_ini_val.RemoteMasterName,
                                          s_main_ini_val.RemoteMasterPort + 2);
 
-        strcpy (SharedLibraryDstDir, s_main_ini_val.RemoteMasterCopyTo);
+        STRING_COPY_TO_ARRAY (SharedLibraryDstDir, s_main_ini_val.RemoteMasterCopyTo);
         p = strrchr(SharedLibraryDstDir, '/');
         if (p != NULL) {
             *p = 0;
         }
 
-        strcpy (SharedLibraryDstPath, s_main_ini_val.RemoteMasterCopyTo);
+        STRING_COPY_TO_ARRAY (SharedLibraryDstPath, s_main_ini_val.RemoteMasterCopyTo);
         p = strrchr(SharedLibraryDstPath, '/');
         if (p == NULL) {
-            strcpy(SharedLibraryDstPath, "libLinuxRemoteMasterCore.so");
+            STRING_COPY_TO_ARRAY(SharedLibraryDstPath, "libLinuxRemoteMasterCore.so");
         } else {
-            strcpy(p, "/libLinuxRemoteMasterCore.so");
+            StringCopyMaxCharTruncate(p, "/libLinuxRemoteMasterCore.so", sizeof(SharedLibraryDstPath) - (p - SharedLibraryDstPath));
         }
 
 #ifdef _WIN32
         GetModuleFileName (GetModuleHandle(NULL), SharedLibrarySrcPath, sizeof (SharedLibrarySrcPath));
         p = strrchr (SharedLibrarySrcPath, '\\');
         if (p == NULL) p = SharedLibrarySrcPath + strlen(SharedLibrarySrcPath);
-        strcpy(p, "\\rt_linux\\libLinuxRemoteMasterCore.so");
+        StringCopyMaxCharTruncate(p, "\\rt_linux\\libLinuxRemoteMasterCore.so", sizeof(SharedLibrarySrcPath) - (p - SharedLibrarySrcPath));
 #else
         readlink("/proc/self/exe", SharedLibrarySrcPath, sizeof (SharedLibrarySrcPath));
         p = strrchr (SharedLibrarySrcPath, '/');
         if (p == NULL) p = SharedLibrarySrcPath + strlen(SharedLibrarySrcPath);
-        strcpy(p, "/rt_linux/libLinuxRemoteMasterCore.so");
+        StringCopyMaxCharTruncate(p, "/rt_linux/libLinuxRemoteMasterCore.so", sizeof(SharedLibrarySrcPath) - (p - SharedLibrarySrcPath));
 #endif
         if (access(SharedLibrarySrcPath, 0)) {
             ThrowError(MESSAGE_STOP, "File %s dosen't exist", SharedLibrarySrcPath);
@@ -578,12 +579,12 @@ static int ConnectThreadToRemoteMaster (SOCKET_THREAD_ELEMENT *par_SocketThreadE
     char PortString[32];
     int Ret = -1;
 
-    memset(&hints, 0, sizeof(hints));
+    MEMSET(&hints, 0, sizeof(hints));
     hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_protocol = IPPROTO_TCP;
 
-    sprintf (PortString, "%i", s_main_ini_val.RemoteMasterPort); //RemoteMasterPort);
+    PrintFormatToString (PortString, sizeof(PortString), "%i", s_main_ini_val.RemoteMasterPort); //RemoteMasterPort);
     // Resolve the server address and port
     iResult = getaddrinfo(s_main_ini_val.RemoteMasterName, PortString, &hints, &result);
     if (iResult != 0) {

@@ -26,6 +26,7 @@
 #endif
 #include "XcpOverEthernet.h"
 extern "C" {
+#include "StringMaxChar.h"
 #include "Scheduler.h"
 #include "ThrowError.h"
 #include "MyMemory.h"
@@ -45,7 +46,7 @@ cCopyPages::cCopyPages (void)
 {
     Pid = -1;
     LinkNo = -1;
-    strcpy (ExecutableName, "");
+    STRING_COPY_TO_ARRAY (ExecutableName, "");
     Pages = nullptr;
     NoOfPages = 0;
     SectionInfoArray = nullptr;
@@ -63,9 +64,9 @@ void cCopyPages::SetProcess (int par_Pid, int par_LinkNo)
 {
     Pid = par_Pid;
     LinkNo = par_LinkNo;
-    if (GetProcessInsideExecutableName (Pid, ExecutableName) < 0) {
+    if (GetProcessInsideExecutableName (Pid, ExecutableName, sizeof(ExecutableName)) < 0) {
         ThrowError (1, "not valid Pid %i", par_Pid);
-        strcpy (ExecutableName, "not valid");
+        STRING_COPY_TO_ARRAY (ExecutableName, "not valid");
     }
 }
 
@@ -108,7 +109,7 @@ int cCopyPages::AddPageToCallibationSegment (unsigned char SegmentNo, unsigned c
     if (Data != 0) {
         XCPReadMemoryFromExternProcess (LinkNo, Data, Pages[p].Buffer, static_cast<int>(Size));
     } else {
-        memset (Pages[p].Buffer, 0, Size);
+        MEMSET (Pages[p].Buffer, 0, Size);
     }
     return 0;
 }
@@ -204,15 +205,15 @@ int cCopyPages::ReadSectionInfosFormOneExecutableFile (int TaskNumber, char *par
                 return -1;
             }
             if (par_SectionPrefix != nullptr) {
-                strcpy (SectionInfoArray[SectionInfoArraySize].LongName, par_SectionPrefix);
-                strcat (SectionInfoArray[SectionInfoArraySize].LongName, "::");
-                strcat (SectionInfoArray[SectionInfoArraySize].LongName, SectionName);
+                STRING_COPY_TO_ARRAY (SectionInfoArray[SectionInfoArraySize].LongName, par_SectionPrefix);
+                STRING_APPEND_TO_ARRAY (SectionInfoArray[SectionInfoArraySize].LongName, "::");
+                STRING_APPEND_TO_ARRAY (SectionInfoArray[SectionInfoArraySize].LongName, SectionName);
                 SectionInfoArray[SectionInfoArraySize].TaskNumber = TaskNumber;
             } else {
-                strcpy (SectionInfoArray[SectionInfoArraySize].LongName, SectionName);
+                STRING_COPY_TO_ARRAY (SectionInfoArray[SectionInfoArraySize].LongName, SectionName);
                 SectionInfoArray[SectionInfoArraySize].TaskNumber = -1;
             }
-            strcpy (SectionInfoArray[SectionInfoArraySize].ShortName, SectionName);
+            STRING_COPY_TO_ARRAY (SectionInfoArray[SectionInfoArraySize].ShortName, SectionName);
             if (!strcmp (SectionName, ".text") ||
                 !strcmp (SectionName, ".rdata") ||
                 !strcmp (SectionName, ".data") ||
@@ -278,7 +279,8 @@ int cCopyPages::ReadSectionInfosFromAllExecutable (void)
         *d = 0;
         int Pid;
 
-        if ((Pid = GetProcessPidAndExecutableAndDllName (ProcessName, ExecutableFileName, DllFileName, &ProcessInsideExecutableNumber)) > 0) {
+        if ((Pid = GetProcessPidAndExecutableAndDllName (ProcessName, ExecutableFileName, sizeof(ExecutableFileName),
+                                                        DllFileName, sizeof(DllFileName), &ProcessInsideExecutableNumber)) > 0) {
             if ((ProcessInsideExecutableNumber < 0) || (ProcessInsideExecutableNumber >= 8)) {
                 ThrowError (1, "not more than 8 processes can be in one executable not %i", ProcessInsideExecutableNumber);
             }
@@ -302,7 +304,8 @@ int cCopyPages::ReadSectionInfosFromAllExecutable (void)
                     while (*p != 0) p++;
                     while ((p > DllOrExecutableName) && (*p != '/') && (*p != '\\')) p--;
                     if ((*p != '/') || (*p != '\\')) p++;
-                    strcpy (FileNameWithoutPath, p);
+                    STRING_COPY_TO_ARRAY
+                        (FileNameWithoutPath, p);
 #ifdef _WIN32
                     strupr (FileNameWithoutPath);    // Only uppercase
 #endif

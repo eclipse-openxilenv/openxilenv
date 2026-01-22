@@ -250,7 +250,6 @@ private Q_SLOTS:
     void toolbarHTMLreport();
     void toolbarOpenErrorFileWithEditor();
     void writeSheetsToIni();
-    void loadPlugin();
     void closeAllSheets();
     void saveAllSheets(QString &par_SelectedSheet);
     void ExitWithoutSaveIni();

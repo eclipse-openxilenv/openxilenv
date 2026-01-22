@@ -17,6 +17,8 @@
 
 extern "C" {
 #include "MyMemory.h"
+#include "MemZeroAndCopy.h"
+#include "PrintFormatToString.h"
 #include "MainValues.h"
 #include "RemoteMasterControlProcess.h"
 }
@@ -138,7 +140,7 @@ void CANMessageWindowModel::AddNewCANMessages(int par_NumberOfMessages, CAN_FD_F
                 m_CanMessageLines = static_cast<CAN_MESSAGE_LINE*>(my_realloc (m_CanMessageLines,
                                                                    static_cast<size_t>(m_CanMessageRowCount) *
                                                                    sizeof (CAN_MESSAGE_LINE)));
-                memset (&(m_CanMessageLines[m_CanMessageRowCount - 1]), 0, sizeof (CAN_MESSAGE_LINE));
+                MEMSET (&(m_CanMessageLines[m_CanMessageRowCount - 1]), 0, sizeof (CAN_MESSAGE_LINE));
                 m_CanMessageLines[m_CanMessageRowCount - 1].dTMin = 1000000.0;
                 m_CanMessageLines[m_CanMessageRowCount - 1].CanMessage = *pCANMessage;
                 TimestampCalcLine (&m_CanMessageLines[m_CanMessageRowCount - 1]);
@@ -216,7 +218,7 @@ QVariant CANMessageWindowModel::data(const QModelIndex &index, int role) const
                 if (Size > 64) Size = 64;
                 unsigned char *Data = m_CanMessageLines[Row].CanMessage.data;
                 for (int x = 0; x < Size; x++) {
-                    p += sprintf (p, "0x%02X ", static_cast<int>(Data[x]));
+                    p += PrintFormatToString (p, sizeof(DataString) - (p - DataString), "0x%02X ", static_cast<int>(Data[x]));
                 }
                 return QString (DataString);
             } else {

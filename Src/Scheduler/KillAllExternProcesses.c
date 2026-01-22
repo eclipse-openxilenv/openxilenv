@@ -26,6 +26,7 @@
 #endif
 
 #include "ThrowError.h"
+#include "PrintFormatToString.h"
 #include "PipeMessagesShared.h"
 #include "KillAllExternProcesses.h"
 
@@ -42,7 +43,7 @@ int InitKillAllExternProcesses (char *par_Prefix)
 #endif
     char EventName[MAX_PATH];
 
-    sprintf (EventName, KILL_ALL_EXTERN_PROCESS_EVENT "_%s", par_Prefix);   // The name can have a "Global\" or "Local\" prefix to explicitly create the object in the global or session namespace
+    PrintFormatToString (EventName, sizeof(EventName), KILL_ALL_EXTERN_PROCESS_EVENT "_%s", par_Prefix);   // The name can have a "Global\" or "Local\" prefix to explicitly create the object in the global or session namespace
 #ifdef _WIN32
     hEvent = CreateEvent (NULL, TRUE, FALSE, EventName);
     if (hEvent == NULL) {

@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>427</width>
-    <height>376</height>
+    <width>448</width>
+    <height>433</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -112,6 +112,9 @@
        <widget class="QComboBox" name="d_comboBoxBreakpoints">
         <property name="editable">
          <bool>true</bool>
+        </property>
+        <property name="sizeAdjustPolicy">
+         <enum>QComboBox::AdjustToMinimumContentsLengthWithIcon</enum>
         </property>
        </widget>
       </item>
@@ -270,7 +273,7 @@
            <bool>true</bool>
           </property>
           <property name="text">
-           <string>Add BB Variable</string>
+           <string>Add variable</string>
           </property>
          </widget>
         </item>

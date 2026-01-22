@@ -139,7 +139,7 @@ QVariant BinaryCompareModel::data(const QModelIndex &index, int role) const
         if ((m_DispBuffer != nullptr) && (Pos < m_DispBuffer->size())) {
             char Buffer[32];
             unsigned char Byte = static_cast<unsigned char>(m_DispBuffer->at(Pos));
-            sprintf (Buffer, "%02X", static_cast<unsigned int>(Byte));
+            PrintFormatToString (Buffer, sizeof(Buffer), "%02X", static_cast<unsigned int>(Byte));
             QString Ret(Buffer);
             return Ret;
         }
@@ -154,7 +154,7 @@ QVariant BinaryCompareModel::headerData(int section, Qt::Orientation orientation
         switch (role) {
         case Qt::DisplayRole:
             char Buffer[8];
-            sprintf (Buffer, "%02X", static_cast<unsigned int>(section));
+            PrintFormatToString (Buffer, sizeof(Buffer), "%02X", static_cast<unsigned int>(section));
             QString Ret(Buffer);
             return Ret;
         }
@@ -162,7 +162,7 @@ QVariant BinaryCompareModel::headerData(int section, Qt::Orientation orientation
         switch (role) {
         case Qt::DisplayRole:
             char Buffer[16];
-            sprintf (Buffer, "%08X", static_cast<unsigned int>(section * 16));
+            PrintFormatToString (Buffer, sizeof(Buffer), "%08X", static_cast<unsigned int>(section * 16));
             QString Ret(Buffer);
             return Ret;
         }

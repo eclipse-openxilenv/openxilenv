@@ -22,6 +22,8 @@
 #include "Platform.h"
 
 #include "Config.h"
+#include "StringMaxChar.h"
+#include "PrintFormatToString.h"
 #include "ReadConfig.h"
 #include "Files.h"
 #include "ThrowError.h"
@@ -79,9 +81,9 @@ int AddExternProcessTerminateOrResetBBVariable (int pid)
     char BlackboardVariable[BBVARI_NAME_SIZE];
     int vid;
 
-    ret = GetProcessNameWithoutPath (pid, ProcessNameWithoutPath);
+    ret = GetProcessNameWithoutPath (pid, ProcessNameWithoutPath, sizeof(ProcessNameWithoutPath));
     if (ret) return ret;
-    sprintf (BlackboardVariable, "%s.ExternProcess.%s.Action", GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_LONG_BLACKBOARD), ProcessNameWithoutPath);
+    PrintFormatToString (BlackboardVariable, sizeof(BlackboardVariable), "%s.ExternProcess.%s.Action", GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_LONG_BLACKBOARD), ProcessNameWithoutPath);
     vid = add_bbvari(BlackboardVariable, BB_UDWORD, "");
     if (vid <= 0) {
         ThrowError (1, "cannot add external process action variable %s", BlackboardVariable);
@@ -93,9 +95,8 @@ int AddExternProcessTerminateOrResetBBVariable (int pid)
         ExternProcessTerminateOrResets[ExternProcessTerminateOrResetCount].Vid = vid;
         ExternProcessTerminateOrResets[ExternProcessTerminateOrResetCount].Pid = pid;
         ExternProcessTerminateOrResets[ExternProcessTerminateOrResetCount].State = 0;
-        if (get_name_by_pid (pid, ProcessName) == 0) {
-            ExternProcessTerminateOrResets[ExternProcessTerminateOrResetCount].Name = (char*)my_malloc(strlen(ProcessName)+1);
-            if (ExternProcessTerminateOrResets[ExternProcessTerminateOrResetCount].Name != NULL) strcpy (ExternProcessTerminateOrResets[ExternProcessTerminateOrResetCount].Name, ProcessName);
+        if (get_name_by_pid (pid, ProcessName, sizeof(ProcessName)) == 0) {
+            ExternProcessTerminateOrResets[ExternProcessTerminateOrResetCount].Name = StringMalloc(ProcessName);
         } else {
             ExternProcessTerminateOrResets[ExternProcessTerminateOrResetCount].Name  = NULL;
         }
@@ -115,9 +116,9 @@ int RemoveExternProcessTerminateOrResetBBVariable (int pid)
     char BlackboardVariable[BBVARI_NAME_SIZE];
     int vid;
 
-    ret = GetProcessNameWithoutPath (pid, ProcessNameWithoutPath);
+    ret = GetProcessNameWithoutPath (pid, ProcessNameWithoutPath, sizeof(ProcessNameWithoutPath));
     if (ret) return ret;
-    sprintf (BlackboardVariable, "%s.ExternProcess.%s.Action", GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_LONG_BLACKBOARD), ProcessNameWithoutPath);
+    PrintFormatToString (BlackboardVariable, sizeof(BlackboardVariable), "%s.ExternProcess.%s.Action", GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_LONG_BLACKBOARD), ProcessNameWithoutPath);
 
     vid = get_bbvarivid_by_name (BlackboardVariable);
     if (vid <= 0) {
@@ -160,8 +161,7 @@ static char *StartupScript;
 
 int SetStartupScript (char *par_StartupScript)
 {
-    StartupScript = my_malloc (strlen (par_StartupScript) + 1);
-    strcpy (StartupScript, par_StartupScript);
+    StartupScript = StringRealloc (StartupScript, par_StartupScript);
     return 0;
 }
 
@@ -169,8 +169,7 @@ static char *RemoteMasterExecutable;
 
 int SetRemoteMasterExecutableCmdLine (char *par_RemoteMasterExecutable)
 {
-    RemoteMasterExecutable = my_malloc (strlen (par_RemoteMasterExecutable) + 1);
-    strcpy (RemoteMasterExecutable, par_RemoteMasterExecutable);
+    RemoteMasterExecutable = StringRealloc (RemoteMasterExecutable, par_RemoteMasterExecutable);
     return 0;
 }
 
@@ -200,7 +199,7 @@ static int ActivateStartupScript (void)
 int init_init (void)
 {
     static int done_flag;
-    long vids[5];
+    int vids[6];
     char str_period[32];
     char Name[BBVARI_NAME_SIZE];
 
@@ -214,7 +213,8 @@ int init_init (void)
     period_vid = vids[1] = add_bbvari (GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_SAMPLE_TIME), BB_DOUBLE, "s");
     vids[2] = add_bbvari (ExtendsWithConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_LONG2_BLACKBOARD, "Version", Name, sizeof(Name)), BB_UWORD, "");
     vids[3] = add_bbvari (ExtendsWithConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_SHORT_BLACKBOARD, "Realtime", Name, sizeof(Name)), BB_UWORD, "");
-    vids[4] = add_bbvari (ExtendsWithConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_LONG2_BLACKBOARD, "Version.Patch", Name, sizeof(Name)), BB_WORD, "");
+    vids[4] = add_bbvari (ExtendsWithConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_LONG2_BLACKBOARD, "Version.Minor", Name, sizeof(Name)), BB_WORD, "");
+    vids[5] = add_bbvari (ExtendsWithConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_LONG2_BLACKBOARD, "Version.Patch", Name, sizeof(Name)), BB_WORD, "");
     exit_vid = add_bbvari (ExtendsWithConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_SHORT_BLACKBOARD, "exit", Name, sizeof(Name)), BB_UWORD, "");
     exitcode_vid = add_bbvari (ExtendsWithConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_OWN_EXIT_CODE, "", Name, sizeof(Name)), BB_DWORD, "");
 
@@ -233,6 +233,7 @@ int init_init (void)
     write_bbvari_double (vids[1], period);
     write_bbvari_uword (vids[2], XILENV_VERSION);
     write_bbvari_word (vids[4], XILENV_MINOR_VERSION);
+    write_bbvari_word (vids[5], XILENV_PATCH_VERSION);
     if (s_main_ini_val.ConnectToRemoteMaster) {
         write_bbvari_uword (vids[3], 1);
     } else {
@@ -247,22 +248,20 @@ int write_process_list2ini (void)
     char *pname;
     char entry[32];
     char path[512];
-    char *ProcessNames[MAX_PROCESSES];
+    char *ProcessNames[MAX_PROCESSES] = {0};
     char *p;
     char ExeName[MAX_PATH];
 
-    memset (ProcessNames, 0, sizeof (ProcessNames));
     if (s_main_ini_val.StartDirectory[0] == 0) {
         path[0] = 0;
-    } else sprintf (path, "%s\\", s_main_ini_val.StartDirectory);
+    } else PrintFormatToString (path, sizeof(path), "%s\\", s_main_ini_val.StartDirectory);
     if (!s_main_ini_val.WriteProtectIniProcessList) {
-        int LastProcessNr = 0;
         READ_NEXT_PROCESS_NAME *Buffer = init_read_next_process_name (1);
         for (x = 0; x < MAX_PROCESSES; x++) {
             do {
                 pname = read_next_process_name (Buffer);
             } while ((pname != NULL) && (!strcmp (pname, "init") || !strcmp (pname, "RemoteMasterControl")));   // Do not save init process inside INI file
-            sprintf (entry, "P%i", x);
+            PrintFormatToString (entry, sizeof(entry), "P%i", x);
             if (pname != NULL) {
                 if (strstr (pname, path) == pname) { // If the beginning of the process is the same as current path
                     p = pname + strlen (path);
@@ -284,10 +283,8 @@ int write_process_list2ini (void)
                         continue;  // EXE is alread saved inside the list
                     }
                 }
-                ProcessNames[x] = my_malloc (strlen (p) + 1);
-                strcpy (ProcessNames[x], p);
+                ProcessNames[x] = StringMalloc (p);
                 IniFileDataBaseWriteString ("InitStartProcesses", entry, p, GetMainFileDescriptor());
-                LastProcessNr = x;
             } else IniFileDataBaseWriteString ("InitStartProcesses", entry, NULL, GetMainFileDescriptor());
         }
         close_read_next_process_name(Buffer);
@@ -435,6 +432,7 @@ void cyclic_init (void)
             break;
         case 2:   // Start terminate script
             SearchAndReplaceEnvironmentStrings (s_main_ini_val.TerminateScript, script_filename, MAX_PATH);
+            SetScriptOutputFilenamesPrefix("terminate_");
             script_status_flag = START;
             TerminateScriptState++;
             break;

@@ -19,10 +19,10 @@
   </property>
   <widget class="QTabWidget" name="centralwidget">
    <property name="tabPosition">
-    <enum>QTabWidget::South</enum>
+    <enum>QTabWidget::TabPosition::South</enum>
    </property>
    <property name="tabShape">
-    <enum>QTabWidget::Triangular</enum>
+    <enum>QTabWidget::TabShape::Triangular</enum>
    </property>
    <property name="currentIndex">
     <number>-1</number>
@@ -61,7 +61,7 @@
      <x>0</x>
      <y>0</y>
      <width>800</width>
-     <height>21</height>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuDatei">
@@ -139,7 +139,6 @@
     <addaction name="actionExport_hotkeys"/>
     <addaction name="menuINI_file"/>
     <addaction name="separator"/>
-    <addaction name="actionLoad_Plugins"/>
     <addaction name="separator"/>
     <addaction name="actionBlackboard_List"/>
    </widget>
@@ -219,7 +218,7 @@
   </widget>
   <widget class="QDockWidget" name="blackboardDockWidget">
    <property name="allowedAreas">
-    <set>Qt::LeftDockWidgetArea|Qt::RightDockWidgetArea</set>
+    <set>Qt::DockWidgetArea::LeftDockWidgetArea|Qt::DockWidgetArea::RightDockWidgetArea</set>
    </property>
    <property name="windowTitle">
     <string>Blackboard Variables</string>
@@ -724,11 +723,6 @@
    </property>
    <property name="text">
     <string>suppress the display of non existing values</string>
-   </property>
-  </action>
-  <action name="actionLoad_Plugins">
-   <property name="text">
-    <string>Load Plugins</string>
    </property>
   </action>
   <action name="actionBarrier_logging">
@@ -1618,22 +1612,6 @@
    <signal>triggered()</signal>
    <receiver>MainWindow</receiver>
    <slot>closeSubwindows()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>399</x>
-     <y>299</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>actionLoad_Plugins</sender>
-   <signal>triggered()</signal>
-   <receiver>MainWindow</receiver>
-   <slot>loadPlugin()</slot>
    <hints>
     <hint type="sourcelabel">
      <x>-1</x>

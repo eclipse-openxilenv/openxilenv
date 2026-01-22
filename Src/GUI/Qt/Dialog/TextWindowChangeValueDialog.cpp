@@ -153,7 +153,13 @@ void TextWindowChangeValueDialog::SetVid(int par_Vid)
 {
     int ConvType = get_bbvari_conversiontype(par_Vid);
     // If no equation or enum than...
-    if ((ConvType != BB_CONV_FORMULA) && (ConvType != BB_CONV_TEXTREP)) {
+    if ((ConvType != BB_CONV_FORMULA) &&
+        (ConvType != BB_CONV_TEXTREP) &&
+        (ConvType != BB_CONV_FACTOFF) &&
+        (ConvType != BB_CONV_OFFFACT) &&
+        (ConvType != BB_CONV_TAB_INTP) &&
+        (ConvType != BB_CONV_TAB_NOINTP) &&
+        (ConvType != BB_CONV_RAT_FUNC)) {
         ui->d_radioButtonPhysically->setEnabled(false);
     }
     ui->d_ValueInput->SetBlackboardVariableId(par_Vid);
