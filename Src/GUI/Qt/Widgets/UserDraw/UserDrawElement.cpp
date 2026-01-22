@@ -21,6 +21,7 @@
 #include "StringHelpers.h"
 
 extern "C" {
+#include "PrintFormatToString.h"
 #include "Blackboard.h"
 #include "ExecutionStack.h"
 #include "EquationParser.h"
@@ -259,7 +260,7 @@ void UserDrawElement::WriteToINI(QString &par_WindowName, QString &par_Entry, in
         UserDrawElement *Child = GetChild(x);
         QString ChildEntry = par_Entry;
         char Help[32];
-        sprintf(Help, "_%i", x);
+        PrintFormatToString (Help, sizeof(Help),"_%i", x);
         ChildEntry.append(QString(Help));
         Child->WriteToINI(par_WindowName, ChildEntry, par_Fd);
     }

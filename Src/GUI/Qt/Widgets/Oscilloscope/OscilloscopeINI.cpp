@@ -24,6 +24,8 @@
 #include <math.h>
 extern "C" {
 #include "Config.h"
+#include "StringMaxChar.h"
+#include "PrintFormatToString.h"
 #include "ThrowError.h"
 #include "MyMemory.h"
 #include "Blackboard.h"
@@ -67,10 +69,12 @@ void write_osziwin_ini (const char *SectionName, OSCILLOSCOPE_DATA* poszidata, i
     IniFileDataBaseWriteFloat(SectionName, "y_zoom", poszidata->y_zoom[poszidata->zoom_pos], Fd);
     IniFileDataBaseWriteFloat(SectionName, "y_off", poszidata->y_off[poszidata->zoom_pos], Fd);
     if ((poszidata->trigger_flag) && (poszidata->trigger_vid > 0)) {
-        sprintf (txt, "%s %c %f, %i, %i", poszidata->name_trigger,
+        PrintFormatToString (txt, sizeof(txt), "%s %c %f, %i, %i", poszidata->name_trigger,
                  poszidata->trigger_flank, poszidata->trigger_value,
                  poszidata->trigger_flag, poszidata->pre_trigger);
-    } else strcpy (txt, "off");
+    } else {
+        STRING_COPY_TO_ARRAY (txt, "off");
+    }
     IniFileDataBaseWriteString(SectionName, "trigger", txt, Fd);
 
     for (x = 0; x < 20; x++) {
@@ -90,7 +94,7 @@ void write_osziwin_ini (const char *SectionName, OSCILLOSCOPE_DATA* poszidata, i
                 notation = "bin";
                 break;
             }
-            sprintf (txt, "%s, %f, %f, (%i,%i,%i), %s, %i, %s, %s, %s",
+            PrintFormatToString (txt, sizeof(txt), "%s, %f, %f, (%i,%i,%i), %s, %i, %s, %s, %s",
                      poszidata->name_left[x],
                      poszidata->min_left[x],
                      poszidata->max_left[x],
@@ -102,10 +106,10 @@ void write_osziwin_ini (const char *SectionName, OSCILLOSCOPE_DATA* poszidata, i
                      (poszidata->txt_align_left[x]) ? "r" : "l",
                      (poszidata->vars_disable_left[x]) ? "d" : "e",
                      (poszidata->presentation_left[x]) ? "p" : "l");
-            sprintf (name, "vl%i", x);
+            PrintFormatToString (name, sizeof(name), "vl%i", x);
             IniFileDataBaseWriteString(SectionName, name, txt, Fd);
         } else {
-            sprintf (name, "vl%i", x);
+            PrintFormatToString (name, sizeof(name), "vl%i", x);
             IniFileDataBaseWriteString(SectionName, name, NULL, Fd);
         }
     }
@@ -126,7 +130,7 @@ void write_osziwin_ini (const char *SectionName, OSCILLOSCOPE_DATA* poszidata, i
                 notation = "bin";
                 break;
             }
-            sprintf (txt, "%s, %f, %f, (%i,%i,%i), %s, %i, %s, %s, %s",
+            PrintFormatToString (txt, sizeof(txt), "%s, %f, %f, (%i,%i,%i), %s, %i, %s, %s, %s",
                      poszidata->name_right[x],
                      poszidata->min_right[x],
                      poszidata->max_right[x],
@@ -139,10 +143,10 @@ void write_osziwin_ini (const char *SectionName, OSCILLOSCOPE_DATA* poszidata, i
                      (poszidata->vars_disable_right[x]) ? "d" : "e",
                      (poszidata->presentation_right[x]) ? "p" : "l"
                      );
-            sprintf (name, "vr%i", x);
+            PrintFormatToString (name, sizeof(name), "vr%i", x);
             IniFileDataBaseWriteString(SectionName, name, txt, Fd);
         } else {
-            sprintf (name, "vr%i", x);
+            PrintFormatToString (name, sizeof(name), "vr%i", x);
             IniFileDataBaseWriteString(SectionName, name, NULL, Fd);
         }
     }
@@ -203,10 +207,8 @@ void read_osziwin_ini (const char *SectionName, OSCILLOSCOPE_DATA* poszidata)
     } else {
         if ((poszidata->trigger_vid = add_bbvari (txt2, BB_UNKNOWN_WAIT, NULL)) > 0) {
             poszidata->vids_left[20] = poszidata->trigger_vid;
-            poszidata->name_trigger = (char*)my_realloc (poszidata->name_trigger, strlen (txt2) + 1);
-            if (poszidata->name_trigger != NULL) strcpy (poszidata->name_trigger, txt2);
-            poszidata->name_left[20] = (char*)my_realloc (poszidata->name_left[20], strlen (txt2) + 1);
-            if (poszidata->name_left[20] != NULL) strcpy (poszidata->name_left[20], txt2);
+            poszidata->name_trigger = StringRealloc (poszidata->name_trigger, txt2);
+            poszidata->name_left[20] = StringRealloc (poszidata->name_left[20], txt2);
 
             if ((poszidata->buffer_left[20] = (double*)my_calloc ((size_t)poszidata->buffer_depth, sizeof (double))) == NULL) {
                 remove_bbvari_unknown_wait (poszidata->vids_left[20]);
@@ -222,7 +224,7 @@ void read_osziwin_ini (const char *SectionName, OSCILLOSCOPE_DATA* poszidata)
         poszidata->LineSize_right[x] = 1;
         poszidata->LineSize_left[x]  = 1;
 
-        sprintf (entry, "vl%i", x);
+        PrintFormatToString (entry, sizeof(entry), "vl%i", x);
         ENTER_GCS ();
         if ((IniFileDataBaseReadString(SectionName, entry, "", txt1, sizeof (txt1), Fd)) &&
             ((p = strtok(txt1, ",")) != NULL) &&
@@ -230,8 +232,7 @@ void read_osziwin_ini (const char *SectionName, OSCILLOSCOPE_DATA* poszidata)
             // Register variable
             ((vid = add_bbvari (vari_name, BB_UNKNOWN_WAIT, NULL)) > 0)) {
             poszidata->vids_left[x] = vid;
-            poszidata->name_left[x] = (char*)my_realloc (poszidata->name_left[x], strlen (vari_name) + 1);
-            if (poszidata->name_left[x] != NULL) strcpy (poszidata->name_left[x], vari_name);
+            poszidata->name_left[x] = StringRealloc (poszidata->name_left[x], vari_name);
             if ((poszidata->buffer_left[x] = (double*)my_calloc ((size_t)poszidata->buffer_depth, sizeof(double))) == NULL) {
                 ThrowError (1, "no free memory");
                 poszidata->vids_left[x] = 0;
@@ -305,15 +306,14 @@ void read_osziwin_ini (const char *SectionName, OSCILLOSCOPE_DATA* poszidata)
                 }
             }
         }
-        sprintf (entry, "vr%i", x);
+        PrintFormatToString (entry, sizeof(entry), "vr%i", x);
         if ((IniFileDataBaseReadString(SectionName, entry, "", txt1, sizeof (txt1), Fd)) &&
             ((p = strtok(txt1, ",")) != NULL) &&
             (p[0] && (sscanf(p, "%s", vari_name) == 1)) &&
             // Register variable
             ((vid = add_bbvari (vari_name, BB_UNKNOWN_WAIT, NULL)) > 0)) {
             poszidata->vids_right[x] = vid;
-            poszidata->name_right[x] = (char*)my_realloc (poszidata->name_right[x], strlen (vari_name) + 1);
-            if (poszidata->name_right[x] != NULL) strcpy (poszidata->name_right[x], vari_name);
+            poszidata->name_right[x] = StringRealloc (poszidata->name_right[x], vari_name);
             if ((poszidata->buffer_right[x] = (double*)my_calloc ((size_t)poszidata->buffer_depth, sizeof(double))) == NULL) {
                 ThrowError (1, "no free memory");
                 poszidata->vids_right[x] = 0;

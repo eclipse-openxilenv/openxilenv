@@ -49,6 +49,10 @@ protected:
 
 private:
     void addBlackboardVariableToModel(QString arg_variableName, int arg_Row = -1, int arg_displayType = -1);
+    enum WhatType {SAVE_THIS_TO_SCRIPT, SAVE_ALL_TO_SCRIPT, SAVE_THIS_TO_SCRIPT_ATOMIC, SAVE_ALL_TO_SCRIPT_ATOMIC,
+                   SAVE_THIS_TO_EQU, SAVE_ALL_TO_EQU, SAVE_THIS_TO_TEMP_BUFFER, SAVE_ALL_TO_TEMP_BUFFER};
+    void SaveToFile(enum WhatType par_Type);
+    void SaveToFile(enum WhatType par_Type, QTextStream &Stream);
 
 private slots:
     virtual void CyclicUpdate() Q_DECL_OVERRIDE;
@@ -59,6 +63,16 @@ private slots:
     void HideUnitColumn();
     void HideDisplayTypeColumn();
     void BlackboardInfos();
+    void SaveThisToScriptAct();
+    void SaveAllToScriptAct();
+    void SaveThisToScriptAtomicAct();
+    void SaveAllToScriptAtomicAct();
+    void SaveThisToEquAct();
+    void SaveAllToEquAct();
+    void SaveThisToSnapshotAct();
+    void SaveAllToSnapshotAct();
+    void LoadFromEquAct();
+    void LoadFromSnapshotAct();
     void customContextMenu(QPoint arg_point);
     void changeFont(QFont arg_newFont) Q_DECL_OVERRIDE;
     void changeColor(QColor arg_color) Q_DECL_OVERRIDE;
@@ -81,9 +95,21 @@ private:
     QAction *m_HideUnitColumnAct;
     QAction *m_HideDisplayTypeColumnAct;
     QAction *m_BlackboardInfosAct;
+    QAction *m_SaveThisToScriptAct;
+    QAction *m_SaveAllToScriptAct;
+    QAction *m_SaveThisToScriptAtomicAct;
+    QAction *m_SaveAllToScriptAtomicAct;
+    QAction *m_SaveThisToEquAct;
+    QAction *m_SaveAllToEquAct;
+    QAction *m_SaveThisToSnapshotAct;
+    QAction *m_SaveAllToSnapshotAct;
+    QAction *m_LoadFromEquAct;
+    QAction *m_LoadFromSnapshotAct;
 
     bool m_ShowUnitColumn;
     bool m_ShowDisplayTypeColumn;
+
+    QString m_SnapshotBuffer;
 };
 
 #endif // TEXTWIDGET_H

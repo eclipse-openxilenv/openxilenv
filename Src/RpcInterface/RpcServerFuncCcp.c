@@ -23,6 +23,7 @@
 #include "Config.h"
 
 #include "MyMemory.h"
+#include "StringMaxChar.h"
 #include "CcpControl.h"
 
 #include "RpcControlProcess.h"
@@ -38,7 +39,7 @@ static int RPCFunc_LoadCcpConfig(RPC_CONNECTION *par_Connection, RPC_API_BASE_ME
     UNUSED(par_Connection);
     RPC_API_LOAD_CCP_CONFIG_MESSAGE *In = (RPC_API_LOAD_CCP_CONFIG_MESSAGE*)par_DataIn;
     RPC_API_LOAD_CCP_CONFIG_MESSAGE_ACK *Out = (RPC_API_LOAD_CCP_CONFIG_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_LOAD_CCP_CONFIG_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_LOAD_CCP_CONFIG_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_LOAD_CCP_CONFIG_MESSAGE_ACK);
     if ((In->Connection >= 0) && (In->Connection < 4)) {
         Out->Header.ReturnValue = LoadConfig_CCP (In->Connection, (char*)In + In->OffsetCcpFile);
@@ -65,7 +66,7 @@ static int RPCFunc_StartCcpBegin(RPC_CONNECTION *par_Connection, RPC_API_BASE_ME
 
     RPC_API_START_CCP_BEGIN_MESSAGE *In = (RPC_API_START_CCP_BEGIN_MESSAGE*)par_DataIn;
     RPC_API_START_CCP_BEGIN_MESSAGE_ACK *Out = (RPC_API_START_CCP_BEGIN_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_START_CCP_BEGIN_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_START_CCP_BEGIN_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_START_CCP_BEGIN_MESSAGE_ACK);
     if ((In->Connection >= 0) && (In->Connection < 4)) {
         CleanUpCcpVariables(par_Connection, In->Connection);
@@ -81,13 +82,12 @@ static int RPCFunc_StartCcpAddVar(RPC_CONNECTION *par_Connection, RPC_API_BASE_M
     UNUSED(par_Connection);
     RPC_API_START_CCP_ADD_VAR_MESSAGE *In = (RPC_API_START_CCP_ADD_VAR_MESSAGE*)par_DataIn;
     RPC_API_START_CCP_ADD_VAR_MESSAGE_ACK *Out = (RPC_API_START_CCP_ADD_VAR_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_START_CCP_ADD_VAR_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_START_CCP_ADD_VAR_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_START_CCP_ADD_VAR_MESSAGE_ACK);
     if ((In->Connection >= 0) && (In->Connection < 4)) {
         if (par_Connection->CCPVarCounter[In->Connection] < 100) {
             par_Connection->CCPVariable[In->Connection] = my_realloc(par_Connection->CCPVariable[In->Connection], sizeof(char*) * (size_t)(par_Connection->CCPVarCounter[In->Connection] + 1));
-            par_Connection->CCPVariable[In->Connection][par_Connection->CCPVarCounter[In->Connection]] = my_malloc(strlen((char*)In + In->OffsetLabel) + 1);
-            strcpy(par_Connection->CCPVariable[In->Connection][par_Connection->CCPVarCounter[In->Connection]], (char*)In + In->OffsetLabel);
+            par_Connection->CCPVariable[In->Connection][par_Connection->CCPVarCounter[In->Connection]] = StringMalloc((char*)In + In->OffsetLabel);
             par_Connection->CCPVarCounter[In->Connection]++;
         } else {
             Out->Header.ReturnValue = -1;
@@ -104,7 +104,7 @@ static int RPCFunc_StartCcpEnd(RPC_CONNECTION *par_Connection, RPC_API_BASE_MESS
 
     RPC_API_START_CCP_END_MESSAGE *In = (RPC_API_START_CCP_END_MESSAGE*)par_DataIn;
     RPC_API_START_CCP_END_MESSAGE_ACK *Out = (RPC_API_START_CCP_END_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_START_CCP_END_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_START_CCP_END_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_START_CCP_END_MESSAGE_ACK);
     if ((In->Connection >= 0) && (In->Connection < 4)) {
         if (par_Connection->CCPVarCounter[In->Connection] > 0) {
@@ -125,7 +125,7 @@ static int RPCFunc_StopCcpEnd(RPC_CONNECTION *par_Connection, RPC_API_BASE_MESSA
 
     RPC_API_STOP_CCP_MESSAGE *In = (RPC_API_STOP_CCP_MESSAGE*)par_DataIn;
     RPC_API_STOP_CCP_MESSAGE_ACK *Out = (RPC_API_STOP_CCP_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_STOP_CCP_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_STOP_CCP_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_STOP_CCP_MESSAGE_ACK);
     if ((In->Connection >= 0) && (In->Connection < 4)) {
         Out->Header.ReturnValue = Stop_CCP(In->Connection, STOP_MEASSUREMENT);
@@ -153,7 +153,7 @@ static int RPCFunc_StartCcpCalBegin(RPC_CONNECTION *par_Connection, RPC_API_BASE
 
     RPC_API_START_CCP_CAL_BEGIN_MESSAGE *In = (RPC_API_START_CCP_CAL_BEGIN_MESSAGE*)par_DataIn;
     RPC_API_START_CCP_CAL_BEGIN_MESSAGE_ACK *Out = (RPC_API_START_CCP_CAL_BEGIN_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_START_CCP_CAL_BEGIN_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_START_CCP_CAL_BEGIN_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_START_CCP_CAL_BEGIN_MESSAGE_ACK);
     if ((In->Connection >= 0) && (In->Connection < 4)) {
         CleanUpCcpParameters(par_Connection, In->Connection);
@@ -169,13 +169,12 @@ static int RPCFunc_StartCcpCalAddVar(RPC_CONNECTION *par_Connection, RPC_API_BAS
     UNUSED(par_Connection);
     RPC_API_START_CCP_CAL_ADD_VAR_MESSAGE *In = (RPC_API_START_CCP_CAL_ADD_VAR_MESSAGE*)par_DataIn;
     RPC_API_START_CCP_CAL_ADD_VAR_MESSAGE_ACK *Out = (RPC_API_START_CCP_CAL_ADD_VAR_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_START_CCP_CAL_ADD_VAR_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_START_CCP_CAL_ADD_VAR_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_START_CCP_CAL_ADD_VAR_MESSAGE_ACK);
     if ((In->Connection >= 0) && (In->Connection < 4)) {
         if (par_Connection->CCPCalCounter[In->Connection] < 100) {
             par_Connection->CCPParameter[In->Connection] = my_realloc(par_Connection->CCPParameter[In->Connection], sizeof(char*) * (size_t)(par_Connection->CCPCalCounter[In->Connection] + 1));
-            par_Connection->CCPParameter[In->Connection][par_Connection->CCPCalCounter[In->Connection]] = my_malloc(strlen((char*)In + In->OffsetLabel) + 1);
-            strcpy(par_Connection->CCPParameter[In->Connection][par_Connection->CCPCalCounter[In->Connection]], (char*)In + In->OffsetLabel);
+            par_Connection->CCPParameter[In->Connection][par_Connection->CCPCalCounter[In->Connection]] = StringMalloc((char*)In + In->OffsetLabel);
             par_Connection->CCPCalCounter[In->Connection]++;
         } else {
             Out->Header.ReturnValue = -1;
@@ -192,7 +191,7 @@ static int RPCFunc_StartCcpCalEnd(RPC_CONNECTION *par_Connection, RPC_API_BASE_M
 
     RPC_API_START_CCP_CAL_END_MESSAGE *In = (RPC_API_START_CCP_CAL_END_MESSAGE*)par_DataIn;
     RPC_API_START_CCP_CAL_END_MESSAGE_ACK *Out = (RPC_API_START_CCP_CAL_END_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_START_CCP_CAL_END_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_START_CCP_CAL_END_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_START_CCP_CAL_END_MESSAGE_ACK);
     if ((In->Connection >= 0) && (In->Connection < 4)) {
         if (par_Connection->CCPCalCounter[In->Connection] > 0) {
@@ -213,7 +212,7 @@ static int RPCFunc_StopCcpCalEnd(RPC_CONNECTION *par_Connection, RPC_API_BASE_ME
 
     RPC_API_STOP_CCP_CAL_MESSAGE *In = (RPC_API_STOP_CCP_CAL_MESSAGE*)par_DataIn;
     RPC_API_STOP_CCP_CAL_MESSAGE_ACK *Out = (RPC_API_STOP_CCP_CAL_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_STOP_CCP_CAL_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_STOP_CCP_CAL_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_STOP_CCP_CAL_MESSAGE_ACK);
     if ((In->Connection >= 0) && (In->Connection < 4)) {
         Out->Header.ReturnValue = Stop_CCP(In->Connection, STOP_CALIBRATION);

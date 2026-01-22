@@ -71,7 +71,7 @@ public:
     ~cStack (void);
 
     int AddRunReturnToScript (int par_RunReturnToIp, const char *Fimename);
-    int RemoveRunReturnToScript (cParser *par_Parser, int *ret_RunReturnToIp, char *ret_Fimename);
+    int RemoveRunReturnToScript (cParser *par_Parser, int *ret_RunReturnToIp, char *ret_Fimename, int par_Maxc);
 
     // DEL_LOCALS
     int AddBlockToStack (void);

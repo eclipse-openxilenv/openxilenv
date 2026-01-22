@@ -38,6 +38,8 @@
 #include "Config.h"
 #include "ThrowError.h"
 #include "MyMemory.h"
+#include "StringMaxChar.h"
+#include "PrintFormatToString.h"
 #include "ConfigurablePrefix.h"
 #include "Blackboard.h"
 #include "BlackboardAccess.h"
@@ -300,7 +302,7 @@ static void *RealtimeSchedulerTreadFunction(void* par_Data)
     __uint64_t diff;
 
     SCHEDULER_CONTROL_BLOCK *Scheduler = (SCHEDULER_CONTROL_BLOCK*)par_Data;
-    memset(Scheduler->ToAddSchedulingProcesses, 0, sizeof(Scheduler->ToAddSchedulingProcesses));
+    MEMSET(Scheduler->ToAddSchedulingProcesses, 0, sizeof(Scheduler->ToAddSchedulingProcesses));
     Scheduler->WritePos = 0;
     Scheduler->ReadPos = 0;
     Scheduler->StartSchedulingProcesses = 0;
@@ -313,27 +315,27 @@ static void *RealtimeSchedulerTreadFunction(void* par_Data)
         const char *Prefix = GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_LONG2_BLACKBOARD);
         Scheduler->CurrentRunningProcess = &schedulers_internal_tcb;
 
-        sprintf(VariableName, "%sCycleCounter", Prefix);
+        PrintFormatToString (VariableName, sizeof(VariableName), "%sCycleCounter", Prefix);
         Scheduler->MainCycleCounterVid = add_bbvari(VariableName, BB_UDWORD, "");
         Prefix = GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_LONG_BLACKBOARD);
-        sprintf(VariableName, "%s.%s.CyleCounter", Prefix, Scheduler->name);
+        PrintFormatToString (VariableName, sizeof(VariableName), "%s.%s.CyleCounter", Prefix, Scheduler->name);
         Scheduler->CycleCounterVid = add_bbvari(VariableName, BB_UDWORD, "");
-        sprintf(VariableName, "%s.%s.CyclePeriod", Prefix, Scheduler->name);
+        PrintFormatToString (VariableName, sizeof(VariableName), "%s.%s.CyclePeriod", Prefix, Scheduler->name);
         Scheduler->CyclePeriodVid = add_bbvari(VariableName, BB_DOUBLE, "");
-        sprintf(VariableName, "%s.%s.CycleMinPeriod", Prefix, Scheduler->name);
+        PrintFormatToString (VariableName, sizeof(VariableName), "%s.%s.CycleMinPeriod", Prefix, Scheduler->name);
         Scheduler->CycleMinPeriodVid = add_bbvari(VariableName, BB_DOUBLE, "");
-        sprintf(VariableName, "%s.%s.CycleMaxPeriod", Prefix, Scheduler->name);
+        PrintFormatToString (VariableName, sizeof(VariableName), "%s.%s.CycleMaxPeriod", Prefix, Scheduler->name);
         Scheduler->CycleMaxPeriodVid = add_bbvari(VariableName, BB_DOUBLE, "");
 
 
-        sprintf(VariableName, "%s.%s.TimeReset", Prefix, Scheduler->name);
+        PrintFormatToString (VariableName, sizeof(VariableName), "%s.%s.TimeReset", Prefix, Scheduler->name);
 		Scheduler->TimeResetVid = add_bbvari(VariableName, BB_UDWORD, "");
-        sprintf(VariableName, "%s.%s.CycleCountMinPeriod", Prefix, Scheduler->name);
+        PrintFormatToString (VariableName, sizeof(VariableName), "%s.%s.CycleCountMinPeriod", Prefix, Scheduler->name);
 		Scheduler->CycleCountMinPeriodVid = add_bbvari(VariableName, BB_UDWORD, "");
-        sprintf(VariableName, "%s.%s.CycleCountMaxPeriod", Prefix, Scheduler->name);
+        PrintFormatToString (VariableName, sizeof(VariableName), "%s.%s.CycleCountMaxPeriod", Prefix, Scheduler->name);
 		Scheduler->CycleCountMaxPeriodVid = add_bbvari(VariableName, BB_UDWORD, "");
         // only debug
-        //sprintf(VariableName, "%s.%s.FreeRunningCycleCounter_Debug", Scheduler->name);
+        //PrintFormatToString (VariableName, sizeof(VariableName), "%s.%s.FreeRunningCycleCounter_Debug", Scheduler->name);
         //SignalCyclicEvent_FreeRunningCycleCounter_Debug_Vid = add_bbvari(VariableName, BB_UDWORD, "");
 	}
 
@@ -346,7 +348,7 @@ static void *RealtimeSchedulerTreadFunction(void* par_Data)
         printf("Could not set CPU affinity to CPU %d\n", 1);
     }
 
-    memset(&schedp, 0, sizeof(schedp));
+    MEMSET(&schedp, 0, sizeof(schedp));
     schedp.sched_priority = 99;
     if (sched_setscheduler(0, SCHED_FIFO, &schedp)) {
         printf("failed to set priority to %d\n", 99);
@@ -424,7 +426,7 @@ static void *RealtimeSchedulerTreadFunction(void* par_Data)
                 else {
                     char VariableName[BBVARI_NAME_SIZE];
                     const char *Prefix = GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_PROGRAM_NAME);
-                    sprintf (VariableName, "%s.Runtime.%s", Prefix, Scheduler->CurrentRunningProcess->name);
+                    PrintFormatToString (VariableName, sizeof(VariableName), "%s.Runtime.%s", Prefix, Scheduler->CurrentRunningProcess->name);
                     Scheduler->CurrentRunningProcess->state = 1;
                     Scheduler->CurrentRunningProcess->VidRuntime = add_bbvari(VariableName, BB_UDWORD, "");
                 }
@@ -545,8 +547,8 @@ int AddRealtimeScheduler(char *par_Name, double par_CyclePeriod, int par_SyncWit
     for (s = 0; s < MAX_SCHEDULERS; s++) {
         if (Schedulers[s].State == 0) {
             pthread_t ThreadId;
-            memset(&(Schedulers[s]), 0, sizeof(Schedulers[0]));
-            strcpy(Schedulers[s].name, par_Name);
+            MEMSET(&(Schedulers[s]), 0, sizeof(Schedulers[0]));
+            STRING_COPY_TO_ARRAY(Schedulers[s].name, par_Name);
             Schedulers[s].State = 1;
             Schedulers[s].CyclePeriod = par_CyclePeriod;
             Schedulers[s].SyncWithFlexray = par_SyncWithFlexray;
@@ -728,13 +730,13 @@ int GetNextRealtimeProcess(int par_Index, int par_Flags, char *ret_Buffer, int p
     for (x = par_Index; x < AvailableRealtimeProcessCount; x++) {
         if (par_Flags) {
             if (AvailableRealtimeProcesses[x]->active) {
-                strcpy(ret_Buffer, AvailableRealtimeProcesses[x]->name);  // todo: maxc
+                StringCopyMaxCharTruncate(ret_Buffer, AvailableRealtimeProcesses[x]->name, par_maxc);
                 return x + 1;
             }
         }
         else {
             if (!AvailableRealtimeProcesses[x]->active) {
-                strcpy(ret_Buffer, AvailableRealtimeProcesses[x]->name);  // todo: maxc
+                StringCopyMaxCharTruncate(ret_Buffer, AvailableRealtimeProcesses[x]->name, par_maxc);
                 return x + 1;
             }
         }
@@ -799,7 +801,7 @@ int AddProcessToPidNameArray(int par_Pid, char *par_Name, int MessageQueuSize)
     for (x = 0; x < 64; x++) {
         if (PidNameArray[x].Pid == 0) {
             PidNameArray[x].Pid = par_Pid;
-            strcpy (PidNameArray[x].Name, par_Name);
+            STRING_COPY_TO_ARRAY (PidNameArray[x].Name, par_Name);
 			if ((par_Pid  & RT_PID_BIT_MASK) == RT_PID_BIT_MASK) {
 				PidNameArray[x].message_buffer = build_message_queue(MessageQueuSize);
 			} else {
@@ -822,7 +824,7 @@ int RemoveProcessFromPidNameArray(int par_Pid)
     for (x = 0; x < 64; x++) {
         if (PidNameArray[x].Pid == par_Pid) {
             PidNameArray[x].Pid = 0;
-            strcpy(PidNameArray[x].Name, "");
+            STRING_COPY_TO_ARRAY(PidNameArray[x].Name, "");
             remove_message_queue(PidNameArray[x].message_buffer);
             PidNameArray[x].message_buffer = NULL;
             Ret = 0;
@@ -895,10 +897,10 @@ static void strcpy_maxc(char *dst, char *src, int max_c)
     if (max_c > 0) {
         int len = strlen(src) + 1;
         if (len <= max_c) {
-            memcpy(dst, src, len);
+            MEMCPY(dst, src, len);
         }
         else {
-            memcpy(dst, src, max_c - 1);
+            MEMCPY(dst, src, max_c - 1);
             dst[max_c - 1] = 0;
         }
     }
@@ -1070,7 +1072,7 @@ int GetOrFreeUniquePid(int par_Command, int par_Pid, char *par_Name)
                 if (par_Name != NULL) {
                     int len = strlen(par_Name) + 1;
                     Name[x] = (char*)my_malloc(len);
-                    if (Name[x] != NULL) memcpy(Name[x], par_Name, len);
+                    if (Name[x] != NULL) MEMCPY(Name[x], par_Name, len);
                 }
                 ValidFlag[x] = 1;
                 break;

@@ -82,9 +82,9 @@ int IniFileDosNotExist::BuidANewIniFile()
         ReadBasicConfigurationFromIni(&BasicSettings);
         ScQt_SetMainFileDescriptor(-1);
         // change something
-        strcpy (BasicSettings.Editor, "");
-        strcpy (BasicSettings.EditorX, "");
-        strcpy (BasicSettings.WorkDir, ".");
+        STRING_COPY_TO_ARRAY (BasicSettings.Editor, "");
+        STRING_COPY_TO_ARRAY (BasicSettings.EditorX, "");
+        STRING_COPY_TO_ARRAY (BasicSettings.WorkDir, ".");
         WriteBasicConfigurationToIni (&BasicSettings);
         //   op == 2 -> remove infos from INI-DB */
         ScQt_IniFileDataBaseSave(Fd, m_NewSelectedIniFile, 2);
@@ -129,21 +129,21 @@ IniFileDosNotExist::IniFileDosNotExist(char *par_SelectedIniFile, void *par_Appl
 #ifdef _WIN32
     HRESULT Result = SHGetFolderPath (nullptr, CSIDL_APPDATA, nullptr, SHGFP_TYPE_CURRENT, HistoryFileChar);
     if (Result == S_OK) {
-        StringAppendMaxCharTruncate(HistoryFileChar, "\\", sizeof(HistoryFileChar));
-        StringAppendMaxCharTruncate(HistoryFileChar, ProgramName, sizeof(HistoryFileChar));
-        StringAppendMaxCharTruncate(HistoryFileChar, "\\History.ini", sizeof(HistoryFileChar));
+        STRING_APPEND_TO_ARRAY(HistoryFileChar, "\\");
+        STRING_APPEND_TO_ARRAY(HistoryFileChar, ProgramName);
+        STRING_APPEND_TO_ARRAY(HistoryFileChar, "\\History.ini");
 #else
         {
             DIR *Dir;
-            GetXilEnvHomeDirectory(HistoryFileChar);
-            StringAppendMaxCharTruncate(HistoryFileChar, "/.", sizeof(HistoryFileChar));
-            StringAppendMaxCharTruncate(HistoryFileChar, ProgramName, sizeof(HistoryFileChar));
+            GetXilEnvHomeDirectory(HistoryFileChar, sizeof(HistoryFileChar));
+            STRING_APPEND_TO_ARRAY(HistoryFileChar, "/.");
+            STRING_APPEND_TO_ARRAY(HistoryFileChar, ProgramName);
             if ((Dir = opendir(HistoryFileChar)) == nullptr) {
                 mkdir(HistoryFileChar, 0777);
             } else {
                 closedir(Dir);
             }
-            StringAppendMaxCharTruncate(HistoryFileChar, "/LastLoadedFiles.ini", sizeof(HistoryFileChar));
+            STRING_APPEND_TO_ARRAY(HistoryFileChar, "/LastLoadedFiles.ini");
         }
 #endif
         m_HistoryFile = CharToQString(HistoryFileChar);

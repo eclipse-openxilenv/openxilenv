@@ -160,8 +160,7 @@ int CreateNewRxFifo (int RxPid, int Size, const char *Name)   // if Size == 0 it
     Fifos[x].TxCounter = 1;  // range is 1...255
 	Fifos[x].RxCounter = 1;
 
-    memset (Fifos[x].Name, 0, sizeof (Fifos[x].Name));
-    strncpy (Fifos[x].Name, Name, sizeof (Fifos[x].Name) - 1);
+    StringCopyMaxCharTruncate(Fifos[x].Name, Name, sizeof (Fifos[x].Name) - 1);
     Fifos[x].RxPid = RxPid;
 	if (Size > 0) {
         Fifos[x].Data = my_calloc((size_t)Size, 1);
@@ -219,7 +218,6 @@ int TxAttachFiFo(int TxPid, const char *Name)  // Return is fifo Handle
 int WriteToFiFo (int32_t FiFoId, uint32_t MessageId, int TramsmiterPid, uint64_t Timestamp, int Len, const void *Data)
 {
     int FiFoNr;
-    FIFO *FiFoDebug;
 
 #ifdef FIFO_LOG_TO_FILE
     fprintf (FifoLogFh, "WriteToFiFo(FiFoId = %i, MessageId = %i, TramsmiterPid = %i, Timestamp = %" PRIu64 ", len = %i, Data)\n",
@@ -234,7 +232,6 @@ int WriteToFiFo (int32_t FiFoId, uint32_t MessageId, int TramsmiterPid, uint64_t
     } else {
         FiFoNr = FiFoId & 0xFFFF;
         if ((FiFoNr < 0) || (FiFoNr >= MAX_FIFOS)) return FIFO_ERR_INVALID_PARAMETER;
-        FiFoDebug = &(Fifos[FiFoNr]);
         if (Fifos[FiFoNr].FiFoId != FiFoId) return FIFO_ERR_UNKNOWN_HANDLE;
     }
 #endif

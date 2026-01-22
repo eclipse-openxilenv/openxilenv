@@ -38,6 +38,7 @@ extern "C" {
 #include "IniDataBase.h"
 #include "ThrowError.h"
 #include "StringMaxChar.h"
+#include "PrintFormatToString.h"
 #include "ConfigurablePrefix.h"
 #include "Blackboard.h"
 #include "BlackboardAccess.h"
@@ -66,16 +67,7 @@ static void EnableGatewayFlags(Ui::CanConfigDialog *ui, bool par_Enable)
     ui->RealGatewayLineEdit->setEnabled(par_Enable);
 }
 
-class QTreeWidgetEditorDelegate : public QItemDelegate
-{
-    //    Q_OBJECT
-public:
-    QTreeWidgetEditorDelegate(QObject *parent):QItemDelegate(parent) {};
-    QWidget* createEditor(QWidget *parent, const QStyleOptionViewItem &option, const QModelIndex &index) const;
-};
-
-
-QWidget* QTreeWidgetEditorDelegate::createEditor(QWidget *parent, const QStyleOptionViewItem &option, const QModelIndex &index) const
+QWidget* BusConfigEditorDelegate::createEditor(QWidget *parent, const QStyleOptionViewItem &option, const QModelIndex &index) const
 {
     if(index.column() == 2) {
         QComboBox *Editor = new QComboBox(parent);
@@ -84,9 +76,132 @@ QWidget* QTreeWidgetEditorDelegate::createEditor(QWidget *parent, const QStyleOp
         Editor->addItem("IF_NOT_EXIST_OFF");
         Editor->addItem("IF_NOT_EXIST_ON");
         return Editor;
-    } else {
-        return nullptr;
+    } else if(index.column() == 4) {
+        QComboBox *Editor = new QComboBox(parent);
+        Editor->addItem(">Last<");
+        Editor->addItem(">First<");
+        Editor->addItem(">User<");
+        Editor->addItem(">Blackboard<");
+        for (int i = 0; ; i++) {
+            QModelIndex Child = index.model()->index(i, 0, index);
+            if (Child.isValid()) {
+                Editor->addItem(Child.data().toString());
+            } else {
+                break;
+            }
+        }
+        return Editor;
+    } else if(index.column() == 5) {
+        if (m_Server != nullptr) {
+            if (IS_BUS_CFG_USER(m_Server->m_ChannelBusConfig.at(index.row()))) {
+                QComboBox *Editor = new QComboBox(parent);
+                Editor->addItem("No");
+                Editor->addItem("Yes");
+                return Editor;
+            }
+        }
+    } else if(index.column() >= 6) {
+        if (m_Server != nullptr) {
+            if (IS_BUS_CFG_USER(m_Server->m_ChannelBusConfig.at(index.row()))) {
+                TextValueInput *Editor = new TextValueInput(parent);
+                union BB_VARI Min, Max;
+                enum BB_DATA_TYPES Type;
+                if (index.column() == 6) {  // baud rate
+                    Type = BB_UQWORD;
+                    Min.uqw = 40;
+                    Max.uqw = 1000;
+                } else if (index.column() == 8) { // data baud rate
+                    Type = BB_UQWORD;
+                    Min.uqw = 320;
+                    Max.uqw = 8000;
+                } else { // sample point and data sample point
+                    Type = BB_DOUBLE;
+                    Min.d = 0.0;
+                    Max.d = 1.0;
+                }
+                Editor->SetMinMaxValue(Min, Max, Type);
+                return Editor;
+            }
+        }
     }
+    return nullptr;
+}
+
+void BusConfigEditorDelegate::setModelData(QWidget *editor,
+                                             QAbstractItemModel *model,
+                                             const QModelIndex &index) const
+{
+    int Row = index.row();
+    int Column = index.column();
+    if (Column == 2) {
+        QComboBox *Edit = static_cast<QComboBox*>(editor);
+        if ((Edit != nullptr) && (m_Server != nullptr)) {
+            QString StartupState = Edit->currentText();
+            if (!StartupState.compare("OFF")) {
+                m_Server->m_ChannelStartupState.replace(Row, 0);
+            } else if (!StartupState.compare("ON")) {
+                m_Server->m_ChannelStartupState.replace(Row, 1);
+            } else if (!StartupState.compare("IF_NOT_EXIST_OFF")) {
+                m_Server->m_ChannelStartupState.replace(Row, 2);
+            } else if (!StartupState.compare("IF_NOT_EXIST_ON")) {
+                m_Server->m_ChannelStartupState.replace(Row, 3);
+            } else {
+                m_Server->m_ChannelStartupState.replace(Row, 1);
+            }
+            QItemDelegate::setModelData(editor, model, index);
+        }
+    } else if (Column == 4) {
+        QComboBox *Edit = static_cast<QComboBox*>(editor);
+        if ((Edit != nullptr) && (m_Server != nullptr)) {
+            QString BusConfig = Edit->currentText();
+            m_Server->SetBusConfig(Row, BusConfig);
+            QItemDelegate::setModelData(editor, model, index);
+            model->setData(model->index(Row, 5), m_Server->m_ChannelFd.at(Row) ? QString("Yes") : QString("No"));
+            model->setData(model->index(Row, 6), QString().number(m_Server->m_ChannelBaudRate.at(Row)));
+            model->setData(model->index(Row, 7), QString().number(m_Server->m_ChannelSamplePoint.at(Row)));
+            model->setData(model->index(Row, 8), QString().number(m_Server->m_ChannelDataBaudRate.at(Row)));
+            model->setData(model->index(Row, 9), QString().number(m_Server->m_ChannelDataSamplePoint.at(Row)));
+        }
+    } else if (Column == 5) {   // fd
+        QComboBox *Edit = static_cast<QComboBox*>(editor);
+        if ((Edit != nullptr) && (m_Server != nullptr)) {
+            QString Text = Edit->currentText();
+            m_Server->m_ChannelFd.replace(Row, Text.compare("Yes") ? 0 : 1);
+            model->setData(model->index(Row, 5), m_Server->m_ChannelFd.at(Row) ? QString("Yes") : QString("No"));
+        }
+    } else { // Baud rates and sample points
+        TextValueInput *Edit = static_cast<TextValueInput*>(editor);
+        if ((Edit != nullptr) && (m_Server != nullptr)) {
+            switch (Column) {
+            case 6:
+                m_Server->m_ChannelBaudRate.replace(Row, Edit->GetUIntValue());
+                model->setData(model->index(Row, Column), QString().number(m_Server->m_ChannelBaudRate.at(Row)));
+                break;
+            case 7:
+                m_Server->m_ChannelSamplePoint.replace(Row, Edit->GetDoubleValue());
+                model->setData(model->index(Row, Column), QString().number(m_Server->m_ChannelSamplePoint.at(Row)));
+                break;
+            case 8:
+                m_Server->m_ChannelDataBaudRate.replace(Row, Edit->GetUIntValue());
+                model->setData(model->index(Row, Column), QString().number(m_Server->m_ChannelDataBaudRate.at(Row)));
+                break;
+            case 9:
+                m_Server->m_ChannelDataSamplePoint.replace(Row, Edit->GetDoubleValue());
+                model->setData(model->index(Row, Column), QString().number(m_Server->m_ChannelDataSamplePoint.at(Row)));
+                break;
+            default:
+                break;
+            }
+        }
+    }
+}
+
+void BusConfigEditorDelegate::updateEditorGeometry(QWidget *editor,
+                                                   const QStyleOptionViewItem &option,
+                                                   const QModelIndex &index) const
+{
+    Q_UNUSED(index)
+    editor->setGeometry(option.rect);
 }
 
 CanConfigDialog::CanConfigDialog(QWidget *par_Parent) : Dialog(par_Parent),
@@ -97,6 +212,8 @@ CanConfigDialog::CanConfigDialog(QWidget *par_Parent) : Dialog(par_Parent),
     m_CanConfig->ReadFromIni();
 
     ui->setupUi(this);
+
+    ui->splitterServer->setStretchFactor(1,2);
 
 #if defined _WIN32 && defined BUILD_WITH_GATEWAY_VIRTUAL_CAN
     // Gateway virtual CAN exists only under windows
@@ -132,8 +249,10 @@ CanConfigDialog::CanConfigDialog(QWidget *par_Parent) : Dialog(par_Parent),
     createActions();
 
     ui->MappingTreeWidget->setEditTriggers(QAbstractItemView::AllEditTriggers);
-    QTreeWidgetEditorDelegate *DelegateComboBox = new QTreeWidgetEditorDelegate(ui->MappingTreeWidget);
-    ui->MappingTreeWidget->setItemDelegate(DelegateComboBox);
+    BusConfigEditorDelegate *Delegate = new BusConfigEditorDelegate(ui->MappingTreeWidget);
+    ui->MappingTreeWidget->setItemDelegate(Delegate);
+    ui->MappingTreeWidget->setColumnHidden(3, true);  // do not display Index column
+    ui->MappingTreeWidget->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
 
     ui->NumberOfChannelsSpinBox->setValue(m_CanConfig->GetNumberOfChannels());
 
@@ -143,11 +262,13 @@ CanConfigDialog::CanConfigDialog(QWidget *par_Parent) : Dialog(par_Parent),
     ui->TreeView->header()->setSectionResizeMode(0, QHeaderView::Interactive);
     ui->TreeView->header()->setSectionResizeMode(1, QHeaderView::Fixed);
     ui->TreeView->header()->setSectionResizeMode(2, QHeaderView::Interactive);
-    //ui->TreeView->header()->setStretchLastSection(false);
     ui->TreeView->setColumnWidth(0, 200);
     ui->TreeView->setColumnWidth(1, 30);
     ui->TreeView->setColumnWidth(2, 10);
     ui->TreeView->expand(Index);
+
+    CanConfigServer* Server = (CanConfigServer*)Index.internalPointer();
+    Delegate->SetServer(Server);
 
     ui->ObjectAllSignalsListView->setModel(m_CanConfigTreeModel);
 
@@ -181,6 +302,7 @@ CanConfigDialog::CanConfigDialog(QWidget *par_Parent) : Dialog(par_Parent),
     ui->ObjectDirectionComboBox->addItem(QString("write"));
     ui->ObjectDirectionComboBox->addItem(QString("read"));
     ui->ObjectDirectionComboBox->addItem(QString("write (variable id)"));
+    ui->ObjectDirectionComboBox->addItem(QString("read (startup variable id)"));
 
     ui->VirtualGatewayComboBox->addItem(QString("no"));
     ui->VirtualGatewayComboBox->addItem(QString("yes"));
@@ -198,8 +320,8 @@ CanConfigDialog::CanConfigDialog(QWidget *par_Parent) : Dialog(par_Parent),
 
     m_CanObjectModel = new CanObjectModel(this);
     ui->ObjectSignalBitPositionsTableView->setModel(m_CanObjectModel);
-    CanObjectBitDelegate *Delegate = new CanObjectBitDelegate(this);
-    ui->ObjectSignalBitPositionsTableView->setItemDelegate(Delegate);
+    CanObjectBitDelegate *BitDelegate = new CanObjectBitDelegate(this);
+    ui->ObjectSignalBitPositionsTableView->setItemDelegate(BitDelegate);
 
     ui->ObjectSignalBitPositionsTableView->horizontalHeader()->setMinimumSectionSize(30);
     ui->ObjectSignalBitPositionsTableView->horizontalHeader()->setMaximumSectionSize(30);
@@ -229,19 +351,19 @@ void CanConfigDialog::SaveToIni()
     // first delete all "CAN"-Sections
     char section[INI_MAX_SECTION_LENGTH];
     int Fd = GetMainFileDescriptor();
-    sprintf (section, "CAN/Global");
+    PrintFormatToString (section, sizeof(section), "CAN/Global");
     if (IniFileDataBaseLookIfSectionExist (section, Fd)) {
         IniFileDataBaseWriteString(section, nullptr, nullptr, Fd);
         for (int v = 0; ; v++) {
-            sprintf (section, "CAN/Variante_%i", v);
+            PrintFormatToString (section, sizeof(section), "CAN/Variante_%i", v);
             if (IniFileDataBaseLookIfSectionExist (section, Fd)) {
                 IniFileDataBaseWriteString(section, nullptr, nullptr, Fd);
                 for (int o = 0; ; o++) {
-                    sprintf (section, "CAN/Variante_%i/Object_%i", v, o);
+                    PrintFormatToString (section, sizeof(section), "CAN/Variante_%i/Object_%i", v, o);
                     if (IniFileDataBaseLookIfSectionExist (section, Fd)) {
                         IniFileDataBaseWriteString(section, nullptr, nullptr, Fd);
                         for (int s = 0; ; s++) {
-                            sprintf (section, "CAN/Variante_%i/Object_%i/Signal_%i", v, o, s);
+                            PrintFormatToString (section, sizeof(section), "CAN/Variante_%i/Object_%i/Signal_%i", v, o, s);
                             if (IniFileDataBaseLookIfSectionExist (section, Fd)) {
                                 IniFileDataBaseWriteString(section, nullptr, nullptr, Fd);
                             } else {
@@ -1081,7 +1203,7 @@ void CanConfigServer::ReadFromIni()
     char txt2[INI_MAX_LINE_LENGTH];
     int Fd = GetMainFileDescriptor();
 
-    sprintf (section, "CAN/Global");
+    PrintFormatToString (section, sizeof(section), "CAN/Global");
     m_NumberOfChannels = GetCanControllerCountFromIni (section, Fd);
     m_DoNotUseUnits = IniFileDataBaseReadInt (section, "dont use units for blackboard", 0, Fd);
     m_RestartCanImmediately = IniFileDataBaseReadInt (section, "restart CAN immediately", 0, Fd);
@@ -1102,7 +1224,7 @@ void CanConfigServer::ReadFromIni()
 
     QList<int> UsedVariants;
     for (int i = 0; i < m_NumberOfChannels; i++) {
-        sprintf (entry, "can_controller%i_variante", i+1);
+        PrintFormatToString (entry, sizeof(entry), "can_controller%i_variante", i+1);
         IniFileDataBaseReadString (section, entry, "", txt2, sizeof (txt2), Fd);
         char *p = txt2;
         while (isdigit (*p)) {
@@ -1116,7 +1238,7 @@ void CanConfigServer::ReadFromIni()
 
     // Read the variants
     for (int VariantNr = 0; ; VariantNr++) {
-        sprintf (section, "CAN/Variante_%i", VariantNr);
+        PrintFormatToString (section, sizeof(section), "CAN/Variante_%i", VariantNr);
         if (!IniFileDataBaseLookIfSectionExist(section, Fd)) break;   // no more variants
         if (m_OnlyUsedVariants) {
             if (UsedVariants.indexOf(VariantNr) < 0) {
@@ -1128,13 +1250,66 @@ void CanConfigServer::ReadFromIni()
         NewVariant->ReadFromIni(VariantNr, Fd);
         m_Variants.append(NewVariant);
     }
+    int BusConfig = 0;
+    PrintFormatToString (section, sizeof(section), "CAN/Global");
 
-    sprintf (section, "CAN/Global");
+
     for (int i = 0; i < m_NumberOfChannels; i++) {
-        sprintf (entry, "can_controller%i_startup_state", i+1);
+        PrintFormatToString (entry, sizeof(entry), "can_controller%i_startup_state", i+1);
+        int StartupState =  IniFileDataBaseReadInt ("CAN/Global", entry, 1, Fd);
+        m_ChannelStartupState.append(StartupState);
+        PrintFormatToString (entry, sizeof(entry), "can_controller%i_baudrate_config", i+1);
+        BusConfig =  IniFileDataBaseReadInt ("CAN/Global", entry, 1, Fd);
+        m_ChannelBusConfig.append(BusConfig);
+        if (IS_BUS_CFG_USER(BusConfig)) { // Use defined bus configuration
+            PrintFormatToString (entry, sizeof(entry), "can_controller%i_user_config_fd", i+1);
+            bool FdFlag =  IniFileDataBaseReadYesNo ("CAN/Global", entry, 1, Fd);
+            m_ChannelFd.append(FdFlag);
+            PrintFormatToString (entry, sizeof(entry), "can_controller%i_user_config_baud_rate", i+1);
+            int Baudrate =  IniFileDataBaseReadInt ("CAN/Global", entry, 500, Fd);
+            m_ChannelBaudRate.append(Baudrate);
+            PrintFormatToString (entry, sizeof(entry), "can_controller%i_user_config_sample_point", i+1);
+            double SamplePoint = IniFileDataBaseReadFloat ("CAN/Global", entry, 0.75, Fd);
+            m_ChannelSamplePoint.append(SamplePoint);
+            PrintFormatToString (entry, sizeof(entry), "can_controller%i_user_config_data_baud_rate", i+1);
+            int DataBaudrate =  IniFileDataBaseReadInt ("CAN/Global", entry, 4000, Fd);
+            m_ChannelDataBaudRate.append(DataBaudrate);
+            PrintFormatToString (entry, sizeof(entry), "can_controller%i_user_config_data_sample_point", i+1);
+            double DataSamplePoint = IniFileDataBaseReadFloat ("CAN/Global", entry, 0.8, Fd);
+            m_ChannelDataSamplePoint.append(DataSamplePoint);
+        }
+        PrintFormatToString (entry, sizeof(entry), "can_controller%i_variante", i+1);
+        IniFileDataBaseReadString (section, entry, "", txt2, sizeof (txt2), Fd);
+        char *p = txt2;
+        int VariantPerChannelCount = 0;
+        while (isdigit (*p)) {
+            int v = strtol (p, &p, 0);
+            bool LastOne = false;
+            if (*p == ',') p++;
+            else LastOne = true;
+            int Index = IndexOfVariantNos.indexOf(v);
+            if ((Index >= 0) && (Index < m_Variants.size())) {
+                CanConfigVariant *Variant = m_Variants.at(Index);
+                Variant->AddToChannel(i+1);
+                if ((IS_BUS_CFG_FIRST_VARIANT(BusConfig) && (VariantPerChannelCount == 0)) || // read from first variant
+                    (IS_BUS_CFG_LAST_VARIANT(BusConfig) && LastOne) || // read from last variant
+                    (IS_BUS_CFG_SEL_VARIANT(BusConfig) && (VariantPerChannelCount == (BusConfig & 0xFFFF)))) {  // use a selected variant
+                    m_ChannelFd.append(Variant->m_CanFdEnable);
+                    m_ChannelBaudRate.append(Variant->m_BaudRate);
+                    m_ChannelSamplePoint.append(Variant->m_SamplePoint);
+                    m_ChannelDataBaudRate.append(Variant->m_DataBaudRate);
+                    m_ChannelDataSamplePoint.append(Variant->m_DataSamplePoint);
+                }
+            }
+            VariantPerChannelCount++;
+        }
+    }
+
+    for (int i = 0; i < m_NumberOfChannels; i++) {
+        PrintFormatToString (entry, sizeof(entry), "can_controller%i_startup_state", i+1);
         int StartupState = IniFileDataBaseReadInt("CAN/Global", entry, 1, Fd);
         m_ChannelStartupState.append(StartupState);
-        sprintf (entry, "can_controller%i_variante", i+1);
+        PrintFormatToString (entry, sizeof(entry), "can_controller%i_variante", i+1);
         IniFileDataBaseReadString (section, entry, "", txt2, sizeof (txt2), Fd);
         char *p = txt2;
         while (isdigit (*p)) {
@@ -1156,7 +1331,7 @@ void CanConfigServer::WriteToIni(bool par_Delete)
     char txt[INI_MAX_LINE_LENGTH];
     int Fd = GetMainFileDescriptor();
 
-    sprintf (section, "CAN/Global");
+    PrintFormatToString (section, sizeof(section), "CAN/Global");
 
     IniFileDataBaseWriteInt (section, "can_controller_count_ext", m_NumberOfChannels, Fd);
     IniFileDataBaseWriteInt (section, "can_controller_count", (m_NumberOfChannels > 4) ? 4 : m_NumberOfChannels, Fd);
@@ -1182,15 +1357,31 @@ void CanConfigServer::WriteToIni(bool par_Delete)
     }
 
     for (int c = 0; c < m_NumberOfChannels; c++) {
-        sprintf (entry, "can_controller%i_startup_state", c+1);
+        PrintFormatToString (entry, sizeof(entry), "can_controller%i_startup_state", c+1);
         IniFileDataBaseWriteInt("CAN/Global", entry, m_ChannelStartupState.at(c), Fd);
-        sprintf (entry, "can_controller%i_variante", c+1);
-        strcpy (txt, "");
+        PrintFormatToString (entry, sizeof(entry), "can_controller%i_baudrate_config", c+1);
+        IniFileDataBaseWriteInt ("CAN/Global", entry, m_ChannelBusConfig.at(c), Fd);
+        if (IS_BUS_CFG_USER(m_ChannelBusConfig.at(c))) { // Use defined bus configuration
+            PrintFormatToString (entry, sizeof(entry), "can_controller%i_user_config_fd", c+1);
+            IniFileDataBaseWriteYesNo ("CAN/Global", entry, m_ChannelFd.at(c), Fd);
+            PrintFormatToString (entry, sizeof(entry), "can_controller%i_user_config_baud_rate", c+1);
+            IniFileDataBaseWriteInt ("CAN/Global", entry, m_ChannelBaudRate.at(c), Fd);
+            PrintFormatToString (entry, sizeof(entry), "can_controller%i_user_config_sample_point", c+1);
+            IniFileDataBaseWriteFloat ("CAN/Global", entry, m_ChannelSamplePoint.at(c), Fd);
+            PrintFormatToString (entry, sizeof(entry), "can_controller%i_user_config_data_baud_rate", c+1);
+            IniFileDataBaseWriteInt ("CAN/Global", entry, m_ChannelDataBaudRate.at(c), Fd);
+            PrintFormatToString (entry, sizeof(entry), "can_controller%i_user_config_data_sample_point", c+1);
+            IniFileDataBaseWriteFloat ("CAN/Global", entry, m_ChannelDataSamplePoint.at(c), Fd);
+        }
+        PrintFormatToString (entry, sizeof(entry), "can_controller%i_variante", c+1);
+        STRING_COPY_TO_ARRAY (txt, "");
         for (int v = 0; v < m_Variants.size(); v++) {
             CanConfigVariant *Variant = m_Variants.at(v);
             if (Variant->IsConnectedToChannel(c+1)) {
-                if (txt[0] != 0) strcat (txt, ",");
-                sprintf (txt + strlen(txt), "%i", v);
+                if (txt[0] != 0) {
+                    STRING_APPEND_TO_ARRAY (txt, ",");
+                }
+                PrintFormatToString (txt + strlen(txt), sizeof(txt) - strlen(txt), "%i", v);
             }
         }
         IniFileDataBaseWriteString (section, entry, txt, Fd);
@@ -1305,7 +1496,7 @@ static void FillCANCardList(Ui::CanConfigDialog *ui)
                     uint32_t InterfaceVersion;
                     GetCanGatewayDeviceInfos(x, Name, 32, &DriverVersion, &DllVersion, &InterfaceVersion);
                     char Text[256];
-                    sprintf(Text, "%i.  Gateway %s (versions: DLL 0x%X, driver 0x%X, interface 0x%X)", x, Name, DllVersion, DriverVersion, InterfaceVersion);
+                    PrintFormatToString (Text, sizeof(Text), "%i.  Gateway %s (versions: DLL 0x%X, driver 0x%X, interface 0x%X)", x, Name, DllVersion, DriverVersion, InterfaceVersion);
                     ui->FoundCANCardslistWidget->addItem(Text);
                 }
                 EnableGatewayFlags(ui, true);
@@ -1318,7 +1509,7 @@ static void FillCANCardList(Ui::CanConfigDialog *ui)
 #endif
         for ( ; x < MAX_CAN_CHANNELS; x++) {
             char Text[256];
-            sprintf(Text, "%i.  virtual can device", x);
+            PrintFormatToString(Text, sizeof(Text), "%i.  virtual can device", x);
             ui->FoundCANCardslistWidget->addItem(Text);
         }
     }
@@ -1347,6 +1538,23 @@ void CanConfigServer::FillDialogTab(Ui::CanConfigDialog *ui, QModelIndex par_Ind
 
 void CanConfigServer::UpdateChannelMapping(Ui::CanConfigDialog *ui)
 {
+    // resize
+    while (m_ChannelStartupState.size() > m_NumberOfChannels) m_ChannelStartupState.removeLast();
+    while (m_ChannelStartupState.size() < m_NumberOfChannels) m_ChannelStartupState.append(1); // ON
+    while (m_ChannelBusConfig.size() > m_NumberOfChannels) m_ChannelBusConfig.removeLast();
+    while (m_ChannelBusConfig.size() < m_NumberOfChannels) m_ChannelBusConfig.append(BUS_CFG_LAST_VARIANT); // >Last<
+
+    while (m_ChannelFd.size() > m_NumberOfChannels) m_ChannelFd.removeLast();
+    while (m_ChannelFd.size() < m_NumberOfChannels) m_ChannelFd.append(0); // Off
+    while (m_ChannelBaudRate.size() > m_NumberOfChannels) m_ChannelBaudRate.removeLast();
+    while (m_ChannelBaudRate.size() < m_NumberOfChannels) m_ChannelBaudRate.append(500);
+    while (m_ChannelSamplePoint.size() > m_NumberOfChannels) m_ChannelSamplePoint.removeLast();
+    while (m_ChannelSamplePoint.size() < m_NumberOfChannels) m_ChannelSamplePoint.append(0.75);
+    while (m_ChannelDataBaudRate.size() > m_NumberOfChannels) m_ChannelDataBaudRate.removeLast();
+    while (m_ChannelDataBaudRate.size() < m_NumberOfChannels) m_ChannelDataBaudRate.append(4000);
+    while (m_ChannelDataSamplePoint.size() > m_NumberOfChannels) m_ChannelDataSamplePoint.removeLast();
+    while (m_ChannelDataSamplePoint.size() < m_NumberOfChannels) m_ChannelDataSamplePoint.append(0.8);
+
     ui->MappingTreeWidget->clear();
     m_ChannelVariant.clear();
     int i = 0;
@@ -1373,8 +1581,74 @@ void CanConfigServer::UpdateChannelMapping(Ui::CanConfigDialog *ui)
         } else {
             ChannelLine.append(QString("ON"));  // new one are by default enabled
         }
+        ChannelLine.append(QString(""));  // invisable index
+        QString BusConfigString;
+        if (m_ChannelBusConfig.size() > c) {
+            int BusConfig = m_ChannelBusConfig.at(c);
+            if (IS_BUS_CFG_BLACKBOARD(BusConfig)) {
+                BusConfigString = QString(">Blackboard<");
+            } else if (IS_BUS_CFG_FIRST_VARIANT(BusConfig)) {
+                BusConfigString =QString(">First<");
+            } else if (IS_BUS_CFG_LAST_VARIANT(BusConfig)) {
+                BusConfigString = QString(">Last<");
+            } else if (IS_BUS_CFG_USER(BusConfig)) {
+                BusConfigString = QString(">User<");
+            } else {
+                int Pos = BusConfig & 0xFFFF;
+                int Index = 0;
+                QString VariantName;
+                foreach (CanConfigVariant *Variant, m_Variants) {
+                    if (Variant->IsConnectedToChannel(c+1)) {
+                        if (Index == 0) {
+                            VariantName = Variant->GetName();
+                        }
+                        if (Index == Pos) {
+                            VariantName = Variant->GetName();
+                            break;
+                        }
+                        Index++;
+                    }
+                }
+                BusConfigString = VariantName;
+            }
+        } else {
+            BusConfigString = QString("");
+        }
+        ChannelLine.append(BusConfigString);
+
+        SetBusConfig(c, BusConfigString);
+
+        if (m_ChannelFd.size() > c) {
+            if (m_ChannelFd.at(c)) {
+                ChannelLine.append(QString("Yes"));
+            } else {
+                ChannelLine.append(QString("No"));
+            }
+        } else {
+            ChannelLine.append(QString("No"));
+        }
+        if (m_ChannelBaudRate.size() > c) {
+            ChannelLine.append(QString("").number(m_ChannelBaudRate.at(c)));
+        } else {
+            ChannelLine.append(QString("500"));
+        }
+        if (m_ChannelSamplePoint.size() > c) {
+            ChannelLine.append(QString("").number(m_ChannelSamplePoint.at(c)));
+        } else {
+            ChannelLine.append(QString("0.75"));
+        }
+        if (m_ChannelDataBaudRate.size() > c) {
+            ChannelLine.append(QString("").number(m_ChannelDataBaudRate.at(c)));
+        } else {
+            ChannelLine.append(QString("4000"));
+        }
+        if (m_ChannelDataSamplePoint.size() > c) {
+            ChannelLine.append(QString("").number(m_ChannelDataSamplePoint.at(c)));
+        } else {
+            ChannelLine.append(QString("0.8"));
+        }
         QTreeWidgetItem *ChannelItem = new QTreeWidgetItem(ui->MappingTreeWidget, ChannelLine);
-        ChannelItem->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable | Qt::ItemIsUserCheckable | Qt::ItemIsEditable);
+        ChannelItem->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable | Qt::ItemIsEditable);
         ui->MappingTreeWidget->addTopLevelItem(ChannelItem);
         foreach (CanConfigVariant *Variant, m_Variants) {
             if (Variant->IsConnectedToChannel(c+1)) {
@@ -1383,6 +1657,7 @@ void CanConfigServer::UpdateChannelMapping(Ui::CanConfigDialog *ui)
                 VariantLine.append(Variant->GetDescription());
                 VariantLine.append(QString()); // no data for the variant inside the startup state column
                 VariantLine.append(QString().number(i));  // 4. column will be used to save the index inside in m_ChannelVariant verwendet and must be invisible
+                VariantLine.append(QString()); // no data for the variant inside the baud rate column
                 QTreeWidgetItem *VariantItem = new QTreeWidgetItem(ChannelItem, VariantLine);
                 m_ChannelVariant.insert(i, Variant);
                 ChannelItem->addChild(VariantItem);
@@ -1402,7 +1677,13 @@ void CanConfigServer::StoreDialogTab(Ui::CanConfigDialog *ui)
     this->m_EnableGatewayirtualDeviceDriverEqu = ui->VirtualGatewayLineEdit->text();
     this->m_EnableGatewayRealDeviceDriver = ui->RealGatewayComboBox->currentIndex();
     this->m_EnableGatewayRealDeviceDriverEqu = ui->RealGatewayLineEdit->text();
+}
+
+void CanConfigServer::StoreServerMappingDialogTab(Ui::CanConfigDialog *ui)
+{
     m_ChannelStartupState.clear();
+    m_ChannelBusConfig.clear();
+
     for (int c = 0; c < ui->MappingTreeWidget->topLevelItemCount(); c++) {
         QString StartupState = ui->MappingTreeWidget->model()->index(c, 2).data(Qt::DisplayRole).toString();
         if (!StartupState.compare("OFF")) {
@@ -1416,6 +1697,34 @@ void CanConfigServer::StoreDialogTab(Ui::CanConfigDialog *ui)
         } else {
             m_ChannelStartupState.append(1);
         }
+        QString BusConfig = ui->MappingTreeWidget->model()->index(c, 4).data(Qt::DisplayRole).toString();
+        if (!BusConfig.compare(">Blackboard<")) {
+            m_ChannelBusConfig.append(BUS_CFG_BLACKBOARD);
+        } else if (!BusConfig.compare(">First<")) {
+            m_ChannelBusConfig.append(BUS_CFG_FIRST_VARIANT);
+        } else if (!BusConfig.compare(">Last<")) {
+            m_ChannelBusConfig.append(BUS_CFG_LAST_VARIANT);
+        } else if (!BusConfig.compare(">User<")) {
+            m_ChannelBusConfig.append(BUS_CFG_USER);
+        } else {
+            // translate the string to an index
+            QString BusConfig = ui->MappingTreeWidget->model()->index(c, 4).data().toString();
+            QModelIndex ParentIndex = ui->MappingTreeWidget->model()->index(c, 0);
+            for (int i = 0; ; i++) {
+                QModelIndex Child = ParentIndex.model()->index(i, 0, ParentIndex);
+                if (Child.isValid()) {
+                    QString Variant = Child.data().toString();
+                    if (!BusConfig.compare(Variant)) {
+                        m_ChannelBusConfig.append(i);
+                        break;
+                    }
+                } else {
+                    m_ChannelBusConfig.append(BUS_CFG_LAST_VARIANT);  // last variant is default
+                    break;
+                }
+            }
+        }
+
     }
 }
 
@@ -1472,6 +1781,67 @@ void CanConfigServer::RemoveVariantFromChannel(int par_IndexNr, int par_ChannelN
 {
     CanConfigVariant *v = m_ChannelVariant.value(par_IndexNr, nullptr);
     v->RemoveFromChannel(par_ChannelNr+1);
+}
+
+void CanConfigServer::SetBusConfig(int par_Channel, QString &par_BusConfig, bool par_ValidFlag,
+                                   bool par_UserFd, int par_UserBaudrate, double par_UserSamplePoint,
+                                   int par_UserDataBaudrate, double par_UserDataSamplePoint)
+{
+    int UserVarinatNo = -1;
+    if (!par_BusConfig.compare(">Blackboard<")) {
+        m_ChannelBusConfig.replace(par_Channel, BUS_CFG_BLACKBOARD);
+    } else if (!par_BusConfig.compare(">First<")) {
+        m_ChannelBusConfig.replace(par_Channel, BUS_CFG_FIRST_VARIANT);
+    } else if (!par_BusConfig.compare(">Last<")) {
+        m_ChannelBusConfig.replace(par_Channel, BUS_CFG_LAST_VARIANT);
+    } else if (!par_BusConfig.compare(">User<")) {
+        m_ChannelBusConfig.replace(par_Channel, BUS_CFG_USER);
+    } else {
+        // translate the variant string to an index
+        int VarinatNo = 0;
+        foreach (CanConfigVariant *Variant, m_Variants) {
+            if (Variant->IsConnectedToChannel(par_Channel+1)) {
+                if (!par_BusConfig.compare(Variant->GetName())) {
+                    m_ChannelBusConfig.replace(par_Channel, VarinatNo);
+                    UserVarinatNo = VarinatNo;
+                    break;
+                }
+                VarinatNo++;
+            }
+        }
+    }
+    // Now update the bus config values
+    int BusConfig = m_ChannelBusConfig.at(par_Channel);
+    if (par_ValidFlag &&
+        IS_BUS_CFG_USER(BusConfig)) {
+        m_ChannelFd.replace(par_Channel, par_UserFd);
+        m_ChannelBaudRate.replace(par_Channel, par_UserBaudrate);
+        m_ChannelSamplePoint.replace(par_Channel, par_UserSamplePoint);
+        m_ChannelDataBaudRate.replace(par_Channel, par_UserDataBaudrate);
+        m_ChannelDataSamplePoint.replace(par_Channel, par_UserDataSamplePoint);
+    } else {
+        int VarinatNo = 0;
+        CanConfigVariant *MatchVariant = nullptr;
+        foreach (CanConfigVariant *Variant, m_Variants) {
+            if (Variant->IsConnectedToChannel(par_Channel+1)) {
+                MatchVariant = Variant;
+                if (IS_BUS_CFG_FIRST_VARIANT(BusConfig) && (VarinatNo == 0)) { // Fist
+                    break;
+                } else if (IS_BUS_CFG_SEL_VARIANT(BusConfig) && // Selected
+                           (UserVarinatNo == VarinatNo)) {
+                    break;
+                }
+                VarinatNo++;
+            }
+        }
+        if ((MatchVariant != nullptr) && !IS_BUS_CFG_USER(BusConfig)) {
+            m_ChannelFd.replace(par_Channel, MatchVariant->m_CanFdEnable);
+            m_ChannelBaudRate.replace(par_Channel, MatchVariant->m_BaudRate);
+            m_ChannelSamplePoint.replace(par_Channel, MatchVariant->m_SamplePoint);
+            m_ChannelDataBaudRate.replace(par_Channel, MatchVariant->m_DataBaudRate);
+            m_ChannelDataSamplePoint.replace(par_Channel, MatchVariant->m_DataSamplePoint);
+        }
+    }
 }
 
 QList<CanConfigSignal *> CanConfigServer::SearchSignal(const QRegularExpression &par_RegExp)
@@ -1570,7 +1940,7 @@ bool CanConfigVariant::ReadFromIni(int par_VariantNr, int par_Fd)
     char txt[INI_MAX_LINE_LENGTH];
     int x;
 
-    sprintf (section, "CAN/Variante_%i", par_VariantNr);
+    PrintFormatToString (section, sizeof(section), "CAN/Variante_%i", par_VariantNr);
     if (!IniFileDataBaseLookIfSectionExist(section, par_Fd)) return false;  // This variante don't exist
     IniFileDataBaseReadString (section, "name", "", txt, sizeof (txt), par_Fd);
     m_Name = CharToQString(txt);
@@ -1586,7 +1956,7 @@ bool CanConfigVariant::ReadFromIni(int par_VariantNr, int par_Fd)
     m_EnableJ1939 = IniFileDataBaseReadYesNo(section, "j1939", 0, par_Fd);
 
     for (x = 0; x < 4; x++) {
-        sprintf (entry, "j1939 src addr %i", x);
+        PrintFormatToString (entry, sizeof(entry), "j1939 src addr %i", x);
         if (IniFileDataBaseReadString (section, entry, "", txt, sizeof (txt), par_Fd) > 0) {
             m_EnableJ1939Addresses[x] = true;
             m_J1939Addresses[x] = strtol (txt, nullptr, 0);
@@ -1631,7 +2001,7 @@ void CanConfigVariant::WriteToIni(int par_VariantNr, int par_Fd, bool par_Delete
     char entry[32];
     int x;
 
-    sprintf (section, "CAN/Variante_%i", par_VariantNr);
+    PrintFormatToString (section, sizeof(section), "CAN/Variante_%i", par_VariantNr);
     IniFileDataBaseWriteString(section, nullptr, nullptr, par_Fd);
     if (par_Delete) return;
     IniFileDataBaseWriteString(section, "name", QStringToConstChar(m_Name), par_Fd);
@@ -1646,7 +2016,7 @@ void CanConfigVariant::WriteToIni(int par_VariantNr, int par_Fd, bool par_Delete
 
     for (x = 0; x < 4; x++) {
         if (m_EnableJ1939Addresses[x]) {
-            sprintf (entry, "j1939 src addr %i", x);
+            PrintFormatToString (entry, sizeof(entry), "j1939 src addr %i", x);
             IniFileDataBaseWriteUInt (section, entry,  m_J1939Addresses[x], par_Fd);
         }
     }
@@ -1762,12 +2132,18 @@ void CanConfigVariant::FillDialogTab(Ui::CanConfigDialog *ui, QModelIndex par_In
         ui->VariantBaudRateValueRadioButton->setChecked(true);
         ui->VariantBaudRateValueLineEdit->SetValue(m_BaudRate & 0xFFFF);
     }
-
-    ui->VariantSamplePointLineEdit->SetValue(m_SamplePoint);
+    if (m_SamplePoint > 1.0) {
+        ui->VariantSamplePointLineEdit->SetValue((uint64_t)m_SamplePoint, 16);
+    } else {
+        ui->VariantSamplePointLineEdit->SetValue(m_SamplePoint);
+    }
     ui->VariantCanFdCheckBox->setChecked(m_CanFdEnable);
     ui->VariantDataBitRateLineEdit->SetValue(m_DataBaudRate);
-    ui->VariantDataSamplePointLineEdit->SetValue(m_DataSamplePoint);
-
+    if (m_SamplePoint > 1.0) {
+        ui->VariantDataSamplePointLineEdit->SetValue((uint64_t)m_DataSamplePoint, 16);
+    } else {
+        ui->VariantDataSamplePointLineEdit->SetValue(m_DataSamplePoint);
+    }
     ui->VariantEnableJ1939CheckBox->setChecked(m_EnableJ1939);
     ui->VariantEnableJ1939FirstAddressCheckBox->setChecked(m_EnableJ1939Addresses[0]);
     ui->VariantJ1939FirstAddressLineEdit->SetValue(m_J1939Addresses[0], 16);
@@ -1998,7 +2374,7 @@ bool CanConfigObject::ReadFromIni(int par_VariantNr, int par_ObjectNr, int par_F
     char txt[INI_MAX_LINE_LENGTH];
     int i;
 
-    sprintf (section, "CAN/Variante_%i/Object_%i", par_VariantNr, par_ObjectNr);
+    PrintFormatToString (section, sizeof(section), "CAN/Variante_%i/Object_%i", par_VariantNr, par_ObjectNr);
     if (!IniFileDataBaseLookIfSectionExist(section, par_Fd)) return false;  // This object don't exist
     IniFileDataBaseReadString (section, "name", "", txt, sizeof (txt), par_Fd);
     m_Name = CharToQString(txt);
@@ -2021,7 +2397,9 @@ bool CanConfigObject::ReadFromIni(int par_VariantNr, int par_ObjectNr, int par_F
     m_Size = IniFileDataBaseReadInt (section, "size", 1, par_Fd);
     if (m_Size < 0) m_Size = 0;
     IniFileDataBaseReadString (section, "direction", "read", txt, sizeof (txt), par_Fd);
-    if (!strcmp ("write_variable_id", txt)) {
+    if (!strcmp ("read_startup_variable_id", txt)) {
+        m_Direction = ReadStartupVariableId;
+    } else if (!strcmp ("write_variable_id", txt)) {
         m_Direction = WriteVariableId;
     } else if (!strcmp ("write", txt)) {
         m_Direction = Write;
@@ -2083,7 +2461,7 @@ bool CanConfigObject::ReadFromIni(int par_VariantNr, int par_ObjectNr, int par_F
     // "additional equation"
     m_AdditionalVariables.clear();
     for (i = 0; ; i++) {
-        sprintf (entry, "additional_variable_%i", i);
+        PrintFormatToString (entry, sizeof(entry), "additional_variable_%i", i);
         if (IniFileDataBaseReadString (section, entry, "", txt, sizeof (txt), par_Fd) <= 0) {
             break;
         }
@@ -2091,7 +2469,7 @@ bool CanConfigObject::ReadFromIni(int par_VariantNr, int par_ObjectNr, int par_F
         //m_AdditionalVariables.append(QString("\n"));
     }
     for (i = 0; ; i++) {
-        sprintf (entry, "equ_before_%i", i);
+        PrintFormatToString (entry, sizeof(entry), "equ_before_%i", i);
         if (IniFileDataBaseReadString (section, entry, "", txt, sizeof (txt), par_Fd) <= 0) {
             break;
         }
@@ -2099,7 +2477,7 @@ bool CanConfigObject::ReadFromIni(int par_VariantNr, int par_ObjectNr, int par_F
         //m_AdditionalEquationBefore.append(QString("\n"));
     }
     for (i = 0; ; i++) {
-        sprintf (entry, "equ_behind_%i", i);
+        PrintFormatToString (entry, sizeof(entry), "equ_behind_%i", i);
         if (IniFileDataBaseReadString (section, entry, "", txt, sizeof (txt), par_Fd) <= 0) {
             break;
         }
@@ -2155,12 +2533,12 @@ void CanConfigObject::WriteToIni(int par_VariantNr, int par_ObjectNr, int par_Fd
     char txt[INI_MAX_LINE_LENGTH];
     int i;
 
-    sprintf (section, "CAN/Variante_%i/Object_%i", par_VariantNr, par_ObjectNr);
+    PrintFormatToString (section, sizeof(section), "CAN/Variante_%i/Object_%i", par_VariantNr, par_ObjectNr);
     IniFileDataBaseWriteString(section, nullptr, nullptr, par_Fd);
     if (par_Delete) return;
     IniFileDataBaseWriteString (section, "name", QStringToConstChar(m_Name), par_Fd);
     IniFileDataBaseWriteString (section, "desc", QStringToConstChar(m_Description), par_Fd);
-    sprintf (txt, "0x%X", m_Identifier);
+    PrintFormatToString (txt, sizeof(txt), "0x%X", m_Identifier);
     IniFileDataBaseWriteString (section, "id", txt, par_Fd);
     if (!m_VariableId.isEmpty()) {
         IniFileDataBaseWriteString (section, "variable_id", QStringToConstChar(m_VariableId), par_Fd);
@@ -2175,6 +2553,9 @@ void CanConfigObject::WriteToIni(int par_VariantNr, int par_ObjectNr, int par_Fd
     }
     IniFileDataBaseWriteInt (section, "size", m_Size, par_Fd);
     switch (m_Direction) {
+    case ReadStartupVariableId:
+        IniFileDataBaseWriteString (section, "direction", "read_startup_variable_id", par_Fd);
+        break;
     case WriteVariableId:
         IniFileDataBaseWriteString (section, "direction", "write_variable_id", par_Fd);
         break;
@@ -2237,25 +2618,25 @@ void CanConfigObject::WriteToIni(int par_VariantNr, int par_ObjectNr, int par_Fd
     // "additional equation"
     i = 0;
     foreach (QString VariableDefinition, m_AdditionalVariables) {
-        sprintf (entry, "additional_variable_%i", i);
+        PrintFormatToString (entry, sizeof(entry), "additional_variable_%i", i);
         IniFileDataBaseWriteString (section, entry, QStringToConstChar(VariableDefinition), par_Fd);
         i++;
     }
     i = 0;
     foreach (QString EquationBefore, m_AdditionalEquationBefore) {
-        sprintf (entry, "equ_before_%i", i);
+        PrintFormatToString (entry, sizeof(entry), "equ_before_%i", i);
         IniFileDataBaseWriteString (section, entry, QStringToConstChar(EquationBefore), par_Fd);
         i++;
     }
     i = 0;
     foreach (QString EquationBehind, m_AdditionalEquationBehind) {
-        sprintf (entry, "equ_behind_%i", i);
+        PrintFormatToString (entry, sizeof(entry), "equ_behind_%i", i);
         IniFileDataBaseWriteString (section, entry, QStringToConstChar(EquationBehind), par_Fd);
         i++;
     }
 
     // Init Data
-    sprintf (txt, "0x%" PRIX64 "", m_ObjectInitValue);
+    PrintFormatToString (txt, sizeof(txt), "0x%" PRIX64 "", m_ObjectInitValue);
     IniFileDataBaseWriteString (section, "InitData", txt, par_Fd);
 
     // write C_PG Ids
@@ -2264,7 +2645,7 @@ void CanConfigObject::WriteToIni(int par_VariantNr, int par_ObjectNr, int par_Fd
         *p = 0;
         foreach(int Id, m_C_PG_Ids) {
             if ((p - txt) > ((int)sizeof(txt) - 32)) break;
-            sprintf(p, (p == txt) ? "0x%X" : ", 0x%X", Id);
+            PrintFormatToString (p, sizeof(txt) - (p - txt), (p == txt) ? "0x%X" : ", 0x%X", Id);
             p = p + strlen(p);
         }
         IniFileDataBaseWriteString (section, "C_PGs", txt, par_Fd);
@@ -2301,7 +2682,9 @@ QVariant CanConfigObject::data(int par_Column)
 {
     switch (par_Column) {
     case 0:
-        if (m_Direction == WriteVariableId) {
+        if (m_Direction == ReadStartupVariableId) {
+            return QString("<- [0x%1(startup var)] ").arg(m_Identifier, 0, 16).append(m_Name);
+        } else if (m_Direction == WriteVariableId) {
             return QString("-> [0x%1(var)] ").arg(m_Identifier, 0, 16).append(m_Name);
         } else if (m_Direction == Write) {
             return QString("-> [0x%1] ").arg(m_Identifier, 0, 16).append(m_Name);
@@ -2656,7 +3039,7 @@ bool CanConfigSignal::ReadFromIni(int par_VariantNr, int par_ObjectNr, int par_S
     char section[INI_MAX_SECTION_LENGTH];
     char txt[INI_MAX_LINE_LENGTH];
 
-    sprintf (section, "CAN/Variante_%i/Object_%i/Signal_%i", par_VariantNr, par_ObjectNr, par_SignalNr);
+    PrintFormatToString (section, sizeof(section), "CAN/Variante_%i/Object_%i/Signal_%i", par_VariantNr, par_ObjectNr, par_SignalNr);
     if (!IniFileDataBaseLookIfSectionExist(section, par_Fd)) return false;  // This signal don't exist
     IniFileDataBaseReadString (section, "name", "", txt, sizeof (txt), par_Fd);
     m_Name = CharToQString(txt);
@@ -2733,7 +3116,7 @@ void CanConfigSignal::WriteToIni(int par_VariantNr, int par_ObjectNr, int par_Si
 {
     char section[INI_MAX_SECTION_LENGTH];
 
-    sprintf (section, "CAN/Variante_%i/Object_%i/Signal_%i", par_VariantNr, par_ObjectNr, par_SignalNr);
+    PrintFormatToString (section, sizeof(section), "CAN/Variante_%i/Object_%i/Signal_%i", par_VariantNr, par_ObjectNr, par_SignalNr);
     IniFileDataBaseWriteString(section, nullptr, nullptr, par_Fd);
     if (par_Delete) return;
     IniFileDataBaseWriteString (section, "name", QStringToConstChar(m_Name), par_Fd);
@@ -3306,14 +3689,20 @@ void CanConfigTreeView::resizeEvent(QResizeEvent *par_Event)
 
 void CanConfigDialog::on_AddVariantToChannelPushButton_clicked()
 {
+    QSize Size = size();
     QModelIndex SelectedChannel = ui->MappingTreeWidget->currentIndex();
     if (SelectedChannel.isValid()) {
         if (!SelectedChannel.parent().isValid()) {
+            int SelRow = SelectedChannel.row();
             QModelIndex Selected = ui->AllVariantListView->currentIndex();
             if (Selected.isValid()) {
                 CanConfigVariant *Item = static_cast<CanConfigVariant*>(this->m_CanConfigTreeModel->GetItem(Selected));
                 Item->AddToChannel(SelectedChannel.row()+1);
                 m_CanConfig->m_Server->UpdateChannelMapping(ui);
+                QModelIndex Index = ui->MappingTreeWidget->model()->index(SelRow, 0, QModelIndex());
+                if (Index.isValid()) {
+                    ui->MappingTreeWidget->setCurrentIndex(Index);
+                }
             }
         }
     }

@@ -34,7 +34,7 @@ static int RPCFunc_Login(RPC_CONNECTION *par_Connection, RPC_API_BASE_MESSAGE *p
     UNUSED(par_Connection);
     UNUSED(par_DataIn);
     RPC_API_LOGIN_MESSAGE_ACK *Out = (RPC_API_LOGIN_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_LOGIN_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_LOGIN_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_LOGIN_MESSAGE_ACK);
     Out->Version = XILENV_VERSION;
     par_Connection->ConnectedFlag = 1;
@@ -48,7 +48,7 @@ static int RPCFunc_LogOut(RPC_CONNECTION *par_Connection, RPC_API_BASE_MESSAGE *
 
     SetShouldExit(In->ShouldTerminate, In->SetExitCode, In->ExitCode);
 
-    memset (Out, 0, sizeof (RPC_API_LOGOUT_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_LOGOUT_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_LOGOUT_MESSAGE_ACK);
     par_Connection->ConnectedFlag = 0;
     return -(int)sizeof(RPC_API_LOGOUT_MESSAGE_ACK);
@@ -59,7 +59,7 @@ static int RPCFunc_GetVersion(RPC_CONNECTION *par_Connection, RPC_API_BASE_MESSA
     UNUSED(par_Connection);
     UNUSED(par_DataIn);
     RPC_API_GET_VERSION_MESSAGE_ACK *Out = (RPC_API_GET_VERSION_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_GET_VERSION_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_GET_VERSION_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_GET_VERSION_MESSAGE_ACK);
     Out->Version =  XILENV_VERSION;
     Out->MinorVersion = XILENV_MINOR_VERSION;
@@ -71,7 +71,7 @@ static int RPCFunc_Ping(RPC_CONNECTION *par_Connection, RPC_API_BASE_MESSAGE *pa
     UNUSED(par_Connection);
     RPC_API_PING_MESSAGE *In = (RPC_API_PING_MESSAGE*)par_DataIn;
     RPC_API_PING_MESSAGE_ACK *Out = (RPC_API_PING_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_PING_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_PING_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_PING_MESSAGE);
     MEMCPY (Out->Data, In->Data, sizeof(Out->Data));
     return sizeof (RPC_API_PING_MESSAGE_ACK);
@@ -81,7 +81,7 @@ static int RPCFunc_ShouldBeTerminated(RPC_CONNECTION *par_Connection, RPC_API_BA
 {
     UNUSED(par_DataIn);
     RPC_API_SHOULD_BE_TERMINATED_MESSAGE_ACK *Out = (RPC_API_SHOULD_BE_TERMINATED_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_SHOULD_BE_TERMINATED_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_SHOULD_BE_TERMINATED_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_SHOULD_BE_TERMINATED_MESSAGE_ACK);
     StopAcceptingNewConnections(par_Connection);
     return sizeof(RPC_API_SHOULD_BE_TERMINATED_MESSAGE_ACK);

@@ -26,17 +26,19 @@
 #include <ifaddrs.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include "StringMaxChar.h"
+#include "PrintFormatToString.h"
 
 int ResetAllIrqToCpu0(void)
 {
     int i, fh;
     char Path[256];
     char Data[256];
-    for (i = 0; i < 64; i++) {   // sind das max. 64?
-        sprintf(Path, "/proc/irq/%i/smp_affinity", i);
+    for (i = 0; i < 64; i++) {   // are this max. 64?
+        PrintFormatToString (Path, sizeof(Path), "/proc/irq/%i/smp_affinity", i);
         fh = open(Path, O_RDWR);
         if (fh > 0) {
-            sprintf(Data, "1");
+            PrintFormatToString (Data, sizeof(Data), "1");
             write(fh, Data, strlen(Data));
             close(fh);
         }
@@ -50,15 +52,15 @@ int SetIrqToCpu(char *par_NameOfDevice, int par_CpuNumber)
     int i, fh;
     char Path[256];
     char Data[256];
-    for (i = 0; i < 64; i++) {   // sind das max. 64?
-        sprintf(Path, "/proc/irq/%i/%s", i, par_NameOfDevice);
+    for (i = 0; i < 64; i++) {   // are this max. 64?
+        PrintFormatToString (Path, sizeof(Path), "/proc/irq/%i/%s", i, par_NameOfDevice);
         fh = open(Path, O_RDONLY);
         if (fh > 0) {
             close(fh);
-            sprintf(Path, "/proc/irq/%i/smp_affinity", i);
+            PrintFormatToString (Path,sizeof(Path),  "/proc/irq/%i/smp_affinity", i);
             fh = open(Path, O_RDWR);
             if (fh > 0) {
-                sprintf(Data, "%i", 1 << par_CpuNumber);
+                PrintFormatToString (Data, sizeof(Data), "%i", 1 << par_CpuNumber);
                 write(fh, Data, strlen(Data));
                 close(fh);
                 printf("set irq affinity of device %s to %X\n", par_NameOfDevice, 1 << par_CpuNumber);
@@ -68,7 +70,7 @@ int SetIrqToCpu(char *par_NameOfDevice, int par_CpuNumber)
     return 0;
 }
 
-int GetEthernetDeviceNameForIpAddress(char *ret_name)
+int GetEthernetDeviceNameForIpAddress(char *ret_name, int maxc)
 {
     struct ifaddrs *if_addrs;
     struct ifaddrs *a;
@@ -84,7 +86,7 @@ int GetEthernetDeviceNameForIpAddress(char *ret_name)
             inet_ntop(AF_INET, tmp, address_string, sizeof(address_string));
             printf("%s -> %s\n", a->ifa_name, address_string);
             if (strcmp("127.0.0.1", address_string)) {
-                strcpy(ret_name, a->ifa_name);
+                StringCopyMaxCharTruncate(ret_name, a->ifa_name, maxc);
                 return 0;
             }
         }

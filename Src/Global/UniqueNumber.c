@@ -32,7 +32,7 @@ static int CountUsedUniqueNumbers;
 void InitUniqueNumbers (void)
 {
     InitializeCriticalSection (&UniqueNumberCriticalSection);
-    GeneratUniqueNuberCounter = 1;   // Is i the first number
+    GeneratUniqueNuberCounter = 1;   // One is the first number
 }
 
 void TerminateUniqueNumbers (void)

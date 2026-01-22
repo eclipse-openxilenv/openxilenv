@@ -62,11 +62,12 @@ static int ConvertDataType (int bbtype, char *asaptype, int maxc)
 int ExportA2lFile (const char *fname)
 {
     FILE *fh;
-    int vid_index;
+    int x, vid_index;
     char *convstr;
     char  *s, *d;
     char txt[1024];
     int count;
+    double Factor, Offset;
 
     if ((fh = open_file (fname, "w+b")) == NULL) {
         ThrowError (1, "cannot open file %s", fname);
@@ -159,6 +160,78 @@ int ExportA2lFile (const char *fname)
                 fprintf (fh, "      %i\r\n", count);
                 fprintf (fh, "%s", convstr);
                 fprintf (fh, "    /end COMPU_VTAB\r\n");
+                break;
+            case BB_CONV_TAB_INTP:
+            case BB_CONV_TAB_NOINTP:
+                fprintf (fh, "    /begin COMPU_METHOD %s_conv\r\n"
+                            "      \"\"\r\n"
+                            "      %s\r\n"
+                            "      \"%%%i.%i\"\r\n"
+                            "      \"%s\"\r\n"
+                            "      COMPU_TAB_REF %s_enum\r\n"
+                            "    /end COMPU_METHOD\r\n",
+                        blackboard[vid_index].pAdditionalInfos->Name,
+                        (blackboard[vid_index].pAdditionalInfos->Conversion.Type == BB_CONV_TAB_INTP) ? "TAB_INTP" : "TAB_NOINTP",
+                        (int)blackboard[vid_index].pAdditionalInfos->Width,
+                        (int)blackboard[vid_index].pAdditionalInfos->Prec,
+                        blackboard[vid_index].pAdditionalInfos->Unit,
+                        blackboard[vid_index].pAdditionalInfos->Name);
+                fprintf (fh, "\r\n");
+                fprintf (fh, "    /begin COMPU_TAB %s_enum\r\n"
+                            "      \"\"\r\n"
+                            "      %s\r\n",
+                            "      %i\r\n",
+                        blackboard[vid_index].pAdditionalInfos->Name,
+                        (blackboard[vid_index].pAdditionalInfos->Conversion.Type == BB_CONV_TAB_INTP) ? "TAB_INTP" : "TAB_NOINTP",
+                        blackboard[vid_index].pAdditionalInfos->Conversion.Conv.Table.Size);
+                for (x = 0; x < blackboard[vid_index].pAdditionalInfos->Conversion.Conv.Table.Size; x++) {
+                    fprintf (fh, "      %.18g %.18g\r\n",
+                             blackboard[vid_index].pAdditionalInfos->Conversion.Conv.Table.Values->Phys,
+                             blackboard[vid_index].pAdditionalInfos->Conversion.Conv.Table.Values->Raw);
+                }
+                fprintf (fh, "    /end COMPU_TAB\r\n");
+                break;
+            case BB_CONV_FACTOFF:
+            case BB_CONV_OFFFACT:
+                if (blackboard[vid_index].pAdditionalInfos->Conversion.Type == BB_CONV_FACTOFF) {
+                    Factor = blackboard[vid_index].pAdditionalInfos->Conversion.Conv.FactorOffset.Factor;
+                    Offset = blackboard[vid_index].pAdditionalInfos->Conversion.Conv.FactorOffset.Offset;
+                } else {
+                    Factor = blackboard[vid_index].pAdditionalInfos->Conversion.Conv.FactorOffset.Factor;
+                    Offset = blackboard[vid_index].pAdditionalInfos->Conversion.Conv.FactorOffset.Offset *
+                             blackboard[vid_index].pAdditionalInfos->Conversion.Conv.FactorOffset.Factor;
+                }
+                fprintf (fh, "    /begin COMPU_METHOD %s_conv\r\n"
+                            "      \"\"\r\n"
+                            "      LINEAR\r\n"
+                            "      \"%%%i.%i\"\r\n"
+                            "      \"%s\"\r\n"
+                            "      COEFFS_LINEAR %.18g %.18g\r\n"
+                            "    /end COMPU_METHOD\r\n",
+                        blackboard[vid_index].pAdditionalInfos->Name,
+                        (int)blackboard[vid_index].pAdditionalInfos->Width,
+                        (int)blackboard[vid_index].pAdditionalInfos->Prec,
+                        blackboard[vid_index].pAdditionalInfos->Unit,
+                        Factor, Offset);
+                break;
+            case BB_CONV_RAT_FUNC:
+                fprintf (fh, "    /begin COMPU_METHOD %s_conv\r\n"
+                            "      \"\"\r\n"
+                            "      RAT_FUNC\r\n"
+                            "      \"%%%i.%i\"\r\n"
+                            "      \"%s\"\r\n"
+                            "      COEFFS %.18g %.18g %.18g %.18g %.18g %.18g\r\n"
+                            "    /end COMPU_METHOD\r\n",
+                        blackboard[vid_index].pAdditionalInfos->Name,
+                        (int)blackboard[vid_index].pAdditionalInfos->Width,
+                        (int)blackboard[vid_index].pAdditionalInfos->Prec,
+                        blackboard[vid_index].pAdditionalInfos->Unit,
+                        blackboard[vid_index].pAdditionalInfos->Conversion.Conv.RatFunc.a,
+                        blackboard[vid_index].pAdditionalInfos->Conversion.Conv.RatFunc.b,
+                        blackboard[vid_index].pAdditionalInfos->Conversion.Conv.RatFunc.c,
+                        blackboard[vid_index].pAdditionalInfos->Conversion.Conv.RatFunc.d,
+                        blackboard[vid_index].pAdditionalInfos->Conversion.Conv.RatFunc.e,
+                        blackboard[vid_index].pAdditionalInfos->Conversion.Conv.RatFunc.f);
                 break;
             }
 

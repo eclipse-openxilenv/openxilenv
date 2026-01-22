@@ -21,6 +21,7 @@
 #include <string.h>
 #include <ctype.h>
 #include "Config.h"
+#include "StringMaxChar.h"
 #include "TimeStamp.h"
 #include "Files.h"
 #include "ReadFromBlackboardPipe.h"
@@ -155,7 +156,7 @@ int open_write_mcsrec_head (START_MESSAGE_DATA hdrec_data,
     for (vids_point = vids; *vids_point > 0; vids_point++) {
         char variname[BBVARI_NAME_SIZE];
         GetBlackboardVariableName (*vids_point, variname, sizeof(variname));
-        strcpy (help_string1, variname);
+        STRING_COPY_TO_ARRAY (help_string1, variname);
         // strupr (help_string1);
         write_pascal_string (help_string2, help_string1, 64);
 

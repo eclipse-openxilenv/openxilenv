@@ -208,13 +208,6 @@ typedef struct {
     char ExecutableName[MAX_PATH];
     int UserSetExecutableName;   // Is 1 than don't call GetModuleName()
     void *ExecutableBaseAddress;
-
-#ifdef _WIN32
-    HWND HwndMainWindow;
-#else
-    void* HwndMainWindow;
-#endif
-
     int ThreadPos; 
     int ThreadCount;   // min. 1 max. 16
     EXTERN_PROCESS_TASK_INFOS_STRUCT *TasksInfos[MAX_PROCESSES_INSIDE_ONE_EXECUTABLE];

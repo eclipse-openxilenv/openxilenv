@@ -40,13 +40,12 @@ int cElseCmd::SyntaxCheck (cParser *par_Parser)
 int cElseCmd::Execute (cParser *par_Parser, cExecutor *par_Executor)
 {
     UNUSED(par_Parser);
-    // wird aufgerufen wenn ein IF-Block ausgefuehrt wurde und dann auf den ELSE-Block
-    // auflaeuft. -> spring ENDIF
     if (par_Executor->GetIfFlag ()) {
-        // Wurde direkt vom IF wegen Bedingung nicht zuteffend angesprungen
+        // Directly jumped from 'IF' to this 'ELSE' because condition was not true.
+        // so the 'ELSE' block should be executed
         par_Executor->SetIfFlag (0);
     } else {
-        // IF-Block wurde ausgefuehrt -> ELSE-Block ueberspringen
+        // The corresponding 'IF' was true -> jump over the 'ELSE' block
         par_Executor->SetNextIp (static_cast<int>(par_Executor->GetOptParameterCurrentCmd ()));
     }
     par_Executor->SetIfFlag (0);

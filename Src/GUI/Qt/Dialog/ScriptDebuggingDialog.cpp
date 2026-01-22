@@ -172,7 +172,7 @@ void ScriptDebuggingDialog::CyclicUpdate()
                 ui->BreakpointsListWidget->clear();
                 char BreakpointLine[1024];
                 for (int x = 0; ; x++) {
-                    if (Executor->GetBreakpointString (x, BreakpointLine)) break;
+                    if (Executor->GetBreakpointString (x, BreakpointLine, sizeof(BreakpointLine))) break;
                     ui->BreakpointsListWidget->addItem(CharToQString(BreakpointLine));
                 }
             } else {

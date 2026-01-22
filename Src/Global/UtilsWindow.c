@@ -44,7 +44,7 @@ int OpenWindowByName (char *WindowName)
     int Ret = -1;
 
     StringCopyMaxCharTruncate(WindowSectionPath, "GUI/Widgets/", sizeof(WindowSectionPath));
-    StringAppendMaxCharTruncate(WindowSectionPath, WindowName, sizeof(WindowSectionPath));
+    STRING_APPEND_TO_ARRAY(WindowSectionPath, WindowName);
 
     if (!IsWindowOpenFromOtherThread(WindowName)) {
         if (IniFileDataBaseReadString (WindowSectionPath, OPN_WND_TYP_TEXT,
@@ -77,7 +77,7 @@ int OpenWindowByFilter (char *WindowNameFilter)
     char WindowType[32];
 
     StringCopyMaxCharTruncate(Filter, "GUI/Widgets/", sizeof(WindowSectionPath));
-    StringAppendMaxCharTruncate(Filter, WindowNameFilter, sizeof(WindowSectionPath));
+    STRING_APPEND_TO_ARRAY(Filter, WindowNameFilter);
     Idx = 0;
     while ((Idx = IniFileDataBaseFindNextSectionNameRegExp (Idx, Filter, 1, WindowSectionPath, sizeof(WindowSectionPath),
                                                            GetMainFileDescriptor())) >= 0) {
@@ -141,7 +141,7 @@ int ExportWindowByFilter (char *SheetFilter, char *WindowNameFilter, char *FileN
     SaveAllConfigToIniDataBaseFromOtherThread();
 
     StringCopyMaxCharTruncate(Filter, "GUI/Widgets/", sizeof(WindowSectionPath));
-    StringAppendMaxCharTruncate(Filter, WindowNameFilter, sizeof(WindowSectionPath));
+    STRING_APPEND_TO_ARRAY(Filter, WindowNameFilter);
 
     Idx = 0;
     while ((Idx = IniFileDataBaseFindNextSectionNameRegExp (Idx, Filter, 1, WindowSectionPath, sizeof(WindowSectionPath),
@@ -183,7 +183,7 @@ int ImportWindowByFilter (char *WindowNameFilter, char *FileName)
     }
 
     StringCopyMaxCharTruncate(Filter, "GUI/Widgets/", sizeof(WindowSectionPath));
-    StringAppendMaxCharTruncate(Filter, WindowNameFilter, sizeof(WindowSectionPath));
+    STRING_APPEND_TO_ARRAY(Filter, WindowNameFilter);
 
     Idx = 0;
     while ((Idx = IniFileDataBaseFindNextSectionNameRegExp (Idx, Filter, 1, WindowSectionPath, sizeof(WindowSectionPath), Fd)) >= 0) {
@@ -229,7 +229,7 @@ int DeleteWindowByFilter (char *WindowNameFilter)
     CloseWindowByNameFromOtherThread(WindowNameFilter);
 
     StringCopyMaxCharTruncate(Filter, "GUI/Widgets/", sizeof(WindowSectionPath));
-    StringAppendMaxCharTruncate(Filter, WindowNameFilter, sizeof(WindowSectionPath));
+    STRING_APPEND_TO_ARRAY(Filter, WindowNameFilter);
     Idx = 0;
     while ((Idx = IniFileDataBaseFindNextSectionNameRegExp(Idx, Filter, 1, WindowSectionPath, sizeof(WindowSectionPath),
                                                            GetMainFileDescriptor())) >= 0) {

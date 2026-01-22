@@ -45,6 +45,10 @@ public:
     bool SignalDatatType();
     bool SignalEquations();
     bool SortSignals();
+    bool ExportToFile();
+    QString ExportToFileName();
+    QString VariantName();
+    bool ObjectNameDoublePoint();
 
     int DbcImportDialogFillComboboxWithVariante();
 
@@ -61,6 +65,8 @@ private slots:
     void on_RemoveReceiveBusMemberPushButton_clicked();
 
     void on_TransferSettingsCheckBox_toggled(bool checked);
+
+    void on_FilePushButton_clicked();
 
 private:
     Ui::DbcImportDialog *ui;

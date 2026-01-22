@@ -18,6 +18,7 @@
 #ifndef FMUSTRUCT_H
 #define FMUSTRUCT_H
 
+#include <stdio.h>
 #include "fmi2Functions.h"
 
 typedef struct {
@@ -156,6 +157,9 @@ Functions for FMI2 for Co-Simulation
 
    bool SyncParametersWithBlackboard;
    bool SyncLocalsWithBlackboard;
+   bool LoggingEnable;
+   char* LoggingFolder;
+   FILE* LoggingFile;
 
    Model_Variables Parameters;
 

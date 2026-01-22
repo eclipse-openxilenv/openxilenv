@@ -162,6 +162,7 @@ typedef struct {
 extern "C" {
 #endif
 
+void Sleep(int par_time_ms);
 uint64_t GetTickCount64(void);
 uint32_t GetTickCount(void);
 
@@ -196,14 +197,14 @@ int GetModuleFileName(void *hModule, char *lpFilename, int nSize);
 int VirtualProtect(LPVOID lpAddress, int dwSize, DWORD flNewProtect, DWORD *lpflOldProtect);
 #define PAGE_READWRITE  0x04
 
-void GetXilEnvHomeDirectory(char *ret_Directory);
+void GetXilEnvHomeDirectory(char *ret_Directory, int par_Maxc);
 
 #define DIR_MUST_EXIST     0
 #define DIR_CREATE_EXIST   1
 #define FILENAME_MUST_EXIST     0
 #define FILENAME_CREATE_EXIST   1
 #define FILENAME_IGNORE         2
-int CheckOpenIPCFile(char *Instance, char *Name, char *ret_Path, int DirCraeteOrMustExists, int FileCraeteOrMustExists);
+int CheckOpenIPCFile(char *Instance, char *Name, char *ret_Path, int par_Maxc, int DirCraeteOrMustExists, int FileCraeteOrMustExists);
 
 char *GetCommandLine(void);
 

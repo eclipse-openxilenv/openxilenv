@@ -68,7 +68,7 @@ int cTransmitCanCmd::Execute (cParser *par_Parser, cExecutor *par_Executor)
     int Help;
     int CanFiFoHandle;
 
-    memset (&CANMessage, 0, sizeof (CANMessage));
+    MEMSET (&CANMessage, 0, sizeof (CANMessage));
     CANMessage.node = 1;  // transmitted oneself
     if (par_Parser->SolveEquationForParameter (0, &Help, -1)) {
         par_Parser->Error (SCRIPT_PARSER_FATAL_ERROR, "equation '%s' contains error ! Perhaps a variable does not exist...", 

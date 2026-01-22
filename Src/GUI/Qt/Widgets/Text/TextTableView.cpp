@@ -77,13 +77,24 @@ void TextTableView::mouseMoveEvent(QMouseEvent* arg_event)
     arg_event->ignore();
 }
 
+static int HasConversion(int arg_Vid)
+{
+    int ConvType = get_bbvari_conversiontype(arg_Vid);
+    return ((ConvType == BB_CONV_FORMULA) ||
+            (ConvType == BB_CONV_FACTOFF) ||
+            (ConvType == BB_CONV_OFFFACT) ||
+            (ConvType == BB_CONV_TAB_INTP) ||
+            (ConvType == BB_CONV_TAB_NOINTP) ||
+            (ConvType == BB_CONV_RAT_FUNC));
+}
+
 void TextTableView::IncOrDecVariable(TextTableModel *arg_model, int arg_row, double arg_Sign, double arg_stepMultiplier)
 {
     arg_stepMultiplier = arg_Sign * arg_stepMultiplier;
     TextTableModel::Variable *loc_variable = arg_model->getVariable(arg_row);
     double loc_step = loc_variable->m_step;
     int loc_stepType = loc_variable->m_stepType;
-    if((loc_variable->m_type == 3) && (get_bbvari_conversiontype(loc_variable->m_vid) == BB_CONV_FORMULA)) {
+    if((loc_variable->m_type == 3) && HasConversion(loc_variable->m_vid)) {
         double loc_actualValue = read_bbvari_equ(loc_variable->m_vid);
 
         if(loc_stepType == 0) {

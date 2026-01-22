@@ -22,6 +22,7 @@
 #include "StringHelpers.h"
 
 extern "C" {
+    #include "PrintFormatToString.h"
     #include "Scheduler.h"
     #include "SchedBarrier.h"
     #include "MyMemory.h"
@@ -38,7 +39,7 @@ ConfigureBarrierDialog::ConfigureBarrierDialog(QWidget *parent) : Dialog(parent)
     char Entry[64];
     char BarrierName[INI_MAX_LINE_LENGTH];
     for (int b = 0; ; b++) {
-        sprintf (Entry, "Barrier_%i", b);
+        PrintFormatToString (Entry, sizeof(Entry), "Barrier_%i", b);
         if (IniFileDataBaseReadString ("SchedulerBarriersConfiguration", Entry, "", BarrierName, sizeof (BarrierName),
                                       GetMainFileDescriptor()) <= 0) {
             break;

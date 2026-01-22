@@ -10,6 +10,7 @@ EXPORTS
 
     XilEnv_CreateFileWithContent
     XilEnv_GetEnvironVar
+    XilEnv_GetEnvironVarOwnBuffer
     XilEnv_SetEnvironVar
     XilEnv_ChangeSettings
     XilEnv_TextOut
@@ -29,9 +30,11 @@ EXPORTS
     XilEnv_StartProcessEx2
     XilEnv_StopProcess
     XilEnv_GetNextProcess
+    XilEnv_GetNextProcessOwnBuffer
     XilEnv_GetProcessState
     XilEnv_DoNextCycles
     XilEnv_DoNextCyclesAndWait
+    XilEnv_DoNextConditionsCyclesAndWait
     XilEnv_AddBeforeProcessEquationFromFile
     XilEnv_AddBehindProcessEquationFromFile
     XilEnv_DelBeforeProcessEquations
@@ -77,9 +80,11 @@ EXPORTS
     XilEnv_Equ
     XilEnv_GetVariConversionType
     XilEnv_GetVariConversionString
+    XilEnv_GetVariConversionStringOwnBuffer
     XilEnv_SetVariConversion
     XilEnv_GetVariType
     XilEnv_GetVariUnit
+    XilEnv_GetVariUnitOwnBuffer
     XilEnv_SetVariUnit
     XilEnv_GetVariMin
     XilEnv_GetVariMax
@@ -95,8 +100,11 @@ EXPORTS
     XilEnv_GetFrame
     XilEnv_WriteFrameWaitReadFrame
     XilEnv_GetNextVari
+    XilEnv_GetNextVariOwnBuffer
     XilEnv_GetNextVariEx
+    XilEnv_GetNextVariExOwnBuffer
     XilEnv_GetVariEnum
+    XilEnv_GetVariEnumOwnBuffer
     XilEnv_WrVariEnable
     XilEnv_WrVariDisable
     XilEnv_IsWrVariEnabled
@@ -222,3 +230,6 @@ EXPORTS
     XilEnv_SetLinkArrayValueDataString
 
     XilEnv_PrintLinkData
+
+    XilEnv_ExportA2lMeasurementList
+    XilEnv_ImportA2lMeasurementList

@@ -38,6 +38,8 @@
 #include "Config.h"
 #include "ThrowError.h"
 #include "MyMemory.h"
+#include "MemZeroAndCopy.h"
+#include "StringMaxChar.h"
 #include "Blackboard.h"
 #include "BlackboardAccess.h"
 #include "tcb.h"
@@ -83,7 +85,7 @@ static SOCKET CreateLoginSocket (char *par_Prefix)
         setsockopt(sock_descriptor, SOL_SOCKET, SO_REUSEADDR, (const char*)&optval, sizeof (optval));
     }
 
-    memset((char *)&serv_addr, 0, sizeof(serv_addr));
+    STRUCT_ZERO_INIT(serv_addr, struct sockaddr_in);
 
     serv_addr.sin_family = AF_INET;
 
@@ -146,6 +148,8 @@ static HANDLE BuildHandleFrom32BitInt (ALIVE_PING_HANDLE_ULONG x)
     return v.x64;
 }
 
+static int ThreadWillCallFirstAcceptState;
+
 #ifdef _WIN32
 static DWORD WINAPI SocketLoginThreadProc (LPVOID lpParam)
 #else
@@ -185,6 +189,7 @@ static void* SocketLoginThreadProc (void* lpParam)
         size = sizeof(client_addr);
         SOCKET conn_desc;
 
+        ThreadWillCallFirstAcceptState = 1;
         // The server will blocks on this call until a client tries to establish connection.
         // If a connection is established, it returns a connected socket descriptor this is different
         // from the one created earlier.
@@ -307,8 +312,8 @@ static int CreateLoginThread (char *par_Prefix)
 
     static char StaticInstanceName[MAX_PATH];
 
-    strcpy (StaticInstanceName, par_Prefix);
-
+    STRING_COPY_TO_ARRAY (StaticInstanceName, par_Prefix);
+    ThreadWillCallFirstAcceptState = 0;
 #ifdef _WIN32
     hThread = CreateThread (
             NULL,                   // no security attribute
@@ -342,6 +347,13 @@ static int CreateLoginThread (char *par_Prefix)
     pthread_attr_destroy(&Attr);
 
 #endif
+
+    // wait until the login thread has called accept()
+    for(int x = 0; (x < 10) && !ThreadWillCallFirstAcceptState; x++) {
+        Sleep(10);
+    }
+    Sleep(10);
+
     return 0;
 }
 

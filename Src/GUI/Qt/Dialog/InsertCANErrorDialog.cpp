@@ -24,6 +24,7 @@
 #include <QMenu>
 
 extern "C" {
+#include "PrintFormatToString.h"
 #include "ConfigurablePrefix.h"
 #include "Blackboard.h"
 #include "BlackboardAccess.h"
@@ -242,7 +243,7 @@ void InsertCANErrorDialog::selectionChanged(const QItemSelection &selected, cons
                 CanConfigVariant *Variant = static_cast<CanConfigVariant*>(Object->parent());
                 if (Variant != nullptr) {
                     char section[INI_MAX_SECTION_LENGTH];
-                    sprintf (section, "CAN/Global");
+                    PrintFormatToString (section, sizeof(section), "CAN/Global");
                     int NumberOfChannels = GetCanControllerCountFromIni (section, GetMainFileDescriptor());
 
                     for (int i = 0; i < NumberOfChannels; i++) {

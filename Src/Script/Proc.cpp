@@ -20,6 +20,7 @@
 
 extern "C" {
 #include "MyMemory.h"
+#include "StringMaxChar.h"
 }
 
 #include "Parser.h"
@@ -46,10 +47,10 @@ cProc::cProc (cParser *par_Parser, const char * const par_ProcName, int par_Para
     Params = static_cast<cParam*>(my_calloc (static_cast<size_t>(par_Parser->GetParameterCounter ()), sizeof (cParam)));
     if ((ParamBuffer != nullptr) && (Params != nullptr)) {
         char *p = Name = ParamBuffer;
-        strcpy (Name, par_ProcName);
+        StringCopyMaxCharTruncate (Name, par_ProcName, SizeofBuffer);
         p += strlen (Name) + 1;
         for (int x = 1; x < par_Parser->GetParameterCounter (); x++) { // 1. parameter is procedure name
-            strcpy (p, par_Parser->GetParameter (x));
+            StringCopyMaxCharTruncate (p, par_Parser->GetParameter (x), SizeofBuffer - (p - ParamBuffer));
             Params[x-1].SetName (p);
             p += strlen (p) + 1;
         }

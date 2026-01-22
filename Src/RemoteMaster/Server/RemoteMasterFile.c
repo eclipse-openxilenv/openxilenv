@@ -26,6 +26,7 @@
 #include <pwd.h>
 
 #include "MyMemory.h"
+#include "StringMaxChar.h"
 #include "Message.h"
 #include "RealtimeScheduler.h"
 #include "RemoteMasterFile.h"
@@ -52,13 +53,15 @@ RT_FILE* get_rt_file_stream(void)
         // replace "~"
         if (Filename[0] == '~') {
             char *homedir;
+            int Size;
             if ((homedir = getenv("HOME")) == NULL) {
                 homedir = getpwuid(getuid())->pw_dir;
             }
-            buf = my_malloc(mhead.size + strlen(homedir) + 1);
+            Size = mhead.size + strlen(homedir) + 1;
+            buf = my_malloc(Size);
 
-            strcpy(buf, homedir);
-            strcat(buf, &(Filename[1]));
+            StringCopyMaxCharTruncate(buf, homedir, Size);
+            StringAppendMaxCharTruncate(buf, &(Filename[1]), Size);
             res = buf;
         }
         else {

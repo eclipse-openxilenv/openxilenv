@@ -29,6 +29,7 @@ class OscilloscopeStatus : public QWidget
 public:
     explicit OscilloscopeStatus(OSCILLOSCOPE_DATA *par_Data, QWidget *parent = nullptr);
     ~OscilloscopeStatus() Q_DECL_OVERRIDE;
+    void paint(QPainter &painter, bool border_flag);
 
 signals:
 

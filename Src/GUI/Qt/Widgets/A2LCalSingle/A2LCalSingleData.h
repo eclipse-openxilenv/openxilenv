@@ -67,7 +67,6 @@ public:
     A2L_SINGLE_VALUE *GetValue();
 
     double GetRawValue();
-    double GetDoubleValue();
     int ToString(bool par_UpdateAlways);
     QString GetValueString();
 
@@ -102,8 +101,9 @@ public:
 private:
     void Clear();
 
-    double Conv (double par_Value, CHARACTERISTIC_AXIS_INFO &par_AxisInfo);
+    double Conv(double par_Value, CHARACTERISTIC_AXIS_INFO &par_AxisInfo);
     QString ConvertToString(double Value, CHARACTERISTIC_AXIS_INFO &AxisInfo);
+    void CalcRawMinMaxValuesOneAxis(CHARACTERISTIC_AXIS_INFO *par_AxisInfo, const char *par_AxisName);
 
     bool m_Exists;
     bool m_HasChanged;

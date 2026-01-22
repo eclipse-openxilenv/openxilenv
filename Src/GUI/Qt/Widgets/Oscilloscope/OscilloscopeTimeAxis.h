@@ -34,6 +34,7 @@ class OscilloscopeTimeAxis : public QWidget
 public:
     explicit OscilloscopeTimeAxis(OscilloscopeWidget *par_OscilloscopeWidget, OSCILLOSCOPE_DATA *par_Data, QWidget *parent = nullptr);
     ~OscilloscopeTimeAxis() Q_DECL_OVERRIDE;
+    void paint(QPainter &painter, bool border_flag);
 
 signals:
 

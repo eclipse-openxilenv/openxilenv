@@ -18,6 +18,7 @@
 #include "Platform.h"
 #include <string.h>
 #include <stdio.h>
+#include "MemZeroAndCopy.h"
 #include "Blackboard.h"
 #include "MainValues.h"
 #include "FileExtensions.h"
@@ -50,16 +51,16 @@ int ImportOneVariablePropertiesFlags (int par_Fd,
 
     // read old properties
     IniFileDataBaseReadString ("Variables", Variname, "", Properties, INI_MAX_LONGLINE_LENGTH, par_Fd);
-    memset (&BbVariElemOld, 0, sizeof (BbVariElemOld));
-    memset (&AdditionalInfosOld, 0, sizeof (AdditionalInfosOld));
+    STRUCT_ZERO_INIT (BbVariElemOld, BB_VARIABLE);
+    STRUCT_ZERO_INIT (AdditionalInfosOld, BB_VARIABLE_ADDITIONAL_INFOS);
     BbVariElemOld.pAdditionalInfos = &AdditionalInfosOld;
     set_default_varinfo (&BbVariElemOld, BB_UNKNOWN);
     set_varinfo_to_inientrys (&BbVariElemOld, Properties);
 
     // read new properties
     IniFileDataBaseReadString ("Variables", Variname, "", Properties, INI_MAX_LONGLINE_LENGTH, par_Fd);
-    memset (&BbVariElem, 0, sizeof (BbVariElem));
-    memset (&AdditionalInfos, 0, sizeof (AdditionalInfos));
+    STRUCT_ZERO_INIT (BbVariElem, BB_VARIABLE);
+    STRUCT_ZERO_INIT (AdditionalInfos, BB_VARIABLE_ADDITIONAL_INFOS);
     BbVariElem.pAdditionalInfos = &AdditionalInfos;
     set_default_varinfo (&BbVariElem, BB_UNKNOWN);
     set_varinfo_to_inientrys (&BbVariElem, Properties);
@@ -110,6 +111,10 @@ int ImportOneVariablePropertiesFlags (int par_Fd,
                 return BB_VAR_ADD_INFOS_MEM_ERROR;
             }
         case BB_CONV_FACTOFF:
+        case BB_CONV_OFFFACT:
+        case BB_CONV_TAB_INTP:
+        case BB_CONV_TAB_NOINTP:
+        case BB_CONV_RAT_FUNC:
         case BB_CONV_REF:
             // todo
             break;

@@ -22,6 +22,8 @@
 #include <malloc.h>
 
 #include "StringMaxChar.h"
+#include "BlackboardAccess.h"
+#include "BlackboardConversion.h"
 
 #include "A2LBuffer.h"
 #include "A2LParser.h"
@@ -76,6 +78,58 @@ static int ConvertTextReplaceToRaw (ASAP2_MODULE_DATA* Module, const char *Name,
     return -1;
 }
 
+static int ConvertValuePairsToRaw (ASAP2_MODULE_DATA* Module, const char *Name, int par_Interpol, A2L_SINGLE_VALUE *par_Phys, A2L_SINGLE_VALUE *ret_Raw)
+{
+    int x;
+    ASAP2_COMPU_TAB *CompuTab, **__CompuTab;
+    const char **pName = &Name;
+
+    double NewPhysValue = ConvertRawValueToDouble(par_Phys);
+    __CompuTab = bsearch (&pName, Module->CompuTabs, Module->CompuTabCounter, sizeof(ASAP2_COMPU_TAB*), BsearchCompareFunc);
+    if (__CompuTab != NULL) {
+        CompuTab = *__CompuTab;
+        switch (CompuTab->TabOrVtabFlag) {
+        case 0: // COMPU_TAB will be ignored
+            for (x = 0; x < CompuTab->NumberValuePairs; x++) {
+                if (CompuTab->ValuePairs[x].OutVal_InValMax >= NewPhysValue) {
+                    if (x == 0) {
+                        ret_Raw->Value.Double = CompuTab->ValuePairs[x].InVal_InValMin;
+                        ret_Raw->Type = A2L_ELEM_TYPE_DOUBLE;
+                    } else {
+                        if (par_Interpol) {
+                            double PhysDelta = CompuTab->ValuePairs[x].OutVal_InValMax - CompuTab->ValuePairs[x-1].OutVal_InValMax;
+                            if ((PhysDelta <= 0.0) && (PhysDelta >= 0.0)) {  // == 0.0
+                                ret_Raw->Value.Double = CompuTab->ValuePairs[x-1].InVal_InValMin;
+                                ret_Raw->Type = A2L_ELEM_TYPE_DOUBLE;
+                            } else {
+                                double RawDelta = CompuTab->ValuePairs[x].InVal_InValMin - CompuTab->ValuePairs[x-1].InVal_InValMin;
+                                double m = RawDelta / PhysDelta;
+                                ret_Raw->Value.Double = CompuTab->ValuePairs[x-1].InVal_InValMin +
+                                                        m * (NewPhysValue - CompuTab->ValuePairs[x-1].OutVal_InValMax);
+                                ret_Raw->Type = A2L_ELEM_TYPE_DOUBLE;
+                            }
+                        } else {
+                            ret_Raw->Value.Double = CompuTab->ValuePairs[x].InVal_InValMin;
+                            ret_Raw->Type = A2L_ELEM_TYPE_DOUBLE;
+                        }
+                    }
+                    break;  // for(;;)
+                }
+            }
+            if (x == CompuTab->NumberValuePairs) {
+                ret_Raw->Value.Double = CompuTab->ValuePairs[x-1].InVal_InValMin;
+                ret_Raw->Type = A2L_ELEM_TYPE_DOUBLE;
+            }
+        case 1: // COMPU_VTAB
+        case 2: // COMPU_VTAB_RANGE
+        default:
+            return -1;
+            break;
+        }
+    }
+    return -1;
+}
+
 static int ConvertWithFormulaToRaw (const char *Formula, A2L_SINGLE_VALUE *par_Phys, A2L_SINGLE_VALUE *ret_Raw)
 {
     double RawValue;
@@ -113,6 +167,15 @@ int ConvertPhysToRaw(ASAP2_MODULE_DATA* Module, const char *par_ConvertName, A2L
             break;
         case 4:  // TAB_INTP
         case 5:  // TAB_NOINTP
+            if (CheckIfFlagSetPos(CompuMethod->OptionalParameter.Flags, OPTPARAM_COMPU_METHOD_COMPU_TAB_REF)) {
+                if (par_Phys->Type != A2L_ELEM_TYPE_TEXT_REPLACE) {
+                    if (!ConvertValuePairsToRaw (Module, CompuMethod->OptionalParameter.ConversionTable,
+                                                (CompuMethod->ConversionType == 4), // interpolation?
+                                                par_Phys, ret_Raw)) {
+                        Ret = 0;
+                    }
+                }
+            }
         default:
             // This will be ignored
             *ret_Raw = *par_Phys;
@@ -128,14 +191,17 @@ int ConvertPhysToRaw(ASAP2_MODULE_DATA* Module, const char *par_ConvertName, A2L
             break;
         case 2:  // RAT_FUNC
             if (CheckIfFlagSetPos(CompuMethod->OptionalParameter.Flags, OPTPARAM_COMPU_METHOD_COEFFS)) {
-                if ((CompuMethod->OptionalParameter.Coeffs.a == 0.0) &&
-                    (CompuMethod->OptionalParameter.Coeffs.d == 0.0) &&
-                    (CompuMethod->OptionalParameter.Coeffs.e == 0.0)) {
                 // INT = f(PHYS);
                 // f(x) = (axx + bx + c) / (dxx + ex + f)
-                    double Value = (CompuMethod->OptionalParameter.Coeffs.b * ConvertRawValueToDouble(par_Phys)
-                                    + CompuMethod->OptionalParameter.Coeffs.c) /
-                                    CompuMethod->OptionalParameter.Coeffs.f;
+                double x = ConvertRawValueToDouble(par_Phys);
+                double a = CompuMethod->OptionalParameter.Coeffs.a * x * x +
+                           CompuMethod->OptionalParameter.Coeffs.b * x +
+                           CompuMethod->OptionalParameter.Coeffs.c;
+                double b = CompuMethod->OptionalParameter.Coeffs.d * x * x +
+                           CompuMethod->OptionalParameter.Coeffs.e * x +
+                           CompuMethod->OptionalParameter.Coeffs.f;
+                if (b != 0.0) {
+                    double Value = a / b;
                     ConvertDoubleToRawValue(par_Phys->TargetType, Value, ret_Raw);
                     Ret = 0;
                 }
@@ -224,6 +290,57 @@ static int ConvertRawToTextReplace (ASAP2_MODULE_DATA* Module, const char *Name,
     return -1;
 }
 
+static int ConvertRawToPhysByTable (ASAP2_MODULE_DATA* Module, const char *Name, int par_Interpol, A2L_SINGLE_VALUE *par_Raw, A2L_SINGLE_VALUE *ret_Phys)
+{
+    int x;
+    ASAP2_COMPU_TAB *CompuTab, **__CompuTab;
+    const char **pName = &Name;
+    double RawValue = ConvertRawValueToDouble(par_Raw);
+
+    __CompuTab = bsearch (&pName, Module->CompuTabs, Module->CompuTabCounter, sizeof(ASAP2_COMPU_TAB*), BsearchCompareFunc);
+    if (__CompuTab != NULL) {
+        CompuTab = *__CompuTab;
+        switch (CompuTab->TabOrVtabFlag) {
+        case 0: // COMPU_TAB werden ignoriert
+            for (x = 0; x < CompuTab->NumberValuePairs; x++) {
+                if (CompuTab->ValuePairs[x].InVal_InValMin >= RawValue) {
+                    if (x == 0) {
+                        ret_Phys->Value.Double = CompuTab->ValuePairs[x].OutVal_InValMax;
+                        ret_Phys->Type = A2L_ELEM_TYPE_PHYS_DOUBLE;
+                    } else {
+                        if (par_Interpol) {
+                            double RawDelta = CompuTab->ValuePairs[x].InVal_InValMin - CompuTab->ValuePairs[x-1].InVal_InValMin;
+                            if ((RawDelta <= 0.0) && (RawDelta >= 0.0)) {  // == 0.0
+                                ret_Phys->Value.Double = CompuTab->ValuePairs[x-1].OutVal_InValMax;
+                                ret_Phys->Type = A2L_ELEM_TYPE_PHYS_DOUBLE;
+                            } else {
+                                double PhysDelta = CompuTab->ValuePairs[x].OutVal_InValMax - CompuTab->ValuePairs[x-1].OutVal_InValMax;
+                                double m = PhysDelta / RawDelta;
+                                ret_Phys->Value.Double = CompuTab->ValuePairs[x-1].OutVal_InValMax + m * (RawValue - CompuTab->ValuePairs[x-1].InVal_InValMin);
+                                ret_Phys->Type = A2L_ELEM_TYPE_PHYS_DOUBLE;
+                            }
+                        } else {
+                            ret_Phys->Value.Double = CompuTab->ValuePairs[x].OutVal_InValMax;
+                            ret_Phys->Type = A2L_ELEM_TYPE_PHYS_DOUBLE;
+                        }
+                    }
+                    break;  // for(;;)
+                }
+            }
+            if (x == CompuTab->NumberValuePairs) {
+                ret_Phys->Value.Double = CompuTab->ValuePairs[x-1].OutVal_InValMax;
+                ret_Phys->Type = A2L_ELEM_TYPE_PHYS_DOUBLE;
+            }
+        case 1: // COMPU_VTAB
+        case 2: // COMPU_VTAB_RANGE
+        default:
+            return -1;
+            break;
+        }
+    }
+    return -1;
+}
+
 static int ConvertWithFormulaToPhys (const char *Formula, A2L_SINGLE_VALUE *par_Raw, A2L_SINGLE_VALUE *ret_Phys)
 {
     double PhysValue;
@@ -281,11 +398,24 @@ int ConvertRawToPhys(ASAP2_MODULE_DATA* Module, const char *par_ConvertName, int
             break;
         case 4:  // TAB_INTP
         case 5:  // TAB_NOINTP
+            if ((par_Flags & A2L_GET_PHYS_FLAG) == A2L_GET_PHYS_FLAG) {
+                if (CheckIfFlagSetPos(CompuMethod->OptionalParameter.Flags, OPTPARAM_COMPU_METHOD_COMPU_TAB_REF)) {
+                    if (!ConvertRawToPhysByTable (Module, CompuMethod->OptionalParameter.ConversionTable,
+                                                 (CompuMethod->ConversionType == 4),
+                                                  par_Raw, ret_Phys)) {
+                        Ret = 0;
+                    }
+                }
+            } else {
+                ValueCopy(ret_Phys, par_Raw);
+                Ret = 0;
+            }
+            break;
         default:
-            // werden noch ignoriert
+            // will be ignored
             *ret_Phys = *par_Raw;
             break;
-        case 6:  // TAB_VERB  -> ENUM (Textersatz)
+        case 6:  // TAB_VERB  -> ENUM (text replace)
             if ((par_Flags & A2L_GET_TEXT_REPLACE_FLAG) == A2L_GET_TEXT_REPLACE_FLAG) {
                 if (CheckIfFlagSetPos(CompuMethod->OptionalParameter.Flags, OPTPARAM_COMPU_METHOD_COMPU_TAB_REF)) {
                     if (!ConvertRawToTextReplace (Module, CompuMethod->OptionalParameter.ConversionTable, par_Raw, ret_Phys)) {
@@ -300,20 +430,24 @@ int ConvertRawToPhys(ASAP2_MODULE_DATA* Module, const char *par_ConvertName, int
         case 2:  // RAT_FUNC
             if ((par_Flags & A2L_GET_PHYS_FLAG) == A2L_GET_PHYS_FLAG) {
                 if (CheckIfFlagSetPos(CompuMethod->OptionalParameter.Flags, OPTPARAM_COMPU_METHOD_COEFFS)) {
-                    if ((CompuMethod->OptionalParameter.Coeffs.a == 0.0) &&
-                        (CompuMethod->OptionalParameter.Coeffs.d == 0.0) &&
-                        (CompuMethod->OptionalParameter.Coeffs.e == 0.0)) {
+                    BB_VARIABLE_CONVERSION Conversion;
+                    double Phys;
                     // INT = f(PHYS);
                     // f(x) = (axx + bx + c) / (dxx + ex + f)
-                        double Value = (ConvertRawValueToDouble(par_Raw) * CompuMethod->OptionalParameter.Coeffs.f -
-                                        CompuMethod->OptionalParameter.Coeffs.c) /
-                                        CompuMethod->OptionalParameter.Coeffs.b;
-                        ConvertDoubleToPhysValue(par_Raw->TargetType, Value, ret_Phys);
+                    Conversion.Type = BB_CONV_RAT_FUNC;
+                    Conversion.Conv.RatFunc.a = CompuMethod->OptionalParameter.Coeffs.a;
+                    Conversion.Conv.RatFunc.b = CompuMethod->OptionalParameter.Coeffs.b;
+                    Conversion.Conv.RatFunc.c = CompuMethod->OptionalParameter.Coeffs.c;
+                    Conversion.Conv.RatFunc.d = CompuMethod->OptionalParameter.Coeffs.d;
+                    Conversion.Conv.RatFunc.e = CompuMethod->OptionalParameter.Coeffs.e;
+                    Conversion.Conv.RatFunc.f = CompuMethod->OptionalParameter.Coeffs.f;
+                    if (Conv_RationalFunctionRawToPhys(&Conversion, ConvertRawValueToDouble(par_Raw), &Phys) == 0) {
+                        ConvertDoubleToPhysValue(par_Raw->TargetType, Phys, ret_Phys);
                         if ((par_Flags & A2L_GET_UNIT_FLAG) == A2L_GET_UNIT_FLAG) {
                             AddUnitToValue(ret_Phys, CompuMethod->Unit);
                         }
-                        Ret = 0;
                     }
+                    Ret = 0;
                 }
             } else {
                 ValueCopy(ret_Phys, par_Raw);

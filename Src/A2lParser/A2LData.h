@@ -338,7 +338,7 @@ typedef struct {
     double LowerLimit;
     double UpperLimit;
 
-    uint32_t ReferenceCounter; // Counts the references inside the blackboard
+    int32_t ReferenceCounter; // Counts the references inside the blackboard
     int DirFlags;
     int Vid;
 
@@ -483,6 +483,10 @@ typedef struct {
     int MaxAxisPoints;
     double LowerLimit;
     double UpperLimit;
+    int32_t ReferenceCounter; // Counts the references inside the blackboard
+    int DirFlags;
+    int Vid;
+
     struct {
         uint32_t Flags;
 #define OPTPARAM_AXIS_PTS_DISPLAY_IDENTIFIER          1

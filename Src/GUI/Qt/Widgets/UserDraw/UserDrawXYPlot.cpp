@@ -21,6 +21,7 @@
 
 extern "C" {
 #include "Config.h"
+#include "MemZeroAndCopy.h"
 #include "OscilloscopeCyclic.h"
 #include "ThrowError.h"
 #include "MyMemory.h"
@@ -30,7 +31,7 @@ extern "C" {
 
 UserDrawXYPlot::UserDrawXYPlot(int par_Pos, QString &par_ParameterString, UserDrawElement *par_Parent) : UserDrawElement(par_Parent)
 {
-    memset (&m_Data, 0, sizeof (m_Data));
+    STRUCT_ZERO_INIT (m_Data, OSCILLOSCOPE_DATA);
     m_Data.NotANumber = GetNotANumber();
     m_Data.CriticalSectionNumber = AllocOsciWidgetCriticalSection ();
     if (m_Data.CriticalSectionNumber < 0) {
@@ -197,10 +198,8 @@ void UserDrawXYPlot::Paint(QPainter *par_Painter, QList<UserDrawImageItem*> *par
             if (x < 20) {
                 // Left side
                 int i = x;
-                if (((m_Data.vids_left[i] > 0) && (!m_Data.vars_disable_left[i])) &&     // nur falls auf der linken Seite zwei Signal hintereinander konfiguriert sind
+                if (((m_Data.vids_left[i] > 0) && (!m_Data.vars_disable_left[i])) &&     // for a valid xy view there must be 2 signals in a row
                     ((m_Data.vids_left[i+1] > 0) && (!m_Data.vars_disable_left[i+1]))) {
-
-                    // TODO: das Pen-Getoese sollte hier raus!
                     QPen Pen;
                     Pen.setWidth (m_Data.LineSize_left[i]);
                     int c = m_Data.color_left[i];
@@ -225,7 +224,7 @@ void UserDrawXYPlot::Paint(QPainter *par_Painter, QList<UserDrawImageItem*> *par
                         ToPaintPoints = (new_since_last_draw < ToPaintPoints) ? new_since_last_draw : ToPaintPoints;
                     }
                     m_Data.new_since_last_draw_left[i] = 0;
-                    for (int Idx = 1; Idx < ToPaintPoints; Idx++) { //(Idx < m_Data.depth_left[i]) && (Idx < m_Data.depth_left[i+1]); Idx++) {
+                    for (int Idx = 1; Idx < ToPaintPoints; Idx++) {
                         int IdxY = m_Data.wr_poi_left[i] - Idx;
                         if (IdxY < 0) IdxY = m_Data.buffer_depth + IdxY;
                         int IdxX = m_Data.wr_poi_left[i+1] - Idx;
@@ -240,17 +239,17 @@ void UserDrawXYPlot::Paint(QPainter *par_Painter, QList<UserDrawImageItem*> *par
 
                             Translate(&x_d, &y_d, P);
 
-                            if (m_Data.presentation_left[i] == 1) {  // hier wird nur die Y-Achse abgefragt
+                            if (m_Data.presentation_left[i] == 1) {  // only the y axis will define this
                                 QPointF Point(x_d, y_d);
                                 par_Painter->drawPoint(Point);
                             } else {
-                                if (valid_m1) { // Wert davor war auch gueltig
+                                if (valid_m1) { // Value before was also valid
                                     QLineF Line (x_m1_d, y_m1_d, x_d, y_d);
                                     par_Painter->drawLine (Line);
                                     x_m1_d = x_d;
                                     y_m1_d = y_d;
                                 } else {
-                                    // Wert davor war nicht gueltig dann nur Werte merken
+                                    // Value before was not valid only stor the current value
                                     x_m1_d = x_d;
                                     y_m1_d = y_d;
                                 }
@@ -264,10 +263,8 @@ void UserDrawXYPlot::Paint(QPainter *par_Painter, QList<UserDrawImageItem*> *par
             } else if (x < 40) {
                 // Right side
                 int i = x - 20;
-                if (((m_Data.vids_right[i] > 0) && (!m_Data.vars_disable_right[i])) &&     // nur falls auf der rechten Seite zwei Signal hintereinander konfiguriert sind
+                if (((m_Data.vids_right[i] > 0) && (!m_Data.vars_disable_right[i])) &&     // for a valid xy view there must be 2 signals in a row
                     ((m_Data.vids_right[i+1] > 0) && (!m_Data.vars_disable_right[i+1]))) {
-
-                    // TODO: das Pen-Getoese sollte hier raus!
                     QPen Pen;
                     Pen.setWidth (m_Data.LineSize_right[i]);
                     int c = m_Data.color_right[i];
@@ -292,7 +289,7 @@ void UserDrawXYPlot::Paint(QPainter *par_Painter, QList<UserDrawImageItem*> *par
                         ToPaintPoints = (new_since_last_draw < ToPaintPoints) ? new_since_last_draw : ToPaintPoints;
                     }
                     m_Data.new_since_last_draw_right[i] = 0;
-                    for (int Idx = 1; Idx < ToPaintPoints; Idx++) { //(Idx < m_Data.depth_right[i]) && (Idx < m_Data.depth_right[i+1]); Idx++) {
+                    for (int Idx = 1; Idx < ToPaintPoints; Idx++) {
                         int IdxY = m_Data.wr_poi_right[i] - Idx;
                         if (IdxY < 0) IdxY = m_Data.buffer_depth + IdxY;
                         int IdxX = m_Data.wr_poi_right[i+1] - Idx;
@@ -307,7 +304,7 @@ void UserDrawXYPlot::Paint(QPainter *par_Painter, QList<UserDrawImageItem*> *par
 
                             Translate(&x_d, &y_d, P);
 
-                            if (m_Data.presentation_right[i] == 1) {  // hier wird nur die Y-Achse abgefragt
+                            if (m_Data.presentation_right[i] == 1) {  // only the y axis will define this
                                 QPointF Point(x_d, y_d);
                                 par_Painter->drawPoint(Point);
                             } else {
@@ -317,7 +314,7 @@ void UserDrawXYPlot::Paint(QPainter *par_Painter, QList<UserDrawImageItem*> *par
                                     x_m1_d = x_d;
                                     y_m1_d = y_d;
                                 } else {
-                                    // Wert davor war nicht gueltig dann nur Werte merken
+                                    // Value before was not valid only stor the current value
                                     x_m1_d = x_d;
                                     y_m1_d = y_d;
                                 }
@@ -328,8 +325,6 @@ void UserDrawXYPlot::Paint(QPainter *par_Painter, QList<UserDrawImageItem*> *par
                         }
                     }
                 }
-
-
             }
         }
     }
@@ -402,9 +397,7 @@ bool UserDrawXYPlot::InitDataStruct()
             if (vid > 0) {
                 m_Data.vids_left[x] = vid;
                 m_Data.name_left[x] = ReallocCopyString(m_Data.name_left[x], SignalName);
-                if ((m_Data.buffer_left[x] = (double*)my_calloc ((size_t)m_Data.buffer_depth, sizeof(double))) != NULL) {
-                    ; //attach_bbvari (vid);
-                } else {
+                if ((m_Data.buffer_left[x] = (double*)my_calloc ((size_t)m_Data.buffer_depth, sizeof(double))) == NULL) {
                     ThrowError (1, "no free memory");
                     m_Data.vids_left[x] = 0;
                 }
@@ -413,9 +406,9 @@ bool UserDrawXYPlot::InitDataStruct()
                 // max
                 m_Data.max_left[x] = m_XYMax.at(s);
                 if (m_Data.max_left[x] <= m_Data.min_left[x]) m_Data.max_left[x] = m_Data.min_left[x] + 1.0;
-                // Farbe
-                m_Data.color_left[x] = m_Color.at(s/2); // only half the size! //RGB(0,0,0);
-                // Phys. oder Dez.
+                // Color
+                m_Data.color_left[x] = m_Color.at(s/2); // only half the size!
+                // Phys. or dec.
                 m_Data.dec_phys_left[x] = m_XYPhys.at(s);
                 m_Data.dec_hex_bin_left[x] = 0;
                 // Line width
@@ -434,9 +427,7 @@ bool UserDrawXYPlot::InitDataStruct()
             if (vid > 0) {
                 m_Data.vids_right[x] = vid;
                 m_Data.name_right[x] = ReallocCopyString(m_Data.name_right[x], SignalName);
-                if ((m_Data.buffer_right[x] = (double*)my_calloc ((size_t)m_Data.buffer_depth, sizeof(double))) != NULL) {
-                    ; //attach_bbvari (vid);
-                } else {
+                if ((m_Data.buffer_right[x] = (double*)my_calloc ((size_t)m_Data.buffer_depth, sizeof(double))) == NULL) {
                     ThrowError (1, "no free memory");
                     m_Data.vids_right[x] = 0;
                 }
@@ -445,9 +436,9 @@ bool UserDrawXYPlot::InitDataStruct()
                 // max
                 m_Data.max_right[x] = m_XYMax.at(s);
                 if (m_Data.max_right[x] <= m_Data.min_right[x]) m_Data.max_right[x] = m_Data.min_right[x] + 1.0;
-                // Farbe
-                m_Data.color_right[x] = m_Color.at(s/2); // only half the size!  //RGB(0,0,0);
-                // Phys. oder Dez.
+                // Color
+                m_Data.color_right[x] = m_Color.at(s/2); // only half the size!
+                // Phys. or dec.
                 m_Data.dec_phys_right[x] = m_XYPhys.at(s);
                 m_Data.dec_hex_bin_right[x] = 0;
                 // Line width

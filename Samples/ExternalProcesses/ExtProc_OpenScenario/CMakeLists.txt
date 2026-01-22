@@ -9,7 +9,7 @@ target_include_directories(${ExtProc_TargetName} PRIVATE ../../../Src/ExternalPr
 target_sources(${ExtProc_TargetName}
     INTERFACE FILE_SET HEADERS 
     BASE_DIRS ${PROJECT_SOURCE_DIR}
-    PRIVATE ExtProc_Esmini.cpp) 
+    PRIVATE ExtProc_OpenScenario.cpp) 
     
 target_include_directories(${ExtProc_TargetName}
     PRIVATE 

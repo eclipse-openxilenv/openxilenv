@@ -24,6 +24,11 @@
 #include <float.h>
 #include <malloc.h>
 #include <stdarg.h>
+#ifndef _WIN32
+#include <dirent.h>
+#include <dlfcn.h>
+#include "Platform.h"
+#endif
 #include "ThrowError.h"
 #include "StringMaxChar.h"
 #include "ExecutionStack.h"
@@ -36,10 +41,11 @@
 #include <strings.h>
 #include "RemoteMasterReqToClient.h"
 #include "RealtimeScheduler.h"
-#define _alloca(x) alloca(x)
-#define stricmp(s1,s2) strcasecmp(s1,s2)
-#define strnicmp(s1,s2,n) strncasecmp(s1,s2,n)
+//#define _alloca(x) alloca(x)
+//#define stricmp(s1,s2) strcasecmp(s1,s2)
+//#define strnicmp(s1,s2,n) strncasecmp(s1,s2,n)
 #else
+#include "Files.h"
 #include "Scheduler.h"
 #include "EnvironmentVariables.h"
 #include "Script.h"
@@ -115,6 +121,17 @@ typedef struct {
    EXECUTION_STACK Stack;
 
 } EQUATION_PARSER_INFOS;
+
+
+typedef const char* (*UserDefinedBuildinFunctionGetNameType) (int *ret_Version, int *ret_MaxParameters, int *ret_MinParameters, int *ret_Flags);
+struct {
+    char *FunctionName;
+    int MaxParameters;
+    int MinParameters;
+    int Flags;
+} *UserDefinedBuildinFunctionTable;
+int UserDefinedBuildinFunctionTableSize;
+
 
 static int or_logic (EQUATION_PARSER_INFOS *pParser);
 
@@ -239,6 +256,21 @@ static int CheckParamterCount (EQUATION_PARSER_INFOS *pParser, char *FuncName, i
         ret = -1;
     } else ret = 0;
     return ret;
+}
+
+static int ParseUserDefinedBuildinFunctions(EQUATION_PARSER_INFOS *pParser, char *par_FuncName, int par_NrArgs, int *ret,
+                                            EQU_TOKEN *ret_Token, int *ret_UseCanOrFlexrayDataFlag)
+{
+    int x;
+    for (x = 0; x < UserDefinedBuildinFunctionTableSize; x++) {
+        if (!strcmp(UserDefinedBuildinFunctionTable[x].FunctionName, par_FuncName)) {
+            *ret_Token = x + USER_DEFINED_BUILDIN_FUNCTION_OFFSET;
+            *ret = CheckParamterCount (pParser, par_FuncName, UserDefinedBuildinFunctionTable[x].MaxParameters, par_NrArgs);
+            *ret_UseCanOrFlexrayDataFlag = UserDefinedBuildinFunctionTable[x].Flags;
+            return 0;
+        }
+    }
+    return -1;
 }
 
 static int CheckIfCANCommandsAllowed (EQUATION_PARSER_INFOS *pParser, char *FuncName)
@@ -505,6 +537,8 @@ static int EquBuildInFunctions (EQUATION_PARSER_INFOS *pParser, char *FuncName, 
     } else if (!strcmp (FuncName, "get_calc_data_width")) {
         ret = CheckParamterCount (pParser, FuncName, 1, NrArgs);
         pParser->Token = EQU_OP_GET_CALC_DATA_WIDTH;
+    } else if (!ParseUserDefinedBuildinFunctions(pParser, FuncName, NrArgs, &ret, &pParser->Token, &pParser->UseCanOrFlexrayDataFlag)) {
+        // are there any user defined buildin functions?
     } else {
         pParser->Token = EQU_OP_END;
         EquationError (pParser, EQU_PARSER_ERROR_STOP, "unknown buildin function '%s' in equation \"%s\"", FuncName, pParser->Equation);
@@ -1637,7 +1671,7 @@ static int prim (EQUATION_PARSER_INFOS *pParser)
                 return 0;
             }
         case EQU_OP_NOT:
-        ReadToken (pParser);
+            ReadToken (pParser);
             prim (pParser);
             if (TRANSLATE_BYTE_CODE (pParser)) {
                 pParser->Value.value = 0.0;
@@ -1648,7 +1682,7 @@ static int prim (EQUATION_PARSER_INFOS *pParser)
                 return direct_execute_one_command (EQU_OP_NOT, &(pParser->Stack), Value);
             }
         case EQU_OP_OPEN_BRACKETS:
-        ReadToken (pParser);
+            ReadToken (pParser);
             or_logic (pParser);
             if (pParser->Token != EQU_OP_CLOSE_BRACKETS) {
                 EquationError (pParser, EQU_PARSER_ERROR_STOP, "missing ')' in equation \"%s\"", pParser->Equation);
@@ -1659,7 +1693,19 @@ static int prim (EQUATION_PARSER_INFOS *pParser)
         case EQU_OP_END:
             //return 1;
         default:
-            EquationError (pParser, EQU_PARSER_ERROR_STOP, "expecting a primary (value, variable, (), or a command) in equation \"%s\"", pParser->Equation);
+            if ((pParser->Token >= USER_DEFINED_BUILDIN_FUNCTION_OFFSET) &&
+                (pParser->Token < (USER_DEFINED_BUILDIN_FUNCTION_OFFSET + UserDefinedBuildinFunctionTableSize))) {
+                // User defined buildin functions
+                ReadToken (pParser);
+                pParser->Value.value = 0.0;
+                if (TRANSLATE_BYTE_CODE (pParser)) {
+                    return add_exec_stack_elem (akt_baustein_save, NULL, pParser->Value, &pParser->ExecStack, pParser->cs, pParser->Pid);
+                } else {
+                    return direct_execute_one_command (akt_baustein_save, &(pParser->Stack), pParser->Value);
+                }
+            } else {
+                EquationError (pParser, EQU_PARSER_ERROR_STOP, "expecting a primary (value, variable, (), or a command) in equation \"%s\"", pParser->Equation);
+            }
 
     }
     return 0;
@@ -3072,3 +3118,268 @@ int calc_raw_value_for_phys_value (const char *equation, double phys_value, cons
     return ret;
 }
 
+#ifndef REMOTE_MASTER
+int DirectSolveEquationFile (const char *EquationFile, const char *EquationBuffer, char **ErrString)
+{
+    FILE *fh = NULL;
+    char *Buffer;
+    char *p;
+    char *Line;
+    int Size, Pos;
+    int c;
+    int Ret = 0;
+
+    Size = Pos = 0;
+    Buffer = Line = NULL;
+    if (EquationBuffer == NULL) {
+        fh = open_file(EquationFile, "rt");
+        if (fh == NULL) {
+            *ErrString = StringMalloc("cannot open file");
+            Ret = -1;
+            goto __OUT;
+        }
+        // read the file into the buffer
+        while((c = fgetc (fh)) != EOF) {
+            if (Size <= (Pos + 1)) {  // + 1 because of tailing termination
+                Size += 1024 + Size / 2;
+                Buffer = my_realloc(Buffer, Size);
+                if (Buffer == NULL) {
+                    *ErrString = NULL;
+                    Ret = -1;
+                    goto __OUT;
+                }
+            }
+            Buffer[Pos] = c;
+            Pos++;
+        }
+        if (Buffer == NULL) {
+            *ErrString = StringMalloc("empty file");
+            Ret = -1;
+            goto __OUT;
+        } else {
+            Buffer[Pos] = 0;
+        }
+    } else {
+        Buffer = (char*)EquationBuffer;
+    }
+    Pos = Size = 0;
+    p = Buffer;
+    do {
+        c = *p++;
+        while (isspace (c)) c = *p++;
+        if (c == ';') {    // it is a comment line
+            if (Pos > 0) {
+                double Value;
+                Line[Pos] = 0;
+                // there is something to solve
+                if (direct_solve_equation_err_string (Line, &Value, ErrString)) {
+                    Ret = -1;
+                    goto __OUT;
+                }
+                Pos = 0;
+            }
+            // ignore all behind the ; character in this line
+            do {
+                c = *p++;
+            } while ((c != 0) && (c != '\n'));
+        } else {
+            if (Size <= (Pos + 1)) {  // + 1 because of tailing termination
+                Size += 1024 + Size / 2;
+                Line = my_realloc(Line, Size);
+                if (Line == NULL) {
+                    *ErrString = NULL;
+                    Ret = -1;
+                    goto __OUT;
+                }
+            }
+            Line[Pos] = c;
+            Pos++;
+        }
+    } while (c != 0);
+__OUT:
+    if (Line != NULL) my_free(Line);
+    if ((EquationBuffer == NULL) && (Buffer != NULL)) my_free(Buffer);
+    if (fh != NULL) close_file(fh);
+    return Ret;
+}
+#endif
+
+int AddUserDefinedBuildinFunctionToParser(const char *par_FunctionName, int par_MaxParameters, int par_MinParameters, int par_Flags)
+{
+    int Pos = UserDefinedBuildinFunctionTableSize;
+    UserDefinedBuildinFunctionTableSize++;
+    UserDefinedBuildinFunctionTable = my_realloc(UserDefinedBuildinFunctionTable, UserDefinedBuildinFunctionTableSize*sizeof(UserDefinedBuildinFunctionTable[0]));
+    UserDefinedBuildinFunctionTable[Pos].FunctionName = StringMalloc(par_FunctionName);
+    UserDefinedBuildinFunctionTable[Pos].MaxParameters = par_MaxParameters;
+    UserDefinedBuildinFunctionTable[Pos].MinParameters = par_MinParameters;
+    UserDefinedBuildinFunctionTable[Pos].Flags = par_Flags;
+    return Pos + USER_DEFINED_BUILDIN_FUNCTION_OFFSET;
+}
+
+
+// List of all found user defined buildin functions
+char **ListOfUserDefinedBuildinFunctionDlls;
+int ListOfUserDefinedBuildinFunctionDllsSize;
+
+int AddUserDefinedBuildinFunctionDllToList(char *par_Name)
+{
+    int Pos = ListOfUserDefinedBuildinFunctionDllsSize;
+    ListOfUserDefinedBuildinFunctionDllsSize++;
+    ListOfUserDefinedBuildinFunctionDlls = (char**)my_realloc(ListOfUserDefinedBuildinFunctionDlls, sizeof(char*) * ListOfUserDefinedBuildinFunctionDllsSize);
+    if(ListOfUserDefinedBuildinFunctionDlls != NULL) {
+        ListOfUserDefinedBuildinFunctionDlls[Pos] = StringMalloc(par_Name);
+        return 0;
+    } else {
+        return -1;
+    }
+}
+
+static int CompareFunction(const void *a, const void *b)
+{
+    return strcmp((char*)a, (char*)b);
+}
+
+static void SortedAndLoadAllFoundUserBuildinFunction(char *par_Folder)
+{
+    int x;
+    qsort(ListOfUserDefinedBuildinFunctionDlls, ListOfUserDefinedBuildinFunctionDllsSize, sizeof(char*), CompareFunction);
+    for (x = 0; x < ListOfUserDefinedBuildinFunctionDllsSize; x++) {
+        char DllPath[MAX_PATH];
+        StringCopyMaxCharTruncate(DllPath, par_Folder, sizeof(DllPath));
+#ifdef _WIN32
+        STRING_APPEND_TO_ARRAY(DllPath, "\\");
+#else
+        STRING_APPEND_TO_ARRAY(DllPath, "/");
+#endif
+        STRING_APPEND_TO_ARRAY(DllPath, ListOfUserDefinedBuildinFunctionDlls[x]);
+
+#ifdef _WIN32
+        HMODULE hModulDll = LoadLibraryA (DllPath);
+        if (hModulDll == NULL) {
+            char *MsgBuf = NULL;
+            DWORD dw = GetLastError ();
+            FormatMessageA (FORMAT_MESSAGE_ALLOCATE_BUFFER |
+                               FORMAT_MESSAGE_FROM_SYSTEM |
+                               FORMAT_MESSAGE_IGNORE_INSERTS,
+                           NULL,
+                           dw,
+                           MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+                           (LPSTR)&MsgBuf,
+                           0, NULL);
+#else
+        void *SharedLibHandle = dlopen(DllPath, RTLD_LAZY); // RTLD_NOW | RTLD_GLOBAL);
+        if (SharedLibHandle == NULL) {
+            char *MsgBuf = dlerror();
+#endif
+            ThrowError(1, "cannot load user defined buildin function DLL \"%s\" because \"%s\"", DllPath, MsgBuf);
+        } else {
+#ifdef _WIN32
+            UserDefinedBuildinFunctionGetNameType UserDefinedBuildinFunctionGetName = (UserDefinedBuildinFunctionGetNameType)GetProcAddress(hModulDll, "UserDefinedBuildinFunctionGetName");
+            UserDefinedBuildinFunctionExecuteType UserDefinedBuildinFunctionExecute = (UserDefinedBuildinFunctionExecuteType)GetProcAddress(hModulDll, "UserDefinedBuildinFunctionExecute");
+#else
+            UserDefinedBuildinFunctionGetNameType UserDefinedBuildinFunctionGetName = (UserDefinedBuildinFunctionGetNameType)dlsym(SharedLibHandle, "UserDefinedBuildinFunctionGetName");
+            UserDefinedBuildinFunctionExecuteType UserDefinedBuildinFunctionExecute = (UserDefinedBuildinFunctionExecuteType)dlsym(SharedLibHandle, "UserDefinedBuildinFunctionExecute");
+#endif
+            if (UserDefinedBuildinFunctionGetName == NULL) {
+                ThrowError (1, "cannot find function \"UserDefinedBuildinFunctionGetName\" inside DLL \"%s\"", DllPath);
+            } else if (UserDefinedBuildinFunctionExecute == NULL) {
+                ThrowError (1, "cannot find function \"UserDefinedBuildinFunctionExecute\" inside DLL \"%s\"", DllPath);
+            } else {
+                int Version, MaxParameters, MinParameters, Flags;
+                const char *FunctionName = UserDefinedBuildinFunctionGetName(&Version, &MaxParameters, &MinParameters, &Flags);
+                if (Version != USER_DEFINED_BUILDIN_FUNCTION_INTERFACE_VERSION) {
+                    ThrowError (1, "Interface version %i of DLL \"%s\" dosen't match to %i", Version, DllPath, USER_DEFINED_BUILDIN_FUNCTION_INTERFACE_VERSION);
+                } else {
+                    int Number = AddUserDefinedBuildinFunctionToParser(FunctionName, MaxParameters, MinParameters, Flags);
+                    AddUserDefinedBuildinFunctionToExecutor(Number, UserDefinedBuildinFunctionExecute);
+                }
+            }
+        }
+    }
+}
+
+
+#ifdef _WIN32
+static void LoadUserBuildinFunctions(void)
+{
+    int Ret = 0;
+    HMODULE hModulDll;
+    char Folder[MAX_PATH];
+
+    Folder[0] = 0;
+    if (GetEnvironmentVariableA("XILENV_BUILDINFUNC_DLL_PATH", Folder, MAX_PATH) <= 0) {
+        // inside the same path as the XilEnv executable
+        GetModuleFileNameA(NULL, Folder, MAX_PATH);
+        // remove the executable name
+        char *p = Folder;
+        while (*p != 0) p++;
+        if (p > Folder) {
+            do {
+                p--;
+            } while((p > Folder) && (*p != '\\') && (*p != '/'));
+            *p = 0;
+        }
+        STRING_APPEND_TO_ARRAY(Folder, "\\user_buildin_func");
+    }
+    char Pattern[MAX_PATH];
+    intptr_t Handle;
+    struct _finddata_t FindData;
+    DWORD Attributes;
+
+    if ((Attributes = GetFileAttributesA(Folder)) == INVALID_FILE_ATTRIBUTES) {
+        return;
+    }
+    if ((Attributes & FILE_ATTRIBUTE_DIRECTORY) == FILE_ATTRIBUTE_DIRECTORY) {
+        StringCopyMaxCharTruncate(Pattern, Folder, sizeof(Pattern));
+        STRING_APPEND_TO_ARRAY(Pattern, "\\*.DLL");
+        if((Handle = _findfirst(Pattern, &FindData)) > 0) {
+            do {
+                AddUserDefinedBuildinFunctionDllToList(FindData.name);
+            } while(_findnext(Handle, &FindData) == 0);
+            _findclose(Handle);
+        }
+    }
+    SortedAndLoadAllFoundUserBuildinFunction(Folder);
+}
+#else
+static void LoadUserBuildinFunctions(void)
+{
+    char Folder[MAX_PATH];
+
+    Folder[0] = 0;
+    if (GetEnvironmentVariable("XILENV_BUILDINFUNC_DLL_PATH", Folder, sizeof(Folder)) <= 0) {
+        // inside the same path as the XilEnv executable
+        GetModuleFileName(NULL, Folder, MAX_PATH);
+        // remove the executable name
+        char *p = Folder;
+        while (*p != 0) p++;
+        if (p > Folder) {
+            do {
+                p--;
+            } while((p > Folder) && (*p != '\\') && (*p != '/'));
+            *p = 0;
+        }
+        STRING_APPEND_TO_ARRAY(Folder, "/user_buildin_func");
+    }
+    struct dirent *dp;
+    DIR *Dir = opendir(Folder);
+    if (Dir != NULL) {
+        while ((dp = readdir(Dir)) != NULL) {
+            char *p = dp->d_name;
+            while (*p != 0) p++;
+            if (((p  - dp->d_name) > 4) &&  // File name ends with ".so"
+                !strcmp(p - 3, ".so")) {
+                AddUserDefinedBuildinFunctionDllToList(dp->d_name);
+            }
+        }
+        closedir(Dir);
+    }
+    SortedAndLoadAllFoundUserBuildinFunction(Folder);
+}
+#endif
+
+int InitEquatuinParser(void)
+{
+    LoadUserBuildinFunctions();
+    return 0;
+}

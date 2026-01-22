@@ -74,6 +74,9 @@ target_sources(XilEnvGui PRIVATE
     HotkeysDialog.cpp
     SaveXcpConfigDialog.cpp
     XcpConfigDialog.cpp
+    EditRationalFunctionDialog.cpp
+    EditTableDialog.cpp
+    EditFactorOffsetDialog.cpp
 
     A2LSelectWidget.ui
     ConfigureBarrierDialog.ui
@@ -145,4 +148,7 @@ target_sources(XilEnvGui PRIVATE
     ConfigSignalConversionDialog.ui
     HotkeysDialog.ui
     SaveProcessesDialog.ui
+    EditRationalFunctionDialog.ui
+    EditTableDialog.ui
+    EditFactorOffsetDialog.ui
 )

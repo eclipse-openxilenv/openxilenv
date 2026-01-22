@@ -70,14 +70,9 @@ QWidget *A2LCalMapDelegateEditor::createEditor(QWidget *parent,
                 Conversion = Data->GetMapConversion();
                 ConvType = Data->GetMapConversionType();
             }
-            switch (ConvType) {
-            case 1:
-                editor->SetFormulaString(Conversion);
-                break;
-            case 2:
-                editor->SetEnumString(Conversion);
-                break;
-            }
+
+            editor->SetConersionTypeAndString((enum BB_CONV_TYPES)ConvType, Conversion);
+
             editor->SetDisplayPhysValue(true);
             editor->SetDisplayRawValue(false);
         } else {

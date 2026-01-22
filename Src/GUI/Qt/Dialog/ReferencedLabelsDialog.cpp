@@ -23,6 +23,8 @@
 #include <QItemSelectionModel>
 
 extern "C" {
+#include "StringMaxChar.h"
+#include "PrintFormatToString.h"
 #include "Scheduler.h"
 #include "Blackboard.h"
 #include "IniDataBase.h"
@@ -65,7 +67,7 @@ ReferencedLabelsDialog::ReferencedLabelsDialog(QString par_ProcessName, QWidget 
         }
     } else {
         char ShortProcessName[MAX_PATH];
-        TruncatePathFromProcessName (ShortProcessName, QStringToConstChar(par_ProcessName));
+        TruncatePathFromProcessName (ShortProcessName, QStringToConstChar(par_ProcessName), sizeof(ShortProcessName));
         ui->ProcessComboBox->setCurrentText (CharToQString(ShortProcessName));
     }
     FillModel(m_ProcessName);
@@ -115,11 +117,11 @@ void ReferencedLabelsDialog::FillModel (const QString &par_Process)
     m_Model->setHeaderData (0, Qt::Horizontal, QObject::tr("label"));
     m_Model->setHeaderData (1, Qt::Horizontal, QObject::tr("rename to"));
 
-    TruncatePathFromProcessName (pname_withoutpath, QStringToConstChar(par_Process));
-    sprintf (section_filter, "referenced variables *%s", pname_withoutpath);
+    TruncatePathFromProcessName (pname_withoutpath, QStringToConstChar(par_Process), sizeof(pname_withoutpath));
+    PrintFormatToString (section_filter, sizeof(section_filter), "referenced variables *%s", pname_withoutpath);
     if (IniFileDataBaseFindNextSectionNameRegExp (0, section_filter, 0, section, sizeof(section), Fd) >= 0) {
         for (int Row = 0;;Row++) {
-            sprintf (entry, "Ref%i", Row);
+            PrintFormatToString (entry, sizeof(entry), "Ref%i", Row);
             if (IniFileDataBaseReadString (section, entry, "", variname, BBVARI_NAME_SIZE, Fd) == 0) break;
             m_Model->insertRow (Row);
             m_Model->setData (m_Model->index (Row, 0), CharToQString(variname));
@@ -154,7 +156,7 @@ int ReferencedLabelsDialog::UnreferenceOneVariable (int Pid, DEBUG_INFOS_ASSOCIA
         char Help[BBVARI_NAME_SIZE + 100];  // +100 because of ConvertLabelAsapCombatible
         // Delete label from refernce liste inside INI file
         if ((DisplayName == nullptr) || (strlen(DisplayName) == 0)) {
-            strcpy (Help, Name);
+            STRING_COPY_TO_ARRAY (Help, Name);
         } else {
             strncpy (Help, DisplayName, BBVARI_NAME_SIZE);
             Help[BBVARI_NAME_SIZE-1] = 0;
@@ -176,7 +178,7 @@ int ReferencedLabelsDialog::RenameReferenceOneVariable(int Pid, DEBUG_INFOS_ASSO
                                                        const char *NewDisplayName)
 {
     char Name[BBVARI_NAME_SIZE];
-    strcpy (Name, VariName);
+    STRING_COPY_TO_ARRAY (Name, VariName);
     ConvertLabelAsapCombatible (Name, sizeof(Name), 2);   // Always replace ._. with ::
     uint64_t Address;
     int32_t TypeNr;
@@ -230,8 +232,8 @@ void ReferencedLabelsDialog::WriteModelToIni (const QString &par_Process)
     char displayname[BBVARI_NAME_SIZE];
 
 
-    TruncatePathFromProcessName (pname_withoutpath, QStringToConstChar(par_Process));
-    sprintf (section_filter, "referenced variables *%s", pname_withoutpath);
+    TruncatePathFromProcessName (pname_withoutpath, QStringToConstChar(par_Process), sizeof(pname_withoutpath));
+    PrintFormatToString (section_filter, sizeof(section_filter), "referenced variables *%s", pname_withoutpath);
     if (IniFileDataBaseFindNextSectionNameRegExp (0, section_filter, 0, section, sizeof(section), GetMainFileDescriptor()) >= 0) {
         DEBUG_INFOS_ASSOCIATED_CONNECTION *DebugInfos;
         int Pid;
@@ -247,7 +249,7 @@ void ReferencedLabelsDialog::WriteModelToIni (const QString &par_Process)
                                                  0);
         if (DebugInfos != nullptr) {
             for (int Row = 0;;Row++) {
-                sprintf (entry, "Ref%i", Row);
+                PrintFormatToString (entry, sizeof(entry), "Ref%i", Row);
                 if (IniFileDataBaseReadString (section, entry, "", variname, BBVARI_NAME_SIZE, GetMainFileDescriptor()) == 0) break;
                 if (GetDisplayName (section, Row, variname, displayname, sizeof (displayname)) != 0) {
                     displayname[0] = 0;    // no display name
@@ -278,13 +280,13 @@ void ReferencedLabelsDialog::WriteModelToIni (const QString &par_Process)
                 QString ReferenceName = m_Model->item(r, 0)->data(Qt::DisplayRole).toString();
                 QString DisplayName = m_Model->item(r, 1)->data(Qt::DisplayRole).toString();
                 char Entry[32];
-                sprintf (Entry, "Ref%i", r);
+                PrintFormatToString (entry, sizeof(entry), "Ref%i", r);
                 IniFileDataBaseWriteString (section, Entry, QStringToConstChar(ReferenceName), GetMainFileDescriptor());
                 // If display name not equal variable name?
                 if ((DisplayName.size() > 0) && DisplayName.compare(ReferenceName)) {
                     char Help[INI_MAX_LINE_LENGTH];
-                    sprintf (Entry, "Dsp%i", r);
-                    sprintf (Help, "%s %s", QStringToConstChar(ReferenceName), QStringToConstChar(DisplayName));
+                    PrintFormatToString (entry, sizeof(entry), "Dsp%i", r);
+                    PrintFormatToString (Help, sizeof(Help), "%s %s", QStringToConstChar(ReferenceName), QStringToConstChar(DisplayName));
                     IniFileDataBaseWriteString (section, Entry, Help, GetMainFileDescriptor());
                 }
             }

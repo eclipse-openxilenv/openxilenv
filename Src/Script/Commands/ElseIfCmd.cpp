@@ -38,10 +38,9 @@ int cElseIfCmd::SyntaxCheck (cParser *par_Parser)
 
 int cElseIfCmd::Execute (cParser *par_Parser, cExecutor *par_Executor)
 {
-    // wird aufgerufen wenn ein IF-Block ausgefuehrt wurde und dann auf den ELSE-Block
-    // auflaeuft. -> spring ENDIF
     if (par_Executor->GetIfFlag ()) {
-        // Wurde direkt vom IF wegen Bedingung nicht zuteffend angesprungen
+        // Directly jumped from 'IF'/'ELSEIF' to this 'ELSEIF' because condition was not true.
+        // so the 'ELSEIF' condition of this block should be checked
         par_Executor->SetIfFlag (0);
 
         int Value;
@@ -49,21 +48,20 @@ int cElseIfCmd::Execute (cParser *par_Parser, cExecutor *par_Executor)
             return -1;
         }
         if (Value) {  
-            // Wenn IF wahr dann mache einfach mit naechsten Befehl weiter
+            // 'ELSEIF' is true -> continue with next command
             if (par_Parser->GenDebugFile ()) par_Parser->PrintDebugFile ("/* ELSEIF is TRUE */");
             par_Executor->SetIfFlag (0);
         } else {
-            // Wenn  IF nicht wahr ist dann setze IP neu (ELSE oder ENDIF?)
+            // 'ELSEIF' is false -> Set the IP to the next (ELSE, ELSEIF or ENDIF)
             if (par_Parser->GenDebugFile ()) par_Parser->PrintDebugFile ("/* ELSEIF is FALSE */");
             par_Executor->SetNextIp (static_cast<int>(par_Executor->GetOptParameterCurrentCmd ()));
             par_Executor->SetIfFlag (1);
         }
 
     } else {
-        // IF-Block wurde ausgefuehrt -> ELSE-Block ueberspringen
+        // the corresponding 'IF' was true -> jump over the 'ELSE' block
         par_Executor->SetNextIp (static_cast<int>(par_Executor->GetOptParameterCurrentCmd ()));
     }
-    //par_Executor->NextCmdInSameCycle ();
     return 0;
 }
 

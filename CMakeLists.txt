@@ -60,13 +60,16 @@ else()
         find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets)
         find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets)
 
+        # Svg support is only optional for copy to clipboard inside oscilloscope
+        find_package(QT NAMES Qt6 Qt5 OPTINAL_COMPONENTS COMPONENTS Svg)
+        find_package(Qt${QT_VERSION_MAJOR} OPTIONAL_COMPONENTS COMPONENTS Svg)
+
         if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
             qt_add_executable(XilEnvGui
                 MANUAL_FINALIZATION
                 ${PROJECT_SOURCES}
             )
             qt6_disable_unicode_defines(XilEnvGui)
-            #set_property(TARGET XilEnvGui PROPERTY QT_NO_UNICODE_DEFINES TRUE)
         else()
             add_executable(XilEnvGui
                 ${PROJECT_SOURCES}
@@ -127,6 +130,13 @@ else()
         endif()
 
         target_link_libraries(XilEnvGui PRIVATE Qt${QT_VERSION_MAJOR}::Widgets)
+        if(Qt${QT_VERSION_MAJOR}Svg_FOUND)
+            message ("Svg supported")
+            target_compile_definitions(XilEnvGui PUBLIC QT_SVG_LIB)
+            target_link_libraries(XilEnvGui PRIVATE Qt${QT_VERSION_MAJOR}::Svg)
+        else()
+            message ("Svg not supported")
+        endif()
         if(WIN32)
             if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
                 target_compile_options(XilEnvGui PRIVATE /wd5105)
@@ -137,11 +147,13 @@ else()
                 target_link_libraries(XilEnvGui PRIVATE ws2_32)
                 target_link_libraries(XilEnvGui PRIVATE Psapi)
                 target_link_libraries(XilEnvGui PRIVATE z)
+                target_link_options(XilEnvGui PRIVATE "-mwindows")
             endif()
             target_link_libraries(XilEnvGui PRIVATE Winmm.lib)
         else()
             target_link_libraries(XilEnvGui PRIVATE pthread)
             target_link_libraries(XilEnvGui PRIVATE z)
+            target_link_libraries(XilEnvGui PRIVATE dl)
         endif()
 
         #
@@ -204,6 +216,7 @@ else()
         else()
             target_link_libraries(XilEnv PRIVATE pthread)
             target_link_libraries(XilEnv PRIVATE z)
+            target_link_libraries(XilEnv PRIVATE dl)
         endif()
 
         #
@@ -323,9 +336,6 @@ else()
                 Src/TraceRecorder
                 Src/Utilities
                 Src/Scheduler)
-            if(BUILD_WITH_J1939_SUPPORT)
-                target_compile_definitions(XilEnvGui PUBLIC BUILD_WITH_J1939_SUPPORT)
-            endif()
             target_compile_definitions(LinuxRemoteMasterCore PUBLIC _M_X64)
             target_compile_definitions(LinuxRemoteMasterCore PUBLIC REMOTE_MASTER)
             if(BUILD_WITH_J1939_SUPPORT)
@@ -334,6 +344,7 @@ else()
             target_compile_options(LinuxRemoteMasterCore PRIVATE -Wno-address-of-packed-member)
             target_link_libraries(LinuxRemoteMasterCore PRIVATE pthread)
             target_link_libraries(LinuxRemoteMasterCore PRIVATE rt)
+            target_link_libraries(LinuxRemoteMasterCore PRIVATE dl)
 
             #
             # LinuxRemoteMaster.a target

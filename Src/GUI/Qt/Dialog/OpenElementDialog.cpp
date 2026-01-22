@@ -22,6 +22,7 @@
 #include "StringHelpers.h"
 
 extern "C" {
+#include "PrintFormatToString.h"
 #include "IniDataBase.h"
 }
 
@@ -47,7 +48,7 @@ void OpenElementDialog::LoadWindowNamesWidgetList()
     for(int i = 0; ; i++) {
         char Entry[64];
         char WindowName[INI_MAX_LINE_LENGTH];
-        sprintf (Entry, "W%i", i);
+        PrintFormatToString (Entry, sizeof(Entry), "W%i", i);
         if (IniFileDataBaseReadString(QStringToConstChar(m_WindowIniListName), Entry, "", WindowName, sizeof (WindowName),
                                       GetMainFileDescriptor()) == 0) {
             break;

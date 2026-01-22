@@ -74,7 +74,7 @@ int ConnectToClinetForRequests(char *Address, int Port)
         printf("TCP_NODELAY Value: %i\n", OptVal);
     }
 
-    memset(&server.sin_addr, 0, sizeof(server.sin_addr));
+    MEMSET(&server.sin_addr, 0, sizeof(server.sin_addr));
     server.sin_addr.s_addr = inet_addr(Address);
     server.sin_family = AF_INET;
     server.sin_port = htons(Port);

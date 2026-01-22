@@ -26,6 +26,7 @@
 #include "ThrowError.h"
 #include "MyMemory.h"
 #include "StringMaxChar.h"
+#include "EnvironmentVariables.h"
 #include "ConfigurablePrefix.h"
 #include "Message.h"
 #include "Fifos.h"
@@ -136,8 +137,19 @@ int start_recorder (MESSAGE_HEAD *mhead, RECORDER_STRUCT *Recorder)
         dec_phys_flags = my_calloc ((size_t)(Recorder->RecordVariablesCount+1), 1);
 		if (dec_phys_flags != NULL) {
             for (x = 0; x <= Recorder->RecordVariablesCount; x++) {
-                if (get_bbvari_conversiontype (vids[x]) == 1) dec_phys_flags[x] = 1;
-                else dec_phys_flags[x] = 0;
+                switch (get_bbvari_conversiontype (vids[x])) {
+                case BB_CONV_FORMULA:
+                case BB_CONV_FACTOFF:
+                case BB_CONV_OFFFACT:
+                case BB_CONV_TAB_INTP:
+                case BB_CONV_TAB_NOINTP:
+                case BB_CONV_RAT_FUNC:
+                    dec_phys_flags[x] = 1;
+                    break;
+                default:
+                    dec_phys_flags[x] = 0;
+                    break;
+                }
             }
             dec_phys_flags[Recorder->RecordVariablesCount] = 0;
 		}
@@ -184,7 +196,7 @@ int start_recorder (MESSAGE_HEAD *mhead, RECORDER_STRUCT *Recorder)
         }
 
         /* Transmit recording length */
-        if (WriteToFiFo (Recorder->ReqFiFo, RDPIPE_SEND_LENGTH, GET_PID(), get_timestamp_counter(), sizeof (unsigned long), (char*)&(Recorder->StartMessage.MaxSampleCounter))) {
+        if (WriteToFiFo (Recorder->ReqFiFo, RDPIPE_SEND_LENGTH, GET_PID(), get_timestamp_counter(), sizeof (uint32_t), (char*)&(Recorder->StartMessage.MaxSampleCounter))) {
             ThrowError (1, "pipe overflow\n");
             Recorder->RecorderStatus = HDREC_SLEEP;
             return RDPIPE_NOT_RUNNING;
@@ -258,9 +270,9 @@ static int BuildRecorderFileNames (RECORDER_STRUCT *Recorder)
     char *p, *pend;
     int StartExt;
 
-    strcpy (Recorder->TextFileName, Recorder->StartMessage.Filename);
-    strcpy (Recorder->MdfFileName, Recorder->StartMessage.Filename);
-    strcpy (Recorder->Mdf4FileName, Recorder->StartMessage.Filename);
+    STRING_COPY_TO_ARRAY (Recorder->TextFileName, Recorder->StartMessage.Filename);
+    STRING_COPY_TO_ARRAY (Recorder->MdfFileName, Recorder->StartMessage.Filename);
+    STRING_COPY_TO_ARRAY (Recorder->Mdf4FileName, Recorder->StartMessage.Filename);
 
     // If there would be writen more than oe file format the file extension will be ignored
     // and the default file extension would be used
@@ -277,9 +289,9 @@ static int BuildRecorderFileNames (RECORDER_STRUCT *Recorder)
             p--;
         }
         StartExt = (int)(p - Recorder->StartMessage.Filename);
-        strcpy (Recorder->TextFileName + StartExt, ".dat"); 
-        strcpy (Recorder->MdfFileName + StartExt, ".mdf");
-        strcpy (Recorder->Mdf4FileName + StartExt, ".mf4");
+        STRING_COPY_TO_ARRAY_OFSET (Recorder->TextFileName, StartExt, ".dat");
+        STRING_COPY_TO_ARRAY_OFSET (Recorder->MdfFileName, StartExt, ".mdf");
+        STRING_COPY_TO_ARRAY_OFSET (Recorder->Mdf4FileName, StartExt, ".mf4");
     }
     return 0;
 }
@@ -334,33 +346,35 @@ int read_recorder_configfile (MESSAGE_HEAD *mhead, RECORDER_STRUCT *Recorder)
     while ((token = read_token (fh, word, sizeof(word)-1, &config_file_line_counter)) != EOF) {
         token_count++;
         if ((token_count == 1) && (token != HDRECORDER_CONFIG_FILE_TOKEN)) {
-            ThrowError (1, "file %s(%i):\r\n"
-                        "   erste Anweisung nicht 'HDRECORDER_CONFIG_FILE'\r\n",
+            ThrowError (1, "file %s(%i):\n"
+                        "   first token must be 'HDRECORDER_CONFIG_FILE'\n",
                       filename, config_file_line_counter);
             close_file (fh);
             return -1;
         } else {
             switch (token) {
             case HDRECORDER_FILE_TOKEN:
-                if (read_word_with_blacks (fh, Recorder->StartMessage.Filename, MAX_PATH, &config_file_line_counter) != 0) {
-                    ThrowError (1, "file %s(%i):\r\n"
-                                "   erwarte ein Filename in HDRECORDER_FILE-Anweisung\n",
+                if (read_word_with_blacks (fh, word, sizeof(word)-1, &config_file_line_counter) != 0) {
+                    ThrowError (1, "file %s(%i):\n"
+                                "   expect a file name after 'HDRECORDER_FILE' token\n",
                            filename, config_file_line_counter);
                     close_file (fh);
                     return -1;
+                } else {
+                    SearchAndReplaceEnvironmentStrings(word, Recorder->StartMessage.Filename, sizeof(Recorder->StartMessage.Filename));
                 }
                 break;
             case HDRECORDER_SAMPLERATE_TOKEN:
                 if (read_token (fh, word, sizeof(word)-1, &config_file_line_counter) != EQUAL_TOKEN) {
                     ThrowError (1, "file %s(%i):\r\n"
-                                "   erwarte ein = in HDRECORDER_SAMPLERATE-Anweisung\n",
+                                "   expect a '=' character after 'HDRECORDER_SAMPLERATE' token\n",
                            filename, config_file_line_counter);
                     close_file (fh);
                     return -1;
                 }
                 if (read_token (fh, word, sizeof(word)-1, &config_file_line_counter) != 0) {
                     ThrowError (1, "file %s(%i):\r\n"
-                                "   erwarte eine Zahl in HDRECORDER_SAMPLERATE-Anweisung\n",
+                                "   expect a number after 'HDRECORDER_SAMPLERATE' token\n",
                            filename, config_file_line_counter);
                     close_file (fh);
                     return -1;
@@ -372,14 +386,14 @@ int read_recorder_configfile (MESSAGE_HEAD *mhead, RECORDER_STRUCT *Recorder)
             case HDRECORDER_SAMPLELENGTH_TOKEN:
                 if (read_token (fh, word, sizeof(word)-1, &config_file_line_counter) != EQUAL_TOKEN) {
                     ThrowError (1, "file %s(%i):\r\n"
-                                "   erwarte ein = in HDRECORDER_SAMPLELENGTH-Anweisung\n",
+                                "   expect a '=' character after 'HDRECORDER_SAMPLELENGTH' token\n",
                            filename, config_file_line_counter);
                     close_file (fh);
                     return -1;
                 }
                 if (read_token (fh, word, sizeof(word)-1, &config_file_line_counter) != 0) {
                     ThrowError (1, "file %s(%i):\r\n"
-                                "   erwarte eine Zahl in HDRECORDER_SAMPLELENGTH-Anweisung\n",
+                                "   expect a number after 'HDRECORDER_SAMPLELENGTH token\n",
                            filename, config_file_line_counter);
                     close_file (fh);
                     return -1;
@@ -390,24 +404,24 @@ int read_recorder_configfile (MESSAGE_HEAD *mhead, RECORDER_STRUCT *Recorder)
             case TRIGGER_TOKEN:
                 if (read_token (fh, word, sizeof (NAME_STRING)-1, &config_file_line_counter) != 0) {
                     ThrowError (1, "file %s(%i):\r\n"
-                                "   erwarte einen Name in TRIGGER-Anweisung\r\n",
+                                "   expect a signal name after 'TRIGGER' token\n",
                     filename, config_file_line_counter);
                     close_file (fh);
                     return -1;
                 }
-                strcpy (Recorder->StartMessage.Trigger, word);
+                STRING_COPY_TO_ARRAY (Recorder->StartMessage.Trigger, word);
 
                 read_token (fh, word, sizeof(word)-1, &config_file_line_counter);
                 if (strcmp (word, ">")) {
-                    ThrowError (1, "in Datei %s(%i):\r\n"
-                                "   erwarte ein > in TRIGGER-Anweisung\n",
+                    ThrowError (1, "file %s(%i):\r\n"
+                                "   expect a '>' character after 'TRIGGER' token\n",
                            filename, config_file_line_counter);
                     close_file (fh);
                     return -1;
                 }
                 if (read_token (fh, word, sizeof(word)-1, &config_file_line_counter) != 0) {
-                    ThrowError (1, "in Datei %s(%i):\r\n"
-                                "   erwarte eine Zahl in TRIGGER-Anweisung\n",
+                    ThrowError (1, "file %s(%i):\r\n"
+                                "   eexpect a number after 'TRIGGER' token\n",
                            filename, config_file_line_counter);
                     close_file (fh);
                     return -1;
@@ -416,8 +430,8 @@ int read_recorder_configfile (MESSAGE_HEAD *mhead, RECORDER_STRUCT *Recorder)
                 break;
             case STARTVARLIST_TOKEN:
                 Recorder->StartMessage.VariableCount = 0;
-                strcpy (Recorder->StartMessage.Comment, Recorder->StartMessage.Filename);
-                strcpy (Recorder->StartMessage.RecordingName, Recorder->StartMessage.Filename);
+                STRING_COPY_TO_ARRAY (Recorder->StartMessage.Comment, Recorder->StartMessage.Filename);
+                STRING_COPY_TO_ARRAY (Recorder->StartMessage.RecordingName, Recorder->StartMessage.Filename);
 
                 Recorder->RecordVariablesBufferSize = 1024;  // Start with 1024 bytes
                 Recorder->RecordVariBufferPos = 0;
@@ -781,7 +795,7 @@ int InitFileWriter (RECORDER_STRUCT *Recorder, uint32_t time_stamp, int elem_cou
     Recorder->LineNumberCounter = 0;
 
     if ((Recorder->StartMessage.FormatFlags & REC_FORMAT_FLAG_MDF) == REC_FORMAT_FLAG_MDF) {
-        strcpy (Recorder->StartMessage.Filename, Recorder->MdfFileName);
+        STRING_COPY_TO_ARRAY (Recorder->StartMessage.Filename, Recorder->MdfFileName);
         if ((Recorder->MdfFileStatus = OpenWriteMdfHead (Recorder->StartMessage, Recorder->Vids, Recorder->PhysicalFlags, &Recorder->MdfFile)) != 0) {
             Recorder->AllFileStatus = Recorder->MdfFileStatus;
             Recorder->RecorderStatus = HDREC_SLEEP;
@@ -789,7 +803,7 @@ int InitFileWriter (RECORDER_STRUCT *Recorder, uint32_t time_stamp, int elem_cou
         }
     }
     if ((Recorder->StartMessage.FormatFlags & REC_FORMAT_FLAG_MDF4) == REC_FORMAT_FLAG_MDF4) {
-        strcpy (Recorder->StartMessage.Filename, Recorder->Mdf4FileName);
+        STRING_COPY_TO_ARRAY (Recorder->StartMessage.Filename, Recorder->Mdf4FileName);
         if ((Recorder->Mdf4FileStatus = OpenWriteMdf4Head (Recorder->StartMessage, Recorder->Vids, Recorder->PhysicalFlags, &Recorder->Mdf4File)) != 0) {
             Recorder->AllFileStatus = Recorder->Mdf4FileStatus;
             Recorder->RecorderStatus = HDREC_SLEEP;
@@ -797,7 +811,7 @@ int InitFileWriter (RECORDER_STRUCT *Recorder, uint32_t time_stamp, int elem_cou
         }
     }
     if ((Recorder->StartMessage.FormatFlags & REC_FORMAT_FLAG_TEXT_STIMULI) == REC_FORMAT_FLAG_TEXT_STIMULI) {
-        strcpy (Recorder->StartMessage.Filename, Recorder->TextFileName);
+        STRING_COPY_TO_ARRAY (Recorder->StartMessage.Filename, Recorder->TextFileName);
         if ((Recorder->TextFileStatus = open_write_stimuli_head (Recorder->StartMessage, Recorder->Vids, &Recorder->StimuliFile)) != 0) {
             Recorder->AllFileStatus = Recorder->TextFileStatus;
             Recorder->RecorderStatus = HDREC_SLEEP;

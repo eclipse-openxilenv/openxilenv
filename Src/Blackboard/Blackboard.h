@@ -65,6 +65,21 @@ typedef struct _BB_VARIABLE_CONVERSION {
             double Offset;
         } FactorOffset;
         struct {
+            struct CONVERSION_TABLE_VALUE_PAIR {
+                double Raw;
+                double Phys;
+            } *Values;
+            int Size;
+        } Table;
+        struct {
+            double a;
+            double b;
+            double c;
+            double d;
+            double e;
+            double f;
+        } RatFunc;
+        struct {
             char *Name;
             struct _BB_VARIABLE_CONVERSION *Reference;
         } Reference;
@@ -121,7 +136,7 @@ typedef struct {
 /*08*/  uint64_t RangeControlFlag;     // For each process one bit
 
 /*04*/  uint32_t ObservationFlags;
-#define OBSERVE_CONFIG_ANYTHING_CHANGED  0xFFFFFFFEUL
+#define OBSERVE_CONFIG_ANYTHING_CHANGED  0x7FFFFFFEUL
 #define OBSERVE_VALUE_CHANGED            0x1UL
 #define OBSERVE_TYPE_CHANGED             0x2UL
 #define OBSERVE_CONVERSION_CHANGED       0x4UL
@@ -132,8 +147,9 @@ typedef struct {
 #define OBSERVE_STEP_CHANGED             0x80UL
 #define OBSERVE_FORMAT_CHANGED          0x100UL
 #define OBSERVE_CONVERSION_TYPE_CHANGED 0x200UL
+#define OBSERVE_REMOVE_VARIABLE         0x20000000UL
 #define OBSERVE_ADD_VARIABLE            0x40000000UL
-#define OBSERVE_REMOVE_VARIABLE         0x80000000UL
+#define OBSERVE_RESET_FLAGS             0x80000000UL
 
 /*04*/  char Fill[4];
 }  BB_VARIABLE;  /* 64 bytes */

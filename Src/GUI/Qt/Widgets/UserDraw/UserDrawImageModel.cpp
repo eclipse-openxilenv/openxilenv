@@ -16,6 +16,7 @@
 
 
 #include <QPainter>
+#include "PrintFormatToString.h"
 #include "UserDrawImageModel.h"
 #include "UserDrawParser.h"
 #include "QtIniFile.h"
@@ -45,7 +46,7 @@ QVariant UserDrawImageModel::data(const QModelIndex &index, int role) const
         case 3:
             {
                 char Help[64];
-                sprintf (Help, "%i x %i", Item->m_Image.width(), Item->m_Image.height());
+                PrintFormatToString (Help, sizeof(Help), "%i x %i", Item->m_Image.width(), Item->m_Image.height());
                 return QString(Help);
             }
         }

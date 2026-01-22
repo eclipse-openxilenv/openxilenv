@@ -63,7 +63,7 @@ extern int ThrowError (int level, const char *txt, ...);
 extern int ThrowErrorString (int level, uint64_t Cycle, const char *MessageBuffer);
 #endif
 
-int ThrowErrorWiithCycle (int level, uint64_t Cycle, const char *format, ...);
+int ThrowErrorWithCycle (int level, uint64_t Cycle, const char *format, ...);
 
 char *GetLastSysErrorString (void);
 void FreeLastSysErrorString (char *String);

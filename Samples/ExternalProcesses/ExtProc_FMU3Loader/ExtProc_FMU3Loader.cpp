@@ -84,6 +84,17 @@ int InitAll(int argc, char* argv[])
     } else {
         Fmu.SyncParametersWithBlackboard = false;
     }
+    if (((Env = getenv("FMU_LOGGING_FOLDER")) != nullptr) &&
+        (strlen(Env) > 0)) {
+        Fmu.LoggingEnable = true;
+        Fmu.LoggingFolder = (char*)malloc(strlen(Env) + 1);
+        if (Fmu.LoggingFolder != nullptr) {
+            strcpy(Fmu.LoggingFolder, Env);
+        }
+    } else {
+        Fmu.LoggingEnable = false;
+        Fmu.LoggingFolder = nullptr;
+    }
 
     if ((FmuParamsFlags = GetFmuPath(argc, argv, FmuFileName, ExtractedFmuDirectrory, MAX_PATH)) & 0x1) {  // es muss -fmu vorhanden sein!
 #ifdef _WIN32

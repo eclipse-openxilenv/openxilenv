@@ -35,7 +35,8 @@ class ChangeValueTextDialog : public Dialog
     Q_OBJECT
 
 public:
-    explicit ChangeValueTextDialog(QWidget *parent = nullptr, QString par_Header = QString(), int par_DataType = BB_DOUBLE, bool par_PhysicalFlag = false, const char *par_Converion = nullptr);
+    explicit ChangeValueTextDialog(QWidget *parent = nullptr, QString par_Header = QString(), int par_DataType = BB_DOUBLE, bool par_PhysicalFlag = false,
+                                   int par_ConvType = 0, const char *par_Converion = nullptr);
     ~ChangeValueTextDialog();
     void SetValue (int32_t par_Value, int par_Base);
     void SetValue (uint32_t par_Value, int par_Base);

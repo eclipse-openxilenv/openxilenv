@@ -156,16 +156,20 @@ FILE *CreateInOrOutputFilterProcessPipe(const char *par_ExecName, const char *pa
     ZeroMemory(&StartInfo, sizeof(STARTUPINFO));
     StartInfo.cb = sizeof(STARTUPINFO);
 
-    StringCopyMaxCharTruncate(CmdLine, par_ExecName, sizeof(CmdLine));
+    StringCopyMaxCharTruncate(CmdLine, "\"", sizeof(CmdLine));
+    STRING_APPEND_TO_ARRAY(CmdLine, par_ExecName);
+    STRING_APPEND_TO_ARRAY(CmdLine, "\"");
     if (par_InOrOut == 1) {
         StartInfo.hStdInput = ChildStdInRd;
-        StringAppendMaxCharTruncate(CmdLine, " -o ", sizeof(CmdLine));
+        STRING_APPEND_TO_ARRAY(CmdLine, " -o ");
     } else {
         StartInfo.hStdOutput = ChildStdOutWr;
-        StringAppendMaxCharTruncate(CmdLine, " -i ", sizeof(CmdLine));
+        STRING_APPEND_TO_ARRAY(CmdLine, " -i ");
     }
     StartInfo.dwFlags |= STARTF_USESTDHANDLES;
-    StringAppendMaxCharTruncate(CmdLine, par_FileName, sizeof(CmdLine));
+    STRING_APPEND_TO_ARRAY(CmdLine, "\"");
+    STRING_APPEND_TO_ARRAY(CmdLine, par_FileName);
+    STRING_APPEND_TO_ARRAY(CmdLine, "\"");
     StartInfo.hStdError = ChildStdErrWr;
 
     Success = CreateProcess(NULL,

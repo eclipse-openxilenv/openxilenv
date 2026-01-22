@@ -21,6 +21,7 @@
 #include <string.h>
 #include <ctype.h>
 #include "MyMemory.h"
+#include "PrintFormatToString.h"
 #include "StringMaxChar.h"
 #include "IniDataBase.h"
 #include "Blackboard.h"
@@ -41,7 +42,7 @@ int A2LConvertToXcpOrCpp(const char *par_A2LFile, const char *par_XcpOrCppFile, 
     if (Database == NULL) {
         return -1;
     } else {
-        int Fd = IniFileDataBaseOpen(par_XcpOrCppFile);
+        int Fd = IniFileDataBaseCreateAndOpenNewIniFile(par_XcpOrCppFile);
         if (Fd > 0) {
             const char *Section;
             char Name[512];
@@ -59,7 +60,7 @@ int A2LConvertToXcpOrCpp(const char *par_A2LFile, const char *par_XcpOrCppFile, 
 
             int Idx, v, p;
 
-            if (par_XcpOrCpp) Section = "XCP Configuration for Target";
+            if (par_XcpOrCpp) Section = "XCP Configuration";
             else Section = "CCP Configuration for Target";
 
             Line = (char*)my_malloc(MAX_LINE_LEN);
@@ -70,13 +71,13 @@ int A2LConvertToXcpOrCpp(const char *par_A2LFile, const char *par_XcpOrCppFile, 
             } else {
                 // first delete all variable and parameter
                 for (v = 0; ; v++) {
-                    sprintf (Entry, "v%i", v);
+                    PrintFormatToString (Entry, sizeof(Entry), "v%i", v);
                     if (IniFileDataBaseReadString(Section, Entry, "", Line, 128*1024, Fd) > 0) {
                         IniFileDataBaseWriteString(Section, Entry, NULL, Fd);
                     } else break;
                 }
                 for (p = 0; ; p++) {
-                    sprintf (Entry, "p%i", p);
+                    PrintFormatToString (Entry, sizeof(Entry), "p%i", p);
                     if (IniFileDataBaseReadString(Section, Entry, "", Line, 128*1024, Fd) > 0) {
                         IniFileDataBaseWriteString(Section, Entry, NULL, Fd);
                     } else break;
@@ -98,28 +99,28 @@ int A2LConvertToXcpOrCpp(const char *par_A2LFile, const char *par_XcpOrCppFile, 
                             if (ConvType != 1) {
                                 StringCopyMaxCharTruncate(Conv, "#", MAX_CONVERSION_LEN);
                             }
-                            sprintf (Line, "%s,%s,0x%" PRIX64 ",%s,%s,%g,%g",
+                            PrintFormatToString (Line, sizeof(Line), "%s,%s,0x%" PRIX64 ",%s,%s,%g,%g",
                                      GetDataTypeName(Type), Name, Address, Unit, Conv, Min, Max);
-                            sprintf (Entry, "v%i", v);
+                            PrintFormatToString (Entry, sizeof(Entry), "v%i", v);
                             IniFileDataBaseWriteString(Section, Entry, Line, Fd);
                             v++;
                             if (IsWritable &&
                                 ((par_Flags & A2LCONVERT2XCP_WRITABLE_MEASUREMENTS_AS_PARAMETER) == A2LCONVERT2XCP_WRITABLE_MEASUREMENTS_AS_PARAMETER)) {
-                                sprintf (Entry, "p%i", p);
+                                PrintFormatToString (Entry, sizeof(Entry), "p%i", p);
                                 IniFileDataBaseWriteString(Section, Entry, Line, Fd);
                                 p++;
                             }
                         } else if ((YDim <= 1) && (ZDim <= 1)) {  // one dimensional array
                             int i;
                             for (i = 0; i < XDim; i++) {
-                                sprintf (Line, "%s,%s[%i],0x%" PRIX64 ",%s,%s,%g,%g",
+                                PrintFormatToString (Line, sizeof(Line), "%s,%s[%i],0x%" PRIX64 ",%s,%s,%g,%g",
                                          GetDataTypeName(Type), Name, i, Address + GetDataTypeByteSize(Type) * i, Unit, Conv, Min, Max);
-                                sprintf (Entry, "v%i", v);
+                                PrintFormatToString (Entry, sizeof(Entry), "v%i", v);
                                 IniFileDataBaseWriteString(Section, Entry, Line, Fd);
                                 v++;
                                 if (IsWritable &&
                                     ((par_Flags & A2LCONVERT2XCP_WRITABLE_MEASUREMENTS_AS_PARAMETER) == A2LCONVERT2XCP_WRITABLE_MEASUREMENTS_AS_PARAMETER)) {
-                                    sprintf (Entry, "p%i", p);
+                                    PrintFormatToString (Entry, sizeof(Entry), "p%i", p);
                                     IniFileDataBaseWriteString(Section, Entry, Line, Fd);
                                     p++;
                                 }
@@ -128,14 +129,14 @@ int A2LConvertToXcpOrCpp(const char *par_A2LFile, const char *par_XcpOrCppFile, 
                             int i, j;
                             for (j = 0; j < YDim; j++) {
                                 for (i = 0; i < XDim; i++) {
-                                    sprintf (Line, "%s,%s[%i][%i],0x%" PRIX64 ",%s,%s,%g,%g",
+                                    PrintFormatToString (Line, sizeof(Line), "%s,%s[%i][%i],0x%" PRIX64 ",%s,%s,%g,%g",
                                              GetDataTypeName(Type), Name, i, j, Address + GetDataTypeByteSize(Type) * (j + XDim + i), Unit, Conv, Min, Max);
-                                    sprintf (Entry, "v%i", v);
+                                    PrintFormatToString (Entry, sizeof(Entry), "v%i", v);
                                     IniFileDataBaseWriteString(Section, Entry, Line, Fd);
                                     v++;
                                     if (IsWritable &&
                                         ((par_Flags & A2LCONVERT2XCP_WRITABLE_MEASUREMENTS_AS_PARAMETER) == A2LCONVERT2XCP_WRITABLE_MEASUREMENTS_AS_PARAMETER)) {
-                                        sprintf (Entry, "p%i", p);
+                                        PrintFormatToString (Entry, sizeof(Entry), "p%i", p);
                                         IniFileDataBaseWriteString(Section, Entry, Line, Fd);
                                         p++;
                                     }
@@ -146,7 +147,7 @@ int A2LConvertToXcpOrCpp(const char *par_A2LFile, const char *par_XcpOrCppFile, 
                 }
                 // be sure no old entries follow
                 for (int i = v; i < (v+10); i++) {
-                    sprintf (Entry, "v%i", i);
+                    PrintFormatToString (Entry, sizeof(Entry), "v%i", i);
                     IniFileDataBaseWriteString(Section, Entry, NULL, Fd);
 
                 }
@@ -166,16 +167,16 @@ int A2LConvertToXcpOrCpp(const char *par_A2LFile, const char *par_XcpOrCppFile, 
                             if (ConvType != 1) {
                                 StringCopyMaxCharTruncate(Conv, "#", MAX_CONVERSION_LEN);
                             }
-                            sprintf (Entry, "p%i", p);
-                            sprintf (Line, "%s,%s,0x%" PRIX64 ",%s,%s,%g,%g",
+                            PrintFormatToString (Entry, sizeof(Entry), "p%i", p);
+                            PrintFormatToString (Line, sizeof(Line), "%s,%s,0x%" PRIX64 ",%s,%s,%g,%g",
                                      GetDataTypeName(Type), Name, Address, Unit, Conv, Min, Max);
                             IniFileDataBaseWriteString(Section, Entry, Line, Fd);
                             p++;
                         } else if ((YDim <= 1) && (ZDim <= 1)) {  // one dimensional array
                             int i;
                             for (i = 0; i < XDim; i++) {
-                                sprintf (Entry, "p%i", p);
-                                sprintf (Line, "%s,%s[%i],0x%" PRIX64 ",%s,%s,%g,%g",
+                                PrintFormatToString (Entry, sizeof(Entry), "p%i", p);
+                                PrintFormatToString (Line, sizeof(Line), "%s,%s[%i],0x%" PRIX64 ",%s,%s,%g,%g",
                                          GetDataTypeName(Type), Name, i, Address + GetDataTypeByteSize(Type) * i, Unit, Conv, Min, Max);
                                 IniFileDataBaseWriteString(Section, Entry, Line, Fd);
                                 p++;
@@ -184,8 +185,8 @@ int A2LConvertToXcpOrCpp(const char *par_A2LFile, const char *par_XcpOrCppFile, 
                             int i, j;
                             for (j = 0; j < YDim; j++) {
                                 for (i = 0; i < XDim; i++) {
-                                    sprintf (Entry, "p%i", p);
-                                    sprintf (Line, "%s,%s[%i][%i],0x%" PRIX64 ",%s,%s,%g,%g",
+                                    PrintFormatToString (Entry, sizeof(Entry), "p%i", p);
+                                    PrintFormatToString (Line, sizeof(Line), "%s,%s[%i][%i],0x%" PRIX64 ",%s,%s,%g,%g",
                                              GetDataTypeName(Type), Name, i, j, Address + GetDataTypeByteSize(Type) * (j + XDim + i), Unit, Conv, Min, Max);
                                     IniFileDataBaseWriteString(Section, Entry, Line, Fd);
                                     p++;
@@ -196,7 +197,7 @@ int A2LConvertToXcpOrCpp(const char *par_A2LFile, const char *par_XcpOrCppFile, 
                 }
                 // be sure no old entries follow
                 for (int i = p; i < (p+10); i++) {
-                    sprintf (Entry, "p%i", i);
+                    PrintFormatToString (Entry, sizeof(Entry), "p%i", i);
                     IniFileDataBaseWriteString(Section, Entry, NULL, Fd);
 
                 }

@@ -23,6 +23,7 @@
 #include "UserDrawElement.h"
 #include "EditTextReplaceDialog.h"
 extern "C" {
+#include "PrintFormatToString.h"
 #include "Blackboard.h"
 }
 
@@ -161,7 +162,7 @@ void UserDrawConfigXYPlotElementDialog::on_SetXPushButton_clicked()
                                    (IntColor >> 8) & 0xFF,
                                    (IntColor >> 16) & 0xFF);
             char Help[64];
-            sprintf (Help , "0x%02X:0x%02X:0x%02X", Color.red(), Color.green(), Color.blue());
+            PrintFormatToString (Help, sizeof(Help), "0x%02X:0x%02X:0x%02X", Color.red(), Color.green(), Color.blue());
             ui->ColorLineEdit->setText(Help);
             SetColorView (Color);
             if (get_bbvari_conversiontype(Vid) == 1) {
@@ -190,7 +191,7 @@ void UserDrawConfigXYPlotElementDialog::on_SetYPushButton_clicked()
                                    (IntColor >> 8) & 0xFF,
                                    (IntColor >> 16) & 0xFF);
             char Help[64];
-            sprintf (Help , "0x%02X:0x%02X:0x%02X", Color.red(), Color.green(), Color.blue());
+            PrintFormatToString (Help, sizeof(Help), "0x%02X:0x%02X:0x%02X", Color.red(), Color.green(), Color.blue());
             ui->ColorLineEdit->setText(Help);
             SetColorView (Color);
             if (get_bbvari_conversiontype(Vid) == 1) {
@@ -214,7 +215,7 @@ void UserDrawConfigXYPlotElementDialog::on_ColorPushButton_clicked()
     if (Dlg.exec() == QDialog::Accepted) {
         Color = Dlg.currentColor();
         char Help[64];
-        sprintf (Help , "0x%02X:0x%02X:0x%02X", Color.red(), Color.green(), Color.blue());
+        PrintFormatToString (Help, sizeof(Help), "0x%02X:0x%02X:0x%02X", Color.red(), Color.green(), Color.blue());
         ui->ColorLineEdit->setText(Help);
         SetColorView (Color);
     }

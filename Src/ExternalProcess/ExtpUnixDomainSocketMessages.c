@@ -36,6 +36,7 @@
 #define SOCKET int
 
 #include "XilEnvExtProc.h"
+#include "StringMaxChar.h"
 #include "ExtpProcessAndTaskInfos.h"
 
 #include "ExtpUnixDomainSocketMessages.h"
@@ -48,14 +49,14 @@ static HANDLE XilEnvInternal_ConnectToUnixDomainSocket (char *par_InstanceName, 
     int iResult;
     char Name[MAX_PATH + 100];
 
-    memset(&address, 0, sizeof(address));
+    MEMSET(&address, 0, sizeof(address));
     address.sun_family = AF_UNIX;
 
-    if (CheckOpenIPCFile(par_InstanceName, "unix_domain", Name, DIR_MUST_EXIST, FILENAME_MUST_EXIST) != 0) {
+    if (CheckOpenIPCFile(par_InstanceName, "unix_domain", Name, sizeof(Name), DIR_MUST_EXIST, FILENAME_MUST_EXIST) != 0) {
         ThrowError(1, "cannot open the unix_domain file for XilEnv instance \"%s\"", par_InstanceName);
         return INVALID_HANDLE_VALUE;
     }
-    strcpy(address.sun_path, Name);
+    STRING_COPY_TO_ARRAY(address.sun_path, Name);
 
     // Create a SOCKET for connecting to server
     Socket = socket(PF_UNIX, SOCK_STREAM, 0);

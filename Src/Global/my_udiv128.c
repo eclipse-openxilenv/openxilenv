@@ -28,19 +28,27 @@ uint64_t my_umuldiv64(uint64_t a, uint64_t b, uint64_t c)
 #ifdef __GNUC__
     unsigned __int128 Help128 = a;
     Help128 = Help128 * b;
-    if (c == 0)
-    {
-        c = 1;
+    if (c == 0) {
+        if (Help128 > 0) {
+            Ret = UINT64_MAX;
+        } else {
+            Ret = 0;   // 0/0 = 0
+        }
+    } else {
+        Help128 = Help128 / c;
+        Ret = (uint64_t)Help128;
     }
-    Help128 = Help128 / c;
-    Ret = (uint64_t)Help128;
 #else
     uint64_t Low, High, Remainder;
     Low = _umul128(a, b, &High);
-    Ret = _udiv128(High, Low, c, &Remainder);
-    // Rouding
-    if (Remainder >= (c >> 1)) {
-        Ret += 1;
+    if (c == 0) {
+        if ((Low != 0) || (High != 0)) {
+            Ret = UINT64_MAX;
+        } else {
+            Ret = 0;   // 0/0 = 0
+        }
+    } else {
+        Ret = _udiv128(High, Low, c, &Remainder);
     }
 #endif
     return Ret;

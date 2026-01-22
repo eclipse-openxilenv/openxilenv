@@ -20,6 +20,8 @@
 
 #include "Blackboard.h"
 
+#define USER_DEFINED_BUILDIN_FUNCTION_INTERFACE_VERSION    1
+
 #define BUILDIN_FUNC_MAX_PARAMETER  32
 
 typedef enum {
@@ -55,6 +57,8 @@ typedef enum {
     EQU_OP_GET_CALC_DATA_TYPE, EQU_OP_GET_CALC_DATA_WIDTH,
     EQU_OP_CRC8_USER_POLY_REFLECT, EQU_OP_CRC16_USER_POLY_REFLECT, EQU_OP_CRC32_USER_POLY_REFLECT,
     EQU_OP_CAN_CYCLES,
+    USER_DEFINED_BUILDIN_FUNCTION_OFFSET,  // this must be always behind the last internal buildin function!
+
     EQU_OP_PLUS_EQUAL=1000, EQU_OP_MINUS_EQUAL=1001, EQU_OP_MUL_EQUAL=1002, EQU_OP_DIV_EQUAL=1003,
     EQU_OP_NAME_PHYS=1004, EQU_OP_NAME_PHYS_REF=1005
 } EQU_TOKEN;
@@ -117,5 +121,9 @@ int CheckEquSyntax (char *Equation, int CANCommandAllowed, int CheckIfVarsExists
 void FreeErrStringBuffer (char **errstring);
 
 int calc_raw_value_for_phys_value (const char *equation, double phys_value, const char *variable_name, int type, double *ret_raw_value, double *ret_phys_value, char **errstring);
+
+int DirectSolveEquationFile (const char *EquationFile, const char *EquationBuffer, char **ErrString);
+
+int InitEquatuinParser(void);
 
 #endif

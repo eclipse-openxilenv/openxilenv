@@ -20,9 +20,8 @@
 #include <memory.h>
 #include <fcntl.h>
 
-#include "Config.h"
+#include "MemZeroAndCopy.h"
 #include "Wildcards.h"
-#include "ThrowError.h"
 #include "Scheduler.h"
 #include "Blackboard.h"
 #include "BlackboardAccess.h"
@@ -30,6 +29,7 @@
 #include "ExtProcessReferences.h"
 #include "MainValues.h"
 #include "ImExportVarProperties.h"
+#include "A2LLink.h"
 
 #include "RpcControlProcess.h"
 
@@ -43,7 +43,7 @@ static int RPCFunc_AddBbvari(RPC_CONNECTION *par_Connection, RPC_API_BASE_MESSAG
     UNUSED(par_Connection);
     RPC_API_ADD_BBVARI_MESSAGE *In = (RPC_API_ADD_BBVARI_MESSAGE*)par_DataIn;
     RPC_API_ADD_BBVARI_MESSAGE_ACK *Out = (RPC_API_ADD_BBVARI_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_ADD_BBVARI_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_ADD_BBVARI_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_ADD_BBVARI_MESSAGE_ACK);
 
     Out->Header.ReturnValue = add_bbvari_pid ((char*)In + In->OffsetLabel, In->Type, (char*)In + In->OffsetUnit, GetRPCControlPid());
@@ -56,7 +56,7 @@ static int RPCFunc_RemoveBbvari(RPC_CONNECTION *par_Connection, RPC_API_BASE_MES
     UNUSED(par_Connection);
     RPC_API_REMOVE_BBVARI_MESSAGE *In = (RPC_API_REMOVE_BBVARI_MESSAGE*)par_DataIn;
     RPC_API_REMOVE_BBVARI_MESSAGE_ACK *Out = (RPC_API_REMOVE_BBVARI_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_REMOVE_BBVARI_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_REMOVE_BBVARI_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_REMOVE_BBVARI_MESSAGE_ACK);
 
     Out->Header.ReturnValue = remove_bbvari_pid (In->Vid, GetRPCControlPid());
@@ -69,7 +69,7 @@ static int RPCFunc_AttachBbvari(RPC_CONNECTION *par_Connection, RPC_API_BASE_MES
     UNUSED(par_Connection);
     RPC_API_ATTACH_BBVARI_MESSAGE *In = (RPC_API_ATTACH_BBVARI_MESSAGE*)par_DataIn;
     RPC_API_ATTACH_BBVARI_MESSAGE_ACK *Out = (RPC_API_ATTACH_BBVARI_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_ATTACH_BBVARI_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_ATTACH_BBVARI_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_ATTACH_BBVARI_MESSAGE_ACK);
 
     Out->Header.ReturnValue = attach_bbvari_by_name((char*)In + In->OffsetLabel, GetRPCControlPid());
@@ -86,7 +86,7 @@ static int RPCFunc_Get(RPC_CONNECTION *par_Connection, RPC_API_BASE_MESSAGE *par
     UNUSED(par_Connection);
     RPC_API_GET_MESSAGE *In = (RPC_API_GET_MESSAGE*)par_DataIn;
     RPC_API_GET_MESSAGE_ACK *Out = (RPC_API_GET_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_GET_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_GET_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_GET_MESSAGE_ACK);
 
     Out->ReturnValue = read_bbvari_convert_double(In->Vid);
@@ -101,7 +101,7 @@ static int RPCFunc_GetPhys(RPC_CONNECTION *par_Connection, RPC_API_BASE_MESSAGE 
     UNUSED(par_Connection);
     RPC_API_GET_PHYS_MESSAGE *In = (RPC_API_GET_PHYS_MESSAGE*)par_DataIn;
     RPC_API_GET_PHYS_MESSAGE_ACK *Out = (RPC_API_GET_PHYS_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_GET_PHYS_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_GET_PHYS_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_GET_PHYS_MESSAGE_ACK);
 
     Out->ReturnValue = read_bbvari_equ(In->Vid);
@@ -116,7 +116,7 @@ static int RPCFunc_Set(RPC_CONNECTION *par_Connection, RPC_API_BASE_MESSAGE *par
     UNUSED(par_Connection);
     RPC_API_SET_MESSAGE *In = (RPC_API_SET_MESSAGE*)par_DataIn;
     RPC_API_SET_MESSAGE_ACK *Out = (RPC_API_SET_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_SET_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_SET_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_SET_MESSAGE_ACK);
 
     write_bbvari_minmax_check_pid (GetRPCControlPid(), In->Vid, In->Value);
@@ -130,7 +130,7 @@ static int RPCFunc_SetPhys(RPC_CONNECTION *par_Connection, RPC_API_BASE_MESSAGE 
     UNUSED(par_Connection);
     RPC_API_SET_PHYS_MESSAGE *In = (RPC_API_SET_PHYS_MESSAGE*)par_DataIn;
     RPC_API_SET_PHYS_MESSAGE_ACK *Out = (RPC_API_SET_PHYS_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_SET_PHYS_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_SET_PHYS_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_SET_PHYS_MESSAGE_ACK);
 
     Out->Header.ReturnValue = write_bbvari_phys_minmax_check_pid (GetRPCControlPid(), In->Vid, In->Value);
@@ -143,7 +143,7 @@ static int RPCFunc_Equ(RPC_CONNECTION *par_Connection, RPC_API_BASE_MESSAGE *par
     UNUSED(par_Connection);
     RPC_API_EQU_MESSAGE *In = (RPC_API_EQU_MESSAGE*)par_DataIn;
     RPC_API_EQU_MESSAGE_ACK *Out = (RPC_API_EQU_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_EQU_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_EQU_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_EQU_MESSAGE_ACK);
 
     Out->ReturnValue = direct_solve_equation_no_add_bbvari_pid((char*)In + In->OffsetEquation, GetRPCControlPid());
@@ -157,7 +157,7 @@ static int RPCFunc_WrVariEnable(RPC_CONNECTION *par_Connection, RPC_API_BASE_MES
     UNUSED(par_Connection);
     RPC_API_WR_VARI_ENABLE_MESSAGE *In = (RPC_API_WR_VARI_ENABLE_MESSAGE*)par_DataIn;
     RPC_API_WR_VARI_ENABLE_MESSAGE_ACK *Out = (RPC_API_WR_VARI_ENABLE_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_WR_VARI_ENABLE_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_WR_VARI_ENABLE_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_WR_VARI_ENABLE_MESSAGE_ACK);
 
     Out->Header.ReturnValue = enable_bbvari_access(get_pid_by_name((char*)In + In->OffsetProcess),
@@ -171,7 +171,7 @@ static int RPCFunc_WrVariDisable(RPC_CONNECTION *par_Connection, RPC_API_BASE_ME
     UNUSED(par_Connection);
     RPC_API_WR_VARI_DISABLE_MESSAGE *In = (RPC_API_WR_VARI_DISABLE_MESSAGE*)par_DataIn;
     RPC_API_WR_VARI_DISABLE_MESSAGE_ACK *Out = (RPC_API_WR_VARI_DISABLE_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_WR_VARI_DISABLE_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_WR_VARI_DISABLE_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_WR_VARI_DISABLE_MESSAGE_ACK);
 
     Out->Header.ReturnValue = disable_bbvari_access(get_pid_by_name((char*)In + In->OffsetProcess),
@@ -188,7 +188,7 @@ static int RPCFunc_IsWrVariEnsable(RPC_CONNECTION *par_Connection, RPC_API_BASE_
     int index;
     RPC_API_IS_WR_VARI_ENABLED_MESSAGE *In = (RPC_API_IS_WR_VARI_ENABLED_MESSAGE*)par_DataIn;
     RPC_API_IS_WR_VARI_ENABLED_MESSAGE_ACK *Out = (RPC_API_IS_WR_VARI_ENABLED_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_IS_WR_VARI_ENABLED_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_IS_WR_VARI_ENABLED_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_IS_WR_VARI_ENABLED_MESSAGE_ACK);
 
 
@@ -223,7 +223,7 @@ static int RPCFunc_LoadRefList(RPC_CONNECTION *par_Connection, RPC_API_BASE_MESS
     UNUSED(par_Connection);
     RPC_API_LOAD_REF_LIST_MESSAGE *In = (RPC_API_LOAD_REF_LIST_MESSAGE*)par_DataIn;
     RPC_API_LOAD_REF_LIST_MESSAGE_ACK *Out = (RPC_API_LOAD_REF_LIST_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_LOAD_REF_LIST_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_LOAD_REF_LIST_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_LOAD_REF_LIST_MESSAGE_ACK);
 
     Out->Header.ReturnValue = ImportVariableReferenceList (get_pid_by_name((char*)In + In->OffsetProcess),
@@ -237,7 +237,7 @@ static int RPCFunc_AddRefList(RPC_CONNECTION *par_Connection, RPC_API_BASE_MESSA
     UNUSED(par_Connection);
     RPC_API_ADD_REF_LIST_MESSAGE *In = (RPC_API_ADD_REF_LIST_MESSAGE*)par_DataIn;
     RPC_API_ADD_REF_LIST_MESSAGE_ACK *Out = (RPC_API_ADD_REF_LIST_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_ADD_REF_LIST_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_ADD_REF_LIST_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_ADD_REF_LIST_MESSAGE_ACK);
 
     Out->Header.ReturnValue = AddVariableReferenceList (get_pid_by_name((char*)In + In->OffsetProcess),
@@ -251,7 +251,7 @@ static int RPCFunc_SaveRefList(RPC_CONNECTION *par_Connection, RPC_API_BASE_MESS
     UNUSED(par_Connection);
     RPC_API_LOAD_REF_LIST_MESSAGE *In = (RPC_API_LOAD_REF_LIST_MESSAGE*)par_DataIn;
     RPC_API_LOAD_REF_LIST_MESSAGE_ACK *Out = (RPC_API_LOAD_REF_LIST_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_LOAD_REF_LIST_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_LOAD_REF_LIST_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_LOAD_REF_LIST_MESSAGE_ACK);
 
     Out->Header.ReturnValue = ExportVariableReferenceList (get_pid_by_name((char*)In + In->OffsetProcess),
@@ -265,7 +265,7 @@ static int RPCFunc_GetVariConversionType(RPC_CONNECTION *par_Connection, RPC_API
     UNUSED(par_Connection);
     RPC_API_GET_VARI_CONVERSION_TYPE_MESSAGE *In = (RPC_API_GET_VARI_CONVERSION_TYPE_MESSAGE*)par_DataIn;
     RPC_API_GET_VARI_CONVERSION_TYPE_MESSAGE_ACK *Out = (RPC_API_GET_VARI_CONVERSION_TYPE_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_GET_VARI_CONVERSION_TYPE_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_GET_VARI_CONVERSION_TYPE_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_GET_VARI_CONVERSION_TYPE_MESSAGE_ACK);
 
     Out->Header.ReturnValue = get_bbvari_conversiontype (In->Vid);
@@ -278,7 +278,7 @@ static int RPCFunc_GetVariConversionString(RPC_CONNECTION *par_Connection, RPC_A
     UNUSED(par_Connection);
     RPC_API_GET_VARI_CONVERSION_STRING_MESSAGE *In = (RPC_API_GET_VARI_CONVERSION_STRING_MESSAGE*)par_DataIn;
     RPC_API_GET_VARI_CONVERSION_STRING_MESSAGE_ACK *Out = (RPC_API_GET_VARI_CONVERSION_STRING_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_GET_VARI_CONVERSION_STRING_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_GET_VARI_CONVERSION_STRING_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_GET_VARI_CONVERSION_STRING_MESSAGE_ACK);
 
     Out->OffsetConversionString = sizeof(RPC_API_GET_VARI_CONVERSION_STRING_MESSAGE_ACK) - 1;
@@ -294,7 +294,7 @@ static int RPCFunc_SetVariConversion(RPC_CONNECTION *par_Connection, RPC_API_BAS
     UNUSED(par_Connection);
     RPC_API_SET_VARI_CONVERSION_MESSAGE *In = (RPC_API_SET_VARI_CONVERSION_MESSAGE*)par_DataIn;
     RPC_API_SET_VARI_CONVERSION_MESSAGE_ACK *Out = (RPC_API_SET_VARI_CONVERSION_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_SET_VARI_CONVERSION_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_SET_VARI_CONVERSION_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_SET_VARI_CONVERSION_MESSAGE_ACK);
 
     Out->Header.ReturnValue =  set_bbvari_conversion(In->Vid, In->Type, (char*)In + In->OffsetConversionString);
@@ -307,7 +307,7 @@ static int RPCFunc_GetVariType(RPC_CONNECTION *par_Connection, RPC_API_BASE_MESS
     UNUSED(par_Connection);
     RPC_API_GET_VARI_TYPE_MESSAGE *In = (RPC_API_GET_VARI_TYPE_MESSAGE*)par_DataIn;
     RPC_API_GET_VARI_TYPE_MESSAGE_ACK *Out = (RPC_API_GET_VARI_TYPE_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_GET_VARI_TYPE_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_GET_VARI_TYPE_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_GET_VARI_TYPE_MESSAGE_ACK);
 
     Out->Header.ReturnValue =  get_bbvaritype(In->Vid);
@@ -320,7 +320,7 @@ static int RPCFunc_GetVariUnit(RPC_CONNECTION *par_Connection, RPC_API_BASE_MESS
     UNUSED(par_Connection);
     RPC_API_GET_VARI_UNIT_MESSAGE *In = (RPC_API_GET_VARI_UNIT_MESSAGE*)par_DataIn;
     RPC_API_GET_VARI_UNIT_MESSAGE_ACK *Out = (RPC_API_GET_VARI_UNIT_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_GET_VARI_UNIT_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_GET_VARI_UNIT_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_GET_VARI_UNIT_MESSAGE_ACK);
 
     Out->OffsetUnit = sizeof(RPC_API_GET_VARI_UNIT_MESSAGE_ACK) - 1;
@@ -335,7 +335,7 @@ static int RPCFunc_SetVariUnit(RPC_CONNECTION *par_Connection, RPC_API_BASE_MESS
     UNUSED(par_Connection);
     RPC_API_SET_VARI_UNIT_MESSAGE *In = (RPC_API_SET_VARI_UNIT_MESSAGE*)par_DataIn;
     RPC_API_SET_VARI_UNIT_MESSAGE_ACK *Out = (RPC_API_SET_VARI_UNIT_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_SET_VARI_UNIT_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_SET_VARI_UNIT_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_SET_VARI_UNIT_MESSAGE_ACK);
 
     Out->Header.ReturnValue =  set_bbvari_unit(In->Vid, (char*)In + In->OffsetUnit);
@@ -348,7 +348,7 @@ static int RPCFunc_GetVariMin(RPC_CONNECTION *par_Connection, RPC_API_BASE_MESSA
     UNUSED(par_Connection);
     RPC_API_GET_VARI_MIN_MESSAGE *In = (RPC_API_GET_VARI_MIN_MESSAGE*)par_DataIn;
     RPC_API_GET_VARI_MIN_MESSAGE_ACK *Out = (RPC_API_GET_VARI_MIN_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_GET_VARI_MIN_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_GET_VARI_MIN_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_GET_VARI_MIN_MESSAGE_ACK);
 
     Out->ReturnValue =  get_bbvari_min(In->Vid);
@@ -361,7 +361,7 @@ static int RPCFunc_GetVariMax(RPC_CONNECTION *par_Connection, RPC_API_BASE_MESSA
     UNUSED(par_Connection);
     RPC_API_GET_VARI_MAX_MESSAGE *In = (RPC_API_GET_VARI_MAX_MESSAGE*)par_DataIn;
     RPC_API_GET_VARI_MAX_MESSAGE_ACK *Out = (RPC_API_GET_VARI_MAX_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_GET_VARI_MAX_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_GET_VARI_MAX_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_GET_VARI_MAX_MESSAGE_ACK);
 
     Out->ReturnValue =  get_bbvari_max(In->Vid);
@@ -374,7 +374,7 @@ static int RPCFunc_SetVariMin(RPC_CONNECTION *par_Connection, RPC_API_BASE_MESSA
     UNUSED(par_Connection);
     RPC_API_SET_VARI_MIN_MESSAGE *In = (RPC_API_SET_VARI_MIN_MESSAGE*)par_DataIn;
     RPC_API_SET_VARI_MIN_MESSAGE_ACK *Out = (RPC_API_SET_VARI_MIN_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_SET_VARI_MIN_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_SET_VARI_MIN_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_SET_VARI_MIN_MESSAGE_ACK);
 
     Out->Header.ReturnValue =  set_bbvari_min(In->Vid, In->Min);
@@ -387,7 +387,7 @@ static int RPCFunc_SetVariMax(RPC_CONNECTION *par_Connection, RPC_API_BASE_MESSA
     UNUSED(par_Connection);
     RPC_API_SET_VARI_MAX_MESSAGE *In = (RPC_API_SET_VARI_MAX_MESSAGE*)par_DataIn;
     RPC_API_SET_VARI_MAX_MESSAGE_ACK *Out = (RPC_API_SET_VARI_MAX_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_SET_VARI_MAX_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_SET_VARI_MAX_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_SET_VARI_MAX_MESSAGE_ACK);
 
     Out->Header.ReturnValue =  set_bbvari_max(In->Vid, In->Max);
@@ -402,7 +402,7 @@ static int RPCFunc_GetNextVari(RPC_CONNECTION *par_Connection, RPC_API_BASE_MESS
     char *ReturnLabelBuffer;
     RPC_API_GET_NEXT_VARI_MESSAGE *In = (RPC_API_GET_NEXT_VARI_MESSAGE*)par_DataIn;
     RPC_API_GET_NEXT_VARI_MESSAGE_ACK *Out = (RPC_API_GET_NEXT_VARI_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_GET_NEXT_VARI_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_GET_NEXT_VARI_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_GET_NEXT_VARI_MESSAGE_ACK);
 
     Out->OffsetLabel = sizeof(RPC_API_GET_NEXT_VARI_MESSAGE_ACK) - 1;
@@ -428,7 +428,7 @@ static int RPCFunc_GetNextVariEx(RPC_CONNECTION *par_Connection, RPC_API_BASE_ME
     char *ReturnLabelBuffer;
     RPC_API_GET_NEXT_VARI_EX_MESSAGE *In = (RPC_API_GET_NEXT_VARI_EX_MESSAGE*)par_DataIn;
     RPC_API_GET_NEXT_VARI_EX_MESSAGE_ACK *Out = (RPC_API_GET_NEXT_VARI_EX_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_GET_NEXT_VARI_EX_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_GET_NEXT_VARI_EX_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_GET_NEXT_VARI_EX_MESSAGE_ACK);
 
     Out->OffsetLabel = sizeof(RPC_API_GET_NEXT_VARI_EX_MESSAGE_ACK) - 1;
@@ -457,7 +457,7 @@ static int RPCFunc_GetVariEnum(RPC_CONNECTION *par_Connection, RPC_API_BASE_MESS
     char *ReturnEnumBuffer;
     RPC_API_GET_VARI_ENUM_MESSAGE *In = (RPC_API_GET_VARI_ENUM_MESSAGE*)par_DataIn;
     RPC_API_GET_VARI_ENUM_MESSAGE_ACK *Out = (RPC_API_GET_VARI_ENUM_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_GET_VARI_ENUM_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_GET_VARI_ENUM_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_GET_VARI_ENUM_MESSAGE_ACK);
 
     Out->OffsetEnum = sizeof(RPC_API_GET_VARI_ENUM_MESSAGE_ACK) - 1;
@@ -475,7 +475,7 @@ static int RPCFunc_GetVariDisplayFormatWidth(RPC_CONNECTION *par_Connection, RPC
     UNUSED(par_Connection);
     RPC_API_GET_VARI_DISPLAY_FORMAT_WIDTH_MESSAGE *In = (RPC_API_GET_VARI_DISPLAY_FORMAT_WIDTH_MESSAGE*)par_DataIn;
     RPC_API_GET_VARI_DISPLAY_FORMAT_WIDTH_MESSAGE_ACK *Out = (RPC_API_GET_VARI_DISPLAY_FORMAT_WIDTH_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_GET_VARI_DISPLAY_FORMAT_WIDTH_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_GET_VARI_DISPLAY_FORMAT_WIDTH_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_GET_VARI_DISPLAY_FORMAT_WIDTH_MESSAGE_ACK);
 
     Out->Header.ReturnValue =  get_bbvari_format_width(In->Vid);
@@ -488,7 +488,7 @@ static int RPCFunc_GetVariDisplayFormatPrec(RPC_CONNECTION *par_Connection, RPC_
     UNUSED(par_Connection);
     RPC_API_GET_VARI_DISPLAY_FORMAT_PREC_MESSAGE *In = (RPC_API_GET_VARI_DISPLAY_FORMAT_PREC_MESSAGE*)par_DataIn;
     RPC_API_GET_VARI_DISPLAY_FORMAT_PREC_MESSAGE_ACK *Out = (RPC_API_GET_VARI_DISPLAY_FORMAT_PREC_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_GET_VARI_DISPLAY_FORMAT_PREC_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_GET_VARI_DISPLAY_FORMAT_PREC_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_GET_VARI_DISPLAY_FORMAT_PREC_MESSAGE_ACK);
 
     Out->Header.ReturnValue =  get_bbvari_format_prec(In->Vid);
@@ -501,7 +501,7 @@ static int RPCFunc_SetVariDisplayFormat(RPC_CONNECTION *par_Connection, RPC_API_
     UNUSED(par_Connection);
     RPC_API_SET_VARI_DISPLAY_FORMAT_MESSAGE *In = (RPC_API_SET_VARI_DISPLAY_FORMAT_MESSAGE*)par_DataIn;
     RPC_API_SET_VARI_DISPLAY_FORMAT_MESSAGE_ACK *Out = (RPC_API_SET_VARI_DISPLAY_FORMAT_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_SET_VARI_DISPLAY_FORMAT_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_SET_VARI_DISPLAY_FORMAT_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_SET_VARI_DISPLAY_FORMAT_MESSAGE_ACK);
 
     Out->Header.ReturnValue =  set_bbvari_format(In->Vid, In->Width, In->Prec);
@@ -514,7 +514,7 @@ static int RPCFunc_ImportVariProperties(RPC_CONNECTION *par_Connection, RPC_API_
     UNUSED(par_Connection);
     RPC_API_IMPORT_VARI_PROPERTIES_MESSAGE *In = (RPC_API_IMPORT_VARI_PROPERTIES_MESSAGE*)par_DataIn;
     RPC_API_IMPORT_VARI_PROPERTIES_MESSAGE_ACK *Out = (RPC_API_IMPORT_VARI_PROPERTIES_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_IMPORT_VARI_PROPERTIES_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_IMPORT_VARI_PROPERTIES_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_IMPORT_VARI_PROPERTIES_MESSAGE_ACK);
 
     Out->Header.ReturnValue =  ScriptImportVariablesProperties ((char*)In + In->OffsetFilename);
@@ -527,7 +527,7 @@ static int RPCFunc_EnableRangeControl(RPC_CONNECTION *par_Connection, RPC_API_BA
     UNUSED(par_Connection);
     RPC_API_ENABLE_RANGE_CONTROL_MESSAGE *In = (RPC_API_ENABLE_RANGE_CONTROL_MESSAGE*)par_DataIn;
     RPC_API_ENABLE_RANGE_CONTROL_MESSAGE_ACK *Out = (RPC_API_ENABLE_RANGE_CONTROL_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_ENABLE_RANGE_CONTROL_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_ENABLE_RANGE_CONTROL_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_ENABLE_RANGE_CONTROL_MESSAGE_ACK);
 
     Out->Header.ReturnValue = enable_bbvari_range_control ((char*)In + In->OffsetProcessNameFilter, (char*)In + In->OffsetVariableNameFilter);
@@ -540,7 +540,7 @@ static int RPCFunc_DisableRangeControl(RPC_CONNECTION *par_Connection, RPC_API_B
     UNUSED(par_Connection);
     RPC_API_DISABLE_RANGE_CONTROL_MESSAGE *In = (RPC_API_DISABLE_RANGE_CONTROL_MESSAGE*)par_DataIn;
     RPC_API_DISABLE_RANGE_CONTROL_MESSAGE_ACK *Out = (RPC_API_DISABLE_RANGE_CONTROL_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_DISABLE_RANGE_CONTROL_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_DISABLE_RANGE_CONTROL_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_DISABLE_RANGE_CONTROL_MESSAGE_ACK);
 
     Out->Header.ReturnValue = disable_bbvari_range_control ((char*)In + In->OffsetProcessNameFilter, (char*)In + In->OffsetVariableNameFilter);
@@ -551,12 +551,22 @@ static int RPCFunc_DisableRangeControl(RPC_CONNECTION *par_Connection, RPC_API_B
 static int RPCFunc_WriteFrame(RPC_CONNECTION *par_Connection, RPC_API_BASE_MESSAGE *par_DataIn, RPC_API_BASE_MESSAGE_ACK *par_DataOut)
 {
     UNUSED(par_Connection);
+    int8_t *PhysOrRaw;
     RPC_API_WRITE_FRAME_MESSAGE *In = (RPC_API_WRITE_FRAME_MESSAGE*)par_DataIn;
     RPC_API_WRITE_FRAME_MESSAGE_ACK *Out = (RPC_API_WRITE_FRAME_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_WRITE_FRAME_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_WRITE_FRAME_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_WRITE_FRAME_MESSAGE_ACK);
 
-    Out->Header.ReturnValue = write_bbvari_frame_pid (GetRPCControlPid(), (VID*)(void*)((char*)In + In->Offset_int32_Elements_Vids), (double*)(void*)((char*)In + In->Offset_double_Elements_ValueFrame), In->Elements);
+    if (In->Offset_int8_Elements_PhysOrRaw <= 0) {
+        PhysOrRaw = NULL;
+    } else {
+        PhysOrRaw = (int8_t*)((char*)In + In->Offset_int8_Elements_PhysOrRaw);
+    }
+    Out->Header.ReturnValue = write_bbvari_frame_pid (GetRPCControlPid(),
+                                                     (VID*)(void*)((char*)In + In->Offset_int32_Elements_Vids),
+                                                     PhysOrRaw,
+                                                     (double*)(void*)((char*)In + In->Offset_double_Elements_ValueFrame),
+                                                     In->Elements);
 
     return Out->Header.StructSize;
 }
@@ -564,12 +574,21 @@ static int RPCFunc_WriteFrame(RPC_CONNECTION *par_Connection, RPC_API_BASE_MESSA
 static int RPCFunc_GetFrame(RPC_CONNECTION *par_Connection, RPC_API_BASE_MESSAGE *par_DataIn, RPC_API_BASE_MESSAGE_ACK *par_DataOut)
 {
     UNUSED(par_Connection);
+    int8_t *PhysOrRaw;
     RPC_API_GET_FRAME_MESSAGE *In = (RPC_API_GET_FRAME_MESSAGE*)par_DataIn;
     RPC_API_GET_FRAME_MESSAGE_ACK *Out = (RPC_API_GET_FRAME_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_GET_FRAME_MESSAGE_ACK));
+    if (In->Offset_int8_Elements_PhysOrRaw <= 0) {
+        PhysOrRaw = NULL;
+    } else {
+        PhysOrRaw = (int8_t*)((char*)In + In->Offset_int8_Elements_PhysOrRaw);
+    }
+    MEMSET (Out, 0, sizeof (RPC_API_GET_FRAME_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_GET_FRAME_MESSAGE_ACK);
     Out->Offset_double_Elements_ValueFrame = sizeof(RPC_API_GET_FRAME_MESSAGE_ACK) - 1;
-    Out->Header.ReturnValue = read_bbvari_frame ((VID*)(void*)((char*)In + In->Offset_int32_Elements_Vids), (double*)(void*)((char*)Out + Out->Offset_double_Elements_ValueFrame), In->Elements);
+    Out->Header.ReturnValue = read_bbvari_frame ((VID*)(void*)((char*)In + In->Offset_int32_Elements_Vids),
+                                                PhysOrRaw,
+                                                (double*)(void*)((char*)Out + Out->Offset_double_Elements_ValueFrame),
+                                                In->Elements);
     if (Out->Header.ReturnValue == 0) {
         Out->Elements = In->Elements;
         Out->Header.StructSize += In->Elements * (int)sizeof(double);
@@ -590,19 +609,42 @@ static void __SCWriteFrameWaitReadFramCallBack (void *Parameter)
 
 static int RPCFunc_WriteFrameWaitReadFrame(RPC_CONNECTION *par_Connection, RPC_API_BASE_MESSAGE *par_DataIn, RPC_API_BASE_MESSAGE_ACK *par_DataOut)
 {
+    int8_t *PhysOrRaw;
     RPC_API_WRITE_FRAME_WAIT_READ_FRAME_MESSAGE *In = (RPC_API_WRITE_FRAME_WAIT_READ_FRAME_MESSAGE*)par_DataIn;
     RPC_API_WRITE_FRAME_WAIT_READ_FRAME_MESSAGE_ACK *Out = (RPC_API_WRITE_FRAME_WAIT_READ_FRAME_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_WRITE_FRAME_WAIT_READ_FRAME_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_WRITE_FRAME_WAIT_READ_FRAME_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_WRITE_FRAME_WAIT_READ_FRAME_MESSAGE_ACK);
-    Out->Offset_double_ReadSize_ReadValuesRet = sizeof(RPC_API_WRITE_FRAME_WAIT_READ_FRAME_MESSAGE_ACK) - 1;
+    Out->Offset_double_Read_ValuesRet = sizeof(RPC_API_WRITE_FRAME_WAIT_READ_FRAME_MESSAGE_ACK) - 1;
     if (par_Connection->SchedulerDisableCounter == 1) {
         par_Connection->SchedulerDisableCounter--;
         par_Connection->DoNextCycleFlag = 1;
-        write_bbvari_frame_pid (GetRPCControlPid(), (VID*)(void*)((char*)In + In->Offset_int32_WriteSize_WriteVids), (double*)(void*)((char*)In + In->Offset_double_WriteSize_WriteValues), In->WriteSize);
+        if (In->Offset_int8_Write_PhysOrRaw <= 0) {
+            PhysOrRaw = NULL;
+        } else {
+            PhysOrRaw = (int8_t*)((char*)In + In->Offset_int8_Write_PhysOrRaw);
+        }
+        write_bbvari_frame_pid (GetRPCControlPid(),
+                               (VID*)(void*)((char*)In + In->Offset_int32_Write_Vids),
+                               PhysOrRaw,
+                               (double*)(void*)((char*)In + In->Offset_double_Write_Values), In->WriteSize);
         RemoteProcedureMarkedForWaitForConnection(par_Connection);
-        make_n_next_cycles(SCHEDULER_CONTROLED_BY_RPC, 1, __SCWriteFrameWaitReadFramCallBack, par_Connection);
-        RemoteProcedureWaitForConnection(par_Connection);
-        Out->Header.ReturnValue = read_bbvari_frame  ((VID*)(void*)((char*)In + In->Offset_int32_ReadSize_ReadVids), (double*)(void*)((char*)Out + Out->Offset_double_ReadSize_ReadValuesRet), In->ReadSize);
+        switch(make_n_next_cycles(SCHEDULER_CONTROLED_BY_RPC, 1, NULL, __SCWriteFrameWaitReadFramCallBack, par_Connection)) {
+        case 0: // stop scheduler request are added during the scheduler is running.
+        case 1: // stop scheduler request are added but the scheduler was already stopped.
+            RemoteProcedureWaitForConnection(par_Connection);
+            break;
+        default: // all others
+            __SCWriteFrameWaitReadFramCallBack(par_Connection);
+            break;
+        }
+        if (In->Offset_int8_Read_PhysOrRaw <= 0) {
+            PhysOrRaw = NULL;
+        } else {
+            PhysOrRaw = (int8_t*)((char*)In + In->Offset_int8_Read_PhysOrRaw);
+        }
+        Out->Header.ReturnValue = read_bbvari_frame((VID*)(void*)((char*)In + In->Offset_int32_Read_Vids),
+                                                    PhysOrRaw,
+                                                    (double*)(void*)((char*)Out + Out->Offset_double_Read_ValuesRet), In->ReadSize);
         if (Out->Header.ReturnValue == 0) {
             Out->ReadSize = In->ReadSize;
             Out->Header.StructSize += In->ReadSize * (int)sizeof(double);
@@ -620,7 +662,7 @@ static int RPCFunc_ReferenceSymbol(RPC_CONNECTION *par_Connection, RPC_API_BASE_
     UNUSED(par_Connection);
     RPC_API_REFERENCE_SYMBOL_MESSAGE *In = (RPC_API_REFERENCE_SYMBOL_MESSAGE*)par_DataIn;
     RPC_API_REFERENCE_SYMBOL_MESSAGE_ACK *Out = (RPC_API_REFERENCE_SYMBOL_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_REFERENCE_SYMBOL_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_REFERENCE_SYMBOL_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_REFERENCE_SYMBOL_MESSAGE_ACK);
 
     Out->Header.ReturnValue = ReferenceOneSymbol((char*)In + In->OffsetSymbol,
@@ -640,7 +682,7 @@ static int RPCFunc_DereferenceSymbol(RPC_CONNECTION *par_Connection, RPC_API_BAS
     UNUSED(par_Connection);
     RPC_API_DEREFERENCE_SYMBOL_MESSAGE *In = (RPC_API_DEREFERENCE_SYMBOL_MESSAGE*)par_DataIn;
     RPC_API_DEREFERENCE_SYMBOL_MESSAGE_ACK *Out = (RPC_API_DEREFERENCE_SYMBOL_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_DEREFERENCE_SYMBOL_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_DEREFERENCE_SYMBOL_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_DEREFERENCE_SYMBOL_MESSAGE_ACK);
 
     Out->Header.ReturnValue = DereferenceOneSymbol((char*)In + In->OffsetSymbol,
@@ -655,7 +697,7 @@ static int RPCFunc_GetRaw(RPC_CONNECTION *par_Connection, RPC_API_BASE_MESSAGE *
     UNUSED(par_Connection);
     RPC_API_GET_RAW_MESSAGE *In = (RPC_API_GET_RAW_MESSAGE*)par_DataIn;
     RPC_API_GET_RAW_MESSAGE_ACK *Out = (RPC_API_GET_RAW_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_GET_RAW_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_GET_RAW_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_GET_RAW_MESSAGE_ACK);
 
     Out->Header.ReturnValue = read_bbvari_union_type (In->Vid, &(Out->Value));
@@ -668,11 +710,39 @@ static int RPCFunc_SetRaw(RPC_CONNECTION *par_Connection, RPC_API_BASE_MESSAGE *
     UNUSED(par_Connection);
     RPC_API_SET_RAW_MESSAGE *In = (RPC_API_SET_RAW_MESSAGE*)par_DataIn;
     RPC_API_SET_RAW_MESSAGE_ACK *Out = (RPC_API_SET_RAW_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_SET_RAW_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_SET_RAW_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_SET_RAW_MESSAGE_ACK);
 
     Out->Header.ReturnValue = 0;
     write_bbvari_convert_to(GetRPCControlPid(), In->Vid, In->Type, &(In->Value));
+
+    return Out->Header.StructSize;
+}
+
+static int RPCFunc_ExportA2lMeasurementList(RPC_CONNECTION *par_Connection, RPC_API_BASE_MESSAGE *par_DataIn, RPC_API_BASE_MESSAGE_ACK *par_DataOut)
+{
+    UNUSED(par_Connection);
+    RPC_API_EXPORT_A2L_MEASUREMENT_LIST_MESSAGE *In = (RPC_API_EXPORT_A2L_MEASUREMENT_LIST_MESSAGE*)par_DataIn;
+    RPC_API_EXPORT_A2L_MEASUREMENT_LIST_MESSAGE_ACK *Out = (RPC_API_EXPORT_A2L_MEASUREMENT_LIST_MESSAGE_ACK*)par_DataOut;
+    memset (Out, 0, sizeof (RPC_API_EXPORT_A2L_MEASUREMENT_LIST_MESSAGE_ACK));
+    Out->Header.StructSize = sizeof(RPC_API_EXPORT_A2L_MEASUREMENT_LIST_MESSAGE_ACK);
+
+    Out->Header.ReturnValue = ExportMeasurementReferencesListForProcess (get_pid_by_name((char*)In + In->OffsetProcess),
+                                                                        (char*)In + In->OffsetRefList);
+
+    return Out->Header.StructSize;
+}
+
+static int RPCFunc_ImportA2lMeasurementList(RPC_CONNECTION *par_Connection, RPC_API_BASE_MESSAGE *par_DataIn, RPC_API_BASE_MESSAGE_ACK *par_DataOut)
+{
+    UNUSED(par_Connection);
+    RPC_API_IMPORT_A2L_MEASUREMENT_LIST_MESSAGE *In = (RPC_API_IMPORT_A2L_MEASUREMENT_LIST_MESSAGE*)par_DataIn;
+    RPC_API_IMPORT_A2L_MEASUREMENT_LIST_MESSAGE_ACK *Out = (RPC_API_IMPORT_A2L_MEASUREMENT_LIST_MESSAGE_ACK*)par_DataOut;
+    memset (Out, 0, sizeof (RPC_API_IMPORT_A2L_MEASUREMENT_LIST_MESSAGE_ACK));
+    Out->Header.StructSize = sizeof(RPC_API_IMPORT_A2L_MEASUREMENT_LIST_MESSAGE_ACK);
+
+    Out->Header.ReturnValue = ImportMeasurementReferencesListForProcess (get_pid_by_name((char*)In + In->OffsetProcess),
+                                                                        (char*)In + In->OffsetRefList);
 
     return Out->Header.StructSize;
 }
@@ -719,5 +789,7 @@ int AddBlackboardFunctionToTable(void)
     AddFunctionToRemoteAPIFunctionTable2(RPC_API_DEREFERENCE_SYMBOL_CMD, 0, RPCFunc_DereferenceSymbol, sizeof(RPC_API_DEREFERENCE_SYMBOL_MESSAGE), RPC_API_MAX_MESSAGE_SIZE, STRINGIZE(RPC_API_DEREFERENCE_SYMBOL_MESSAGE_MEMBERS), STRINGIZE(RPC_API_DEREFERENCE_SYMBOL_MESSAGE_ACK_MEMBERS));
     AddFunctionToRemoteAPIFunctionTable2(RPC_API_GET_RAW_CMD, 0, RPCFunc_GetRaw, sizeof(RPC_API_GET_RAW_MESSAGE), sizeof(RPC_API_GET_RAW_MESSAGE), STRINGIZE(RPC_API_GET_RAW_MESSAGE_MEMBERS), STRINGIZE(RPC_API_GET_RAW_MESSAGE_ACK_MEMBERS));
     AddFunctionToRemoteAPIFunctionTable2(RPC_API_SET_RAW_CMD, 0, RPCFunc_SetRaw, sizeof(RPC_API_SET_RAW_MESSAGE), sizeof(RPC_API_SET_RAW_MESSAGE), STRINGIZE(RPC_API_SET_RAW_MESSAGE_MEMBERS), STRINGIZE(RPC_API_SET_RAW_MESSAGE_ACK_MEMBERS));
+    AddFunctionToRemoteAPIFunctionTable2(RPC_API_EXPORT_A2L_MEASUREMENT_LIST_CMD, 0, RPCFunc_ExportA2lMeasurementList, sizeof(RPC_API_EXPORT_A2L_MEASUREMENT_LIST_MESSAGE), RPC_API_MAX_MESSAGE_SIZE, STRINGIZE(RPC_API_EXPORT_A2L_MEASUREMENT_LIST_MESSAGE_MEMBERS), STRINGIZE(RPC_API_EXPORT_A2L_MEASUREMENT_LIST_ACK_MEMBERS));
+    AddFunctionToRemoteAPIFunctionTable2(RPC_API_IMPORT_A2L_MEASUREMENT_LIST_CMD, 0, RPCFunc_ImportA2lMeasurementList, sizeof(RPC_API_IMPORT_A2L_MEASUREMENT_LIST_MESSAGE), RPC_API_MAX_MESSAGE_SIZE, STRINGIZE(RPC_API_IMPORT_A2L_MEASUREMENT_LIST_MESSAGE_MEMBERS), STRINGIZE(RPC_API_IMPORT_A2L_MEASUREMENT_LIST_ACK_MEMBERS));
     return 0;
 }

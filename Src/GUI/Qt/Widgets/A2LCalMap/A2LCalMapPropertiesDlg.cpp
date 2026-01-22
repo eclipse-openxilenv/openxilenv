@@ -25,13 +25,21 @@
 
 extern "C" {
 #include "MyMemory.h"
+#include "StringMaxChar.h"
+#include "PrintFormatToString.h"
 }
 
 static void InitConTypeComboBox(QComboBox *par_ComboBox)
 {
-    par_ComboBox->addItem("none");
-    par_ComboBox->addItem("formula");
-    par_ComboBox->addItem("text replace");
+    par_ComboBox->addItem ("none");  // BB_CONV_NONE
+    par_ComboBox->addItem ("formula");  // BB_CONV_FORMULA
+    par_ComboBox->addItem ("text replace");  // BB_CONV_TEXTREP
+    par_ComboBox->addItem ("# * factor + offset");  // BB_CONV_FACTOFF
+    par_ComboBox->addItem ("factor * (# + offset)");  // BB_CONV_OFFFACT
+    par_ComboBox->addItem ("table with interpolation");  // BB_CONV_TAB_INTP
+    par_ComboBox->addItem ("table without interpolation");  // BB_CONV_TAB_NOINTP
+    par_ComboBox->addItem ("fractional rational function");  // BB_CONV_RAT_FUNC
+    par_ComboBox->addItem ("reference");  // BB_CONV_REF
 }
 
 A2LCalMapPropertiesDlg::A2LCalMapPropertiesDlg(QString par_Label,
@@ -50,7 +58,7 @@ A2LCalMapPropertiesDlg::A2LCalMapPropertiesDlg(QString par_Label,
     InitConTypeComboBox(ui->MapConvTypeComboBox);
     ui->LabelLineEdit->setText(par_Label);
     char Help[32];
-    sprintf(Help, "0x%" PRIX64 "", par_Address);
+    PrintFormatToString (Help, sizeof(Help), "0x%" PRIX64 "", par_Address);
     ui->AddressLineEdit->setText(QString(Help));
     // X axis
     ui->XInputSignalLineEdit->setText(par_XAxisInfo->m_Input);
@@ -97,8 +105,7 @@ A2LCalMapPropertiesDlg::~A2LCalMapPropertiesDlg()
 
 static char *ReallocCopy(char *DstPtrQString, QString par_String)
 {
-    char *Ret = (char*)my_realloc(DstPtrQString, strlen(QStringToConstChar(par_String)) + 1);
-    if (Ret != nullptr) strcpy(Ret, QStringToConstChar(par_String));
+    char *Ret = StringRealloc(DstPtrQString, QStringToConstChar(par_String));
     return Ret;
 }
 

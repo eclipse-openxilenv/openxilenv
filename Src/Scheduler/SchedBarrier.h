@@ -124,29 +124,31 @@ int RemoveProcessOrSchedulerFromBarrierIniConfig (char *par_Name, int par_Proces
 
 void RemoveProcessOrSchedulerFromAllBarrierIniConfig (const char *par_Name, int par_ProcessOrSchedulerFlag);
 
-int GetNextBarrierLoggingEntry (int par_Index, char *ret_BarrierName,
-                                BARRIER_LOGGING_ACTION *ret_Action,
-                                BARRIER_LOGGING_TYPE *ret_ProcessOrSched, char *ret_ProcOrSchedName,
-                                int *ret_LineNr,
+int GetNextBarrierLoggingEntry (int par_Index,
+                               char *ret_BarrierName, int par_BarrierName_Maxc,
+                               BARRIER_LOGGING_ACTION *ret_Action,
+                               BARRIER_LOGGING_TYPE *ret_ProcessOrSched,
+                               char *ret_ProcOrSchedName, int par_ProcOrSchedName_Maxc,
+                               int *ret_LineNr,
 
-                                // Snapshot
-                                unsigned int *ret_SchedulerMask,
-                                unsigned int *ret_ProcessMask,
-                                int *ret_Switch,  // 0 or 1
-                                unsigned int *ret_Ib_0_SchedulerFlags,
-                                unsigned int *ret_Ib_0_ProcessFlags,
-                                unsigned int *ret_Ib_1_SchedulerFlags,
-                                unsigned int *ret_Ib_1_ProcessFlags,
+                               // Snapshot
+                               unsigned int *ret_SchedulerMask,
+                               unsigned int *ret_ProcessMask,
+                               int *ret_Switch,  // 0 or 1
+                               unsigned int *ret_Ib_0_SchedulerFlags,
+                               unsigned int *ret_Ib_0_ProcessFlags,
+                               unsigned int *ret_Ib_1_SchedulerFlags,
+                               unsigned int *ret_Ib_1_ProcessFlags,
 
-                                int *ret_ProcesseOrSchedulerCount,
-                                unsigned int *ret_AddNewProcessMasksBefore,
-                                unsigned int *ret_AddNewProcessMasksBehind,
-                                unsigned int *ret_AddNewSchedulerMasks,
-                                unsigned int *ret_RemoveProcessMasks,
-                                unsigned int *ret_RemoveSchedulerMasks,
+                               int *ret_ProcesseOrSchedulerCount,
+                               unsigned int *ret_AddNewProcessMasksBefore,
+                               unsigned int *ret_AddNewProcessMasksBehind,
+                               unsigned int *ret_AddNewSchedulerMasks,
+                               unsigned int *ret_RemoveProcessMasks,
+                               unsigned int *ret_RemoveSchedulerMasks,
 
-                                unsigned int *ret_Counter
-                                );
+                               unsigned int *ret_Counter
+                               );
 
 char *GetAllBarrierString(void);
 void FreeAllBarrierString (char *String);

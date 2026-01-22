@@ -369,7 +369,13 @@ bool OszilloscopeDialogFrame::ChangePhysFlag(char NewPhysFlag, char NewDecHexBin
     if(m_data->sel_left_right) {
         if (m_data->dec_phys_right[m_data->sel_pos_right] != NewPhysFlag) {
             m_data->dec_phys_right[m_data->sel_pos_right] = NewPhysFlag;
-            if (get_bbvari_conversiontype(m_data->vids_right[m_data->sel_pos_right]) == BB_CONV_FORMULA) {
+            int ConvType = get_bbvari_conversiontype(m_data->vids_right[m_data->sel_pos_right]);
+            if ((ConvType == BB_CONV_FORMULA) ||
+                (ConvType == BB_CONV_FACTOFF) ||
+                (ConvType == BB_CONV_OFFFACT) ||
+                (ConvType == BB_CONV_TAB_INTP) ||
+                (ConvType == BB_CONV_TAB_NOINTP) ||
+                (ConvType == BB_CONV_RAT_FUNC)) {
                 ResetCurrentBuffer();
                 Ret = true;
             }
@@ -378,7 +384,13 @@ bool OszilloscopeDialogFrame::ChangePhysFlag(char NewPhysFlag, char NewDecHexBin
     } else {
         if (m_data->dec_phys_left[m_data->sel_pos_left] != NewPhysFlag) {
             m_data->dec_phys_left[m_data->sel_pos_left] = NewPhysFlag;
-            if (get_bbvari_conversiontype(m_data->vids_left[m_data->sel_pos_left]) == BB_CONV_FORMULA) {
+            int ConvType = get_bbvari_conversiontype(m_data->vids_left[m_data->sel_pos_left]);
+            if ((ConvType == BB_CONV_FORMULA) ||
+                (ConvType == BB_CONV_FACTOFF) ||
+                (ConvType == BB_CONV_OFFFACT) ||
+                (ConvType == BB_CONV_TAB_INTP) ||
+                (ConvType == BB_CONV_TAB_NOINTP) ||
+                (ConvType == BB_CONV_RAT_FUNC)) {
                 ResetCurrentBuffer();
                 Ret = true;
             }

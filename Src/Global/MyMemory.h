@@ -82,8 +82,6 @@ extern int free_process_used_memory (int pid);
 void check_memory_corrupted (int LineNr, char *Filename);
 #define CHECK_MEMORY_CORRUPTED() check_memory_corrupted (__LINE__, (char*)__FILE__)
 
-uint64_t write_memory_infos_to_file(int Idx);
-
 int DebugCheckIfIsHeap (void *par_Address);
 
 #undef extern

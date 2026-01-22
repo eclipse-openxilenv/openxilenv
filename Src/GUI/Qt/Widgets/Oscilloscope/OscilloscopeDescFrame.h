@@ -47,6 +47,8 @@ public:
 
     void DeleteSignal(int par_Numer);
 
+    OscilloscopeDesc *GetDesciption(int par_no);
+
 signals:
     void variableForStandardDialog(QStringList arg_variableName, bool arg_showAllVariable, bool arg_multiSelect, QColor arg_color, QFont arg_font);
 public slots:

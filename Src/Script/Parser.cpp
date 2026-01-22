@@ -25,6 +25,7 @@
 
 extern "C" {
 #include "MyMemory.h"
+#include "PrintFormatToString.h"
 #include "EquationParser.h"
 #include "ThrowError.h"
 #include "Scheduler.h"
@@ -35,6 +36,7 @@ extern "C" {
 #include "FileCache.h"
 #include "FormatMessageOutput.h"
 #include "Parser.h"
+#include <stdlib.h>
 
 int cParser::Error (int Level, const char * const FormatStr, ...)
 {
@@ -51,7 +53,7 @@ int cParser::Error (int Level, const char * const FormatStr, ...)
         Filename = CurrentScript->GetFilename();
         Size = (int)strlen(Filename) + 1024;  // first try with 1024 bytes
         MessageBuffer = (char*)(my_malloc((size_t)(Size)));
-        s = MessageBuffer + sprintf (MessageBuffer, "%s(%i) : ", Filename, LineNr);
+        s = MessageBuffer + PrintFormatToString (MessageBuffer, Size, "%s(%i) : ", Filename, LineNr);
     } else {
         LineNr = 0;
         Filename = "";
@@ -62,22 +64,22 @@ int cParser::Error (int Level, const char * const FormatStr, ...)
     // Than the error level
     switch (Level) {
     case SCRIPT_PARSER_FATAL_ERROR:
-        s += sprintf (s, "fatal error: ");
+        s += PrintFormatToString (s, Size - (s - MessageBuffer), "fatal error: ");
         ErrorCounter++;
         State = PARSER_STATE_ERROR;
         break;
     case SCRIPT_PARSER_ERROR_CONTINUE:
-        s += sprintf (s, "error: ");
+        s += PrintFormatToString (s, Size - (s - MessageBuffer), "error: ");
         ErrorCounter++;
         break;
     default:
     case SCRIPT_PARSER_NO_ERROR:
         break;
     case SCRIPT_PARSER_WARNING:
-        s += sprintf (s, "warning: ");
+        s += PrintFormatToString (s, Size - (s - MessageBuffer), "warning: ");
         break;
     case SCRIPT_PARSER_MESSAGE:
-        s += sprintf (s, "comment: ");
+        s += PrintFormatToString (s, Size - (s - MessageBuffer), "comment: ");
         break;
     }
 
@@ -90,7 +92,7 @@ int cParser::Error (int Level, const char * const FormatStr, ...)
         va_end (Args);
 
         if ((Len < 0) || (LoopCount > 1)) {
-            strcpy (s, "internal format error");
+            StringCopyMaxCharTruncate (s, "internal format error", Size - (s - MessageBuffer));
             break;
         }
 

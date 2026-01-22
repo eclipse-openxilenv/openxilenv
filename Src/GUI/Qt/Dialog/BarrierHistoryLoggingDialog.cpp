@@ -208,10 +208,10 @@ void BarrierHistoryLoggingDialog::InitHistory()
 
     int Index = -1;
     while ((Index = GetNextBarrierLoggingEntry (Index,
-                                                BarrierName,
+                                                BarrierName, sizeof(BarrierName),
                                                 &Action,
                                                 &ProcessOrSched,
-                                                ProcOrSchedName,
+                                                ProcOrSchedName, sizeof(ProcOrSchedName),
                                                 &LineNr,
 
                                                 // Snapshot

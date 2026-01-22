@@ -23,95 +23,87 @@
 #define MDF_UNDEFINED_LENGTH 1
 
 #pragma pack(push,1)
-typedef char MDF_CHAR;
-typedef unsigned char MDF_UINT8;
-typedef uint16_t MDF_UINT16;
-typedef uint32_t MDF_UINT32;
-typedef uint64_t MDF_UINT64;
-typedef uint16_t MDF_BOOL;
-typedef double MDF_REAL;
-typedef int32_t MDF_LINK;
 
 typedef struct {
-    MDF_CHAR FileIdentifier[8];     // "MDF     "
-    MDF_CHAR FormatTdentifier[8];   // "3.10 "
-    MDF_CHAR ProgramIdentifier[8];
-    MDF_UINT16 DefaultByteOrder;    // 0 -> LSB fist, > 0 MSB first
-    MDF_UINT16 DefaultFloatFormat;  // 0 = float
-    MDF_UINT16 VersionNumber;       // 310
-    MDF_UINT16 Reserved1;
-    MDF_CHAR Reserved2[2];
-    MDF_CHAR Reserved3[30];
+    char FileIdentifier[8];     // "MDF     "
+    char FormatTdentifier[8];   // "3.10 "
+    char ProgramIdentifier[8];
+    uint16_t DefaultByteOrder;    // 0 -> LSB fist, > 0 MSB first
+    uint16_t DefaultFloatFormat;  // 0 = float
+    uint16_t VersionNumber;       // 310
+    uint16_t Reserved1;
+    char Reserved2[2];
+    char Reserved3[30];
 } MDF_IDBLOCK;
 
 
 typedef struct {
-    MDF_CHAR BlockTypeIdentifier[2];   // "HD"
-    MDF_UINT16 BlockSize;              // Size of entire struct
-    MDF_LINK FirstDataGroupBlock;      // File offset to the first DGBLOCK
-    MDF_LINK MeasurementFileComment;   // File offset to comment text TXBLOCK or NULL
-    MDF_LINK ProgramBlock;             // File offset to program block PRBLOCK or NULL
-    MDF_UINT16 NumberOfDataGroups;     // Number of data groups
-    MDF_CHAR DateOfRecording[10];      // Date of the recording "DD:MM:YYYY"
-    MDF_CHAR TimeOfRecording[8];       // Time of the recording "HH:MM:SS"
-    MDF_CHAR AuthorName[32];
-    MDF_CHAR OrganizationName[32];
-    MDF_CHAR ProjectName[32];
-    MDF_CHAR MeasurementObject[32];
-//    MDF_UINT64 TimeStamp;          // Time stamp of recording was started (ns).
+    char BlockTypeIdentifier[2];   // "HD"
+    uint16_t BlockSize;              // Size of entire struct
+    int32_t FirstDataGroupBlock;      // File offset to the first DGBLOCK
+    int32_t MeasurementFileComment;   // File offset to comment text TXBLOCK or NULL
+    int32_t ProgramBlock;             // File offset to program block PRBLOCK or NULL
+    uint16_t NumberOfDataGroups;     // Number of data groups
+    char DateOfRecording[10];      // Date of the recording "DD:MM:YYYY"
+    char TimeOfRecording[8];       // Time of the recording "HH:MM:SS"
+    char AuthorName[32];
+    char OrganizationName[32];
+    char ProjectName[32];
+    char MeasurementObject[32];
+//    uint64_t TimeStamp;          // Time stamp of recording was started (ns).
 //                                   // Elapsed time since 00:00:00 01.01.1970 Start with version 3.20. before value is 0
 } MDF_HDBLOCK;
 
 typedef struct {
-    MDF_CHAR BlockTypeIdentifier[2];   // "TX"
-    MDF_UINT16 BlockSize;              // size of TXBLOCK
-    // MDF_CHAR Text[MDF_UNDEFINED_LENGTH];
+    char BlockTypeIdentifier[2];   // "TX"
+    uint16_t BlockSize;              // size of TXBLOCK
+    // char Text[MDF_UNDEFINED_LENGTH];
 } MDF_TXBLOCK;
 
 
 typedef struct {
-    MDF_CHAR BlockTypeIdentifier[2];   // "DG"
-    MDF_UINT16 BlockSize;              // Size of DGBLOCK
-    MDF_LINK NextDataGroupBlock;       // File offset to next DGBLOCK or NULL
-    MDF_LINK FirstChannelGroupBlock;   // File offset to first CGBLOCK or NULL
-    MDF_LINK TriggerBlock;             // File offset to TRBLOCK or NULL
-    MDF_LINK DataBlock;                // File offset to the data block
-    MDF_UINT16 NumberOfChannelGroups;  // Number of channel groups
-    MDF_UINT16 NumberOfRecordIDs;      // Number of record IDs in the data block
+    char BlockTypeIdentifier[2];   // "DG"
+    uint16_t BlockSize;              // Size of DGBLOCK
+    int32_t NextDataGroupBlock;       // File offset to next DGBLOCK or NULL
+    int32_t FirstChannelGroupBlock;   // File offset to first CGBLOCK or NULL
+    int32_t TriggerBlock;             // File offset to TRBLOCK or NULL
+    int32_t DataBlock;                // File offset to the data block
+    uint16_t NumberOfChannelGroups;  // Number of channel groups
+    uint16_t NumberOfRecordIDs;      // Number of record IDs in the data block
                                        // 0 = without record ID
                                        // 1 = record ID before data record
                                        // 2 = record ID before and after data record
-    MDF_UINT32 Reserved;
+    uint32_t Reserved;
 } MDF_DGBLOCK;
 
 typedef struct {
-    MDF_CHAR BlockTypeIdentifier[2];   // "CG"
-    MDF_UINT16 BlockSize;              // Size of CGBLOCK
-    MDF_LINK NextChannelGroupBlock;    // File offset to next CGBLOCK or NULL
-    MDF_LINK FirstChannelBlock;        // File offset to first CNBLOCK or NULL
-    MDF_LINK ChannelGroupComment;      // File offset to TXBLOCK or NULL
-    MDF_UINT16 RecordID;               // Record ID
-    MDF_UINT16 NumberOfChannels;       // Number of channels
-    MDF_UINT16 SizeOfDataRecord;       // Size of data record in Bytes, without record ID
-    MDF_UINT32 NumberOfRecords;        // Number of records
+    char BlockTypeIdentifier[2];   // "CG"
+    uint16_t BlockSize;              // Size of CGBLOCK
+    int32_t NextChannelGroupBlock;    // File offset to next CGBLOCK or NULL
+    int32_t FirstChannelBlock;        // File offset to first CNBLOCK or NULL
+    int32_t ChannelGroupComment;      // File offset to TXBLOCK or NULL
+    uint16_t RecordID;               // Record ID
+    uint16_t NumberOfChannels;       // Number of channels
+    uint16_t SizeOfDataRecord;       // Size of data record in Bytes, without record ID
+    uint32_t NumberOfRecords;        // Number of records
 } MDF_CGBLOCK;
 
 typedef struct {
-    MDF_CHAR BlockTypeIdentifier[2];   //  "CN"
-    MDF_UINT16 BlockSize;              //  Size of CNBLOCK
-    MDF_LINK NextChannelBlock;         //  File offset to next CNBLOCK or NULL
-    MDF_LINK ConversionFormula;        //  File offset to CCBLOCK or NULL
-    MDF_LINK SourceDependingExtensions; // File offset to CEBLOCK or NULL
-    MDF_LINK DependencyBlock;          //  File offset to CDBLOCK or NULL
-    MDF_LINK ChannelComment;           //  File offset to TXBLOCK or NULL
-    MDF_UINT16 ChannelType;            //  Channel type
+    char BlockTypeIdentifier[2];   //  "CN"
+    uint16_t BlockSize;              //  Size of CNBLOCK
+    int32_t NextChannelBlock;         //  File offset to next CNBLOCK or NULL
+    int32_t ConversionFormula;        //  File offset to CCBLOCK or NULL
+    int32_t SourceDependingExtensions; // File offset to CEBLOCK or NULL
+    int32_t DependencyBlock;          //  File offset to CDBLOCK or NULL
+    int32_t ChannelComment;           //  File offset to TXBLOCK or NULL
+    uint16_t ChannelType;            //  Channel type
                                        //    0 = Data
                                        //    1 = Time
-    MDF_CHAR ShortSignalName[32];      //  Signal name
-    MDF_CHAR SignalDescription[128];   //  Signal description
-    MDF_UINT16 StartBitOffset;         //  Start offset
-    MDF_UINT16 NumberOfBits;           //  Number of bits
-    MDF_UINT16 SignalDataType;         //  Data type
+    char ShortSignalName[32];      //  Signal name
+    char SignalDescription[128];   //  Signal description
+    uint16_t StartBitOffset;         //  Start offset
+    uint16_t NumberOfBits;           //  Number of bits
+    uint16_t SignalDataType;         //  Data type
                                        //    0 = unsigned int
                                        //    1 = signed int
                                        //    2 = float
@@ -129,24 +121,24 @@ typedef struct {
                                        //    14 = signed int (little endian)
                                        //    15 = float (little endian)
                                        //    16 = double (little endian)
-    MDF_BOOL ValueRangeValidFlag;      //  1 -> min. and max. values are valid
-    MDF_REAL MinimumSignalValue;       //  Min. raw value
-    MDF_REAL MaximumSignalValue;       //  Max. raw value
-    MDF_REAL SamplingRate;             //  Sampling period
-    MDF_LINK LongSignalName;           //  File offset to TXBLOCK long signal name or NULL
-    MDF_LINK SignalDisplayName;        //  File offset to TXBLOCK display name  or NULL
-    MDF_UINT16 AdditionalByteOffset;   //  Additional Byte offset default = 0
+    uint16_t ValueRangeValidFlag;      //  1 -> min. and max. values are valid
+    double MinimumSignalValue;       //  Min. raw value
+    double MaximumSignalValue;       //  Max. raw value
+    double SamplingRate;             //  Sampling period
+    int32_t LongSignalName;           //  File offset to TXBLOCK long signal name or NULL
+    int32_t SignalDisplayName;        //  File offset to TXBLOCK display name  or NULL
+    uint16_t AdditionalByteOffset;   //  Additional Byte offset default = 0
 } MDF_CNBLOCK;
 
 
 typedef struct {
-    MDF_CHAR BlockTypeIdentifier[2];      //  "CC"
-    MDF_UINT16 BlockSize;                 //  Block size CCBLOCK
-    MDF_BOOL PhysicalValueRangeValidFlag; //  1 -> min. and max. values are valid
-    MDF_REAL MinimumPhysicalSignalValue;  //  Min. raw value
-    MDF_REAL MaximumPhysicalSignalValue;  //  Max. raw value
-    MDF_CHAR PhysicalUnit[20];            //  Unit
-    MDF_UINT16 ConversionType;            //  Conversion type:
+    char BlockTypeIdentifier[2];      //  "CC"
+    uint16_t BlockSize;                 //  Block size CCBLOCK
+    uint16_t PhysicalValueRangeValidFlag; //  1 -> min. and max. values are valid
+    double MinimumPhysicalSignalValue;  //  Min. raw value
+    double MaximumPhysicalSignalValue;  //  Max. raw value
+    char PhysicalUnit[20];            //  Unit
+    uint16_t ConversionType;            //  Conversion type:
                                           //     0 = linear
                                           //     1 = tabular with interpolation
                                           //     2 = tabular
@@ -160,19 +152,19 @@ typedef struct {
                                           //     132 = date (Based on 7 Byte Date data structure)
                                           //     133 = time (Based on 6 Byte Time data structure)
                                           //     65535 = 1:1 raw = phys
-    MDF_UINT16 ConversionDataSize;       // Size
+    uint16_t ConversionDataSize;       // Size
 } MDF_CCBLOCK;
 
 
 typedef struct {
-    MDF_REAL LowerRange;
-    MDF_REAL UpperRange;
-    MDF_LINK PointerToTx;
+    double LowerRange;
+    double UpperRange;
+    int32_t PointerToTx;
 }  MDF_COMPU_VTAB_RANGE;
 
 typedef struct {
-    MDF_REAL Value;
-    MDF_CHAR AssignedText[32];
+    double Value;
+    char AssignedText[32];
 }  MDF_COMPU_VTAB;
 
 #pragma pack(pop)

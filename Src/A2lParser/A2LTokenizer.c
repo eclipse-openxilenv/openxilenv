@@ -43,7 +43,7 @@ ASAP2_PARSER *InitASAP2Parser (const char *Filename, int Flags)
 
     Parser = (ASAP2_PARSER*)my_malloc (sizeof(ASAP2_PARSER));
     if (Parser != NULL) {
-        memset (Parser, 0, sizeof(ASAP2_PARSER));
+        STRUCT_ZERO_INIT (*Parser, ASAP2_PARSER);
         Parser->Flags = Flags;
         Parser->LineNumber = 1;
         Parser->MaxStringSize = 1024;
@@ -199,65 +199,6 @@ char* ParseNextString (ASAP2_PARSER *Parser, int BufferedFlag)
                     DstPtr--;
                     RemoveComment2(Parser);
                     if (CharCounter) goto END_OF_STRING;
-#if 0
-                } else {
-                    // because of the speciale case that the strings /begin or /end are without whitespaces before or behind
-                    int TempLineNr;
-                    int CurrentOffset = CacheTell(Parser->Cache, &TempLineNr);
-                    switch (GetNextCharFromFile (Parser)) {
-                    case 'b':
-                        if (GetNextCharFromFile (Parser) == 'e') {
-                            if (GetNextCharFromFile (Parser) == 'g') {
-                                if (GetNextCharFromFile (Parser) == 'i') {
-                                    if (GetNextCharFromFile (Parser) == 'n') {
-                                        if (CharCounter) {
-                                            // direct following /begin without whitespaces
-                                            CacheSeek(Parser->Cache, CurrentOffset - 1, SEEK_SET, TempLineNr);
-                                            goto END_OF_STRING;
-                                        } else {
-                                            if (BufferedFlag) {
-                                                ThrowParserError (Parser, __FILE__, __LINE__, "/begin should not be buffered");
-                                                return NULL;
-                                            } else {
-                                                // we have detected a /begin
-                                                strcpy(DstPtr, "/begin");
-                                                CharCounter = 6;
-                                                DstPtr += 6;
-                                                goto END_OF_STRING;
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            break;
-                        case 'e':
-                            if (GetNextCharFromFile (Parser) == 'n') {
-                                if (GetNextCharFromFile (Parser) == 'd') {
-                                    if (CharCounter) {
-                                        // direct following /end without whitespaces
-                                        CacheSeek(Parser->Cache, CurrentOffset - 1, SEEK_SET, TempLineNr);
-                                        goto END_OF_STRING;
-                                    } else {
-                                        if (BufferedFlag) {
-                                            ThrowParserError (Parser, __FILE__, __LINE__, "/end should not be buffered");
-                                            return NULL;
-                                        } else {
-                                            // we have detected a /end
-                                            strcpy(DstPtr, "/end");
-                                            CharCounter = 4;
-                                            DstPtr += 4;
-                                            goto END_OF_STRING;
-                                        }
-                                    }
-                                }
-                            }
-                            break;
-                        default:
-                            break;
-                        }
-                        CacheSeek(Parser->Cache, CurrentOffset, SEEK_SET, TempLineNr);
-                    }
-#endif
                 }
             }
             break;

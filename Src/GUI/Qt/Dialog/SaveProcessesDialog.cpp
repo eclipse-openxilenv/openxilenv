@@ -24,6 +24,7 @@
 
 extern "C"
 {
+    #include "StringMaxChar.h"
     #include "DebugInfos.h"
     #include "LoadSaveToFile.h"
     #include "ThrowError.h"
@@ -189,7 +190,7 @@ void saveprocessesdialog::accept()
     }
     else {
         idx = ui->listWidgetProcesses->currentIndex().row();
-        strcpy(CurProcess, QStringToConstChar(ui->listWidgetProcesses->item(idx)->text()));
+        STRING_COPY_TO_ARRAY(CurProcess, QStringToConstChar(ui->listWidgetProcesses->item(idx)->text()));
     }
 
     IniFileDataBaseWriteString("BasicCalibrationSettings",
@@ -210,7 +211,7 @@ void saveprocessesdialog::accept()
         switch (ui->tabWidgetTarget->currentIndex()) {
         case 0:                  /* Save into a SVL file        */
         default:
-            strcpy(SvlFileName, QStringToConstChar(ui->lineEditSVL->text()));
+            STRING_COPY_TO_ARRAY(SvlFileName, QStringToConstChar(ui->lineEditSVL->text()));
             if (file_exists(SvlFileName)) {
                 if (ThrowError(ERROR_OKCANCEL, "File \"%s\" exists already. "
                                "Overwrite it ?", SvlFileName) == IDCANCEL) {
@@ -239,7 +240,7 @@ void saveprocessesdialog::accept()
             }
             break;
         case 1:                   /* Save into SAL file        */
-            strcpy(SalFileName, QStringToConstChar(ui->lineEditSAL->text()));
+            STRING_COPY_TO_ARRAY(SalFileName, QStringToConstChar(ui->lineEditSAL->text()));
             if (file_exists(SalFileName)) {
                 if (ThrowError(ERROR_OKCANCEL, "File \"%s\" exists already. "
                                "Overwrite it ?", SalFileName) == IDCANCEL) {
@@ -265,7 +266,7 @@ void saveprocessesdialog::accept()
             }
             break;
         case 2:                   /* Save into SATVL file        */
-            strcpy(SatvlFileName, QStringToConstChar(ui->lineEditSATVL->text()));
+            STRING_COPY_TO_ARRAY(SatvlFileName, QStringToConstChar(ui->lineEditSATVL->text()));
             if (file_exists(SatvlFileName)) {
                 if (ThrowError(ERROR_OKCANCEL, "File \"%s\" exists already. "
                                "Overwrite it ?", SatvlFileName) == IDCANCEL) {

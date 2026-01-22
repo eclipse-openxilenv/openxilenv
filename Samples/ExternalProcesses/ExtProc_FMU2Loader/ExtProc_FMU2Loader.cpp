@@ -82,6 +82,25 @@ int InitAll(int argc, char* argv[])
     char ExtractedFmuDirectrory[MAX_PATH];
     char ProcessName[MAX_PATH];
     int FmuParamsFlags;
+    char *Env;
+
+    if (((Env = getenv("REFERENCE_FMU_PARAMETERS")) != nullptr) &&
+        (strcmpi(Env, "yes") == 0)) {
+        Fmu.SyncParametersWithBlackboard = true;
+    } else {
+        Fmu.SyncParametersWithBlackboard = false;
+    }
+    if (((Env = getenv("FMU_LOGGING_FOLDER")) != nullptr) &&
+        (strlen(Env) > 0)) {
+        Fmu.LoggingEnable = true;
+        Fmu.LoggingFolder = (char*)malloc(strlen(Env) + 1);
+        if (Fmu.LoggingFolder != nullptr) {
+            strcpy(Fmu.LoggingFolder, Env);
+        }
+    } else {
+        Fmu.LoggingEnable = false;
+        Fmu.LoggingFolder = nullptr;
+    }
 
     if ((FmuParamsFlags = GetFmuPath(argc, argv, FmuFileName, ExtractedFmuDirectrory, MAX_PATH)) & 0x1) {  // es muss -fmu vorhanden sein!
 #ifdef _WIN32
@@ -281,8 +300,6 @@ int main(int argc, char* argv[])
     EXTERN_PROCESS_TASK_HANDLE Process;
     EXTERN_PROCESS_TASKS_LIST ExternProcessTasksList[1];
     int ExternProcessTasksListElementCount;
-
-    //DebugBreak();
 
 #ifdef HEAPCHECK
     HeapDump2File("c:\\temp\\a_1.txt");

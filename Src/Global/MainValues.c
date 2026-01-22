@@ -26,6 +26,7 @@
 #include "IniSectionEntryDefines.h"
 #include "Files.h"
 #include "StringMaxChar.h"
+#include "PrintFormatToString.h"
 #include "ConfigurablePrefix.h"
 #include "ThrowError.h"
 #include "InitProcess.h"
@@ -62,9 +63,9 @@ static void ReadRenameProcessFromTo(int par_Fd)
     char From[MAX_PATH], To[MAX_PATH];
 
     for (x = 0; x < 16; x++) {
-        sprintf(Entry, "Rename_%i_Process_From", x);
+        PrintFormatToString (Entry, sizeof(Entry), "Rename_%i_Process_From", x);
         if (IniFileDataBaseReadString(OPT_SECTION, Entry, "",  From, sizeof(From), par_Fd) > 0) {
-            sprintf(Entry, "Rename_%i_Process_To", x);
+            PrintFormatToString (Entry, sizeof(Entry), "Rename_%i_Process_To", x);
             if (IniFileDataBaseReadString(OPT_SECTION, Entry, "", To, sizeof(To), par_Fd) > 0) {
                 if ((s_main_ini_val.RenameProcessFromTo == NULL) || (s_main_ini_val.RenameProcessFromToPos >= s_main_ini_val.RenameProcessFromToSize)) {
                     s_main_ini_val.RenameProcessFromToSize += 8;
@@ -307,6 +308,7 @@ int ReadBasicConfigurationFromIni(MAIN_INI_VAL *sp_main_ini)
     sp_main_ini->StopGeneratorIfScriptStopped = 1;
     sp_main_ini->StopEquationIfScriptStopped = 1;
 
+    sp_main_ini->HideControlPanelLock = 0;
     IniFileDataBaseReadString (OPT_SECTION, "HideControlPanel",
                                 "no", tmp_str, sizeof (tmp_str), Fd);
     if (!strcmp (tmp_str, "yes")) sp_main_ini->HideControlPanel = 1;
@@ -334,7 +336,7 @@ int ReadBasicConfigurationFromIni(MAIN_INI_VAL *sp_main_ini)
     // Text window:
     sp_main_ini->TextDefaultShowUnitColumn = IniFileDataBaseReadYesNo (OPT_SECTION, "TextDefaultShowUnitColumn", 1, Fd);
     sp_main_ini->TextDefaultShowDispayTypeColumn = IniFileDataBaseReadYesNo (OPT_SECTION, "TextDefaultShowDispayTypeColumn", 1, Fd);
-    memset (sp_main_ini->TextDefaultFont, 0, sizeof (sp_main_ini->TextDefaultFont));
+    MEMSET (sp_main_ini->TextDefaultFont, 0, sizeof (sp_main_ini->TextDefaultFont));
     sp_main_ini->TextDefaultFontSize = 0;
     if (IniFileDataBaseReadString(OPT_SECTION, "TextDefaultFont", "", tmp_str, sizeof (tmp_str), Fd) > 0) {
         char *Name, *Size;
@@ -347,7 +349,7 @@ int ReadBasicConfigurationFromIni(MAIN_INI_VAL *sp_main_ini)
     }
     // oscilloscope window:
     sp_main_ini->OscilloscopeDefaultBufferDepth = IniFileDataBaseReadInt (OPT_SECTION, "OscilloscopeDefaultBufferDepth", 131072, Fd);
-    memset (sp_main_ini->OscilloscopeDefaultFont, 0, sizeof (sp_main_ini->OscilloscopeDefaultFont));
+    MEMSET (sp_main_ini->OscilloscopeDefaultFont, 0, sizeof (sp_main_ini->OscilloscopeDefaultFont));
     sp_main_ini->OscilloscopeDefaultFontSize = 0;
     if (IniFileDataBaseReadString(OPT_SECTION, "OscilloscopeDefaultFont", "", tmp_str, sizeof (tmp_str), Fd) > 0) {
         char *Name, *Size;
@@ -452,56 +454,56 @@ int WriteBasicConfigurationToIni(MAIN_INI_VAL *sp_main_ini)
     char tmp_str[MAX_PATH];
     int Fd = GetMainFileDescriptor();
 
-    sprintf(tmp_str, "%d", sp_main_ini->WriteProtectIniProcessList);
+    PrintFormatToString (tmp_str, sizeof(tmp_str), "%d", sp_main_ini->WriteProtectIniProcessList);
     if (IniFileDataBaseWriteString("InitStartProcesses", "WriteProtect",
                                  tmp_str, Fd) == 0) {
         return INI_WRITE_ERROR;
     }
 
-    sprintf(tmp_str, "%d", sp_main_ini->SwitchAutomaticSaveIniOff);
+    PrintFormatToString (tmp_str, sizeof(tmp_str), "%d", sp_main_ini->SwitchAutomaticSaveIniOff);
     if (IniFileDataBaseWriteString(OPT_SECTION, "SwitchOffAutomaticSaveIniFile",
                                  tmp_str, Fd) == 0) {
         return INI_WRITE_ERROR;
     }
 
-    sprintf(tmp_str, "%d", sp_main_ini->AskSaveIniAtExit);
+    PrintFormatToString (tmp_str, sizeof(tmp_str), "%d", sp_main_ini->AskSaveIniAtExit);
     if (IniFileDataBaseWriteString(OPT_SECTION, "AskToSaveIniFileAtExit",
                                  tmp_str, Fd) == 0) {
         return INI_WRITE_ERROR;
     }
 
-    sprintf(tmp_str, "%d", sp_main_ini->ShouldStopSchedulerWhileDialogOpen);
+    PrintFormatToString (tmp_str, sizeof(tmp_str), "%d", sp_main_ini->ShouldStopSchedulerWhileDialogOpen);
     if (IniFileDataBaseWriteString(OPT_SECTION, "StopSchedulerWhileDialogsAreOpen",
                                    tmp_str, Fd) == 0) {
         return INI_WRITE_ERROR;
     }
 
-    sprintf(tmp_str, "%d", sp_main_ini->SeparateCyclesForRefAndInitFunction);
+    PrintFormatToString (tmp_str, sizeof(tmp_str), "%d", sp_main_ini->SeparateCyclesForRefAndInitFunction);
     if (IniFileDataBaseWriteString(OPT_SECTION, "SeparateCyclesForRefAndInitFunction",
                                    tmp_str, Fd) == 0)
     {
         return INI_WRITE_ERROR;
     }
 
-    sprintf(tmp_str, "%d", sp_main_ini->RememberReferencedLabels);
+    PrintFormatToString (tmp_str, sizeof(tmp_str), "%d", sp_main_ini->RememberReferencedLabels);
     if (IniFileDataBaseWriteString(OPT_SECTION, "RememberManualReferencedLabels",
                                  tmp_str, Fd) == 0) {
         return INI_WRITE_ERROR;
     }
 
-    sprintf(tmp_str, "%d", sp_main_ini->NotFasterThanRealTime);
+    PrintFormatToString (tmp_str, sizeof(tmp_str), "%d", sp_main_ini->NotFasterThanRealTime);
     if (IniFileDataBaseWriteString(OPT_SECTION, "NotFasterThanRealtime",
                                  tmp_str, Fd) == 0) {
         return INI_WRITE_ERROR;
     }
 
-    sprintf(tmp_str, "%d", sp_main_ini->UseRelativePaths);
+    PrintFormatToString (tmp_str, sizeof(tmp_str), "%d", sp_main_ini->UseRelativePaths);
     if (IniFileDataBaseWriteString(OPT_SECTION, "UseRelativePathes",
                                  tmp_str, Fd) == 0) {
         return INI_WRITE_ERROR;
     }
 
-    sprintf(tmp_str, "%d", sp_main_ini->SuppressDisplayNonExistValues);
+    PrintFormatToString (tmp_str, sizeof(tmp_str), "%d", sp_main_ini->SuppressDisplayNonExistValues);
     if (IniFileDataBaseWriteString(OPT_SECTION, "SuppressDisplayNonExistingValues",
                                  tmp_str, Fd) == 0) {
         return INI_WRITE_ERROR;
@@ -517,37 +519,37 @@ int WriteBasicConfigurationToIni(MAIN_INI_VAL *sp_main_ini)
         return INI_WRITE_ERROR;
     }
 
-    sprintf(tmp_str, "%d", sp_main_ini->MainWindowWidth);
+    PrintFormatToString (tmp_str, sizeof(tmp_str), "%d", sp_main_ini->MainWindowWidth);
     if (IniFileDataBaseWriteString(OPT_SECTION, OPT_XDIM_TEXT,
                                 tmp_str, Fd) == 0) {
         return INI_WRITE_ERROR;
     }
 
-    sprintf(tmp_str, "%d", sp_main_ini->MainWindowHeight);
+    PrintFormatToString (tmp_str, sizeof(tmp_str), "%d", sp_main_ini->MainWindowHeight);
     if (IniFileDataBaseWriteString(OPT_SECTION, OPT_YDIM_TEXT,
                                 tmp_str, Fd) == 0) {
         return INI_WRITE_ERROR;
     }
 
-    sprintf(tmp_str, "%d", sp_main_ini->Maximized);
+    PrintFormatToString (tmp_str, sizeof(tmp_str), "%d", sp_main_ini->Maximized);
     if (IniFileDataBaseWriteString(OPT_SECTION, OPT_MAXIMIZED_TEXT,
                                 tmp_str, Fd) == 0) {
         return INI_WRITE_ERROR;
     }
 
-    sprintf(tmp_str, "%d", sp_main_ini->ControlPanelXPos);
+    PrintFormatToString (tmp_str, sizeof(tmp_str), "%d", sp_main_ini->ControlPanelXPos);
     if (IniFileDataBaseWriteString(OPT_SECTION, OPT_CPNL_XPOS_TEXT,
                                 tmp_str, Fd) == 0) {
         return INI_WRITE_ERROR;
     }
 
-    sprintf(tmp_str, "%d", sp_main_ini->ControlPanelYPos);
+    PrintFormatToString (tmp_str, sizeof(tmp_str), "%d", sp_main_ini->ControlPanelYPos);
     if (IniFileDataBaseWriteString(OPT_SECTION, OPT_CPNL_YPOS_TEXT,
                                 tmp_str, Fd) == 0) {
         return INI_WRITE_ERROR;
     }
 
-    sprintf(tmp_str, "%d", sp_main_ini->NumberOfNextCycles);
+    PrintFormatToString (tmp_str, sizeof(tmp_str), "%d", sp_main_ini->NumberOfNextCycles);
     if (IniFileDataBaseWriteString(OPT_SECTION, OPT_CYCLES_TEXT,
                                 tmp_str, Fd) == 0) {
         return INI_WRITE_ERROR;
@@ -559,7 +561,7 @@ int WriteBasicConfigurationToIni(MAIN_INI_VAL *sp_main_ini)
         return INI_WRITE_ERROR;
     }
 
-    sprintf(tmp_str, "%d", sp_main_ini->BlackboardSize);
+    PrintFormatToString (tmp_str, sizeof(tmp_str), "%d", sp_main_ini->BlackboardSize);
     if (IniFileDataBaseWriteString(OPT_SECTION, OPT_BB_SIZE_TEXT,
                                 tmp_str, Fd) == 0) {
         return INI_WRITE_ERROR;
@@ -592,23 +594,23 @@ int WriteBasicConfigurationToIni(MAIN_INI_VAL *sp_main_ini)
     IniFileDataBaseWriteString(OPT_SECTION, "Priority",
                               sp_main_ini->Priority, Fd);
 
-    sprintf(tmp_str, "%i", DisplayUnitForNonePhysicalValues);
+    PrintFormatToString (tmp_str, sizeof(tmp_str), "%i", DisplayUnitForNonePhysicalValues);
     IniFileDataBaseWriteString(OPT_SECTION, "DisplayUnitForNonePhysicalValues",
                               tmp_str, Fd);
 
-    sprintf(tmp_str, "%i", sp_main_ini->StatusbarCar);
+    PrintFormatToString (tmp_str, sizeof(tmp_str), "%i", sp_main_ini->StatusbarCar);
     IniFileDataBaseWriteString(OPT_SECTION, "StatusbarCar",
                               tmp_str, Fd);
     IniFileDataBaseWriteString(OPT_SECTION, "StatusbarCarSpeed",
                               sp_main_ini->SpeedStatusbarCar, Fd);
-    sprintf(tmp_str, "%i", sp_main_ini->NoCaseSensitiveFilters);
+    PrintFormatToString (tmp_str, sizeof(tmp_str), "%i", sp_main_ini->NoCaseSensitiveFilters);
     IniFileDataBaseWriteString(OPT_SECTION, "NoCaseSensitiveFilters",
                               tmp_str, Fd);
-    sprintf(tmp_str, "%i", sp_main_ini->AsapCombatibleLabelnames);
+    PrintFormatToString (tmp_str, sizeof(tmp_str), "%i", sp_main_ini->AsapCombatibleLabelnames);
     IniFileDataBaseWriteString(OPT_SECTION, "AsapCombatibleLabelNames",
                               tmp_str, Fd);
 
-    sprintf(tmp_str, "%i", sp_main_ini->ReplaceAllNoneAsapCombatibleChars);
+    PrintFormatToString (tmp_str, sizeof(tmp_str), "%i", sp_main_ini->ReplaceAllNoneAsapCombatibleChars);
     IniFileDataBaseWriteString(OPT_SECTION, "ReplaceAllNoneAsapCombatibleChars",
                               tmp_str, Fd);
 
@@ -665,9 +667,9 @@ int WriteBasicConfigurationToIni(MAIN_INI_VAL *sp_main_ini)
         break;
     }
     IniFileDataBaseWriteString (OPT_SECTION, "DefaultMinMaxValues", tmp_str, Fd);
-    sprintf (tmp_str, "%g", sp_main_ini->MinMinValues);
+    PrintFormatToString (tmp_str, sizeof(tmp_str), "%g", sp_main_ini->MinMinValues);
     IniFileDataBaseWriteString (OPT_SECTION, "DefaultMinMinValue", tmp_str, Fd);
-    sprintf (tmp_str, "%g", sp_main_ini->MaxMaxValues);
+    PrintFormatToString (tmp_str, sizeof(tmp_str), "%g", sp_main_ini->MaxMaxValues);
     IniFileDataBaseWriteString (OPT_SECTION, "DefaultMaxMaxValue", tmp_str, Fd);
     IniFileDataBaseWriteString (OPT_SECTION, "TerminateScript",
                                sp_main_ini->TerminateScript, Fd);
@@ -709,10 +711,10 @@ int WriteBasicConfigurationToIni(MAIN_INI_VAL *sp_main_ini)
     IniFileDataBaseWriteYesNo (OPT_SECTION, "TextDefaultShowDispayTypeColumn", sp_main_ini->TextDefaultShowDispayTypeColumn, Fd);
     if (strlen(sp_main_ini->TextDefaultFont)) {
         char Help[16];
-        sprintf (Help, "%i", sp_main_ini->TextDefaultFontSize);
+        PrintFormatToString (Help, sizeof(Help), "%i", sp_main_ini->TextDefaultFontSize);
         StringCopyMaxCharTruncate(tmp_str, sp_main_ini->TextDefaultFont, sizeof(tmp_str));
-        StringAppendMaxCharTruncate(tmp_str, ", ", sizeof(tmp_str));
-        StringAppendMaxCharTruncate(tmp_str, Help, sizeof(tmp_str));
+        STRING_APPEND_TO_ARRAY(tmp_str, ", ");
+        STRING_APPEND_TO_ARRAY(tmp_str, Help);
         IniFileDataBaseWriteString (OPT_SECTION, "TextDefaultFont", tmp_str, Fd);
     } else {
         IniFileDataBaseWriteString (OPT_SECTION, "TextDefaultFont", NULL, Fd);
@@ -721,10 +723,10 @@ int WriteBasicConfigurationToIni(MAIN_INI_VAL *sp_main_ini)
     IniFileDataBaseWriteInt (OPT_SECTION, "OscilloscopeDefaultBufferDepth", sp_main_ini->OscilloscopeDefaultBufferDepth, Fd);
     if (strlen(sp_main_ini->OscilloscopeDefaultFont)) {
         char Help[16];
-        sprintf (Help, "%i", sp_main_ini->OscilloscopeDefaultFontSize);
+        PrintFormatToString (Help, sizeof(Help), "%i", sp_main_ini->OscilloscopeDefaultFontSize);
         StringCopyMaxCharTruncate(tmp_str, sp_main_ini->OscilloscopeDefaultFont, sizeof(tmp_str));
-        StringAppendMaxCharTruncate(tmp_str, ", ", sizeof(tmp_str));
-        StringAppendMaxCharTruncate(tmp_str, Help, sizeof(tmp_str));
+        STRING_APPEND_TO_ARRAY(tmp_str, ", ");
+        STRING_APPEND_TO_ARRAY(tmp_str, Help);
         IniFileDataBaseWriteString (OPT_SECTION, "OscilloscopeDefaultFont", tmp_str, Fd);
     } else {
         IniFileDataBaseWriteString (OPT_SECTION, "OscilloscopeDefaultFont", NULL, Fd);

@@ -19,6 +19,8 @@
 #include "Blackboard.h"
 #include "ThrowError.h"
 #include "MyMemory.h"
+#include "PrintFormatToString.h"
+#include "MemZeroAndCopy.h"
 #include "BlackboardAccess.h"
 #include "ExecutionStack.h"
 #include "ScriptMessageFile.h"
@@ -201,7 +203,7 @@ int RemoveVariableFromCopyLists (int Pid, int Vid, unsigned long long UniqueId, 
 {
     int Ret = 0;
     TASK_CONTROL_BLOCK *Tcb;
-    int Dir;
+    int Dir = 0;
 
     Tcb = GetPointerToTaskControlBlock (Pid);
     if (Tcb == NULL) {
@@ -374,7 +376,7 @@ static int RangeControlCheck (TASK_CONTROL_BLOCK *Tcb, PIPE_MESSAGE_REF_COPY_LIS
             }
             if (Output) {
                 char Text[1024];
-                sprintf (Text, "Variable %s = %g%s become smaler than it's min value %g",
+                PrintFormatToString (Text, sizeof(Text), "Variable %s = %g%s become smaler than it's min value %g",
                          blackboard[vid_index].pAdditionalInfos->Name, Value, Phys ? " (Phys)": "", blackboard[vid_index].pAdditionalInfos->Min);
                 switch (Output) {
                 case 1:
@@ -408,7 +410,7 @@ static int RangeControlCheck (TASK_CONTROL_BLOCK *Tcb, PIPE_MESSAGE_REF_COPY_LIS
             }
             if (Output) {
                 char Text[1024];
-                sprintf (Text, "Variable %s = %g%s become larger than it's max value %g",
+                PrintFormatToString (Text, sizeof(Text), "Variable %s = %g%s become larger than it's max value %g",
                          blackboard[vid_index].pAdditionalInfos->Name, Value, Phys ? " (Phys)": "", blackboard[vid_index].pAdditionalInfos->Max);
                 switch (Output) {
                 case 1:
@@ -851,7 +853,7 @@ static void FreeOneCopyList(PIPE_MESSAGE_REF_COPY_LIST *par_CopyList)
     if (par_CopyList->pElems != NULL) {
         my_free (par_CopyList->pElems);
     }
-    memset (par_CopyList, 0, sizeof (*par_CopyList));
+    STRUCT_ZERO_INIT(*par_CopyList, PIPE_MESSAGE_REF_COPY_LIST);
 }
 
 void FreeCopyLists (PIPE_MESSAGE_REF_COPY_LISTS *par_CopyLists)

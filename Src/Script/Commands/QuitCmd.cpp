@@ -22,6 +22,7 @@
 extern "C" {
 #include "Config.h"
 #include "MyMemory.h"
+#include "PrintFormatToString.h"
 #include "ConfigurablePrefix.h"
 #include "Message.h"
 #include "EquationParser.h"
@@ -48,7 +49,7 @@ int cExitToDosCmd::Execute (cParser *par_Parser, cExecutor *par_Executor)
         Len += strlen(par_Parser->GetParameter (0));
         Len += 1; // for termination character
         char *Buffer = static_cast<char*>(my_malloc(Len));
-        sprintf (Buffer, "%s=%s", GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_OWN_EXIT_CODE), par_Parser->GetParameter (0));
+        PrintFormatToString (Buffer, Len, "%s=%s", GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_OWN_EXIT_CODE), par_Parser->GetParameter (0));
         direct_solve_equation (Buffer);
         my_free(Buffer);
     }
@@ -57,7 +58,7 @@ int cExitToDosCmd::Execute (cParser *par_Parser, cExecutor *par_Executor)
     Len += strlen("exit=1");
     Len += 1; // for termination character
     char *Buffer = static_cast<char*>(my_malloc(Len));
-    sprintf (Buffer, "%sexit=1", GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_SHORT_BLACKBOARD));
+    PrintFormatToString (Buffer, Len, "%sexit=1", GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_SHORT_BLACKBOARD));
     direct_solve_equation (Buffer);
     my_free(Buffer);
     return 0xE0F;  // 0xEOF not EOF

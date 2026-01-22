@@ -19,8 +19,8 @@
 #include <stdio.h>
 
 #include "MyMemory.h"
+#include "StringMaxChar.h"
 #include "MainValues.h"
-//#include "toolbar.h"
 #include "Blackboard.h"
 #include "ThrowError.h"
 
@@ -112,13 +112,16 @@ static int PushToStack (char *Name, char *Value)
 
 static char * AllocYesNo (int Value)
 {
-    char *Ret = my_malloc(4);
+    char *Ret;
+    if (Value) {
+        Ret = StringMalloc ("Yes");
+    } else {
+        Ret = StringMalloc ("No");
+    }
     if (Ret == NULL) {
         ThrowError (1, "out of memory");
         return NULL;
     }
-    if (Value) strcpy (Ret, "Yes");
-    else strcpy (Ret, "No");
     return Ret;
 }
 
@@ -314,17 +317,17 @@ static int ADD_BBVARI_DEFAULT_UNIT_set_func (int OnlyCheckFlag, const char* Valu
             Err = -1;
         }
     }
-    if (!Err && !OnlyCheckFlag) strcpy (s_main_ini_val.Script_ADD_BBVARI_DefaultUnit, Value);
+    if (!Err && !OnlyCheckFlag) {
+        STRING_COPY_TO_ARRAY (s_main_ini_val.Script_ADD_BBVARI_DefaultUnit, Value);
+    }
     return Err;
 }
 static char* ADD_BBVARI_DEFAULT_UNIT_get_func (void)
 {
-    char *Buffer = my_malloc (strlen(s_main_ini_val.Script_ADD_BBVARI_DefaultUnit) + 1);
+    char *Buffer = StringMalloc (s_main_ini_val.Script_ADD_BBVARI_DefaultUnit);
     if (Buffer == NULL) {
         ThrowError (1, "out of memory");
         return NULL;
-    } else {
-        strcpy (Buffer, s_main_ini_val.Script_ADD_BBVARI_DefaultUnit);
     }
     return Buffer;
 }

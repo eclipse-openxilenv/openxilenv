@@ -27,6 +27,7 @@
 #include <QLineEdit>
 
 extern "C" {
+#include "PrintFormatToString.h"
 #include "TextReplace.h"
 #include "ThrowError.h"
 }
@@ -111,7 +112,7 @@ QWidget *ColorDelegate::createEditor(QWidget *par_Parent,
             Model->setData (Model->index(par_Index.row(), 3),
                             QVariant::fromValue (ColorView(ColorInt)));
             char Help[64];
-            sprintf (Help, "0x%02X:0x%02X:0x%02X", (ColorInt >> 0) & 0xFF, (ColorInt >> 8) & 0xFF, (ColorInt >> 16) & 0xFF);
+            PrintFormatToString (Help, sizeof(Help), "0x%02X:0x%02X:0x%02X", (ColorInt >> 0) & 0xFF, (ColorInt >> 8) & 0xFF, (ColorInt >> 16) & 0xFF);
             Model->setData (Model->index(par_Index.row(), 4), QVariant::fromValue (QString  (Help)));
         }
 
@@ -348,7 +349,7 @@ void EditTextReplaceDialog::InsertReplaceStringBeginAt (QString &par_TextReplace
         m_proxyModel->setData (m_proxyModel->index(Row, 3),
                                QVariant::fromValue (ColorView(Color)));
         char Help[64];
-        sprintf (Help, "0x%02X:0x%02X:0x%02X", (Color >> 0) & 0xFF, (Color >> 8) & 0xFF, (Color >> 16) & 0xFF);
+        PrintFormatToString (Help, sizeof(Help), "0x%02X:0x%02X:0x%02X", (Color >> 0) & 0xFF, (Color >> 8) & 0xFF, (Color >> 16) & 0xFF);
         m_proxyModel->setData (m_proxyModel->index(Row, 4), QVariant::fromValue (QString  (Help)));
         Row++;
         Index++;
@@ -391,7 +392,7 @@ QString EditTextReplaceDialog::GetModifiedTextReplaceString ()
         int ColorInt = Color.ColorInt();
         if (ColorInt >= 0) {  // valid color
             char Help[64];
-            sprintf (Help, "RGB(0x%02X:0x%02X:0x%02X)", (ColorInt >> 0) & 0xFF, (ColorInt >> 8) & 0xFF, (ColorInt >> 16) & 0xFF);
+            PrintFormatToString (Help, sizeof(Help), "RGB(0x%02X:0x%02X:0x%02X)", (ColorInt >> 0) & 0xFF, (ColorInt >> 8) & 0xFF, (ColorInt >> 16) & 0xFF);
             Ret.append (QString (Help));
         }
         // Name
@@ -428,7 +429,7 @@ QString EditTextReplaceDialog::GetTextSelectedReplaceString ()
             int ColorInt = Color.ColorInt();
             if (ColorInt >= 0) {  // valid color
                 char Help[64];
-                sprintf (Help, "RGB(0x%02X:0x%02X:0x%02X)", (ColorInt >> 0) & 0xFF, (ColorInt >> 8) & 0xFF, (ColorInt >> 16) & 0xFF);
+                PrintFormatToString (Help, sizeof(Help), "RGB(0x%02X:0x%02X:0x%02X)", (ColorInt >> 0) & 0xFF, (ColorInt >> 8) & 0xFF, (ColorInt >> 16) & 0xFF);
                 Ret.append (QString (Help));
             }
             // Name

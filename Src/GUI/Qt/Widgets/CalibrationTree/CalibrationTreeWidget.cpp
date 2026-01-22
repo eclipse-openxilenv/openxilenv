@@ -29,6 +29,8 @@
 #include "CalibrationTreeAddReferenceDialog.h"
 
 extern "C" {
+#include "StringMaxChar.h"
+#include "PrintFormatToString.h"
 #include "Scheduler.h"
 #include "Blackboard.h"
 #include "BlackboardConvertFromTo.h"
@@ -199,24 +201,24 @@ bool CalibrationTreeWidget::writeToIni()
     ScQt_IniFileDataBaseWriteString (SectionPath, "type", "CalibrationTree", Fd);
     ScQt_IniFileDataBaseWriteString (SectionPath, "process", m_ProcessName, Fd);
     ScQt_IniFileDataBaseWriteString (SectionPath, "filter", m_Filter, Fd);
-    sprintf (txt, "%i", m_ConstOnly);
+    PrintFormatToString (txt, sizeof(txt), "%i", m_ConstOnly);
     ScQt_IniFileDataBaseWriteString (SectionPath, "const only", txt, Fd);
-    sprintf (txt, "%i", m_ShowValues);
+    PrintFormatToString (txt, sizeof(txt), "%i", m_ShowValues);
     ScQt_IniFileDataBaseWriteString (SectionPath, "show values", txt, Fd);
-    sprintf (txt, "%i", m_ShowAddress);
+    PrintFormatToString (txt, sizeof(txt), "%i", m_ShowAddress);
     ScQt_IniFileDataBaseWriteString (SectionPath, "show address", txt, Fd);
-    sprintf (txt, "%i", m_ShowType);
+    PrintFormatToString (txt, sizeof(txt), "%i", m_ShowType);
     ScQt_IniFileDataBaseWriteString (SectionPath, "show type", txt, Fd);
-    sprintf (txt, "%i", m_HexOrDec);
+    PrintFormatToString (txt, sizeof(txt), "%i", m_HexOrDec);
     ScQt_IniFileDataBaseWriteString(SectionPath, "hex or dec", txt, Fd);
 
-    sprintf (txt, "%i", m_View->columnWidth(0));
+    PrintFormatToString (txt, sizeof(txt), "%i", m_View->columnWidth(0));
     ScQt_IniFileDataBaseWriteString(SectionPath, "column width label", txt, Fd);
-    sprintf (txt, "%i", m_View->columnWidth(1));
+    PrintFormatToString (txt, sizeof(txt), "%i", m_View->columnWidth(1));
     ScQt_IniFileDataBaseWriteString(SectionPath, "column width value", txt, Fd);
-    sprintf (txt, "%i", m_View->columnWidth(2));
+    PrintFormatToString (txt, sizeof(txt), "%i", m_View->columnWidth(2));
     ScQt_IniFileDataBaseWriteString(SectionPath, "column width address", txt, Fd);
-    sprintf (txt, "%i", m_View->columnWidth(3));
+    PrintFormatToString (txt, sizeof(txt), "%i", m_View->columnWidth(3));
     ScQt_IniFileDataBaseWriteString(SectionPath, "column width type", txt, Fd);
     if (m_IncExcFilter != nullptr) {
         SaveIncludeExcludeListsToIni (m_IncExcFilter, QStringToConstChar(SectionPath), "", Fd);
@@ -286,7 +288,7 @@ void CalibrationTreeWidget::OpenConfigDialog (void)
         m_HexOrDec = Dlg.GetHexOrDec();
         m_Model->SetHexOrDecViewFlag (m_HexOrDec);
         char NewProcessName[MAX_PATH];
-        Dlg.GetProcessName (NewProcessName);
+        Dlg.GetProcessName (NewProcessName, sizeof(NewProcessName));
         INCLUDE_EXCLUDE_FILTER *NewIncExcFilter = Dlg.GetFilter();
         FilterChanged = CompareIncludeExcludeFilter (m_IncExcFilter, NewIncExcFilter) != 0;
         ProcessNameChanged = Compare2ProcessNames (m_ProcessName, NewProcessName) != 0;
@@ -300,7 +302,7 @@ void CalibrationTreeWidget::OpenConfigDialog (void)
 
         if (ProcessNameChanged) {
             // Process name has changed
-            strcpy (m_ProcessName, NewProcessName);
+            STRING_COPY_TO_ARRAY (m_ProcessName, NewProcessName);
             if (m_DebugInfos != nullptr) {
                 RemoveConnectFromProcessDebugInfos (m_UniqueNumber);
             }

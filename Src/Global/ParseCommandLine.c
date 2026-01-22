@@ -58,8 +58,8 @@ int SaveCommandArgs(int argc, char *argv[])
     }
     CommandLineBuffer[0] = 0;
     for (x = 1; x < argc; x++) {
-        strcat(CommandLineBuffer, argv[x]);
-        if (x < (argc-1)) strcat(CommandLineBuffer, " ");
+        StringAppendMaxCharTruncate(CommandLineBuffer, argv[x], Len);
+        if (x < (argc-1)) StringAppendMaxCharTruncate(CommandLineBuffer, " ", Len);
     }
     return 0;
 }
@@ -180,13 +180,11 @@ int ParseCommandLine (char *ret_IniFile, unsigned int par_MaxCharsIniFile,
     lpCmdLineSys = GetCommandLineSavedBuffer ();
 #endif
     // Make a copy the string will changed
-    lpCmdLine = my_malloc (strlen (lpCmdLineSys)+1);
+    lpCmdLine = StringMalloc (lpCmdLineSys);
     if (lpCmdLine == NULL) {
         ThrowError (1, "out of memory");
         return -1;
     }
-    strcpy (lpCmdLine, lpCmdLineSys);
-
 
     // Search inside the complete command line string
     for (szCmdLine = lpCmdLine; (szToken = GetNextParameter(&szCmdLine, " ")) != NULL;) {
@@ -412,7 +410,7 @@ int ParseCommandLine (char *ret_IniFile, unsigned int par_MaxCharsIniFile,
             ThrowError (1, "too many call froms (will be ignored)");
         } else if (Ret > 0) {
             if (strlen (Instance) < par_MaxCharsInstance) {
-                strcpy (ret_Instance, Instance);
+                StringCopyMaxCharTruncate (ret_Instance, Instance, par_MaxCharsInstance);
             } else {
                 MEMCPY (ret_Instance, Instance, par_MaxCharsInstance-1);
                 ret_Instance[par_MaxCharsInstance-1] = 0;

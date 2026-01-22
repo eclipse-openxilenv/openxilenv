@@ -108,6 +108,7 @@ typedef struct SCHEDULER_DATA_STRUCT {
 
     int SchedulerHaveRecogizedTerminationRequeFlag;
 
+    int CycleDiffTimeVid;
 } SCHEDULER_DATA;
 
 int GetSchedulerCount (void);
@@ -140,7 +141,7 @@ TASK_CONTROL_BLOCK * GetPointerToTaskControlBlock (PID pid);
 int Compare2ProcessNames (const char *pn1, const char *pn2);
 int Compare2ExecutableNames (const char *par_Name1, const char *par_Name2);
 
-int TruncatePathFromProcessName (char *DestProcessName, const char *SourceProcessName);
+int TruncatePathFromProcessName (char *DestProcessName, const char *SourceProcessName, int Maxc);
 int TruncatePathAndTaskNameFromProcessName (char *DestProcessName, char *SourceProcessName);
 int TruncateTaskNameFromProcessName (char *DestProcessName, char *SourceProcessName);
 
@@ -157,14 +158,14 @@ void TerminatePipeScheduler (void);
 
 // This wil define the number of cycles the scheduler should run.
 // Afterwards it should call the callback function Callback(CallbackParameter)
-int make_n_next_cycles (int FromUser, uint64_t nextcyclecount,
-                        void (*Callback)(void*), void *CallbackParameter);
+int make_n_next_cycles (int FromUser, uint64_t nextcyclecount, const char *Equation,
+                       void (*Callback)(void*), void *CallbackParameter);
 
 SCHEDULER_DATA *GetSchedulerProcessIsRunning (int Pid);
 int GetSchedulerNameProcessIsRunning (char *ProcessName, char *ret_SchedulerName, int par_MaxChars);
 
 int GetProsessExeFilename (char *ProcessName, char *ret_ExeFilename, int par_MaxChars);
-int GetProcessNameWithoutPath (int pid, char *pname);
+int GetProcessNameWithoutPath (int pid, char *pname, int maxc);
 
 int WaitUntilProcessIsNotActiveAndThanLockItEx (int par_Pid, int par_MaxWaitTime, int par_ErrorBehavior, const char *par_OperationDescription,
                                                 int *ret_PidsSameExe, int *ret_PidsSameExeCount, int par_SizeOfPidsSameExe,
@@ -183,11 +184,12 @@ void InitWaitUntilProcessIsNotActive (TASK_CONTROL_BLOCK *pTcb);
 void TerminatWaitUntilProcessIsNotActive (TASK_CONTROL_BLOCK *pTcb);
 
 int get_process_state (PID pid);
-int GetProcessLongName (PID par_Pid, char *ret_Name);
-int GetProcessShortName (PID par_Pid, char *ret_Name);
-int GetProcessExecutableName (PID par_Pid, char *ret_Name);
-int GetProcessInsideExecutableName (PID par_Pid, char *ret_Name);
-int GetProcessPidAndExecutableAndDllName (char *par_Name, char *ret_ExecutableName, char *ret_DllName, int *ret_ProcessInsideExecutableNumber);
+int GetProcessLongName (PID par_Pid, char *ret_Name, int par_Maxc);
+int GetProcessShortName (PID par_Pid, char *ret_Name, int Maxc);
+int GetProcessExecutableName (PID par_Pid, char *ret_Name, int Maxc);
+int GetProcessInsideExecutableName (PID par_Pid, char *ret_Name, int Maxc);
+int GetProcessPidAndExecutableAndDllName (char *par_Name, char *ret_ExecutableName, int par_ExecutableName_Maxc,
+                                          char *ret_DllName, int par_DllName_Maxc, int *ret_ProcessInsideExecutableNumber);
 int GetProsessLongExeFilename (const char *par_ProcessName, char *ret_ExeFilename, int par_MaxChars);
 int GetProsessShortExeFilename (const char *par_ProcessName, char *ret_ExeFilename, int par_MaxChars);
 int GetShortDllFilename (const char *par_DllLongName, char *ret_DllShortName, int par_MaxChars);
@@ -198,24 +200,24 @@ char *GetAllProcessNamesSemicolonSeparated (void);
 char *GetProcessInsideExecutionFunctionSemicolonSeparated (void);
 
 int read_extprocinfos_from_ini (int par_Fd,
-                                const char *ext_proc_name,
-                                int *priority,
-                                int *time_steps,
-                                int *delay,
-                                int *timeout,
-                                char *RangeErrorCounter,
-                                char *RangeControl,
-                                unsigned int *RangeControlFlags,
-                                char *BBPrefix,
-                                char *Scheduler,
-                                char *BarriersBeforeOnlySignal,
-                                char *BarriersBeforeSignalAndWait,
-                                char *BarriersBehindOnlySignal,
-                                char *BarriersBehindSignalAndWait,
-                                char *BarriersLoopOutBeforeOnlySignal,
-                                char *BarriersLoopOutBeforeSignalAndWait,
-                                char *BarriersLoopOutBehindOnlySignal,
-                                char *BarriersLoopOutBehindSignalAndWait);
+                               const char *ext_proc_name,
+                               int *priority,
+                               int *time_steps,
+                               int *delay,
+                               int *timeout,
+                               char *RangeErrorCounter, int RangeErrorCounter_Maxc,
+                               char *RangeControl, int RangeControl_Maxc,
+                               unsigned int *RangeControlFlags,
+                               char *BBPrefix, int BBPrefix_Maxc,
+                               char *Scheduler, int Scheduler_Maxc,
+                               char *BarriersBeforeOnlySignal, int BarriersBeforeOnlySignal_Maxc,
+                               char *BarriersBeforeSignalAndWait, int BarriersBeforeSignalAndWait_Maxc,
+                               char *BarriersBehindOnlySignal, int BarriersBehindOnlySignal_Maxc,
+                               char *BarriersBehindSignalAndWait, int BarriersBehindSignalAndWait_Maxc,
+                               char *BarriersLoopOutBeforeOnlySignal, int BarriersLoopOutBeforeOnlySignal_Maxc,
+                               char *BarriersLoopOutBeforeSignalAndWait, int BarriersLoopOutBeforeSignalAndWait_Maxc,
+                               char *BarriersLoopOutBehindOnlySignal, int BarriersLoopOutBehindOnlySignal_Maxc,
+                               char *BarriersLoopOutBehindSignalAndWait, int BarriersLoopOutBehindSignalAndWait_Maxc);
 
 int write_extprocinfos_to_ini (int par_Fd,
                                const char *ext_proc_name,
@@ -261,7 +263,7 @@ void DelBehindProcessEquationFile (const char *ProcessName);
 void SetSVLFileLoadedBeforeInitProcessFileName (const char *ProcessName,
                                                 const char *SVLFileName, int INIFlag);
 int GetSVLFileLoadedBeforeInitProcessFileName (const char *ProcessName,
-                                               char *SVLFileName);
+                                              char *SVLFileName, int Maxc);
 
 int CheckIfAllSchedulerAreTerminated (void);
 void TerminateAllSchedulerRequest (void);
@@ -297,7 +299,7 @@ int CheckBreakPoint (void);
 HANDLE get_extern_process_handle_by_pid (int pid);
 DWORD get_extern_process_windows_id_by_pid (int pid);
 
-int lives_process_inside_dll (const char *ProcessName, char *ret_DllName);
+int lives_process_inside_dll (const char *ProcessName, char *ret_DllName, int Maxc);
 
 int GetExternProcessIndexInsideExecutable (int Pid);
 int IsExternProcess64BitExecutable (int Pid);
@@ -351,7 +353,7 @@ int get_process_info_internal_debug (PID pid,
 TASK_CONTROL_BLOCK *get_process_info (PID pid);
 
 PID get_pid_by_name (const char *name);
-int get_name_by_pid (PID pid, char *name);
+int get_name_by_pid (PID pid, char *name, int maxc);
 
 
 double GetRealtimeFactor(void);
@@ -387,7 +389,7 @@ int terminate_process (PID pid);
 
 int GetExternProcessBaseAddress (int Pid, uint64_t *ret_Address, char *ExecutableName);
 
-int get_real_running_process_name (char *pname);
+int get_real_running_process_name (char *pname, int maxc);
 
 typedef struct {
     char *Ptr;
@@ -411,12 +413,12 @@ int SetPriority(char *txt);
 void SetSVLFileLoadedBeforeInitProcessFileName (const char *ProcessName,
                                                 const char *SVLFileName, int INIFlag);
 int GetSVLFileLoadedBeforeInitProcessFileName (const char *ProcessName,
-                                               char *SVLFileName);
+                                               char *SVLFileName, int Maxc);
 void SetA2LFileAssociatedToProcessFileName (const char *ProcessName,
                                             const char *A2LFileName, int UpdateAddrFlag, int INIFlag);
 int GetA2LFileAssociatedProcessFileName (const char *ProcessName,
-                                         char *A2LFileName,
-                                         int *UpdateAddrFlag);
+                                        char *A2LFileName, int Maxc,
+                                        int *UpdateAddrFlag);
 int DisconnectA2LFromProcess(int par_Pid);
 
 

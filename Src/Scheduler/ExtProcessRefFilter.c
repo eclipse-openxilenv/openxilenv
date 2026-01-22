@@ -21,6 +21,7 @@
 #include <stdlib.h>
 #include "MyMemory.h"
 #include "StringMaxChar.h"
+#include "PrintFormatToString.h"
 #include "ThrowError.h"
 #include "Files.h"
 #include "ReadConfig.h"
@@ -99,7 +100,7 @@ int BuildExternProcessReferenceFilter(int par_Pid, const char *par_ProcessPath)
     int Ret;
     int Idx;
 
-    sprintf (Label, "%s.RefFilter", par_ProcessPath);
+    PrintFormatToString (Label, sizeof(Label), "%s.RefFilter", par_ProcessPath);
     FILE *fh = open_file(Label, "rt");
     if (fh != NULL) {
         EnterCriticalSection(&FilterCriticalSection);

@@ -24,6 +24,7 @@
 #include "Scheduler.h"
 #ifdef __linux__
 #include <time.h>
+#include "MemZeroAndCopy.h"
 #endif
 #include "TimeProcess.h"
 
@@ -48,19 +49,22 @@ void CyclicTimeProcess (void)
 {
 #ifdef __linux__
     time_t SystemTime;
-    struct tm *LocalTime;
+    struct tm LocalTime;
+    struct tm *LocalTimePtr;
 
-    SystemTime = time(&SystemTime);
-
-    LocalTime = localtime(&SystemTime) ;
-
-    TimeStruct.Year    = 1900 + LocalTime->tm_year;
-    TimeStruct.Month   = (unsigned char)LocalTime->tm_mon + 1;
-    TimeStruct.Day     = (unsigned char)LocalTime->tm_mday;
-    TimeStruct.Hour    = (unsigned char)LocalTime->tm_hour;
-    TimeStruct.Minute  = (unsigned char)LocalTime->tm_min;
-    TimeStruct.Second  = (unsigned char)LocalTime->tm_sec;
-    TimeStruct.Weekday = (unsigned char)LocalTime->tm_wday;
+    SystemTime = ((GetSimulatedStartTimeInNanoSecond() + GetSimulatedTimeInNanoSecond()) / 1000000000); //100);
+    LocalTimePtr = gmtime_r(&SystemTime, &LocalTime);
+    if (LocalTimePtr != NULL) {
+        TimeStruct.Year    = 1900 + LocalTimePtr->tm_year;
+        TimeStruct.Month   = (unsigned char)LocalTimePtr->tm_mon + 1;
+        TimeStruct.Day     = (unsigned char)LocalTimePtr->tm_mday;
+        TimeStruct.Hour    = (unsigned char)LocalTimePtr->tm_hour;
+        TimeStruct.Minute  = (unsigned char)LocalTimePtr->tm_min;
+        TimeStruct.Second  = (unsigned char)LocalTimePtr->tm_sec;
+        TimeStruct.Weekday = (unsigned char)LocalTimePtr->tm_wday;
+    } else {
+        MEMSET (&TimeStruct, 0, sizeof(TimeStruct));
+    }
 #else
     FILETIME FileTime;
     uint64_t Help;
@@ -99,6 +103,8 @@ int InitTimeProcess (void)
     TimeStruct.VidMinute = add_bbvari (ExtendsWithConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_LONG_BLACKBOARD, ".Time.Minute", Name, sizeof(Name)), BB_UBYTE, "min");
     TimeStruct.VidSecond = add_bbvari (ExtendsWithConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_LONG_BLACKBOARD, ".Time.Second", Name, sizeof(Name)), BB_UBYTE, "s");
     TimeStruct.VidWeekday = add_bbvari (ExtendsWithConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_LONG_BLACKBOARD, ".Time.Weekday", Name, sizeof(Name)), BB_UBYTE, "");
+    // set the init values
+    CyclicTimeProcess();
     return 0;
 }
 
@@ -115,6 +121,6 @@ void TerminateTimeProcess (void)
 
 
 TASK_CONTROL_BLOCK TimeTcb
-= INIT_TASK_COTROL_BLOCK("TimeProcess", INTERN_ASYNC, 1, CyclicTimeProcess, InitTimeProcess, TerminateTimeProcess, 0);
+= INIT_TASK_COTROL_BLOCK("TimeProcess", INTERN_ASYNC, 10, CyclicTimeProcess, InitTimeProcess, TerminateTimeProcess, 0);
 
 

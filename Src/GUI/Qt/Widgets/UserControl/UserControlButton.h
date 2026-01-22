@@ -45,6 +45,7 @@ private slots:
 private:
     QString m_Text;
     QString m_Script;
+    QString m_Equation;
     QPushButton *m_PushButton;
 };
 

@@ -20,14 +20,10 @@
 #include <stdarg.h>
 #include <string.h>
 
-
 extern "C" {
 #include "MyMemory.h"
 #include "StringMaxChar.h"
-}
-
-
-extern "C" {
+#include "PrintFormatToString.h"
 #include "MainValues.h"
 #include "Blackboard.h"
 #include "BlackboardAccess.h"
@@ -56,7 +52,7 @@ int FormatMessageOutput (cParser *par_Parser, int par_FormatStringPos, char *par
     switch (par_Verbose) {
     case VERBOSE_OFF:
         if ((par_Flags & ONLY_COUNT_SPEZIFIER_FLAG) != ONLY_COUNT_SPEZIFIER_FLAG) {
-            h = sprintf  (Help, "MESSAGE: "); 
+            h = PrintFormatToString  (Help, sizeof(Help), "MESSAGE: ");
             Len += h;
             if (Len >= par_SizeofOutputBuffer) Dst = nullptr;
             if (Dst != nullptr) {
@@ -67,7 +63,7 @@ int FormatMessageOutput (cParser *par_Parser, int par_FormatStringPos, char *par
         break;
     case VERBOSE_ON:
         if ((par_Flags & ONLY_COUNT_SPEZIFIER_FLAG) != ONLY_COUNT_SPEZIFIER_FLAG) {
-            h = sprintf  (Help, "cycle:%08u:MESSAGE: ", read_bbvari_udword (CycleCounterVid));
+            h = PrintFormatToString  (Help, sizeof(Help), "cycle:%08u:MESSAGE: ", read_bbvari_udword (CycleCounterVid));
             Len += h;
             if (Len >= par_SizeofOutputBuffer) Dst = nullptr;
             if (Dst != nullptr) {
@@ -78,7 +74,7 @@ int FormatMessageOutput (cParser *par_Parser, int par_FormatStringPos, char *par
         break;
     case VERBOSE_MESSAGE_PREFIX_CYCLE_COUNTER:
         if ((par_Flags & ONLY_COUNT_SPEZIFIER_FLAG) != ONLY_COUNT_SPEZIFIER_FLAG) {
-            h = sprintf  (Help, "%08u: ", read_bbvari_udword (CycleCounterVid));
+            h = PrintFormatToString (Help, sizeof(Help), "%08u: ", read_bbvari_udword (CycleCounterVid));
             Len += h;
             if (Len >= par_SizeofOutputBuffer) Dst = nullptr;
             if (Dst != nullptr) {
@@ -142,7 +138,7 @@ int FormatMessageOutput (cParser *par_Parser, int par_FormatStringPos, char *par
                             break;
                         }
                         *fd = 0;
-                        h = 1 + sprintf (Help+1, Format, Value);
+                        h = 1 + PrintFormatToString (Help+1, sizeof(Help) - 1, Format, Value);
                         Len += h;
                         if (Len >= par_SizeofOutputBuffer) Dst = nullptr;
                         if (Dst != nullptr) {
@@ -174,14 +170,14 @@ int FormatMessageOutput (cParser *par_Parser, int par_FormatStringPos, char *par
                                 *fd++ = 'l';
                                 *fd++ = 'd';
                                 *fd = 0;
-                                h = sprintf (Help, Format, ResultValue.qw);
+                                h = PrintFormatToString (Help, sizeof(Help), Format, ResultValue.qw);
                                 break;
                             case 'u':  // Dec output
                                 *fd++ = 'l';
                                 *fd++ = 'l';
                                 *fd++ = 'u';
                                 *fd = 0;
-                                h = sprintf (Help, Format, (uint64_t)ResultValue.qw);
+                                h = PrintFormatToString (Help, sizeof(Help), Format, (uint64_t)ResultValue.qw);
                                 break;
                             case 'x':  // Hex output
                                 *fd++ = 'l';
@@ -190,7 +186,7 @@ int FormatMessageOutput (cParser *par_Parser, int par_FormatStringPos, char *par
                                 Help[0] = '0';
                                 Help[1] = 'x';
                                 *fd = 0;
-                                h = 2 + sprintf (Help+2, Format, (uint64_t)ResultValue.qw);
+                                h = 2 + PrintFormatToString (Help+2, sizeof(Help) - 2, Format, (uint64_t)ResultValue.qw);
                                 break;
                             }
                             break;
@@ -201,14 +197,14 @@ int FormatMessageOutput (cParser *par_Parser, int par_FormatStringPos, char *par
                                 *fd++ = 'l';
                                 *fd++ = 'd';
                                 *fd = 0;
-                                h = sprintf (Help, Format, (int64_t)ResultValue.uqw);
+                                h = PrintFormatToString (Help, sizeof(Help), Format, (int64_t)ResultValue.uqw);
                                 break;
                             case 'u':  // Dec output
                                 *fd++ = 'l';
                                 *fd++ = 'l';
                                 *fd++ = 'u';
                                 *fd = 0;
-                                h = sprintf (Help, Format, ResultValue.uqw);
+                                h = PrintFormatToString (Help, sizeof(Help), Format, ResultValue.uqw);
                                 break;
                             case 'x':  // Hex output
                                 *fd++ = 'l';
@@ -217,7 +213,7 @@ int FormatMessageOutput (cParser *par_Parser, int par_FormatStringPos, char *par
                                 Help[0] = '0';
                                 Help[1] = 'x';
                                 *fd = 0;
-                                h = 2 + sprintf (Help+2, Format, ResultValue.uqw);
+                                h = 2 + PrintFormatToString (Help+2, sizeof(Help) - 2, Format, ResultValue.uqw);
                                 break;
                             }
                             break;
@@ -228,14 +224,14 @@ int FormatMessageOutput (cParser *par_Parser, int par_FormatStringPos, char *par
                                 *fd++ = 'l';
                                 *fd++ = 'd';
                                 *fd = 0;
-                                h = sprintf (Help, Format, (int64_t)ResultValue.d);
+                                h = PrintFormatToString (Help, sizeof(Help), Format, (int64_t)ResultValue.d);
                                 break;
                             case 'u':  // Dec output
                                 *fd++ = 'l';
                                 *fd++ = 'l';
                                 *fd++ = 'u';
                                 *fd = 0;
-                                h = sprintf (Help, Format, ResultValue.d);
+                                h = PrintFormatToString (Help, sizeof(Help), Format, ResultValue.d);
                                 break;
                             case 'x':  // Hex output
                                 *fd++ = 'l';
@@ -244,13 +240,13 @@ int FormatMessageOutput (cParser *par_Parser, int par_FormatStringPos, char *par
                                 Help[0] = '0';
                                 Help[1] = 'x';
                                 *fd = 0;
-                                h = 2 + sprintf (Help+2, Format, ResultValue.d);
+                                h = 2 + PrintFormatToString (Help+2, sizeof(Help) - 2, Format, ResultValue.d);
                                 break;
                             }
                             break;
                         case FLOAT_OR_INT_64_TYPE_INVALID:
                         default:
-                            h = sprintf (Help, "error");
+                            h = PrintFormatToString (Help, sizeof(Help), "error");
                             break;
                         }
                         Len += h;
@@ -286,7 +282,7 @@ int FormatMessageOutput (cParser *par_Parser, int par_FormatStringPos, char *par
                                 return -1;
                             }
                             Help[0] = ' ';
-                            h = 1 + sprintf (Help+1, "%g", Value);
+                            h = 1 + PrintFormatToString (Help+1, sizeof(Help) - 1, "%g", Value);
                         }
                         Len += h;
                         if (Len >= par_SizeofOutputBuffer) Dst = nullptr;

@@ -21,6 +21,7 @@
 #include "StringHelpers.h"
 
 extern "C" {
+#include "StringMaxChar.h"
 #include "Scheduler.h"
 #include "ThrowError.h"
 }
@@ -62,7 +63,7 @@ ConfigCalibrationTreeViewDialog::ConfigCalibrationTreeViewDialog(QString &par_Wi
         }
     } else {
         char ShortProcessName[MAX_PATH];
-        TruncatePathFromProcessName (ShortProcessName, pProcessName);
+        TruncatePathFromProcessName (ShortProcessName, pProcessName, sizeof(ShortProcessName));
         ui->ProcessComboBox->setCurrentText (QString (ShortProcessName));
     }
     ui->Filter->SetFilter (par_IncExcFilter);
@@ -85,9 +86,9 @@ QString ConfigCalibrationTreeViewDialog::GetWindowName ()
     return ui->WindowNameLineEdit->text();
 }
 
-void ConfigCalibrationTreeViewDialog::GetProcessName (char *ret_Processname)
+void ConfigCalibrationTreeViewDialog::GetProcessName (char *ret_Processname, int par_Maxc)
 {
-    strcpy (ret_Processname, QStringToConstChar(ui->ProcessComboBox->currentText().trimmed()));
+    StringCopyMaxCharTruncate (ret_Processname, QStringToConstChar(ui->ProcessComboBox->currentText().trimmed()), par_Maxc);
 }
 
 INCLUDE_EXCLUDE_FILTER *ConfigCalibrationTreeViewDialog::GetFilter ()

@@ -18,6 +18,9 @@
 #include "OscilloscopeStatus.h"
 extern "C" {
 #include "Config.h"
+#include "MainValues.h"
+#include "StringMaxChar.h"
+#include "PrintFormatToString.h"
 #include "Blackboard.h"
 }
 
@@ -36,24 +39,28 @@ OscilloscopeStatus::~OscilloscopeStatus()
 
 void OscilloscopeStatus::paintEvent(QPaintEvent * /* event */)
 {
+    QPainter painter(this);
+    paint(painter, true);
+}
+
+void OscilloscopeStatus::paint(QPainter &painter, bool border_flag)
+{
     int win_width, win_height;
     char txt[BBVARI_NAME_SIZE+100];
     double time;
-
-    QPainter painter(this);
 
     win_width = width ();
     win_height = height ();
     switch (m_Data->state) {
     case 2:
     case 3:
-        sprintf (txt, "%s %c %.2lf",
+        PrintFormatToString (txt, sizeof(txt), "%s %c %.2lf",
                  m_Data->name_trigger,
                  m_Data->trigger_flank,
                  m_Data->trigger_value);
         break;
     case 1:
-        strcpy (txt, "Online");
+        STRING_COPY_TO_ARRAY (txt, "Online");
         break;
     default:
         if (m_Data->ref_point_flag) {
@@ -66,15 +73,26 @@ void OscilloscopeStatus::paintEvent(QPaintEvent * /* event */)
             time = static_cast<double>(m_Data->t_cursor) / TIMERCLKFRQ;
         }
         if (m_Data->t_step < 1000) {
-            sprintf (txt, "Offline %.6lfs", time);
+            PrintFormatToString (txt, sizeof(txt), "Offline %.6lfs", time);
         } else {
-            sprintf (txt, "Offline %.4lfs", time);
+            PrintFormatToString (txt, sizeof(txt), "Offline %.4lfs", time);
         }
     }
+    QPen PenSave = painter.pen();
+    if (!border_flag || !s_main_ini_val.DarkMode) {
+        painter.setPen (Qt::black);
+    } else {
+        painter.setPen (Qt::white);
+    }
     painter.drawText (rect(), Qt::AlignCenter, tr(txt));
-    painter.setPen(Qt::darkGray);
-    painter.drawLine (win_width-1, 0, 0, 0);
-    painter.drawLine (0, 0, 0, win_height-1);
-    painter.drawLine (0, win_height-1, win_width-1, win_height-1);
-    painter.drawLine (win_width-1, win_height-1, win_width-1, 0);
+    if (border_flag) {
+        QPen Pen(Qt::darkGray);
+        Pen.setWidth(2);
+        painter.setPen(Pen);
+        painter.drawLine (win_width-1, 0, 0, 0);
+        painter.drawLine (0, 0, 0, win_height-1);
+        painter.drawLine (0, win_height-1, win_width-1, win_height-1);
+        painter.drawLine (win_width-1, win_height-1, win_width-1, 0);
+    }
+    painter.setPen(PenSave);
 }

@@ -21,6 +21,7 @@
 #include <QDialog>
 #include <QTreeView>
 #include <QAbstractItemModel>
+#include <QItemDelegate>
 
 #include "Dialog.h"
 #include "CanConfigSearchVariableDialog.h"
@@ -170,7 +171,7 @@ public:
     enum Type GetObjectType() {
         return m_Type;
     }
-    enum Direction {Write, Read, WriteVariableId};
+    enum Direction {Write, Read, WriteVariableId, ReadStartupVariableId};
     enum Direction GetDir() {
         return m_Direction;
     }
@@ -321,6 +322,7 @@ public:
     void FillDialogTab(Ui::CanConfigDialog *ui, QModelIndex par_Index);
     void UpdateChannelMapping(Ui::CanConfigDialog *ui);
     void StoreDialogTab(Ui::CanConfigDialog *ui);
+    void StoreServerMappingDialogTab(Ui::CanConfigDialog *ui);
     void AddNewChild(int par_Row);
     QString GenerateUniqueName (QString par_Name);
     void AddChild (int par_Row, CanConfigElement *par_Child);
@@ -333,6 +335,9 @@ public:
 
     void AddVariantToChannel(int par_ChannelNr, CanConfigVariant *par_Variant);
     void RemoveVariantFromChannel(int par_IndexNr, int par_ChannelNr);
+    void SetBusConfig(int par_Channel, QString &par_BusConfig, bool par_ValidFlag = false,
+                      bool par_UserFd = 0, int par_UserBaudrate = 500, double par_UserSamplePoint = 0.75,
+                      int par_UserDataBaudrate = 40000, double par_UserDataSamplePoint = 0.75);
 
     QList<CanConfigSignal*> SearchSignal(const QRegularExpression &par_RegExp);
 
@@ -342,7 +347,24 @@ private:
     QList<CanConfigVariant*> m_Variants;
 
     QMap<int, CanConfigVariant*> m_ChannelVariant;
+public:
     QList<int> m_ChannelStartupState;
+    QList<int> m_ChannelBusConfig;
+#define BUS_CFG_SEL_VARIANT    0x00000
+#define BUS_CFG_FIRST_VARIANT  0x20000
+#define BUS_CFG_LAST_VARIANT   0x30000
+#define BUS_CFG_BLACKBOARD     0x10000
+#define BUS_CFG_USER           0x40000
+#define IS_BUS_CFG_SEL_VARIANT(c)   ((c & 0xF0000) == BUS_CFG_SEL_VARIANT)
+#define IS_BUS_CFG_FIRST_VARIANT(c) ((c & 0xF0000) == BUS_CFG_FIRST_VARIANT)
+#define IS_BUS_CFG_LAST_VARIANT(c)  ((c & 0xF0000) == BUS_CFG_LAST_VARIANT)
+#define IS_BUS_CFG_BLACKBOARD(c)    ((c & 0xF0000) == BUS_CFG_BLACKBOARD)
+#define IS_BUS_CFG_USER(c)          ((c & 0xF0000) == BUS_CFG_USER)
+    QList<bool> m_ChannelFd;
+    QList<int> m_ChannelBaudRate;
+    QList<double> m_ChannelSamplePoint;
+    QList<int> m_ChannelDataBaudRate;
+    QList<double> m_ChannelDataSamplePoint;
 
     CanConfigBase *m_ParentBase;
 };
@@ -495,6 +517,20 @@ public:
                    const QModelIndex &par_Index ) const;
 };
 
+class BusConfigEditorDelegate : public QItemDelegate
+{
+    Q_OBJECT
+public:
+    BusConfigEditorDelegate(QObject *parent):QItemDelegate(parent) { m_Server = nullptr; }
+    void SetServer(CanConfigServer *par_Server) {m_Server = par_Server;}
+    QWidget* createEditor(QWidget *parent, const QStyleOptionViewItem &option, const QModelIndex &index) const;
+    void setModelData(QWidget *editor, QAbstractItemModel *model, const QModelIndex &index) const;
+    void updateEditorGeometry(QWidget *editor,
+                              const QStyleOptionViewItem &option,
+                              const QModelIndex &index) const;
+private:
+    CanConfigServer *m_Server;
+};
 
 class CanConfigDialog : public Dialog
 {

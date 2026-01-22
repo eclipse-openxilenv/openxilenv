@@ -34,6 +34,8 @@ double ChargeCurrent; // A
 double BatteryVoltage; // V
 double BatteryCapacity; // Ah
 double SampleTime;  // s
+double Random;
+double Pulse;
 
 // This is the frist call if the process is started 
 // Here all input and output signal should be register
@@ -45,6 +47,8 @@ void reference_varis (void)
     REF_DIR_DOUBLE_VAR_AI (READ_ONLY_REFERENCE, ChargeCurrent, "A", 0, "", -20.0, 100.0, 6, 2, SC_RGB (10,20,30), 0, 1.0);
     REF_DIR_DOUBLE_VAR_AI (WRITE_ONLY_REFERENCE, BatteryCapacity, "Wh", 0, "", 0.0, 100000.0, 6, 0, SC_RGB (10,20,30), 0, 1.0);
     REF_DIR_DOUBLE_VAR (READ_ONLY_REFERENCE, SampleTime, "XilEnv.SampleTime", "s");
+    REF_DIR_DOUBLE_VAR_AI (WRITE_ONLY_REFERENCE, Random, "", 0, "", 0.0, 1.0, 4, 3, SC_RGB (10,20,30), 0, 1.0);
+    REF_DIR_DOUBLE_VAR_AI (WRITE_ONLY_REFERENCE, Pulse, "", 0, "", 0.0, 1000.0, 6, 0, SC_RGB (10,20,30), 0, 1.0);
 }
 
 // This will call one time after reference_varis
@@ -72,6 +76,14 @@ void cyclic_test_object(void)
             // Charge
             BatteryCapacity -= Power * SampleTime / 3600.0;
         }
+    }
+    Random = (double)rand() / (double)RAND_MAX;
+    if (Pulse < 100) {
+        Pulse += 1.0;
+    } else if (Pulse < 1000) {
+        Pulse = 1000.0;
+    } else {
+        Pulse = 0.0;
     }
 }
 

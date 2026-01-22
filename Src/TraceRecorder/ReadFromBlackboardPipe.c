@@ -139,6 +139,18 @@ void analyze_message (void)
     }
 }
 
+static int HasConverion(int par_Vid)
+{
+    int ConvType;
+    ConvType = get_bbvari_conversiontype (par_Vid);
+    return ((ConvType == BB_CONV_FORMULA) ||
+            (ConvType == BB_CONV_FACTOFF) ||
+            (ConvType == BB_CONV_OFFFACT) ||
+            (ConvType == BB_CONV_TAB_INTP) ||
+            (ConvType == BB_CONV_TAB_NOINTP) ||
+            (ConvType == BB_CONV_RAT_FUNC));
+}
+
 int test_read_frame (PIPE_FRAME *pframe)
 {
     int i = 0;
@@ -148,7 +160,7 @@ int test_read_frame (PIPE_FRAME *pframe)
         if (test_wrflag (pframe->vids[fnr], pframe->wrflag)) {
             reset_wrflag (pframe->vids[fnr], pframe->wrflag);
             if (pframe->dec_phys_mask[fnr] &&
-                (get_bbvari_conversiontype (pframe->vids[fnr]) == 1)) {
+                (HasConverion (pframe->vids[fnr]) == 1)) {
                 msgbuffer[i].value.d = read_bbvari_equ (pframe->vids[fnr]);
                 msgbuffer[i].vid = pframe->vids[fnr];
                 msgbuffer[i].type = BB_DOUBLE;
@@ -172,7 +184,7 @@ int read_frame (PIPE_FRAME *pframe)
         type = get_bbvaritype (pframe->vids[fnr]);
         if ((type != BB_UNKNOWN_WAIT) &&
             pframe->dec_phys_mask[fnr] &&
-            (get_bbvari_conversiontype (pframe->vids[fnr]) == 1)) {
+            (HasConverion (pframe->vids[fnr]) == 1)) {
             msgbuffer[fnr].value.d = read_bbvari_equ (pframe->vids[fnr]);
             msgbuffer[fnr].vid = pframe->vids[fnr];
             msgbuffer[fnr].type = BB_DOUBLE;

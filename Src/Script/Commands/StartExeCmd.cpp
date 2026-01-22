@@ -21,6 +21,7 @@
 
 extern "C" {
 #include "MyMemory.h"
+#include "StringMaxChar.h"
 #include "Files.h"
 #include "Blackboard.h"
 #include "BlackboardAccess.h"
@@ -59,7 +60,7 @@ int cStartExeCmd::Execute (cParser *par_Parser, cExecutor *par_Executor)
     }
     p = CmdLine = static_cast<char*>(_alloca (CmdLineLen));
     for (int i = 0; i < par_Parser->GetParameterCounter (); i++) {
-        strcpy (p, par_Parser->GetParameter (i));
+        StringCopyMaxCharTruncate (p, par_Parser->GetParameter (i), CmdLineLen - (p - CmdLine));
         p += strlen (p);
         *p++ = ' ';
     }

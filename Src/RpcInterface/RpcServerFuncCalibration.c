@@ -42,7 +42,7 @@ static int RPCFunc_LoadSvl(RPC_CONNECTION *par_Connection, RPC_API_BASE_MESSAGE 
     UNUSED(par_Connection);
     RPC_API_LOAD_SVL_MESSAGE *In = (RPC_API_LOAD_SVL_MESSAGE*)par_DataIn;
     RPC_API_LOAD_SVL_MESSAGE_ACK *Out = (RPC_API_LOAD_SVL_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_LOAD_SVL_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_LOAD_SVL_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_LOAD_SVL_MESSAGE_ACK);
     Out->Header.ReturnValue = (ScriptWriteSVLToProcess((char*)In + In->OffsetSvlFilename, (char*)In + In->OffsetProcess) == 0);
     return Out->Header.StructSize;
@@ -54,7 +54,7 @@ static int RPCFunc_SaveSvl(RPC_CONNECTION *par_Connection, RPC_API_BASE_MESSAGE 
     UNUSED(par_Connection);
     RPC_API_SAVE_SVL_MESSAGE *In = (RPC_API_SAVE_SVL_MESSAGE*)par_DataIn;
     RPC_API_SAVE_SVL_MESSAGE_ACK *Out = (RPC_API_SAVE_SVL_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_SAVE_SVL_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_SAVE_SVL_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_SAVE_SVL_MESSAGE_ACK);
     Out->Header.ReturnValue = ScriptWriteProcessToSVL((char*)In + In->OffsetSvlFilename, (char*)In + In->OffsetProcess, (char*)In + In->OffsetFilter);
     return Out->Header.StructSize;
@@ -65,7 +65,7 @@ static int RPCFunc_SaveSal(RPC_CONNECTION *par_Connection, RPC_API_BASE_MESSAGE 
     UNUSED(par_Connection);
     RPC_API_SAVE_SAL_MESSAGE *In = (RPC_API_SAVE_SAL_MESSAGE*)par_DataIn;
     RPC_API_SAVE_SAL_MESSAGE_ACK *Out = (RPC_API_SAVE_SAL_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_SAVE_SAL_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_SAVE_SAL_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_SAVE_SAL_MESSAGE_ACK);
     Out->Header.ReturnValue = ScriptWriteProcessToSAL((char*)In + In->OffsetSalFilename, (char*)In + In->OffsetProcess, (char*)In + In->OffsetFilter, 0);
     return Out->Header.StructSize;
@@ -76,7 +76,7 @@ static int RPCFunc_GetSymbolRaw(RPC_CONNECTION *par_Connection, RPC_API_BASE_MES
     UNUSED(par_Connection);
     RPC_API_GET_SYMBOL_RAW_MESSAGE *In = (RPC_API_GET_SYMBOL_RAW_MESSAGE*)par_DataIn;
     RPC_API_GET_SYMBOL_RAW_MESSAGE_ACK *Out = (RPC_API_GET_SYMBOL_RAW_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_GET_SYMBOL_RAW_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_GET_SYMBOL_RAW_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_GET_SYMBOL_RAW_MESSAGE_ACK);
 
     Out->Header.ReturnValue = GetRawValueOfOneSymbol((char*)In + In->OffsetSymbol,
@@ -91,7 +91,7 @@ static int RPCFunc_SetSymbolRaw(RPC_CONNECTION *par_Connection, RPC_API_BASE_MES
     UNUSED(par_Connection);
     RPC_API_SET_SYMBOL_RAW_MESSAGE *In = (RPC_API_SET_SYMBOL_RAW_MESSAGE*)par_DataIn;
     RPC_API_SET_SYMBOL_RAW_MESSAGE_ACK *Out = (RPC_API_SET_SYMBOL_RAW_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_SET_SYMBOL_RAW_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_SET_SYMBOL_RAW_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_SET_SYMBOL_RAW_MESSAGE_ACK);
 
     Out->Header.ReturnValue = SetRawValueOfOneSymbol((char*)In + In->OffsetSymbol,
@@ -108,7 +108,7 @@ static int RPCFunc_SetupLinkToExternProcess(RPC_CONNECTION *par_Connection, RPC_
     UNUSED(par_Connection);
     RPC_API_SETUP_LINK_TO_EXTERN_PROCESS_MESSAGE *In = (RPC_API_SETUP_LINK_TO_EXTERN_PROCESS_MESSAGE*)par_DataIn;
     RPC_API_SETUP_LINK_TO_EXTERN_PROCESS_MESSAGE_ACK *Out = (RPC_API_SETUP_LINK_TO_EXTERN_PROCESS_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_SETUP_LINK_TO_EXTERN_PROCESS_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_SETUP_LINK_TO_EXTERN_PROCESS_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_SETUP_LINK_TO_EXTERN_PROCESS_MESSAGE_ACK);
 
     Out->Header.ReturnValue = A2LSetupLinkToExternProcess((char*)In + In->OffsetA2LFileName, (char*)In + In->OffsetProcessName,
@@ -121,7 +121,7 @@ static int RPCFunc_GetLinkToExternProcess(RPC_CONNECTION *par_Connection, RPC_AP
     UNUSED(par_Connection);
     RPC_API_GET_LINK_TO_EXTERN_PROCESS_MESSAGE *In = (RPC_API_GET_LINK_TO_EXTERN_PROCESS_MESSAGE*)par_DataIn;
     RPC_API_GET_LINK_TO_EXTERN_PROCESS_MESSAGE_ACK *Out = (RPC_API_GET_LINK_TO_EXTERN_PROCESS_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_GET_LINK_TO_EXTERN_PROCESS_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_GET_LINK_TO_EXTERN_PROCESS_MESSAGE_ACK));
     Out->Header.StructSize = (int)sizeof(RPC_API_GET_LINK_TO_EXTERN_PROCESS_MESSAGE_ACK);
 
     Out->Header.ReturnValue = A2LGetLinkToExternProcess((char*)In + In->OffsetProcessName);
@@ -133,7 +133,7 @@ static int RPCFunc_GetIndexFromLink(RPC_CONNECTION *par_Connection, RPC_API_BASE
     UNUSED(par_Connection);
     RPC_API_GET_INDEX_FROM_LINK_MESSAGE *In = (RPC_API_GET_INDEX_FROM_LINK_MESSAGE*)par_DataIn;
     RPC_API_GET_INDEX_FROM_LINK_MESSAGE_ACK *Out = (RPC_API_GET_INDEX_FROM_LINK_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_GET_INDEX_FROM_LINK_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_GET_INDEX_FROM_LINK_MESSAGE_ACK));
     Out->Header.StructSize = (int)sizeof(RPC_API_GET_INDEX_FROM_LINK_MESSAGE_ACK);
 
     Out->Header.ReturnValue = A2LGetIndexFromLink(In->LinkNr, (char*)In + In->OffsetLabel, In->TypeMask);
@@ -145,7 +145,7 @@ static int RPCFunc_GetNextSymbolFromLink(RPC_CONNECTION *par_Connection, RPC_API
     UNUSED(par_Connection);
     RPC_API_GET_NEXT_SYMBOL_FROM_LINK_MESSAGE *In = (RPC_API_GET_NEXT_SYMBOL_FROM_LINK_MESSAGE*)par_DataIn;
     RPC_API_GET_NEXT_SYMBOL_FROM_LINK_MESSAGE_ACK *Out = (RPC_API_GET_NEXT_SYMBOL_FROM_LINK_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_GET_NEXT_SYMBOL_FROM_LINK_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_GET_NEXT_SYMBOL_FROM_LINK_MESSAGE_ACK));
     Out->Header.StructSize = (int)sizeof(RPC_API_GET_NEXT_SYMBOL_FROM_LINK_MESSAGE_ACK);
 
     Out->Header.ReturnValue = A2LGetNextSymbolFromLink(In->LinkNr, In->Index, In->TypeMask, (char*)In + In->OffsetFilter, Out->Data, In->MaxChar);
@@ -190,7 +190,7 @@ static int RPCFunc_GetDataFromLink(RPC_CONNECTION *par_Connection, RPC_API_BASE_
     int Size;
     RPC_API_GET_DATA_FROM_LINK_MESSAGE *In = (RPC_API_GET_DATA_FROM_LINK_MESSAGE*)par_DataIn;
     RPC_API_GET_DATA_FROM_LINK_MESSAGE_ACK *Out = (RPC_API_GET_DATA_FROM_LINK_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_GET_DATA_FROM_LINK_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_GET_DATA_FROM_LINK_MESSAGE_ACK));
     Out->Header.StructSize = (int)sizeof(RPC_API_GET_DATA_FROM_LINK_MESSAGE_ACK);
     GET_SET_DATA_FROM_TO_LINK Parameter;
     Parameter.Data = NULL;
@@ -200,6 +200,7 @@ static int RPCFunc_GetDataFromLink(RPC_CONNECTION *par_Connection, RPC_API_BASE_
                                                   __RPCFunc_GetDataFromLink, (void*)&Parameter);
 
     INDEX_DATA_BLOCK *idb = GetIndexDataBlock(1);
+    idb->Data->LinkNo = In->LinkNr;
     idb->Data->Index = In->Index;
     idb->Data->Data = NULL;
     idb->Data->Flags = In->PhysFlag;
@@ -240,7 +241,7 @@ static int RPCFunc_SetDataToLink(RPC_CONNECTION *par_Connection, RPC_API_BASE_ME
     int Size;
     RPC_API_SET_DATA_TO_LINK_MESSAGE *In = (RPC_API_SET_DATA_TO_LINK_MESSAGE*)par_DataIn;
     RPC_API_SET_DATA_TO_LINK_MESSAGE_ACK *Out = (RPC_API_SET_DATA_TO_LINK_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_SET_DATA_TO_LINK_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_SET_DATA_TO_LINK_MESSAGE_ACK));
     Out->Header.StructSize = (int)sizeof(RPC_API_SET_DATA_TO_LINK_MESSAGE_ACK);
     GET_SET_DATA_FROM_TO_LINK Parameter;
     Parameter.Data = NULL;
@@ -250,6 +251,7 @@ static int RPCFunc_SetDataToLink(RPC_CONNECTION *par_Connection, RPC_API_BASE_ME
                                                   __RPCFunc_GetDataFromLink, (void*)&Parameter);
 
     INDEX_DATA_BLOCK *idb = GetIndexDataBlock(1);
+    idb->Data->LinkNo = In->LinkNr;
     idb->Data->Index = In->Index;
     idb->Data->Data = (char*)In + In->OffsetData;
     idb->Data->Flags = 0;
@@ -279,7 +281,7 @@ static int RPCFunc_ReferenceMeasurementToBlackboard(RPC_CONNECTION *par_Connecti
     UNUSED(par_Connection);
     RPC_API_REFERENCE_MEASUREMENT_TO_BLACKBOARD_MESSAGE *In = (RPC_API_REFERENCE_MEASUREMENT_TO_BLACKBOARD_MESSAGE*)par_DataIn;
     RPC_API_REFERENCE_MEASUREMENT_TO_BLACKBOARD_MESSAGE_ACK *Out = (RPC_API_REFERENCE_MEASUREMENT_TO_BLACKBOARD_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_REFERENCE_MEASUREMENT_TO_BLACKBOARD_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_REFERENCE_MEASUREMENT_TO_BLACKBOARD_MESSAGE_ACK));
     Out->Header.StructSize = (int)sizeof(RPC_API_REFERENCE_MEASUREMENT_TO_BLACKBOARD_MESSAGE_ACK);
 
     Out->Header.ReturnValue = A2LReferenceMeasurementToBlackboard(In->LinkNr, In->Index, In->DirFlags, 1);
@@ -291,7 +293,7 @@ static int RPCFunc_DereferenceMeasurementFromBlackboard(RPC_CONNECTION *par_Conn
     UNUSED(par_Connection);
     RPC_API_DEREFERENCE_MEASUREMENT_FROM_BLACKBOARD_MESSAGE *In = (RPC_API_DEREFERENCE_MEASUREMENT_FROM_BLACKBOARD_MESSAGE*)par_DataIn;
     RPC_API_DEREFERENCE_MEASUREMENT_FROM_BLACKBOARD_MESSAGE_ACK *Out = (RPC_API_DEREFERENCE_MEASUREMENT_FROM_BLACKBOARD_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_DEREFERENCE_MEASUREMENT_FROM_BLACKBOARD_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_DEREFERENCE_MEASUREMENT_FROM_BLACKBOARD_MESSAGE_ACK));
     Out->Header.StructSize = (int)sizeof(RPC_API_DEREFERENCE_MEASUREMENT_FROM_BLACKBOARD_MESSAGE_ACK);
 
     Out->Header.ReturnValue = A2LReferenceMeasurementToBlackboard(In->LinkNr, In->Index, 0, 0);

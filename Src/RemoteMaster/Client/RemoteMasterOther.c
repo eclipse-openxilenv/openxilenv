@@ -46,9 +46,10 @@ int rm_Init (int par_PreAllocMemorySize, int par_PidForSchedulersHelperProcess, 
     Offset = sizeof(RM_INIT_REQ);
     for (x = 0; x < 32; x++) {
         if (s_main_ini_val.ConfigurablePrefix[x] != NULL) {
+            int Len = strlen(s_main_ini_val.ConfigurablePrefix[x]) + 1;
             Req->OffsetConfigurablePrefix[x] = Offset;
-            strcpy((char*)Req + Offset, s_main_ini_val.ConfigurablePrefix[x]);
-            Offset += strlen(s_main_ini_val.ConfigurablePrefix[x]) + 1;
+            StringCopyMaxCharTruncate((char*)Req + Offset, s_main_ini_val.ConfigurablePrefix[x], Len);
+            Offset += Len;
         } else {
             Req->OffsetConfigurablePrefix[x] = 0;
         }
@@ -148,7 +149,7 @@ int rm_CopyFile(char *par_FileNameSrc, char *par_FileNameDst)
     LenFileNameDst = (int)strlen (par_FileNameDst) + 1;
     SizeOfStruct = (int)sizeof (RM_COPY_FILE_START_REQ) + LenFileNameDst;
     Req->OffsetFileName = sizeof(RM_COPY_FILE_START_REQ);
-    strcpy((char*)Req + Req->OffsetFileName, par_FileNameDst);
+    StringCopyMaxCharTruncate((char*)Req + Req->OffsetFileName, par_FileNameDst, LenFileNameDst);
 
     TransactRemoteMaster (RM_COPY_FILE_START_CMD, Req, SizeOfStruct, Ack, BUFFER_SIZE);
     if (Ack->Ret) {
@@ -245,13 +246,15 @@ int rm_ReferenceVariable(int par_Pid, uint64_t par_Address, const char *par_Name
     RM_REFERENCE_VARIABLE_REQ *Req;
     RM_REFERENCE_VARIABLE_ACK Ack;
     int SizeOfStruct;
+    int Len;
 
-    SizeOfStruct = (int)sizeof(RM_REFERENCE_VARIABLE_REQ) + strlen(par_Name) + 1;
+    Len = strlen(par_Name) + 1;
+    SizeOfStruct = (int)sizeof(RM_REFERENCE_VARIABLE_REQ) + Len;
     Req = (RM_REFERENCE_VARIABLE_REQ*)_alloca((size_t)SizeOfStruct);
     Req->Pid = par_Pid;
     Req->Address = par_Address;
     Req->OffsetName = sizeof(RM_REFERENCE_VARIABLE_REQ);
-    strcpy((char*)Req + Req->OffsetName, par_Name);
+    StringCopyMaxCharTruncate((char*)Req + Req->OffsetName, par_Name, Len);
     Req->Type = par_Type;
     Req->Dir = par_Dir;
 
@@ -264,13 +267,15 @@ int rm_DeReferenceVariable(int par_Pid, uint64_t par_Address, const char *par_Na
     RM_DEREFERENCE_VARIABLE_REQ *Req;
     RM_DEREFERENCE_VARIABLE_ACK Ack;
     int SizeOfStruct;
+    int Len;
 
-    SizeOfStruct = (int)sizeof(RM_DEREFERENCE_VARIABLE_REQ) + strlen(par_Name) + 1;
+    Len = strlen(par_Name) + 1;
+    SizeOfStruct = (int)sizeof(RM_DEREFERENCE_VARIABLE_REQ) + Len;
     Req = (RM_DEREFERENCE_VARIABLE_REQ*)_alloca((size_t)SizeOfStruct);
     Req->Pid = par_Pid;
     Req->Address = par_Address;
     Req->OffsetName = sizeof(RM_DEREFERENCE_VARIABLE_REQ);
-    strcpy((char*)Req + Req->OffsetName, par_Name);
+    StringCopyMaxCharTruncate((char*)Req + Req->OffsetName, par_Name, Len);
     Req->Type = par_Type;
 
     TransactRemoteMaster (RM_DEREFERENCE_VARIABLE_CMD, Req, SizeOfStruct, &Ack, sizeof(Ack));

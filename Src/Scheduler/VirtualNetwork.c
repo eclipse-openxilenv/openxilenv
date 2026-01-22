@@ -76,7 +76,8 @@ int VirtualNetworkOpen (int par_Pid, int par_Type, int par_Channel, int par_Size
     for(;;) {
         for ( ; x < FifoCounter; x++) {
             if (Fifos[x].FiFoHandle < 0) {  // free FiFo
-                memset(&Fifos[x], 0, sizeof (VIRTUAL_NETWORK_FIFO));
+
+                STRUCT_ZERO_INIT(Fifos[x], VIRTUAL_NETWORK_FIFO);
                 Fifos[x].FiFoHandle = x;
                 break;  // for(;;)
             }
@@ -84,7 +85,7 @@ int VirtualNetworkOpen (int par_Pid, int par_Type, int par_Channel, int par_Size
         if (x == FifoCounter) {
             FifoCounter += 10;  // 10 new fifos
             Fifos = (VIRTUAL_NETWORK_FIFO*)my_realloc(Fifos, sizeof(Fifos[0]) * FifoCounter);
-            memset(Fifos + (FifoCounter - 10), 0, sizeof(Fifos[0]) * 10);
+            MEMSET(Fifos + (FifoCounter - 10), 0, sizeof(Fifos[0]) * 10);
             for (int i = (FifoCounter - 10); i < FifoCounter; i++) {
                 Fifos[i].FiFoHandle = -1;
             }
@@ -238,7 +239,7 @@ __NEXT_ONE:
                                                                              par_MaxSize, 1)) {
                             default:
                             case 0:  // use the original data
-                                memcpy(ret_Data, Dest, Size);
+                                MEMCPY(ret_Data, Dest, Size);
                                 break;
                             case 1:  // the data has changend
                                 break;

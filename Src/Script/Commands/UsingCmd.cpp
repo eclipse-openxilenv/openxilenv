@@ -62,7 +62,6 @@ int cUsingCmd::SyntaxCheck (cParser *par_Parser)
         par_Parser->Error (SCRIPT_PARSER_FATAL_ERROR, "cannot open file \"%s\"", par_Parser->GetParameter (0));
         return -1;
     }
-    //GetFinalPathNameByHandle (hFile, FilePath, MAX_PATH, FILE_NAME_NORMALIZED | VOLUME_NAME_DOS);
     CloseHandle (hFile);
 #else
     if (realpath(par_Parser->GetParameter (0), FilePath) == nullptr) {
@@ -77,15 +76,15 @@ int cUsingCmd::SyntaxCheck (cParser *par_Parser)
     close(fh);
 #endif
 
-    // wenn File schon Compiliert ist tue nichts
+    // If file already compiled do nothing
     if (par_Parser->IsFileAlreadyLoadedAndChecked (FilePath, &StartIp)) {
         return 0;
     } else {
-        // das File zum Parsen merken
+        // Mark this file that it should be parsed
         if (par_Parser->AddToParseFile (FilePath, par_Parser->GetCurrentIp (), static_cast<uint32_t>(par_Parser->GetStartCmdLineNr ()), 1) < 0) {
             return -1;
         }
-        // Wechsel zum neuen USING Script-File (aber nur zum Proc-Name parsen)
+        // Change to the USING script file (but only for parsing the procedure namees)
         if (par_Parser->ChangeToFileIfNotLoadedChecked (FilePath, &StartIp, 1, 1) < 0) {
             return -1;
         } else {

@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-
 #include "TextWidget.h"
 #include "MdiWindowType.h"
 #include "DragAndDrop.h"
+#include <QFile>
 #include <QBrush>
 #include <QPalette>
 #include <QVBoxLayout>
@@ -28,6 +28,7 @@
 #include <QDoubleValidator>
 #include <QComboBox>
 #include <QApplication>
+#include "FileDialog.h"
 #include "TextWindowChangeValueDialog.h"
 #include "BlackboardInfoDialog.h"
 #include "GetEventPos.h"
@@ -41,6 +42,9 @@ extern "C" {
 #include "Blackboard.h"
 #include "BlackboardAccess.h"
 #include "Scheduler.h"
+#include "FileExtensions.h"
+#include "MyMemory.h"
+#include "EquationParser.h"
 }
 
 #define UNIFORM_DIALOGE
@@ -101,6 +105,30 @@ TextWidget::TextWidget(QString par_WindowTitle, MdiSubWindow *par_SubWindow, Mdi
     m_BlackboardInfosAct->setStatusTip(tr("blackboard &variable info"));;
     connect(m_BlackboardInfosAct, SIGNAL(triggered()), this, SLOT(BlackboardInfos()));
 
+    m_SaveThisToScriptAct = new QAction(tr("to script file"), this);
+    connect(m_SaveThisToScriptAct, SIGNAL(triggered()), this, SLOT(SaveThisToScriptAct()));
+    m_SaveAllToScriptAct = new QAction(tr("to script file"), this);
+    connect(m_SaveAllToScriptAct, SIGNAL(triggered()), this, SLOT(SaveAllToScriptAct()));
+    m_SaveThisToScriptAtomicAct = new QAction(tr("to script file with ATOMIC"), this);
+    connect(m_SaveThisToScriptAtomicAct, SIGNAL(triggered()), this, SLOT(SaveThisToScriptAtomicAct()));
+    m_SaveAllToScriptAtomicAct = new QAction(tr("to script file with ATOMIC"), this);
+    connect(m_SaveAllToScriptAtomicAct, SIGNAL(triggered()), this, SLOT(SaveAllToScriptAtomicAct()));
+
+    m_SaveThisToEquAct = new QAction(tr("to equation file"), this);
+    connect(m_SaveThisToEquAct, SIGNAL(triggered()), this, SLOT(SaveThisToEquAct()));
+    m_SaveAllToEquAct = new QAction(tr("to equation file"), this);
+    connect(m_SaveAllToEquAct, SIGNAL(triggered()), this, SLOT(SaveAllToEquAct()));
+
+    m_SaveThisToSnapshotAct = new QAction(tr("to snapshot"), this);
+    connect(m_SaveThisToSnapshotAct, SIGNAL(triggered()), this, SLOT(SaveThisToSnapshotAct()));
+    m_SaveAllToSnapshotAct = new QAction(tr("to snapshot"), this);
+    connect(m_SaveAllToSnapshotAct, SIGNAL(triggered()), this, SLOT(SaveAllToSnapshotAct()));
+
+    m_LoadFromEquAct = new QAction(tr("load from euation file"), this);
+    connect(m_LoadFromEquAct, SIGNAL(triggered()), this, SLOT(LoadFromEquAct()));
+    m_LoadFromSnapshotAct = new QAction(tr("load from snapshot"), this);
+    connect(m_LoadFromSnapshotAct, SIGNAL(triggered()), this, SLOT(LoadFromSnapshotAct()));
+
     readFromIni();
 
     m_tableViewVariables->verticalHeader()->resizeSections(QHeaderView::ResizeToContents);
@@ -118,6 +146,20 @@ TextWidget::~TextWidget()
     }
     delete m_tableViewVariables;
     delete m_dataModel;
+    delete m_ConfigAct;
+    delete m_ShowUnitColumnAct;
+    delete m_ShowDisplayTypeColumnAct;
+    delete m_HideUnitColumnAct;
+    delete m_HideDisplayTypeColumnAct;
+    delete m_BlackboardInfosAct;
+    delete m_SaveThisToScriptAct;
+    delete m_SaveAllToScriptAct;
+    delete m_SaveThisToScriptAtomicAct;
+    delete m_SaveAllToScriptAtomicAct;
+    delete m_SaveThisToSnapshotAct;
+    delete m_SaveAllToSnapshotAct;
+    delete m_LoadFromEquAct;
+    delete m_LoadFromSnapshotAct;
 }
 
 bool TextWidget::writeToIni()
@@ -149,7 +191,7 @@ bool TextWidget::writeToIni()
         loc_logicalIndex = m_tableViewVariables->verticalHeader()->logicalIndex(i);
         QString Entry = QString("E%1").arg(i);
         QString Line = QString().number(loc_variableList.at(loc_logicalIndex)->m_type);
-        Line.append(", ");
+        Line.append(",");
         Line.append(loc_variableList.at(loc_logicalIndex)->m_name);
         ScQt_IniFileDataBaseWriteString(SectionPath, Entry, Line, Fd);
     }
@@ -467,6 +509,144 @@ void TextWidget::BlackboardInfos()
     }
 }
 
+void TextWidget::SaveToFile(enum WhatType par_Type)
+{
+    QTextStream Stream;
+    QFile File;
+
+    if ((par_Type == SAVE_THIS_TO_TEMP_BUFFER) || (par_Type == SAVE_ALL_TO_TEMP_BUFFER)) {
+        Stream.setString(&m_SnapshotBuffer);
+    } else {
+        QString FileName;
+        if ((par_Type == SAVE_THIS_TO_EQU) || (par_Type == SAVE_ALL_TO_EQU)) {
+            FileName = FileDialog::getSaveFileName(this, QString ("Equation file name"), QString(), QString (TRIGGER_EXT));
+        } else {
+            FileName = FileDialog::getSaveFileName(this, QString ("Script file name"), QString(), QString (SCRIPT_EXT));
+        }
+        if(FileName.isEmpty()) return;
+        File.setFileName(FileName);
+        if (File.open(QFile::WriteOnly | QFile::Truncate)) {
+            Stream.setDevice(&File);
+        } else {
+            ThrowError(1, "cannot write to file %s", FileName.toLatin1().data());
+        }
+    }
+    if (1) {
+        if ((par_Type == SAVE_THIS_TO_SCRIPT_ATOMIC) || (par_Type == SAVE_ALL_TO_SCRIPT_ATOMIC)) {
+            Stream << "ATOMIC\n";
+        }
+        if ((par_Type == SAVE_ALL_TO_SCRIPT) || (par_Type == SAVE_ALL_TO_SCRIPT_ATOMIC) ||
+            (par_Type == SAVE_ALL_TO_EQU)) {
+            QList<MdiWindowWidget*> TextWindowList;
+            TextWindowList = GetMdiWindowType()->GetAllOpenWidgetsOfThisType();
+            foreach(MdiWindowWidget *Window, TextWindowList) {
+                (static_cast<TextWidget*>(Window))->SaveToFile(par_Type, Stream);
+            }
+        } else {
+            SaveToFile(par_Type, Stream);
+        }
+        if ((par_Type == SAVE_THIS_TO_SCRIPT_ATOMIC) || (par_Type == SAVE_ALL_TO_SCRIPT_ATOMIC)) {
+            Stream << "END_ATOMIC\n";
+        }
+        Stream.flush();
+        if (File.isOpen()) {
+            File.close();
+        }
+    }
+}
+
+void TextWidget::SaveToFile(enum WhatType par_Type, QTextStream &Stream)
+{
+    switch(par_Type) {
+    case SAVE_THIS_TO_SCRIPT:
+    case SAVE_ALL_TO_SCRIPT:
+        Stream << "/* From window " << GetWindowTitle() << " */\n";
+        m_dataModel->WriteContentToFile(false, TextTableModel::SCRIPT_FILE_TYPE, Stream);
+        break;
+    case SAVE_THIS_TO_SCRIPT_ATOMIC:
+    case SAVE_ALL_TO_SCRIPT_ATOMIC:
+        Stream << "/* From window " << GetWindowTitle() << " */\n";
+        m_dataModel->WriteContentToFile(true, TextTableModel::SCRIPT_FILE_TYPE, Stream);
+        break;
+    case SAVE_THIS_TO_EQU:
+    case SAVE_ALL_TO_EQU:
+    case SAVE_THIS_TO_TEMP_BUFFER:
+    case SAVE_ALL_TO_TEMP_BUFFER:
+        Stream << "; From window " << GetWindowTitle() << "\n";
+        m_dataModel->WriteContentToFile(false, TextTableModel::EQU_FILE_TYPE, Stream);
+        break;
+    }
+}
+
+void TextWidget::SaveThisToScriptAct()
+{
+    SaveToFile(SAVE_THIS_TO_SCRIPT);
+}
+
+void TextWidget::SaveAllToScriptAct()
+{
+    SaveToFile(SAVE_ALL_TO_SCRIPT);
+}
+
+void TextWidget::SaveThisToScriptAtomicAct()
+{
+    SaveToFile(SAVE_THIS_TO_SCRIPT_ATOMIC);
+}
+
+void TextWidget::SaveAllToScriptAtomicAct()
+{
+    SaveToFile(SAVE_ALL_TO_SCRIPT_ATOMIC);
+}
+
+void TextWidget::SaveThisToEquAct()
+{
+    SaveToFile(SAVE_THIS_TO_EQU);
+}
+
+void TextWidget::SaveAllToEquAct()
+{
+    SaveToFile(SAVE_ALL_TO_EQU);
+}
+
+void TextWidget::SaveThisToSnapshotAct()
+{
+    SaveToFile(SAVE_THIS_TO_TEMP_BUFFER);
+}
+
+void TextWidget::SaveAllToSnapshotAct()
+{
+    SaveToFile(SAVE_ALL_TO_TEMP_BUFFER);
+}
+
+void TextWidget::LoadFromEquAct()
+{
+    QString FileName;
+    char *ErrString = nullptr;
+    FileName = FileDialog::getOpenFileName(this, QString ("Equation file name"), QString(), QString (TRIGGER_EXT));
+    if(FileName.isEmpty()) return;
+    if (DirectSolveEquationFile (FileName.toLatin1().data(), nullptr, &ErrString)) {
+        ThrowError(1, "cannot load file %s because of error %s", FileName.toLatin1().data(),
+                   (ErrString == nullptr) ? "unknown" : ErrString);
+        if (ErrString != nullptr) {
+            my_free(ErrString);
+        }
+    }
+}
+
+void TextWidget::LoadFromSnapshotAct()
+{
+    if (!m_SnapshotBuffer.isEmpty()) {
+        char *ErrString = nullptr;
+        if (DirectSolveEquationFile (nullptr, m_SnapshotBuffer.toLatin1().data(), &ErrString)) {
+            ThrowError(1, "cannot load snapshot because of error %s",
+                       (ErrString == nullptr) ? "unknown" : ErrString);
+            if (ErrString != nullptr) {
+                my_free(ErrString);
+            }
+        }
+    }
+}
+
 static QString ConvertAlignmentEnumToString(int par_Alignement)
 {
     if ((par_Alignement & Qt::AlignLeft) == Qt::AlignLeft) return QString("Left");
@@ -549,6 +729,23 @@ void TextWidget::customContextMenu(QPoint arg_point)
         menu.addAction (m_BlackboardInfosAct);
     }
 
+    QMenu *SaveMenu = menu.addMenu("Save content");
+    QMenu *SaveOfThisMenu = SaveMenu->addMenu("of this");
+    QMenu *SaveOfAllMenu = SaveMenu->addMenu("of all");
+    SaveOfThisMenu->addAction (m_SaveThisToSnapshotAct);
+    SaveOfAllMenu->addAction (m_SaveAllToSnapshotAct);
+    SaveOfThisMenu->addAction (m_SaveThisToEquAct);
+    SaveOfAllMenu->addAction (m_SaveAllToEquAct);
+    SaveOfThisMenu->addAction (m_SaveThisToScriptAct);
+    SaveOfAllMenu->addAction (m_SaveAllToScriptAct);
+    SaveOfThisMenu->addAction (m_SaveThisToScriptAtomicAct);
+    SaveOfAllMenu->addAction (m_SaveAllToScriptAtomicAct);
+
+    menu.addAction (m_LoadFromEquAct);
+    if (!m_SnapshotBuffer.isEmpty()) {
+        menu.addAction (m_LoadFromSnapshotAct);
+    }
+
     menu.exec(mapToGlobal(arg_point));
     this->m_dataModel->setColumnAlignment(0, ConvertStringToAlignmentEnum(NameComboBox->currentText()));
     this->m_dataModel->setColumnAlignment(1, ConvertStringToAlignmentEnum(ValueComboBox->currentText()));
@@ -592,7 +789,13 @@ void TextWidget::addBlackboardVariableToModel(QString arg_variableName, int arg_
     int loc_conversionType;
     if (Exist) {
         loc_conversionType = get_bbvari_conversiontype(loc_vid);
-        if(loc_conversionType == BB_CONV_FORMULA || loc_conversionType == BB_CONV_TEXTREP) {
+        if((loc_conversionType == BB_CONV_FORMULA) ||
+            (loc_conversionType == BB_CONV_TEXTREP) ||
+            (loc_conversionType == BB_CONV_FACTOFF) ||
+            (loc_conversionType == BB_CONV_OFFFACT) ||
+            (loc_conversionType == BB_CONV_TAB_INTP) ||
+            (loc_conversionType == BB_CONV_TAB_NOINTP) ||
+            (loc_conversionType == BB_CONV_RAT_FUNC)) {
             m_dataModel->setVariableHasConversion(loc_index.row(), true);
         }
     } else {
@@ -602,7 +805,13 @@ void TextWidget::addBlackboardVariableToModel(QString arg_variableName, int arg_
     if (arg_displayType >= 0) {
         m_dataModel->setDisplayType(loc_index.row(), arg_displayType);  // For variables with conversion phys is the default display type
     } else {
-        if(Exist && (loc_conversionType == BB_CONV_FORMULA || loc_conversionType == BB_CONV_TEXTREP)) {
+        if(Exist && ((loc_conversionType == BB_CONV_FORMULA) ||
+                     (loc_conversionType == BB_CONV_TEXTREP) ||
+                      (loc_conversionType == BB_CONV_FACTOFF) ||
+                      (loc_conversionType == BB_CONV_OFFFACT) ||
+                      (loc_conversionType == BB_CONV_TAB_INTP) ||
+                      (loc_conversionType == BB_CONV_TAB_NOINTP) ||
+                      (loc_conversionType == BB_CONV_RAT_FUNC))) {
             m_dataModel->setDisplayType(loc_index.row(), 3);  // For variables with conversion phys is the default display type
         } else {
             m_dataModel->setDisplayType(loc_index.row(), 0);  // For variables without conversion raw is the default display type

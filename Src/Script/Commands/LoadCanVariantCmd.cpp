@@ -54,10 +54,10 @@ int cLoadCanVariantCmd::Execute (cParser *par_Parser, cExecutor *par_Executor)
             par_Parser->Error (SCRIPT_PARSER_ERROR_CONTINUE, "equation '%s' result are less than 1 use channel 1",
                                par_Parser->GetParameter (1));
             Channel = 1;
-        } else if (erg > 8.0) {
+        } else if (erg > 16.0) {
             par_Parser->Error (SCRIPT_PARSER_ERROR_CONTINUE, "equation '%s' result are greater than 8 use channel 8",
                                par_Parser->GetParameter (1));
-            Channel = 8;
+            Channel = 16;
         } else Channel = static_cast<int>(erg);
         if (LoadCANVarianteScriptCommand (Path, Channel)) {
             par_Parser->Error (SCRIPT_PARSER_FATAL_ERROR, "cannot load CAN file \"%s\" (perhaps file does not exist)",

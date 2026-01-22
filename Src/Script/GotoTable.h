@@ -22,6 +22,7 @@
 
 extern "C"{
 #include "MyMemory.h"
+#include "StringMaxChar.h"
 }
 
 class cGotoTable {
@@ -36,7 +37,7 @@ private:
             unsigned int Counter : 31;
             unsigned int JumpTargetFlag : 1;
         } Ref;
-        int DefLocalsTreePos;  // Position im DefLocals Baum
+        int DefLocalsTreePos;  // Position inside the DefLocals tree
         int FirstGoto;
         int AtomicDepth;
     } *LabelTable;
@@ -47,7 +48,7 @@ private:
     struct GOTO_TABLE {
         int LineNr;
         int Ip;
-        int DefLocalsTreePos;  // Position im DefLocals Baum
+        int DefLocalsTreePos;  // Position inside the DefLocals tree
         int PosInLabelTable;
         int NextGoto;
         int AtomicDepth;
@@ -132,12 +133,11 @@ public:
 
         Idx = SearchLabel (par_Name, par_FileNr);
         if (Idx < 0) {
-            // noch kein Label mit diesem Namen vorhanden
+            // There exist no lable with this name
             if (CheckSizeOf ()) return -2;
             Idx = PosInLabelTable;
-            LabelTable[Idx].Name = (char*)my_malloc (strlen (par_Name) + 1);
+            LabelTable[Idx].Name = StringMalloc (par_Name);
             if (LabelTable[Idx].Name == NULL) return -1;
-            strcpy (LabelTable[Idx].Name, par_Name);
             LabelTable[Idx].Ip = par_Ip;
             LabelTable[Idx].FileNr = par_FileNr;
             LabelTable[Idx].LineNr = par_LineNr;
@@ -149,7 +149,7 @@ public:
             LabelTable[Idx].FirstGoto = -1;
             return PosInLabelTable++;
         } else {
-            // Es gibt schon ein Label mit diesm Namen
+            // There exist no lable with this name
             if (LabelTable[Idx].Ref.JumpTargetFlag) {
                 return -1;
             } else {
@@ -172,16 +172,15 @@ public:
 
         if (CheckSizeOf ()) return -2;
         if (par_Name == NULL) {
-            // GOTO Label mit Umgebungsvariable
+            // GOTO label with environment variable
             Ret = AddRefToLabel (-1, par_Ip, par_LineNr, par_DefLocalsTreePos, par_AtomicDepth);
         } else {
             Idx = SearchLabel (par_Name, par_FileNr);
             if (Idx < 0) {
-                // noch kein Label mit diesem Namen vorhanden
+                // There exist no lable with this name
                 Idx = PosInLabelTable;
-                LabelTable[Idx].Name = (char*)my_malloc (strlen (par_Name) + 1);
+                LabelTable[Idx].Name = StringMalloc (par_Name);
                 if (LabelTable[Idx].Name == NULL) return -1;
-                strcpy (LabelTable[Idx].Name, par_Name);
                 LabelTable[Idx].FileNr = par_FileNr;
                 LabelTable[Idx].LineNr = par_LineNr;
                 LabelTable[Idx].FileOffset = par_FileOffset;
@@ -205,12 +204,14 @@ public:
 
     int NextLabel (int par_Idx)
     {
-        if (par_Idx >= (PosInLabelTable - 1)) return -1;  // keine weiteren Label mehr
+        if (par_Idx >= (PosInLabelTable - 1)) return -1;  // no more lables
         if (par_Idx < 0) {
-            if (PosInLabelTable) return 0;   // Erstes Label wenn -1
-            return -1;                       // gibt ueberhaupt kein Label in dieser Proc
+            if (PosInLabelTable) return 0;   // if -1 it is the first label
+            return -1;                       // there are no lable inside this Proc
         }
-        return par_Idx + 1;   // naechstes Label
+        return par_Idx + 1;   // next lable
+
+
     }
 
     int Exist (int par_idx)

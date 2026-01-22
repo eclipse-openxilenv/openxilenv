@@ -108,3 +108,12 @@ void OscilloscopeDescFrame::DeleteSignal(int par_Numer)
         m_OscilloscopeWidget->DeleteSignal(m_Side, par_Numer);
     }
 }
+
+OscilloscopeDesc *OscilloscopeDescFrame::GetDesciption(int par_no)
+{
+    if ((par_no >= 0) && (par_no < MAX_SIGNALS_INSIDE_FRAME)) {
+        return m_Desc[par_no];
+    } else {
+        return nullptr;
+    }
+}
