@@ -32,6 +32,7 @@
 #include "MyMemory.h"
 #include "StringMaxChar.h"
 #include "EnvironmentVariables.h"
+#include "PrintFormatToString.h"
 #include "ThrowError.h"
 #include "StimulusReadFile.h"
 #include "MdfStructs.h"
@@ -63,7 +64,8 @@ int IsMdfFormat(const char *par_Filename, int *ret_Version)
         return 0;
     }
     if ((MdfIdBlock.VersionNumber < 300) || (MdfIdBlock.VersionNumber > 330) ||
-        !(!strncmp("3.10 ", MdfIdBlock.FormatTdentifier, 5) ||
+        !(!strncmp("3.00 ", MdfIdBlock.FormatTdentifier, 5) ||
+          !strncmp("3.10 ", MdfIdBlock.FormatTdentifier, 5) ||
           !strncmp("3.20 ", MdfIdBlock.FormatTdentifier, 5) ||
           !strncmp("3.30 ", MdfIdBlock.FormatTdentifier, 5))) {
         my_close (fh);
@@ -113,7 +115,7 @@ uint64_t ConvertDateTimeStringToTimeStamp(char *par_Date, char *par_Time)
     SYSTEMTIME st;
     FILETIME ft;
 
-    memset(&st, 0, sizeof(st));
+    MEMSET(&st, 0, sizeof(st));
     p = par_Date;
     st.wDay = (WORD)strtoul(p, &p, 10);
     if (*p++ != ':') return 0;
@@ -135,7 +137,7 @@ uint64_t ConvertDateTimeStringToTimeStamp(char *par_Date, char *par_Time)
     struct tm tm_time;
     time_t time_t_time;
 
-    memset(&tm_time, 0, sizeof(tm_time));
+    MEMSET(&tm_time, 0, sizeof(tm_time));
     p = par_Date;
     tm_time.tm_mday = (int)strtoul(p, &p, 10);
     if (*p++ != ':') return 0;
@@ -317,11 +319,10 @@ char *MdfReadStimulHeaderVariabeles (const char *par_Filename)
                                     return NULL;
                                 }
                                 if (VariableCount) {
-                                    strcpy (Ret + Pos, ";");
+                                    StringCopyMaxCharTruncate (Ret + Pos, ";", (LenOfRet + 1) - Pos);
                                     Pos += 1;
                                 }
-                                strcpy (Ret + Pos, SignalName);
-                                Pos += (int)strlen (SignalName);
+                                StringCopyMaxCharTruncate (Ret + Pos, SignalName, (LenOfRet + 1) - Pos);
                                 VariableCount++;
                             }
 
@@ -377,7 +378,7 @@ static int AddDataBlockToCache(MDF_STIMULI_FILE *par_Mdf, uint32_t par_OffsetIns
         ErrorCleanCache(par_Mdf, "out of memory");
         return -1;
     }
-    memset(&(par_Mdf->Cache.DataBlocks[par_Mdf->Cache.NumberOfDataBlocks - 1]), 0, sizeof (MDF_DATA_BLOCK_CACHE));
+    MEMSET(&(par_Mdf->Cache.DataBlocks[par_Mdf->Cache.NumberOfDataBlocks - 1]), 0, sizeof (MDF_DATA_BLOCK_CACHE));
     par_Mdf->Cache.DataBlocks[par_Mdf->Cache.NumberOfDataBlocks - 1].OffsetInsideFile = par_OffsetInsideFile;
     par_Mdf->Cache.DataBlocks[par_Mdf->Cache.NumberOfDataBlocks - 1].CurrentFilePos = par_OffsetInsideFile;
     par_Mdf->Cache.DataBlocks[par_Mdf->Cache.NumberOfDataBlocks - 1].EndCacheFilePos = par_OffsetInsideFile;
@@ -400,7 +401,7 @@ static int AddChannelGroupToCache(MDF_STIMULI_FILE *par_Mdf, int par_BlockNumber
         ErrorCleanCache(par_Mdf, "out of memory");
         return -1;
     }
-    memset(&DataBlock->Records[DataBlock->NumberOfChannelGroups - 1], 0, sizeof(MDF_RECORD_CACHE));
+    MEMSET(&DataBlock->Records[DataBlock->NumberOfChannelGroups - 1], 0, sizeof(MDF_RECORD_CACHE));
     DataBlock->Records[DataBlock->NumberOfChannelGroups - 1].Id = par_ChannelId;
     DataBlock->Records[DataBlock->NumberOfChannelGroups - 1].SizeOfOneRecord = par_SizeOfDataRecord;
     DataBlock->Records[DataBlock->NumberOfChannelGroups - 1].NumberOfRecords = par_NumberOfRecords;
@@ -455,7 +456,7 @@ static int AddVariableToCache(MDF_STIMULI_FILE *par_Mdf, int par_BlockNumber, in
             ErrorCleanCache(par_Mdf, "out of memory");
             return -1;
         }
-        memset(&Record->Entrys[Record->NumberOfEntrys - 1], 0, sizeof(MDF_RECORD_ENTY));
+        MEMSET(&Record->Entrys[Record->NumberOfEntrys - 1], 0, sizeof(MDF_RECORD_ENTY));
         Record->Entrys[Record->NumberOfEntrys - 1].Vid = par_Vid;
         Record->Entrys[Record->NumberOfEntrys - 1].DataType = par_DataType;
         Record->Entrys[Record->NumberOfEntrys - 1].BbDataType = par_BbDataType;
@@ -465,11 +466,11 @@ static int AddVariableToCache(MDF_STIMULI_FILE *par_Mdf, int par_BlockNumber, in
     return DataBlock->NumberOfChannelGroups - 1;
 }
 
-static void DoubleToString(double par_Value, char *ret_String)
+static void DoubleToString(double par_Value, char *ret_String, int par_Maxc)
 {
     int Prec = 15;
     while (1) {
-        sprintf (ret_String, "%.*g", Prec, par_Value);
+        PrintFormatToString (ret_String, par_Maxc, "%.*g", Prec, par_Value);
         if ((Prec++) == 18 || (par_Value == strtod (ret_String, NULL))) break;
     }
 }
@@ -507,30 +508,30 @@ static int MdfReadTextRangeTable(MDF_STIMULI_FILE *Mdf, int par_Vid, uint32_t pa
         if (strncmp("TX", MdfTxBlock.BlockTypeIdentifier, 2)) {
             goto ERROR_OUT;
         }
-        DoubleToString(Elements[x].LowerRange, LowerRangeString);
-        DoubleToString(Elements[x].UpperRange, UpperRangeString);
+        DoubleToString(Elements[x].LowerRange, LowerRangeString, sizeof(LowerRangeString));
+        DoubleToString(Elements[x].UpperRange, UpperRangeString, sizeof(UpperRangeString));
 
         if (x > 0) { // for(x=1...
             // Check if it fits into
             if ((PosInConversion + MdfTxBlock.BlockSize - sizeof(MdfTxBlock) + strlen(LowerRangeString) + strlen(UpperRangeString) + 8) < BBVARI_CONVERSION_SIZE) {
                 if (x != 1) {
-                    strcpy(Conversion + PosInConversion, " ");
+                    StringCopyMaxCharTruncate(Conversion + PosInConversion, " ", BBVARI_CONVERSION_SIZE - PosInConversion);
                     PosInConversion++;
                 }
-                strcpy(Conversion + PosInConversion, LowerRangeString);
+                StringCopyMaxCharTruncate(Conversion + PosInConversion, LowerRangeString, BBVARI_CONVERSION_SIZE - PosInConversion);
                 PosInConversion += (int)strlen(LowerRangeString);
-                strcpy(Conversion + PosInConversion, " ");
+                StringCopyMaxCharTruncate(Conversion + PosInConversion, " ", BBVARI_CONVERSION_SIZE - PosInConversion);
                 PosInConversion++;
-                strcpy(Conversion + PosInConversion, UpperRangeString);
+                StringCopyMaxCharTruncate(Conversion + PosInConversion, UpperRangeString, BBVARI_CONVERSION_SIZE - PosInConversion);
                 PosInConversion += (int)strlen(UpperRangeString);
-                strcpy(Conversion + PosInConversion, " \"");
+                StringCopyMaxCharTruncate(Conversion + PosInConversion, " \"", BBVARI_CONVERSION_SIZE - PosInConversion);
                 PosInConversion += 2;
                 ReadResult = my_read (Mdf->fh, Conversion + PosInConversion, MdfTxBlock.BlockSize - sizeof(MdfTxBlock));
                 if (ReadResult != (int)MdfTxBlock.BlockSize - (int)sizeof(MdfTxBlock)) {
                     goto ERROR_OUT;
                 }
                 PosInConversion += ReadResult - 1;
-                strcpy(Conversion + PosInConversion, "\";");
+                StringCopyMaxCharTruncate(Conversion + PosInConversion, "\";", BBVARI_CONVERSION_SIZE - PosInConversion);
                 PosInConversion += 2;
             } else {
                 break;
@@ -566,24 +567,24 @@ static int MdfReadTextValueTable(MDF_STIMULI_FILE *Mdf, int par_Vid, uint32_t pa
         goto ERROR_OUT;
     }
     for (x = 0; x < NumberOfElements; x++) {
-        DoubleToString(Elements[x].Value, ValueString);
+        DoubleToString(Elements[x].Value, ValueString, sizeof(ValueString));
         //  Check if it fits into
         if ((PosInConversion + strlen(Elements[x].AssignedText) + strlen(ValueString) + strlen(ValueString) + 8) < BBVARI_CONVERSION_SIZE) {
             if (x != 0) {
-                strcpy(Conversion + PosInConversion, " ");
+                StringCopyMaxCharTruncate(Conversion + PosInConversion, " ", BBVARI_CONVERSION_SIZE - PosInConversion);
                 PosInConversion++;
             }
-            strcpy(Conversion + PosInConversion, ValueString);
+            StringCopyMaxCharTruncate(Conversion + PosInConversion, ValueString, BBVARI_CONVERSION_SIZE - PosInConversion);
             PosInConversion += (int)strlen(ValueString);
-            strcpy(Conversion + PosInConversion, " ");
+            StringCopyMaxCharTruncate(Conversion + PosInConversion, " ", BBVARI_CONVERSION_SIZE - PosInConversion);
             PosInConversion++;
-            strcpy(Conversion + PosInConversion, ValueString);
+            StringCopyMaxCharTruncate(Conversion + PosInConversion, ValueString, BBVARI_CONVERSION_SIZE - PosInConversion);
             PosInConversion += (int)strlen(ValueString);
-            strcpy(Conversion + PosInConversion, " \"");
+            StringCopyMaxCharTruncate(Conversion + PosInConversion, " \"", BBVARI_CONVERSION_SIZE - PosInConversion);
             PosInConversion += 2;
-            strcpy(Conversion + PosInConversion, Elements[x].AssignedText);
+            StringCopyMaxCharTruncate(Conversion + PosInConversion, Elements[x].AssignedText, BBVARI_CONVERSION_SIZE - PosInConversion);
             PosInConversion += (int)strlen(Elements[x].AssignedText);
-            strcpy(Conversion + PosInConversion, "\";");
+            StringCopyMaxCharTruncate(Conversion + PosInConversion, "\";", BBVARI_CONVERSION_SIZE - PosInConversion);
             PosInConversion += 2;
         } else {
             break;
@@ -623,15 +624,15 @@ static int MdfGetConversion (MDF_STIMULI_FILE *Mdf, uint32_t par_ConversionOffse
     case 0:     //     0 = parametric, linear
         {
             double P[2];
-            char Help[64];
+            char Conversion[64];
             if (MdfCcBlock.BlockSize >= (sizeof (MdfCcBlock) + 2 * sizeof(double))) {
                 ReadResult = my_read (Mdf->fh, P, sizeof (P));
                 if (ReadResult != sizeof (P)) {
                     return -1;
                 }
                 if  (par_Vid > 0) {
-                    sprintf (Help, "$*%g+%g", P[1], P[0]);
-                    set_bbvari_conversion(par_Vid, 1, Help);
+                    PrintFormatToString (Conversion, sizeof(Conversion), "%.18g:%.18g", P[1], P[0]);
+                    set_bbvari_conversion(par_Vid, BB_CONV_FACTOFF, Conversion);
                 } else {
                     if (ret_Fac != NULL) *ret_Fac = P[1];
                     if (ret_Off != NULL) *ret_Off = P[0];
@@ -641,38 +642,61 @@ static int MdfGetConversion (MDF_STIMULI_FILE *Mdf, uint32_t par_ConversionOffse
         }
     case 1:     //     1 = tabular with interpolation
     case 2:     //     2 = tabular
-        return -1;
-    case 6:     //     6 = polynomial function
-        /* {
+        if (par_Vid > 0) {
+            if (MdfCcBlock.BlockSize >= (sizeof (MdfCcBlock) + 6 * sizeof(double))) {
+                int Size = (MdfCcBlock.BlockSize - sizeof(MdfCcBlock)) / (2 * sizeof(double));
+                int ConvStringSize = 64 * Size;
+                char *Conversion = my_malloc(ConvStringSize);
+                double *P = my_malloc(sizeof(double) * 2 * Size);
+                if ((Conversion != NULL) && (P != NULL)) {
+                    int x;
+                    char *p;
+                    ReadResult = my_read (Mdf->fh, P, Size * 2 * sizeof(double));
+                    if (ReadResult !=  Size * 2 * sizeof(double)) {
+                        my_free(Conversion);
+                        my_free(P);
+                        return -1;
+                    }
+                    p = Conversion;
+                    for (x = 0; x < Size; x++) {
+                        p += PrintFormatToString (p, ConvStringSize - (p - Conversion), (x == 0) ? "%.18g/%.18g" : ":%.18g/%.18g", P[x * 2 + 1], P[x * 2]);  // phys/raw
+                    }
+                    set_bbvari_conversion(par_Vid, (MdfCcBlock.ConversionType == 1) ? BB_CONV_TAB_INTP : BB_CONV_TAB_NOINTP, Conversion);
+                }
+            }
+            break;
+        }
+    case 9:     //     9 = rational function
+         {
             double P[6];
-            char Help[256];
+            char Conversion[256];
             if (MdfCcBlock.BlockSize >= (sizeof (MdfCcBlock) + 6 * sizeof(double))) {
                 ReadResult = my_read (Mdf->fh, P, sizeof (P));
                 if (ReadResult != sizeof (P)) {
                     return -1;
                 }
                 if  (par_Vid > 0) {
-                    sprintf (Help, "(%g-(%g*($-%g-%g)))/(%g*(-%g-%g)-%g)",
-                             P[2-1], P[4-1], P[5-1], P[6-1],
-                             P[3-1], P[5-1], P[6-1], P[1-1]);
-                    set_bbvari_conversion(par_Vid, 1, Help);
+                    if ((P[0] == 0.0) &&   // a == 0
+                        (P[1] != 0.0) &&   // b != 0
+                        (P[3] == 0.0) &&   // d == 0
+                        (P[4] == 0.0)) {   // e == 0
+                        // it is a linear conversion
+                        PrintFormatToString (Conversion, sizeof(Conversion), "%.18g:%.18g",
+                                P[5] / P[1], P[2] / P[1]); // f/b, c/b
+                        set_bbvari_conversion(par_Vid, BB_CONV_FACTOFF, Conversion);
+                    } else {
+                        PrintFormatToString (Conversion, sizeof(Conversion), "%.18g:%.18g:%.18g:%.18g:%.18g:%.18g",
+                                P[0], P[1], P[2], P[3], P[4], P[5]);
+                        set_bbvari_conversion(par_Vid, BB_CONV_RAT_FUNC, Conversion);
+                    }
                 }
             }
             break;
-        } */
-        return -1;
-    case 7:     //     7 = exponential function
-    case 8:     //     8 = logarithmic function
-    case 9:     //     9 = rational conversion formula
-    case 10:    //     10 = ASAM-MCD2 Text formula
-        return -1;
+        }
     case 11:    //     11 = ASAM-MCD2 Text Table, (COMPU_VTAB)
         return MdfReadTextValueTable(Mdf,  par_Vid, MdfCcBlock.BlockSize - sizeof(MdfCcBlock));
     case 12:    //     12 = ASAM-MCD2 Text Range Table (COMPU_VTAB_RANGE)
         return MdfReadTextRangeTable(Mdf,  par_Vid, MdfCcBlock.BlockSize - sizeof(MdfCcBlock));
-    case 132:   //     132 = date (Based on 7 Byte Date data structure)
-    case 133:   //     133 = time (Based on 6 Byte Time data structure)
-        return -1;
     case 65535: //     65535 = 1:1 conversion formula (Int = Phys)
         if  (par_Vid > 0) {
             set_bbvari_conversion(par_Vid, 0, "");

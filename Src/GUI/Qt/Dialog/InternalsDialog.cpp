@@ -23,6 +23,8 @@
 
 extern "C"
 {
+    #include "StringMaxChar.h"
+    #include "PrintFormatToString.h"
     #include "MainValues.h"
     #include "Scheduler.h"
     #include "MyMemory.h"
@@ -44,7 +46,7 @@ InternalsDialog::InternalsDialog(QWidget *parent) : Dialog(parent),
     openFilesItems = get_count_open_files_infos();
 
     for (int x = 0; x < openFilesItems; x++) {
-        strcpy(openFiles, get_open_files_infos(x));
+        STRING_COPY_TO_ARRAY(openFiles, get_open_files_infos(x));
         ui->listWidgetOpenFiles->addItem(QString(openFiles));
     }
     char IniFileName[MAX_PATH];
@@ -101,7 +103,7 @@ void InternalsDialog::get_memory_infos(int pid)
     for (cblock = memory_block_list; cblock != nullptr; cblock = nextblock) {
         nextblock = cblock->next;
         if ((pid == 0) || (cblock->pid == pid)) {
-            sprintf (buffer, "(%i) %p[%u] %s[%i]", cblock->pid, cblock->block, cblock->size, cblock->file, cblock->line);
+            PrintFormatToString (buffer, sizeof(buffer), "(%i) %p[%u] %s[%i]", cblock->pid, cblock->block, cblock->size, cblock->file, cblock->line);
             if (fh != nullptr) fprintf (fh, "(%i) %p[%u] %s[%i]\n", cblock->pid, cblock->block, cblock->size, cblock->file, cblock->line);
             ui->listWidgetMemory->addItem(QString(buffer));
             total_mem += cblock->size;
@@ -115,7 +117,7 @@ void InternalsDialog::on_listWidgetProcess_currentRowChanged(int currentRow)
 {
     int pid;
     char pName[MAX_PATH];
-    strcpy(pName, QStringToConstChar(ui->listWidgetProcess->item(currentRow)->text()));
+    STRING_COPY_TO_ARRAY(pName, QStringToConstChar(ui->listWidgetProcess->item(currentRow)->text()));
     if(!strcmp("all", pName)) pid = 0;
     else pid = get_pid_by_name(pName);
     get_memory_infos(pid);
@@ -141,7 +143,7 @@ void InternalsDialog::FillOpenIniFile()
     // We know the file descriptors are in the rang 256...(256+15)
     for (int x = 256; x < (256+16); x++) {
         if (IniFileDataBaseGetFileNameByDescriptor(x, Filename, sizeof(Filename))) {
-            strcpy(Filename, "not used");
+            STRING_COPY_TO_ARRAY(Filename, "not used");
         }
         ui->listWidgetOpenIniFiles->addItem(QString(Filename));
     }

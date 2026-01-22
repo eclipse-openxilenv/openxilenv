@@ -23,6 +23,7 @@
 
 extern "C"
 {
+    #include "StringMaxChar.h"
     #include "IniDataBase.h"
     #include "Blackboard.h"
     #include "Wildcards.h"
@@ -36,7 +37,7 @@ exportvariableproperties::exportvariableproperties(QWidget *parent) : Dialog(par
     ui->setupUi(this);
     char Filter[BBVARI_NAME_SIZE];
     ui->lineEditFilter->setText("*");
-    strcpy(Filter, QStringToConstChar(ui->lineEditFilter->text()));
+    STRING_COPY_TO_ARRAY(Filter, QStringToConstChar(ui->lineEditFilter->text()));
     ui->checkBoxExistingOnly->setChecked(true);
     FillListBox (GetMainFileDescriptor(), 1, Filter);
 
@@ -89,7 +90,7 @@ void exportvariableproperties::on_pushButtonFilter_clicked()
     char Filter[BBVARI_NAME_SIZE];
     int OnlyExistingVariablesFlag;
     ui->checkBoxExistingOnly->isChecked() ? OnlyExistingVariablesFlag = 1 : OnlyExistingVariablesFlag = 0;
-    strcpy(Filter, QStringToConstChar(ui->lineEditFilter->text()));
+    STRING_COPY_TO_ARRAY(Filter, QStringToConstChar(ui->lineEditFilter->text()));
     FillListBox (GetMainFileDescriptor(), OnlyExistingVariablesFlag, Filter);
 }
 
@@ -131,7 +132,7 @@ void exportvariableproperties::on_buttonBox_accepted()
         // tranfer variables
         file.replace("/", "\\");
         char FileName[MAX_PATH];
-        strcpy(FileName, QStringToConstChar(file));
+        STRING_COPY_TO_ARRAY(FileName, QStringToConstChar(file));
         int Fd = IniFileDataBaseCreateAndOpenNewIniFile(FileName);
         if (Fd > 0) {
             CopyVariablePropertiesBetweenTwoIniFiles (GetMainFileDescriptor(), Fd);
@@ -156,7 +157,7 @@ int exportvariableproperties::CopyVariablePropertiesBetweenTwoIniFiles (int SrcI
     char Properties[INI_MAX_LINE_LENGTH];
 
     for (i = 0; i < ui->listWidgetExportVariable->count(); i++) {
-        strcpy(VarName, QStringToConstChar(ui->listWidgetExportVariable->item(i)->text()));
+        STRING_COPY_TO_ARRAY(VarName, QStringToConstChar(ui->listWidgetExportVariable->item(i)->text()));
         IniFileDataBaseReadString ("Variables", VarName, "", Properties, sizeof (Properties), SrcIniFile);
         IniFileDataBaseWriteString ("Variables", VarName, Properties, DstIniFile);
     }
@@ -167,6 +168,6 @@ void exportvariableproperties::on_checkBoxExistingOnly_toggled(bool checked)
 {
     Q_UNUSED(checked);
     char Filter[BBVARI_NAME_SIZE];
-    strcpy(Filter, QStringToConstChar(ui->lineEditFilter->text()));
+    STRING_COPY_TO_ARRAY(Filter, QStringToConstChar(ui->lineEditFilter->text()));
     FillListBox (GetMainFileDescriptor(), ui->checkBoxExistingOnly->isChecked(), Filter);
 }

@@ -24,6 +24,7 @@
 #include "Config.h"
 
 #include "MyMemory.h"
+#include "StringMaxChar.h"
 #include "XcpControl.h"
 
 #include "RpcControlProcess.h"
@@ -38,7 +39,7 @@ static int RPCFunc_LoadXcpConfig(RPC_CONNECTION *par_Connection, RPC_API_BASE_ME
     UNUSED(par_Connection);
     RPC_API_LOAD_XCP_CONFIG_MESSAGE *In = (RPC_API_LOAD_XCP_CONFIG_MESSAGE*)par_DataIn;
     RPC_API_LOAD_XCP_CONFIG_MESSAGE_ACK *Out = (RPC_API_LOAD_XCP_CONFIG_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_LOAD_XCP_CONFIG_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_LOAD_XCP_CONFIG_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_LOAD_XCP_CONFIG_MESSAGE_ACK);
     if ((In->Connection >= 0) && (In->Connection < 4)) {
         Out->Header.ReturnValue = LoadConfig_XCP (In->Connection, (char*)In + In->OffsetXcpFile);
@@ -65,7 +66,7 @@ static int RPCFunc_StartXcpBegin(RPC_CONNECTION *par_Connection, RPC_API_BASE_ME
 
     RPC_API_START_XCP_BEGIN_MESSAGE *In = (RPC_API_START_XCP_BEGIN_MESSAGE*)par_DataIn;
     RPC_API_START_XCP_BEGIN_MESSAGE_ACK *Out = (RPC_API_START_XCP_BEGIN_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_START_XCP_BEGIN_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_START_XCP_BEGIN_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_START_XCP_BEGIN_MESSAGE_ACK);
     if ((In->Connection >= 0) && (In->Connection < 4)) {
         CleanUpXcpVariables(par_Connection, In->Connection);
@@ -81,13 +82,12 @@ static int RPCFunc_StartXcpAddVar(RPC_CONNECTION *par_Connection, RPC_API_BASE_M
     UNUSED(par_Connection);
     RPC_API_START_XCP_ADD_VAR_MESSAGE *In = (RPC_API_START_XCP_ADD_VAR_MESSAGE*)par_DataIn;
     RPC_API_START_XCP_ADD_VAR_MESSAGE_ACK *Out = (RPC_API_START_XCP_ADD_VAR_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_START_XCP_ADD_VAR_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_START_XCP_ADD_VAR_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_START_XCP_ADD_VAR_MESSAGE_ACK);
     if ((In->Connection >= 0) && (In->Connection < 4)) {
         if (par_Connection->XCPVarCounter[In->Connection] < 100) {
             par_Connection->XCPVariable[In->Connection] = my_realloc(par_Connection->XCPVariable[In->Connection], sizeof(char*) * (size_t)(par_Connection->XCPVarCounter[In->Connection] + 1));
-            par_Connection->XCPVariable[In->Connection][par_Connection->XCPVarCounter[In->Connection]] = my_malloc(strlen((char*)In + In->OffsetLabel) + 1);
-            strcpy(par_Connection->XCPVariable[In->Connection][par_Connection->XCPVarCounter[In->Connection]], (char*)In + In->OffsetLabel);
+            par_Connection->XCPVariable[In->Connection][par_Connection->XCPVarCounter[In->Connection]] = StringMalloc((char*)In + In->OffsetLabel);
             par_Connection->XCPVarCounter[In->Connection]++;
 
         } else {
@@ -105,7 +105,7 @@ static int RPCFunc_StartXcpEnd(RPC_CONNECTION *par_Connection, RPC_API_BASE_MESS
 
     RPC_API_START_XCP_END_MESSAGE *In = (RPC_API_START_XCP_END_MESSAGE*)par_DataIn;
     RPC_API_START_XCP_END_MESSAGE_ACK *Out = (RPC_API_START_XCP_END_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_START_XCP_END_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_START_XCP_END_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_START_XCP_END_MESSAGE_ACK);
     if ((In->Connection >= 0) && (In->Connection < 4)) {
         if (par_Connection->XCPVarCounter[In->Connection] > 0) {
@@ -126,7 +126,7 @@ static int RPCFunc_StopXcp(RPC_CONNECTION *par_Connection, RPC_API_BASE_MESSAGE 
 
     RPC_API_STOP_XCP_MESSAGE *In = (RPC_API_STOP_XCP_MESSAGE*)par_DataIn;
     RPC_API_STOP_XCP_MESSAGE_ACK *Out = (RPC_API_STOP_XCP_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_STOP_XCP_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_STOP_XCP_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_STOP_XCP_MESSAGE_ACK);
     if ((In->Connection >= 0) && (In->Connection < 4)) {
         Out->Header.ReturnValue = Stop_XCP(In->Connection, STOP_MEASSUREMENT);
@@ -154,7 +154,7 @@ static int RPCFunc_StartXcpCalBegin(RPC_CONNECTION *par_Connection, RPC_API_BASE
 
     RPC_API_START_XCP_CAL_BEGIN_MESSAGE *In = (RPC_API_START_XCP_CAL_BEGIN_MESSAGE*)par_DataIn;
     RPC_API_START_XCP_CAL_BEGIN_MESSAGE_ACK *Out = (RPC_API_START_XCP_CAL_BEGIN_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_START_XCP_CAL_BEGIN_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_START_XCP_CAL_BEGIN_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_START_XCP_CAL_BEGIN_MESSAGE_ACK);
     if ((In->Connection >= 0) && (In->Connection < 4)) {
         CleanUpXcpParameters(par_Connection, In->Connection);
@@ -170,13 +170,12 @@ static int RPCFunc_StartXcpCalAddVar(RPC_CONNECTION *par_Connection, RPC_API_BAS
     UNUSED(par_Connection);
     RPC_API_START_XCP_CAL_ADD_VAR_MESSAGE *In = (RPC_API_START_XCP_CAL_ADD_VAR_MESSAGE*)par_DataIn;
     RPC_API_START_XCP_CAL_ADD_VAR_MESSAGE_ACK *Out = (RPC_API_START_XCP_CAL_ADD_VAR_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_START_XCP_CAL_ADD_VAR_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_START_XCP_CAL_ADD_VAR_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_START_XCP_CAL_ADD_VAR_MESSAGE_ACK);
     if ((In->Connection >= 0) && (In->Connection < 4)) {
         if (par_Connection->XCPCalCounter[In->Connection] < 100) {
             par_Connection->XCPParameter[In->Connection] = my_realloc(par_Connection->XCPParameter[In->Connection], sizeof(char*) * (size_t)(par_Connection->XCPCalCounter[In->Connection] + 1));
-            par_Connection->XCPParameter[In->Connection][par_Connection->XCPCalCounter[In->Connection]] = my_malloc(strlen((char*)In + In->OffsetLabel) + 1);
-            strcpy(par_Connection->XCPParameter[In->Connection][par_Connection->XCPCalCounter[In->Connection]], (char*)In + In->OffsetLabel);
+            par_Connection->XCPParameter[In->Connection][par_Connection->XCPCalCounter[In->Connection]] = StringMalloc((char*)In + In->OffsetLabel);
             par_Connection->XCPCalCounter[In->Connection]++;
 
         } else {
@@ -194,7 +193,7 @@ static int RPCFunc_StartXcpCalEnd(RPC_CONNECTION *par_Connection, RPC_API_BASE_M
 
     RPC_API_START_XCP_CAL_END_MESSAGE *In = (RPC_API_START_XCP_CAL_END_MESSAGE*)par_DataIn;
     RPC_API_START_XCP_CAL_END_MESSAGE_ACK *Out = (RPC_API_START_XCP_CAL_END_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_START_XCP_CAL_END_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_START_XCP_CAL_END_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_START_XCP_CAL_END_MESSAGE_ACK);
     if ((In->Connection >= 0) && (In->Connection < 4)) {
         if (par_Connection->XCPCalCounter[In->Connection] > 0) {
@@ -215,7 +214,7 @@ static int RPCFunc_StopXcpCal(RPC_CONNECTION *par_Connection, RPC_API_BASE_MESSA
 
     RPC_API_STOP_XCP_CAL_MESSAGE *In = (RPC_API_STOP_XCP_CAL_MESSAGE*)par_DataIn;
     RPC_API_STOP_XCP_CAL_MESSAGE_ACK *Out = (RPC_API_STOP_XCP_CAL_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_STOP_XCP_CAL_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_STOP_XCP_CAL_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_STOP_XCP_CAL_MESSAGE_ACK);
     if ((In->Connection >= 0) && (In->Connection < 4)) {
         Out->Header.ReturnValue = Stop_XCP(In->Connection, STOP_CALIBRATION);

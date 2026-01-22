@@ -27,9 +27,8 @@
 #include "GetExeDebugSign.h"
 #include "ReadExeInfos.h"
 
-/* Maximale Groesse eines DWARF Namens */
-#define MAXIMUM_DWARF_NAME_SIZE 64
-/* Groesse in Byte eines Symbols in der COFF Symbol Table */
+#define MAXIMUM_SECTION_NAME_SIZE 64
+/* Size of a symbols inside the COFF symbol table */
 #define SYMBOL_SIZE   18 
 
 
@@ -357,7 +356,7 @@ int ReadExeInfos (char *Filename, uint64_t *pBaseAddr, unsigned int *pLinkerVers
                                              strtoull ((char*)SectionHeader.Name+1, NULL, 0);
                     SaveFilePos = my_ftell(hFile);
                     my_lseek(hFile, VirtualOffset);
-                    for (i = 0; i < MAXIMUM_DWARF_NAME_SIZE; i++) {
+                    for (i = 0; i < MAXIMUM_SECTION_NAME_SIZE; i++) {
                         my_read (hFile, &c, 1);
                         if (c == 0) break;
                     }
@@ -515,6 +514,7 @@ int ReadExeInfos (char *Filename, uint64_t *pBaseAddr, unsigned int *pLinkerVers
                 char SectionName[256];
                 char c;
                 int x;
+                int Len;
 
                 SectionName[0] = 0;
                 if (Is64Bit) {
@@ -548,8 +548,9 @@ int ReadExeInfos (char *Filename, uint64_t *pBaseAddr, unsigned int *pLinkerVers
                     SectionName[x] = c;
                     if (c == 0) break;
                 }
-                pSectionNames[i] = my_malloc(strlen(SectionName)+1);
-                strcpy(pSectionNames[i], SectionName);
+                Len = strlen(SectionName)+1;
+                pSectionNames[i] = my_malloc(Len);
+                StringCopyMaxCharTruncate(pSectionNames[i], SectionName, Len);
                 if (Is64Bit) {
                     pSectionVirtualAddresses[i] = Shdr64.sh_addr;
                     pSectionVirtualSize[i] = (uint32_t)Shdr64.sh_size;

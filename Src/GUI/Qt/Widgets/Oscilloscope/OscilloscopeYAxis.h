@@ -36,6 +36,7 @@ public:
     enum Side { Left, Right};
     explicit OscilloscopeYAxis(OscilloscopeWidget *par_OscilloscopeWidget, OSCILLOSCOPE_DATA *par_Data, enum Side par_Side, QWidget *parent = nullptr);
     ~OscilloscopeYAxis() Q_DECL_OVERRIDE;
+    void paint(QPainter &painter, bool border_flag);
 
 signals:
 

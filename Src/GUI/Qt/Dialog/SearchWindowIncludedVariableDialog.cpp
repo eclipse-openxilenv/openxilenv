@@ -22,6 +22,8 @@
 #include "StringHelpers.h"
 
 extern "C" {
+#include "StringMaxChar.h"
+#include "PrintFormatToString.h"
 #include "IniDataBase.h"
 #include "MainValues.h"
 #include "Wildcards.h"
@@ -101,17 +103,17 @@ int SearchWindowIncludedVariableDialog::SearchVariableInAllWindows (const char *
     // Make sure that all infos are inside the INI file
     SaveAllInfosToIniDataBase();
 
-    strcpy(WindowSectionName, "GUI/Widgets/");
+    STRING_COPY_TO_ARRAY(WindowSectionName, "GUI/Widgets/");
     WindowName = WindowSectionName + strlen(WindowSectionName);
     WindowNameMaxSize = sizeof(WindowSectionName) - strlen(WindowSectionName);
 
     for (x = 0;;x++) {
-        sprintf (Entry, "W%i", x);
+        PrintFormatToString (Entry, sizeof(Entry), "W%i", x);
         if (IniFileDataBaseReadString ("GUI/AllEnumWindows", Entry, "", WindowName, WindowNameMaxSize, Fd) == 0) {
             break;
         }
         for (i = 0;;i++) {
-            sprintf (Entry, "Variable%i", i);
+            PrintFormatToString (Entry, sizeof(Entry), "Variable%i", i);
             if (IniFileDataBaseReadString (WindowName, Entry, "", WindowVariableName, sizeof (WindowVariableName), Fd) == 0)
                 break;
             if (!strcmp (par_VariableName, WindowVariableName)) {
@@ -120,13 +122,13 @@ int SearchWindowIncludedVariableDialog::SearchVariableInAllWindows (const char *
         }
     }
     for (x = 0;;x++) {
-        sprintf (Entry, "W%i", x);
+        PrintFormatToString (Entry, sizeof(Entry), "W%i", x);
         if (IniFileDataBaseReadString ("GUI/AllOscilloscopeWindows", Entry, "", WindowName, WindowNameMaxSize, Fd) == 0)
             break;
         for (y = 0; y < 2; y++) {
             for (i = 0; i < 20; i++) {
-                if (y) sprintf (Entry, "vl%i", i);
-                else sprintf (Entry, "vr%i", i);
+                if (y) PrintFormatToString (Entry, sizeof(Entry), "vl%i", i);
+                else PrintFormatToString (Entry, sizeof(Entry), "vr%i", i);
                 if (IniFileDataBaseReadString (WindowSectionName, Entry, "", WindowVariableName, sizeof (WindowVariableName), Fd) > 0) {
                     // Only name ignore all other things
                     p = WindowVariableName;
@@ -140,11 +142,11 @@ int SearchWindowIncludedVariableDialog::SearchVariableInAllWindows (const char *
         }
     }
     for (x = 0;;x++) {
-        sprintf (Entry, "W%i", x);
+        PrintFormatToString (Entry, sizeof(Entry), "W%i", x);
         if (IniFileDataBaseReadString ("GUI/AllTextWindows", Entry, "", WindowName, WindowNameMaxSize, Fd) == 0)
             break;
         for (i = 0;;i++) {
-            sprintf (Entry, "E%i", i);
+            PrintFormatToString (Entry, sizeof(Entry), "E%i", i);
             if (IniFileDataBaseReadString (WindowSectionName, Entry, "", WindowVariableName, sizeof (WindowVariableName), Fd) == 0)
                 break;
             // Only name ignore all other things
@@ -158,7 +160,7 @@ int SearchWindowIncludedVariableDialog::SearchVariableInAllWindows (const char *
         }
     }
     for (x = 0;;x++) {
-        sprintf (Entry, "W%i", x);
+        PrintFormatToString (Entry, sizeof(Entry), "W%i", x);
         if (IniFileDataBaseReadString ("GUI/AllTachometerWindows", Entry, "", WindowName, WindowNameMaxSize, Fd) == 0)
             break;
         if (IniFileDataBaseReadString (WindowSectionName, "variable", "", WindowVariableName, sizeof (WindowVariableName), Fd) == 0)
@@ -172,7 +174,7 @@ int SearchWindowIncludedVariableDialog::SearchVariableInAllWindows (const char *
         }
     }
     for (x = 0;;x++) {
-        sprintf (Entry, "W%i", x);
+        PrintFormatToString (Entry, sizeof(Entry), "W%i", x);
         if (IniFileDataBaseReadString ("GUI/AllKnobWindows", Entry, "", WindowName, WindowNameMaxSize, Fd) == 0)
             break;
         if (IniFileDataBaseReadString (WindowSectionName, "variable", "", WindowVariableName, sizeof (WindowVariableName), Fd) == 0)
@@ -186,7 +188,7 @@ int SearchWindowIncludedVariableDialog::SearchVariableInAllWindows (const char *
         }
     }
     for (x = 0;;x++) {
-        sprintf (Entry, "W%i", x);
+        PrintFormatToString (Entry, sizeof(Entry), "W%i", x);
         if (IniFileDataBaseReadString ("GUI/AllSliderWindows", Entry, "", WindowName, WindowNameMaxSize, Fd) == 0)
             break;
         if (IniFileDataBaseReadString (WindowSectionName, "variable", "", WindowVariableName, sizeof (WindowVariableName), Fd) == 0)
@@ -200,11 +202,11 @@ int SearchWindowIncludedVariableDialog::SearchVariableInAllWindows (const char *
         }
     }
     for (x = 0;;x++) {
-        sprintf (Entry, "W%i", x);
+        PrintFormatToString (Entry, sizeof(Entry), "W%i", x);
         if (IniFileDataBaseReadString ("GUI/AllControlLampsViewWindows", Entry, "", WindowName, WindowNameMaxSize, Fd) == 0)
             break;
         for (i = 0;;i++) {
-            sprintf (Entry, "Lamp_%i", i);
+            PrintFormatToString (Entry, sizeof(Entry), "Lamp_%i", i);
             if (IniFileDataBaseReadString (WindowSectionName, Entry, "", WindowVariableName, sizeof (WindowVariableName), Fd) == 0)
                 break;
             // Only name ignore all other things

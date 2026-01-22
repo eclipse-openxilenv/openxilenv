@@ -22,6 +22,7 @@
 
 extern "C"
 {
+    #include "PrintFormatToString.h"
     #include "ThrowError.h"
     #include "LoadSaveToFile.h"
     #include "IniDataBase.h"
@@ -69,7 +70,7 @@ void UserDefinedBBVariableDialog::FillTableView()
         item = new QTableWidgetItem(QString(VarName));
         ui->tableWidget->setItem(rowCount-1, 0, item);
         int index = QString(type).toInt();
-        if (index < 8 && index >= 0) comboBox->setCurrentIndex(index);
+        if (index <= 9 && index >= 0) comboBox->setCurrentIndex(index);
         ui->tableWidget->setCellWidget(rowCount-1, 1, comboBox);
         item = new QTableWidgetItem(QString(value));
         ui->tableWidget->setItem(rowCount-1, 2, item);
@@ -269,7 +270,7 @@ void UserDefinedBBVariableDialog::accept()
         if (Ok) {
             write_bbvari_minmax_check(Vid, Value);
         }
-        sprintf(txt, "%i,%s,%s", TypeNo, QStringToConstChar(ValueStr), QStringToConstChar(Unit));
+        PrintFormatToString (txt, sizeof(txt), "%i,%s,%s", TypeNo, QStringToConstChar(ValueStr), QStringToConstChar(Unit));
         IniFileDataBaseWriteString("UserDefinedBBVariables", VarName, txt, Fd);
     }
     QDialog::accept();

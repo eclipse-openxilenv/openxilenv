@@ -42,8 +42,9 @@ public:
 signals:
     void variableChanged(int arg_vid, unsigned int arg_ObservationFlagsFired);
 
-private:
+public:
     QObject *m_Owner;
+    uint32_t m_Flags;
 };
 
 
@@ -81,6 +82,7 @@ public:
     void VariableChanged(VID arg_Vid, uint32_t arg_observationFlags, uint32_t arg_observationData);
 
 private:
+    QList<BlackboardObserverConnection*> m_GlobalConnections;
     QList<BlackboardObserverConnection*> m_Connections;
     QList<ObserverdVariableEntry*> m_ObservedVariables;
 

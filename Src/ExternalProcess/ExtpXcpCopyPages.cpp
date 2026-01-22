@@ -24,6 +24,7 @@
 #endif
 
 extern "C" {
+#include "PrintFormatToString.h"
 #include "StringMaxChar.h"
 #include "ExtpBaseMessages.h"
 }
@@ -107,7 +108,7 @@ int AddPageToCallibationSegment (unsigned char SegmentNo, unsigned char PageNo, 
     if (Data != NULL) {
         MEMCPY (Pages[p].Buffer, Data, Size);
     } else {
-        memset (Pages[p].Buffer, 0, Size);
+        MEMSET (Pages[p].Buffer, 0, Size);
     }
     return 0;
 }
@@ -174,20 +175,20 @@ extern "C" int get_image_base_and_size (unsigned long *ret_base_address, unsigne
 }
 #endif
 
-static int ExtractCopyExeBackImage (char *ret_TempPathBuffer)
+static int ExtractCopyExeBackImage (char *ret_TempPathBuffer, int par_Maxc)
 {
     FILE *fh;
 #ifdef _WIN32
     DWORD dwRetVal;
     char CmdPath[MAX_PATH];
-    dwRetVal = GetTempPath (MAX_PATH,
+    dwRetVal = GetTempPath (par_Maxc,
                             ret_TempPathBuffer);
     if (dwRetVal > MAX_PATH || (dwRetVal == 0)) {
-        strcpy (ret_TempPathBuffer, "c:\\temp");
+        StringCopyMaxCharTruncate(ret_TempPathBuffer, "c:\\temp", par_Maxc);
     }
     GetSystemDirectory(CmdPath, sizeof(CmdPath));
 
-    sprintf (ret_TempPathBuffer+strlen(ret_TempPathBuffer), "%i_CopyExeBack.bat", GetCurrentProcessId());
+    PrintFormatToString (ret_TempPathBuffer+strlen(ret_TempPathBuffer), par_Maxc - strlen(ret_TempPathBuffer), "%i_CopyExeBack.bat", GetCurrentProcessId());
 
     fh = fopen(ret_TempPathBuffer, "wt");
     if (fh == NULL)  {
@@ -219,8 +220,8 @@ static int ExtractCopyExeBackImage (char *ret_TempPathBuffer)
     if (Folder == NULL) {
         Folder = "/tmp";
     }
-    strcpy (ret_TempPathBuffer, Folder);
-    sprintf (ret_TempPathBuffer+strlen(ret_TempPathBuffer), "/%i_CopyExeBack.sh", getpid());
+    StringCopyMaxCharTruncate (ret_TempPathBuffer, Folder, par_Maxc);
+    PrintFormatToString (ret_TempPathBuffer+strlen(ret_TempPathBuffer), par_Maxc - strlen(ret_TempPathBuffer), "/%i_CopyExeBack.sh", getpid());
 
     fh = fopen(ret_TempPathBuffer, "wt");
     if (fh == NULL)  {
@@ -260,15 +261,15 @@ static int copy_exe_file_back_after_terminate (char *CopyExeBackImagePath, char 
     dwRetVal = GetTempPath (MAX_PATH,
                             TempPathBuffer);
     if (dwRetVal > MAX_PATH || (dwRetVal == 0)) {
-        strcpy (TempPathBuffer, "c:\\temp");
+        STRING_COPY_TO_ARRAY (TempPathBuffer, "c:\\temp");
     }
 
     GetStartupInfo (&StartupInfo);
 
-    sprintf (CommandLine, "/C %s 0x%X \"%s\" \"%s\"", CopyExeBackImagePath, (unsigned long)GetCurrentProcessId(), ExeSrc, ExeDst);
+    PrintFormatToString (CommandLine, sizeof(CommandLine), "/C %s 0x%X \"%s\" \"%s\"", CopyExeBackImagePath, (unsigned long)GetCurrentProcessId(), ExeSrc, ExeDst);
 
     GetSystemDirectory(CmdPath, sizeof(CmdPath) - 8);
-    strcat(CmdPath, "\\cmd.exe");
+    STRING_APPEND_TO_ARRAY(CmdPath, "\\cmd.exe");
     if (!CreateProcess (CmdPath,
                         CommandLine, NULL, NULL,
                         TRUE, 0, NULL, NULL,
@@ -289,7 +290,7 @@ static int copy_exe_file_back_after_terminate (char *CopyExeBackImagePath, char 
     }
 #else
     char OwnPidString[32];
-    sprintf (OwnPidString, "%i", getpid());
+    PrintFormatToString (OwnPidString, sizeof(OwnPidString), "%i", getpid());
     int Pid = fork();
     if (Pid == 0) {
         execl("/bin/bash", "bash", CopyExeBackImagePath, OwnPidString, ExeSrc, ExeDst, NULL);
@@ -300,7 +301,10 @@ static int copy_exe_file_back_after_terminate (char *CopyExeBackImagePath, char 
     return 0;
 }
 
-static int write_section_to_exe_file_after_terminate (char *ExecutableName, char *SelectedSection, char *TargetExe, char *TempExe, unsigned long long BaseAddress)
+static int write_section_to_exe_file_after_terminate (char *ExecutableName, char *SelectedSection,
+                                                      char *TargetExe, int TargetExe_Maxc,
+                                                      char *TempExe, int TempExe_Maxc,
+                                                      unsigned long long BaseAddress)
 {
     char TempPathBuffer[MAX_PATH];
     char Help[100];
@@ -341,7 +345,7 @@ static int write_section_to_exe_file_after_terminate (char *ExecutableName, char
 
     if (strlen (TempExe) == 0) {
         // First time a section will be write back to the executable
-        strcpy (TargetExe, ExecutableName);
+        StringCopyMaxCharTruncate (TargetExe, ExecutableName, TargetExe_Maxc);
 
         ExeName = TargetExe;
         while (*ExeName != 0) ExeName++;
@@ -356,11 +360,13 @@ static int write_section_to_exe_file_after_terminate (char *ExecutableName, char
         EXTERN_PROCESS_INFOS_STRUCT *ProcessInfos = XilEnvInternal_GetGlobalProcessInfos();
         if (strlen(ProcessInfos->WriteBackExeToDir)) {
             // There was defined a path where the temp EXE file should be writen with the parameter -WriteBackExeToDir
-            strcpy(TempExe, ProcessInfos->WriteBackExeToDir);
+            StringCopyMaxCharTruncate(TempExe, ProcessInfos->WriteBackExeToDir, TempExe_Maxc);
 #ifdef _WIN32
-            if (TempExe[strlen(TempExe)-1] != '\\') strcat (TempExe, "\\");
+            if (TempExe[strlen(TempExe)-1] != '\\') {
+                StringAppendMaxCharTruncate (TempExe, "\\", TempExe_Maxc);
+            }
 #else
-            if (TempExe[strlen(TempExe)-1] != '/') strcat (TempExe, "/");
+            if (TempExe[strlen(TempExe)-1] != '/') StringAppendMaxCharTruncate (TempExe, "/", TempExe_Maxc);
 #endif
         } else {
             // If not then this should be written to the system temporary folder "c:\temp" with the name <PID>_Name.EXE bzw <PID>_Name.DLL
@@ -368,25 +374,25 @@ static int write_section_to_exe_file_after_terminate (char *ExecutableName, char
             dwRetVal = GetTempPath (MAX_PATH,          // length of the buffer
                                     TempPathBuffer); // buffer for path
             if (dwRetVal > MAX_PATH || (dwRetVal == 0)) {
-                strcpy (TempPathBuffer, "c:\\temp");
+                STRING_COPY_TO_ARRAY (TempPathBuffer, "c:\\temp");
             }
 #else
-            strcpy(TempPathBuffer, "/tmp/");
+            STRING_COPY_TO_ARRAY(TempPathBuffer, "/tmp/");
 #endif
-            strcpy (TempExe, TempPathBuffer);
+            StringCopyMaxCharTruncate (TempExe, TempPathBuffer, TempExe_Maxc);
 #ifdef _WIN32
-            sprintf (Help, "%i_", (unsigned long)GetCurrentProcessId());
+            PrintFormatToString (Help, sizeof(Help), "%i_", (unsigned long)GetCurrentProcessId());
 #else
-            sprintf(Help, "%i_", getpid());
+            PrintFormatToString (Help, sizeof(Help), "%i_", getpid());
 #endif
-            strcat (TempExe, Help);
+            StringAppendMaxCharTruncate (TempExe, Help, TempExe_Maxc);
         }
-        strcat (TempExe, ExeName);
+        StringAppendMaxCharTruncate (TempExe, ExeName, TempExe_Maxc);
 
         if (!CopyFile (TargetExe, TempExe, FALSE)) {
             ThrowError (1, "Unable to copy file \"%s\" to file \"%s\" (1)\n", TargetExe, TempExe);
-            strcpy (TargetExe, "");
-            strcpy (TempExe, "");
+            StringCopyMaxCharTruncate (TargetExe, "", TargetExe_Maxc);
+            StringCopyMaxCharTruncate (TempExe, "", TempExe_Maxc);
             return 0;
         }
     }
@@ -400,16 +406,16 @@ static int write_section_to_exe_file_after_terminate (char *ExecutableName, char
                            NULL);
     if (hFileExe == (HANDLE)HFILE_ERROR) {
         ThrowError (1, "Unable to open %s file\n", TempExe);
-        strcpy (TargetExe, "");
-        strcpy (TempExe, "");
+        StringCopyMaxCharTruncate (TargetExe, "", TargetExe_Maxc);
+        StringCopyMaxCharTruncate (TempExe, "", TempExe_Maxc);
         return 0;
     }
     ReadFile (hFileExe, &DosHeader, sizeof (DosHeader), &xx, NULL);
     if (DosHeader.e_magic != IMAGE_DOS_SIGNATURE) {
         CloseHandle (hFileExe);
         ThrowError (1, "file %s in not an executable", TempExe);
-        strcpy (TargetExe, "");
-        strcpy (TempExe, "");
+        StringCopyMaxCharTruncate (TargetExe, "", TargetExe_Maxc);
+        StringCopyMaxCharTruncate (TempExe, "", TempExe_Maxc);
         return 0;
     }
     SetFilePointer (hFileExe, DosHeader.e_lfanew, 0, FILE_BEGIN);
@@ -417,8 +423,8 @@ static int write_section_to_exe_file_after_terminate (char *ExecutableName, char
     if (NtHeader.Signature != IMAGE_NT_SIGNATURE) {
         CloseHandle (hFileExe);
         ThrowError (1, "file %s in not an executable", TempExe);
-        strcpy (TargetExe, "");
-        strcpy (TempExe, "");
+        StringCopyMaxCharTruncate (TargetExe, "", TargetExe_Maxc);
+        StringCopyMaxCharTruncate (TempExe, "", TempExe_Maxc);
         return 0;
     }
     // is it a 64 bit EXE
@@ -494,8 +500,8 @@ static int write_section_to_exe_file_after_terminate (char *ExecutableName, char
                     CloseHandle (hFileExe);
                     ThrowError (1, "cannot write to executable file %s (%s)", TempExe, lpMsgBuf);
                     LocalFree (lpMsgBuf);
-                    strcpy (TargetExe, "");
-                    strcpy (TempExe, "");
+                    StringCopyMaxCharTruncate (TargetExe, "", TargetExe_Maxc);
+                    StringCopyMaxCharTruncate (TempExe, "", TempExe_Maxc);
                     return 0;
                 }
             }
@@ -632,8 +638,8 @@ static int write_section_to_exe_file_after_terminate (char *ExecutableName, char
 
             if (write(fh, Address, Size) != Size) {
                 ThrowError(1, "cannot write to executable file %s", TempExe);
-                strcpy(TargetExe, "");
-                strcpy(TempExe, "");
+                StringCopyMaxCharTruncate (TargetExe, "", TargetExe_Maxc);
+                StringCopyMaxCharTruncate (TempExe, "", TempExe_Maxc);
                 close(fh);
                 return 0;
             }
@@ -645,8 +651,8 @@ static int write_section_to_exe_file_after_terminate (char *ExecutableName, char
 
     if (FoundSectionCounter == 0) {
         ThrowError (1, "error section %s not found\n", SelectedSection);
-        strcpy (TargetExe, "");
-        strcpy (TempExe, "");
+        StringCopyMaxCharTruncate (TargetExe, "", TargetExe_Maxc);
+        StringCopyMaxCharTruncate (TempExe, "", TempExe_Maxc);
         return 0;
     } else {
         return 1;
@@ -686,16 +692,16 @@ static int XilEnvInternal_AddSectionToSectionArray(const char * par_SectionPrefi
             return -1;
         }
         if (par_SectionPrefix != NULL) {
-            strcpy(SectionInfoArray[SectionInfoArraySize].LongName, par_SectionPrefix);
-            strcat(SectionInfoArray[SectionInfoArraySize].LongName, "::");
-            strcat(SectionInfoArray[SectionInfoArraySize].LongName, par_SectionName);
+            STRING_COPY_TO_ARRAY(SectionInfoArray[SectionInfoArraySize].LongName, par_SectionPrefix);
+            STRING_APPEND_TO_ARRAY(SectionInfoArray[SectionInfoArraySize].LongName, "::");
+            STRING_APPEND_TO_ARRAY(SectionInfoArray[SectionInfoArraySize].LongName, par_SectionName);
             SectionInfoArray[SectionInfoArraySize].TaskNumber = par_TaskNumber;
         }
         else {
-            strcpy(SectionInfoArray[SectionInfoArraySize].LongName, par_SectionName);
+            STRING_COPY_TO_ARRAY(SectionInfoArray[SectionInfoArraySize].LongName, par_SectionName);
             SectionInfoArray[SectionInfoArraySize].TaskNumber = -1;
         }
-        strcpy(SectionInfoArray[SectionInfoArraySize].ShortName, par_SectionName);
+        STRING_COPY_TO_ARRAY(SectionInfoArray[SectionInfoArraySize].ShortName, par_SectionName);
         if (!strcmp(par_SectionName, ".text") ||
             !strcmp(par_SectionName, ".rdata") ||
             !strcmp(par_SectionName, ".data") ||
@@ -990,7 +996,7 @@ int XilEnvInternal_ReadSectionInfosFromAllExecutable (void)
             while (*p != 0) p++;
             while ((p > ProcessInfos->TasksInfos[x]->DllName) && (*p != '/') && (*p != '\\')) p--;
             if ((*p != '/') || (*p != '\\')) p++;
-            strcpy (DllFileName, p);
+            STRING_COPY_TO_ARRAY (DllFileName, p);
 #ifdef _WIN32
             _strupr (DllFileName);    // Only upper-case letter
 #else
@@ -1279,14 +1285,19 @@ public:
         ShouldExtarctCopyBackExe = 1;
         if ((TaskInfos->DllName != NULL) && (strlen(TaskInfos->DllName))) {
             if ((TaskInfos->Number >= 0) && (TaskInfos->Number < 8)) {
-                return write_section_to_exe_file_after_terminate (TaskInfos->DllName, SelectedSection, Dlls[TaskInfos->Number].Target, Dlls[TaskInfos->Number].Temp,
-                                                                  (unsigned long long)TaskInfos->DllBaseAddress);
+                return write_section_to_exe_file_after_terminate (TaskInfos->DllName, SelectedSection,
+                                                                 Dlls[TaskInfos->Number].Target, sizeof(Dlls[TaskInfos->Number].Target),
+                                                                 Dlls[TaskInfos->Number].Temp, sizeof(Dlls[TaskInfos->Number].Temp),
+                                                                 (unsigned long long)TaskInfos->DllBaseAddress);
             } else {
                 return -1;
             }
         } else {
             EXTERN_PROCESS_INFOS_STRUCT *ProcessInfos = XilEnvInternal_GetGlobalProcessInfos();
-            return write_section_to_exe_file_after_terminate (TaskInfos->ExecutableName, SelectedSection, TargetExe, TempExe, (unsigned long long)ProcessInfos->ExecutableBaseAddress);
+            return write_section_to_exe_file_after_terminate (TaskInfos->ExecutableName, SelectedSection,
+                                                              TargetExe, sizeof(TargetExe),
+                                                              TempExe, sizeof(TempExe),
+                                                              (unsigned long long)ProcessInfos->ExecutableBaseAddress);
         }
     }
     cWriteCallibrationDataBackToExeFile (void)
@@ -1300,7 +1311,7 @@ public:
         if ((strlen(ProcessInfos->WriteBackExeToDir) == 0) && 
             ShouldExtarctCopyBackExe) {
             char CopyExeBackImagePath[MAX_PATH];
-            if (ExtractCopyExeBackImage (CopyExeBackImagePath)) {
+            if (ExtractCopyExeBackImage (CopyExeBackImagePath, sizeof(CopyExeBackImagePath))) {
                 return;
             }
             if (strlen (TargetExe) && strlen (TempExe)) {

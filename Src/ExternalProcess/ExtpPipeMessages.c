@@ -18,6 +18,7 @@
 #include <Windows.h>
 #include <stdio.h>
 
+#include "PrintFormatToString.h"
 #include "XilEnvExtProc.h"
 #include "ExtpProcessAndTaskInfos.h"
 
@@ -31,7 +32,7 @@ static HANDLE XilEnvInternal_ConnectToPipe (char *par_InstanceName, char *par_Se
     DWORD Mode;
     char Pipename[MAX_PATH];
 
-    sprintf (Pipename, PIPE_NAME "_%s", par_InstanceName);
+    PrintFormatToString (Pipename, sizeof(Pipename), PIPE_NAME "_%s", par_InstanceName);
 
     while (1) {
         hPipe = CreateFile (Pipename,   // pipe name

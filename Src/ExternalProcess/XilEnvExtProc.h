@@ -20,7 +20,7 @@
 
 #define XILENV_VERSION              0
 #define XILENV_MINOR_VERSION        9
-#define XILENV_PATCH_VERSION        0
+#define XILENV_PATCH_VERSION        2
 
 #define SC_MAX_LABEL_SIZE         512
 #define SC_MAX_UNIT_SIZE           64
@@ -352,14 +352,14 @@ extern void reference_varis (void);
 #define REF_DOUBLE_VAR_INDEXED(name, idx) \
     { \
         char str[SC_MAX_LABEL_SIZE]; \
-        sprintf (str,"%s[%d]", #name, idx); \
+        PrintFormatToString (str, sizeof(str), "%s[%d]", #name, idx); \
         reference_double_var (&(name[idx]), str); \
     }
 
 #define REF_DOUBLE_INDEXED(name, ptr, idx) \
     { \
         char str[SC_MAX_LABEL_SIZE]; \
-        sprintf (str,"%s[%d]", #name, idx); \
+        PrintFormatToString (str, sizeof(str), "%s[%d]", #name, idx); \
         reference_double_var (ptr, str); \
     }
 
@@ -404,14 +404,14 @@ extern void reference_varis (void);
 #define REF_FLOAT_VAR_INDEXED(name, idx) \
     { \
         char str[SC_MAX_LABEL_SIZE]; \
-        sprintf (str,"%s[%d]", #name, idx); \
+        PrintFormatToString (str, sizeof(str),"%s[%d]", #name, idx); \
         reference_float_var (&(name[idx]), str); \
     }
 
 #define REF_FLOAT_INDEXED(name, ptr, idx) \
     { \
         char str[SC_MAX_LABEL_SIZE]; \
-        sprintf (str,"%s[%d]", #name, idx); \
+        PrintFormatToString (str, sizeof(str),"%s[%d]", #name, idx); \
         reference_float_var (ptr, str); \
     }
 
@@ -456,14 +456,14 @@ extern void reference_varis (void);
 #define REF_QWORD_VAR_INDEXED(name, idx) \
     { \
         char str[SC_MAX_LABEL_SIZE]; \
-        sprintf (str,"%s[%d]", #name, idx); \
+        PrintFormatToString (str, sizeof(str),"%s[%d]", #name, idx); \
         reference_qword_var (&(name[idx]), str); \
     }
 
 #define REF_QWORD_INDEXED(name, ptr, idx) \
     { \
         char str[SC_MAX_LABEL_SIZE]; \
-        sprintf (str,"%s[%d]", #name, idx); \
+        PrintFormatToString (str, sizeof(str),"%s[%d]", #name, idx); \
         reference_qword_var (ptr, str); \
     }
 
@@ -508,14 +508,14 @@ extern void reference_varis (void);
 #define REF_UQWORD_VAR_INDEXED(name, idx) \
     { \
         char str[SC_MAX_LABEL_SIZE]; \
-        sprintf (str,"%s[%d]", #name, idx); \
+        PrintFormatToString (str, sizeof(str),"%s[%d]", #name, idx); \
         reference_uqword_var (&(name[idx]), str); \
     }
 
 #define REF_UQWORD_INDEXED(name, ptr, idx) \
     { \
         char str[SC_MAX_LABEL_SIZE]; \
-        sprintf (str,"%s[%d]", #name, idx); \
+        PrintFormatToString (str, sizeof(str),"%s[%d]", #name, idx); \
         reference_uqword_var (ptr, str); \
     }
 
@@ -560,14 +560,14 @@ extern void reference_varis (void);
 #define REF_DWORD_VAR_INDEXED(name, idx) \
     { \
         char str[SC_MAX_LABEL_SIZE]; \
-        sprintf (str,"%s[%d]", #name, idx); \
+        PrintFormatToString (str, sizeof(str),"%s[%d]", #name, idx); \
         reference_dword_var (&(name[idx]), str); \
     }
 
 #define REF_DWORD_INDEXED(name, ptr, idx) \
     { \
         char str[SC_MAX_LABEL_SIZE]; \
-        sprintf (str,"%s[%d]", #name, idx); \
+        PrintFormatToString (str, sizeof(str),"%s[%d]", #name, idx); \
         reference_dword_var (ptr, str); \
     }
 
@@ -612,14 +612,14 @@ extern void reference_varis (void);
 #define REF_UDWORD_VAR_INDEXED(name, idx) \
     { \
         char str[SC_MAX_LABEL_SIZE]; \
-        sprintf (str,"%s[%d]", #name, idx); \
+        PrintFormatToString (str, sizeof(str),"%s[%d]", #name, idx); \
         reference_udword_var (&(name[idx]), str); \
     }
 
 #define REF_UDWORD_INDEXED(name, ptr, idx) \
     { \
         char str[SC_MAX_LABEL_SIZE]; \
-        sprintf (str,"%s[%d]", #name, idx); \
+        PrintFormatToString (str, sizeof(str),"%s[%d]", #name, idx); \
         reference_udword_var (ptr, str); \
     }
 
@@ -664,14 +664,14 @@ extern void reference_varis (void);
 #define REF_INT_VAR_INDEXED(name, idx) \
     { \
         char str[SC_MAX_LABEL_SIZE]; \
-        sprintf (str,"%s[%d]", #name, idx); \
+        PrintFormatToString (str, sizeof(str),"%s[%d]", #name, idx); \
         reference_dword_var (&(name[idx]), str); \
     }
 
 #define REF_INT_INDEXED(name, ptr, idx) \
     { \
         char str[SC_MAX_LABEL_SIZE]; \
-        sprintf (str,"%s[%d]", #name, idx); \
+        PrintFormatToString (str, sizeof(str),"%s[%d]", #name, idx); \
         reference_dword_var (ptr, str); \
     }
 
@@ -716,14 +716,14 @@ extern void reference_varis (void);
 #define REF_UINT_VAR_INDEXED(name, idx) \
     { \
         char str[SC_MAX_LABEL_SIZE]; \
-        sprintf (str,"%s[%d]", #name, idx); \
+        PrintFormatToString (str, sizeof(str),"%s[%d]", #name, idx); \
         reference_udword_var (&(name[idx]), str); \
     }
 
 #define REF_UINT_INDEXED(name, ptr, idx) \
     { \
         char str[SC_MAX_LABEL_SIZE]; \
-        sprintf (str,"%s[%d]", #name, idx); \
+        PrintFormatToString (str, sizeof(str),"%s[%d]", #name, idx); \
         reference_udword_var (ptr, str); \
     }
 
@@ -768,14 +768,14 @@ extern void reference_varis (void);
 #define REF_CHAR_VAR_INDEXED(name, idx) \
     { \
         char str[SC_MAX_LABEL_SIZE]; \
-        sprintf (str,"%s[%d]", #name, idx); \
+        PrintFormatToString (str, sizeof(str),"%s[%d]", #name, idx); \
         reference_byte_var (&(name[idx]), str); \
     }
 
 #define REF_CHAR_INDEXED(name, ptr, idx) \
     { \
         char str[SC_MAX_LABEL_SIZE]; \
-        sprintf (str,"%s[%d]", #name, idx); \
+        PrintFormatToString (str, sizeof(str),"%s[%d]", #name, idx); \
         reference_byte_var (ptr, str); \
     }
 
@@ -820,14 +820,14 @@ extern void reference_varis (void);
 #define REF_UCHAR_VAR_INDEXED(name, idx) \
     { \
         char str[SC_MAX_LABEL_SIZE]; \
-        sprintf (str,"%s[%d]", #name, idx); \
+        PrintFormatToString (str, sizeof(str),"%s[%d]", #name, idx); \
         reference_ubyte_var (&(name[idx]), str); \
     }
 
 #define REF_UCHAR_INDEXED(name, ptr, idx) \
     { \
         char str[SC_MAX_LABEL_SIZE]; \
-        sprintf (str,"%s[%d]", #name, idx); \
+        PrintFormatToString (str, sizeof(str),"%s[%d]", #name, idx); \
         reference_ubyte_var (ptr, str); \
     }
 
@@ -872,14 +872,14 @@ extern void reference_varis (void);
 #define REF_WORD_VAR_INDEXED(name, idx) \
     { \
         char str[SC_MAX_LABEL_SIZE]; \
-        sprintf (str,"%s[%d]", #name, idx); \
+        PrintFormatToString (str, sizeof(str),"%s[%d]", #name, idx); \
         reference_word_var (&(name[idx]), str); \
     }
 
 #define REF_WORD_INDEXED(name, ptr, idx) \
     { \
         char str[SC_MAX_LABEL_SIZE]; \
-        sprintf (str,"%s[%d]", #name, idx); \
+        PrintFormatToString (str, sizeof(str),"%s[%d]", #name, idx); \
         reference_word_var (ptr, str); \
     }
 
@@ -924,14 +924,14 @@ extern void reference_varis (void);
 #define REF_UWORD_VAR_INDEXED(name, idx) \
     { \
         char str[SC_MAX_LABEL_SIZE]; \
-        sprintf (str,"%s[%d]", #name, idx); \
+        PrintFormatToString (str, sizeof(str),"%s[%d]", #name, idx); \
         reference_uword_var (&(name[idx]), str); \
     }
 
 #define REF_UWORD_INDEXED(name, ptr, idx) \
     { \
         char str[SC_MAX_LABEL_SIZE]; \
-        sprintf (str,"%s[%d]", #name, idx); \
+        PrintFormatToString (str, sizeof(str),"%s[%d]", #name, idx); \
         reference_uword_var (ptr, str); \
     }
 
@@ -976,14 +976,14 @@ extern void reference_varis (void);
 #define REF_BYTE_VAR_INDEXED(name, idx) \
     { \
         char str[SC_MAX_LABEL_SIZE]; \
-        sprintf (str,"%s[%d]", #name, idx); \
+        PrintFormatToString (str, sizeof(str),"%s[%d]", #name, idx); \
         reference_byte_var (&(name[idx]), str); \
     }
 
 #define REF_BYTE_INDEXED(name, ptr, idx) \
     { \
         char str[SC_MAX_LABEL_SIZE]; \
-        sprintf (str,"%s[%d]", #name, idx); \
+        PrintFormatToString (str, sizeof(str),"%s[%d]", #name, idx); \
         reference_byte_var (ptr, str); \
     }
 
@@ -1028,14 +1028,14 @@ extern void reference_varis (void);
 #define REF_UBYTE_VAR_INDEXED(name, idx) \
     { \
         char str[SC_MAX_LABEL_SIZE]; \
-        sprintf (str,"%s[%d]", #name, idx); \
+        PrintFormatToString (str, sizeof(str),"%s[%d]", #name, idx); \
         reference_ubyte_var (&(name[idx]), str); \
     }
 
 #define REF_UBYTE_INDEXED(name, ptr, idx) \
     { \
         char str[SC_MAX_LABEL_SIZE]; \
-        sprintf (str,"%s[%d]", #name, idx); \
+        PrintFormatToString (str, sizeof(str),"%s[%d]", #name, idx); \
         reference_ubyte_var (ptr, str); \
     }
 
@@ -1080,14 +1080,14 @@ extern void reference_varis (void);
 #define REF_BOOL_VAR_INDEXED(name, idx) \
     { \
         char str[SC_MAX_LABEL_SIZE]; \
-        sprintf (str,"%s[%d]", #name, idx); \
+        PrintFormatToString (str, sizeof(str),"%s[%d]", #name, idx); \
         reference_ubyte_var ((unsigned char*)&(name[idx]), str); \
     }
 
 #define REF_BOOL_INDEXED(name, ptr, idx) \
     { \
         char str[SC_MAX_LABEL_SIZE]; \
-        sprintf (str,"%s[%d]", #name, idx); \
+        PrintFormatToString (str, sizeof(str),"%s[%d]", #name, idx); \
         reference_ubyte_var ((unsigned char*)ptr, str); \
     }
 
@@ -1146,7 +1146,7 @@ extern void reference_varis (void);
 #define REF_ENUM_VAR_INDEXED(name, idx) \
     {\
         char str[SC_MAX_LABEL_SIZE];\
-        sprintf (str,"%s[%d]", #name, idx);\
+        PrintFormatToString (str, sizeof(str),"%s[%d]", #name, idx);\
         switch (sizeof (name[0])) {\
         case 1: reference_byte_var ((signed char*)&(name[idx]), str); break;\
         case 2: reference_word_var ((short*)&(name[idx]), str); break;\
@@ -1158,7 +1158,7 @@ extern void reference_varis (void);
 #define REF_ENUM_INDEXED(name, ptr, idx) \
     {\
         char str[SC_MAX_LABEL_SIZE];\
-        sprintf (str,"%s[%d]", #name, idx);\
+        PrintFormatToString (str, sizeof(str),"%s[%d]", #name, idx);\
         switch (sizeof (*ptr)) {\
         case 1: reference_byte_var ((signed char*)ptr, str); break;\
         case 2: reference_word_var ((short*)ptr, str); break;\
@@ -1227,7 +1227,7 @@ extern void reference_varis (void);
 #define REF_UENUM_VAR_INDEXED(name, idx) \
     {\
         char str[SC_MAX_LABEL_SIZE];\
-        sprintf (str,"%s[%d]", #name, idx);\
+        PrintFormatToString (str, sizeof(str),"%s[%d]", #name, idx);\
         switch (sizeof (name[0])) {\
         case 1: reference_ubyte_var ((unsigned char*)&(name[idx]), str); break;\
         case 2: reference_uword_var ((unsigned short*)&(name[idx]), str); break;\
@@ -1239,7 +1239,7 @@ extern void reference_varis (void);
 #define REF_UENUM_INDEXED(name, ptr, idx) \
     {\
         char str[SC_MAX_LABEL_SIZE];\
-        sprintf (str,"%s[%d]", #name, idx);\
+        PrintFormatToString (str, sizeof(str),"%s[%d]", #name, idx);\
         switch (sizeof (*ptr)) {\
         case 1: reference_ubyte_var ((unsigned char*)ptr, str); break;\
         case 2: reference_uword_var ((unsigned short*)ptr, str); break;\
@@ -1293,14 +1293,14 @@ extern void reference_varis (void);
 #define REF_XXX_VAR_INDEXED(name, idx) \
     { \
         char str[SC_MAX_LABEL_SIZE]; \
-        sprintf (str,"%s[%d]", #name, idx); \
+        PrintFormatToString (str, sizeof(str),"%s[%d]", #name, idx); \
         reference_xxx_var (&(name[idx]), str); \
     }
 
 #define REF_XXX_INDEXED(name, ptr, idx) \
     { \
         char str[SC_MAX_LABEL_SIZE]; \
-        sprintf (str,"%s[%d]", #name, idx); \
+        PrintFormatToString (str, sizeof(str),"%s[%d]", #name, idx); \
         reference_xxx_var (ptr, str); \
     }
 

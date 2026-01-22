@@ -24,6 +24,7 @@
 
 extern"C"
 {
+    #include "StringMaxChar.h"
     #include "XcpControl.h"
     #include "ThrowError.h"
     #include "FileExtensions.h"
@@ -67,7 +68,7 @@ void SaveXCPConfigDialog::accept()
         ThrowError(1, "Unhandled Error");
         return;
     }
-    strcpy(fileName, QStringToConstChar(ui->lineEditBrowse->text()));
+    STRING_COPY_TO_ARRAY(fileName, QStringToConstChar(ui->lineEditBrowse->text()));
     SaveConfig_XCP(i, fileName);
     QDialog::accept();
 }

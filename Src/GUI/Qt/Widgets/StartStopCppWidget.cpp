@@ -24,6 +24,7 @@
 
 extern "C"
 {
+    #include "StringMaxChar.h"
     #include "ConfigurablePrefix.h"
     #include "Message.h"
     #include "Scheduler.h"
@@ -51,7 +52,7 @@ StartStopCPPWidget::StartStopCPPWidget(QWidget *parent) :
     curConnection = Connection;
     ui->lineEditStatus->setDisabled(true);
     ui->lineEditFilter->setText("*");
-    FillListBoxes("*");
+    FillListBoxes("*", true);
     Connection++;
 }
 
@@ -63,7 +64,7 @@ StartStopCPPWidget::~StartStopCPPWidget()
 
 void StartStopCPPWidget::on_pushButtonFilter_clicked()
 {
-    FillListBoxes(QStringToConstChar(ui->lineEditFilter->text()));
+    FillListBoxes(QStringToConstChar(ui->lineEditFilter->text()), false);
 }
 
 void StartStopCPPWidget::on_pushButtonRight_clicked()
@@ -88,7 +89,7 @@ void StartStopCPPWidget::on_pushButtonLeft_clicked()
     }
 }
 
-void StartStopCPPWidget::FillListBoxes(const char* Filter)
+void StartStopCPPWidget::FillListBoxes(const char* Filter, bool UpdateSelected)
 {
     int vid;
     int Fd = ScQt_GetMainFileDescriptor();
@@ -109,7 +110,6 @@ void StartStopCPPWidget::FillListBoxes(const char* Filter)
         }
         index++;
     }
-    ui->listWidgetOnVar->clear();
     QString Label = CharToQString(GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_CAN_NAMES));
     Label.append(QString(".CCP[%1].Status").arg(curConnection));
     vid = add_bbvari (QStringToChar(Label), BB_UDWORD, nullptr);
@@ -117,14 +117,16 @@ void StartStopCPPWidget::FillListBoxes(const char* Filter)
     read_bbvari_textreplace (vid, Text, sizeof (Text), nullptr);
     remove_bbvari (vid);
     ui->lineEditStatus->setText(CharToQString(Text));
-
-    for (int i = 0; ; i++) {
-        QString Entry  = QString("lastselcted_%1").arg(i);
-        QString Line = ScQt_IniFileDataBaseReadString(Section, Entry, "", Fd);
-        if(Line.isEmpty()) {
-            break;
+    if (UpdateSelected) {
+        ui->listWidgetOnVar->clear();
+        for (int i = 0; ; i++) {
+            QString Entry  = QString("lastselcted_%1").arg(i);
+            QString Line = ScQt_IniFileDataBaseReadString(Section, Entry, "", Fd);
+            if(Line.isEmpty()) {
+                break;
+            }
+            ui->listWidgetOnVar->addItem(Line);
         }
-        ui->listWidgetOnVar->addItem(Line);
     }
 }
 
@@ -150,7 +152,7 @@ void StartStopCPPWidget::on_pushButtonStart_clicked()
         // Now copy the labels
         char *p = Buffer;
         for (i = 0; i < ui->listWidgetOnVar->count(); i++) {
-            strcpy(p , QStringToConstChar(ui->listWidgetOnVar->item(i)->text()));
+            StringCopyMaxCharTruncate(p , QStringToConstChar(ui->listWidgetOnVar->item(i)->text()), NeededSize - (p - Buffer));
             Pointers[i] = p;
             p = p + strlen(p) + 1;
         }

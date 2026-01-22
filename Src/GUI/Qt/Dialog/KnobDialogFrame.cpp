@@ -28,6 +28,7 @@
 
 extern "C" {
 #include "Compare2DoubleEqual.h"
+#include "FileExtensions.h"
 }
 
 void KnobDialogFrame::Init()
@@ -82,6 +83,9 @@ void KnobDialogFrame::Init()
         ui->textFontCheckBox->setChecked(true);
     }
     ui->textAlignComboBox->setCurrentIndex(m_KnobOrTacho->getTextAlign());
+    HideTextPos(m_KnobOrTacho->getTextAlign() != 3);
+    ui->textPosXDoubleSpinBox->setValue(m_KnobOrTacho->getTextPosX());
+    ui->textPosYDoubleSpinBox->setValue(m_KnobOrTacho->getTextPosY());
     // Name
     ui->nameGroupBox->setChecked(m_KnobOrTacho->getNameFlag());
     nameFontFlagChanged(m_KnobOrTacho->getNameFontFlag());
@@ -89,6 +93,9 @@ void KnobDialogFrame::Init()
         ui->nameFontCheckBox->setChecked(true);
     }
     ui->nameAlignComboBox->setCurrentIndex(m_KnobOrTacho->getNameAlign());
+    HideNamePos(m_KnobOrTacho->getNameAlign() != 3);
+    ui->namePosXDoubleSpinBox->setValue(m_KnobOrTacho->getNamePosX());
+    ui->namePosYDoubleSpinBox->setValue(m_KnobOrTacho->getNamePosY());
     // Bitmap
     ui->bitmapGroupBox->setChecked(m_KnobOrTacho->getBitmapFlag());
     if (m_KnobOrTacho->getBitmapFlag()) {
@@ -202,11 +209,15 @@ KnobDialogFrame::KnobDialogFrame(KnobOrTachoWidget* arg_tacho, QWidget* arg_pare
     connect(ui->textFontCheckBox, SIGNAL(clicked(bool)), this, SLOT(textFontFlagChanged(bool)));
     connect(ui->textFontPushButton, SIGNAL(clicked()), this, SLOT(textFontChoose()));
     connect(ui->textAlignComboBox, SIGNAL(currentIndexChanged(int)), this, SLOT(textFontAlignChanged(int)));
+    connect(ui->textPosXDoubleSpinBox, SIGNAL(valueChanged(double)), this, SLOT(textPositionXChanged(double)));
+    connect(ui->textPosYDoubleSpinBox, SIGNAL(valueChanged(double)), this, SLOT(textPositionYChanged(double)));
     // Name
     connect(ui->nameGroupBox, SIGNAL(clicked(bool)), this, SLOT(nameVisible(bool)));
     connect(ui->nameFontCheckBox, SIGNAL(clicked(bool)), this, SLOT(nameFontFlagChanged(bool)));
     connect(ui->nameFontPushButton, SIGNAL(clicked()), this, SLOT(nameFontChoose()));
     connect(ui->nameAlignComboBox, SIGNAL(currentIndexChanged(int)), this, SLOT(nameFontAlignChanged(int)));
+    connect(ui->namePosXDoubleSpinBox, SIGNAL(valueChanged(double)), this, SLOT(namePositionXChanged(double)));
+    connect(ui->namePosYDoubleSpinBox, SIGNAL(valueChanged(double)), this, SLOT(namePositionYChanged(double)));
     // Bitmap
     connect(ui->bitmapGroupBox, SIGNAL(clicked(bool)), this, SLOT(bitmapVisible(bool)));
     connect(ui->bitmapPushButton, SIGNAL(clicked()), this, SLOT(openBitmapPathDialog()));
@@ -573,6 +584,11 @@ void KnobDialogFrame::textFontChoose()
 
 void KnobDialogFrame::textFontAlignChanged(int par_Align)
 {
+    bool DisablePos = (par_Align != 3);
+    ui->textPosXDoubleSpinBox->setHidden(DisablePos);
+    ui->textPosXLabel->setHidden(DisablePos);
+    ui->textPosYDoubleSpinBox->setHidden(DisablePos);
+    ui->textPosYLabel->setHidden(DisablePos);
     m_KnobOrTacho->SetTextAlign(par_Align);
     m_KnobOrTacho->update();
 }
@@ -619,6 +635,7 @@ void KnobDialogFrame::nameFontChoose()
 
 void KnobDialogFrame::nameFontAlignChanged(int par_Align)
 {
+    HideNamePos(par_Align != 3);
     m_KnobOrTacho->SetNameAlign(par_Align);
     m_KnobOrTacho->update();
 }
@@ -641,9 +658,25 @@ void KnobDialogFrame::variableDirectConfig(bool arg_value)
     ui->lineEditMaxValue->setEnabled(!arg_value);
 }
 
+void KnobDialogFrame::HideNamePos(bool par_Hide)
+{
+    ui->namePosXDoubleSpinBox->setHidden(par_Hide);
+    ui->namePosXLabel->setHidden(par_Hide);
+    ui->namePosYDoubleSpinBox->setHidden(par_Hide);
+    ui->namePosYLabel->setHidden(par_Hide);
+}
+
+void KnobDialogFrame::HideTextPos(bool par_Hide)
+{
+    ui->textPosXDoubleSpinBox->setHidden(par_Hide);
+    ui->textPosXLabel->setHidden(par_Hide);
+    ui->textPosYDoubleSpinBox->setHidden(par_Hide);
+    ui->textPosYLabel->setHidden(par_Hide);
+}
+
 void KnobDialogFrame::openBitmapPathDialog()
 {
-    QString FileName = FileDialog::getOpenFileName(this, "open bitmap", QString(), ui->bitmapLineEdit->text());
+    QString FileName = FileDialog::getOpenFileName(this, "open bitmap", ui->bitmapLineEdit->text(), IMAGE_EXT);
     if (!FileName.isEmpty()) {
         ui->bitmapLineEdit->setText(FileName);
         m_KnobOrTacho->setBitmapPath(FileName);
@@ -726,4 +759,5 @@ void KnobDialogFrame::FillAlignComboBox(QComboBox *par_ComboBox)
     par_ComboBox->addItem("center");   // 0
     par_ComboBox->addItem("left");     // 1
     par_ComboBox->addItem("right");    // 2
+    par_ComboBox->addItem("inside");   // 3
 }

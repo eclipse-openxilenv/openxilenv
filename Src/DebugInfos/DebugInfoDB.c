@@ -35,6 +35,7 @@
 #include "MyMemory.h"
 #include "ThrowError.h"
 #include "StringMaxChar.h"
+#include "PrintFormatToString.h"
 #include "Files.h"
 #include "Wildcards.h"
 #include "DebugInfos.h"
@@ -145,7 +146,7 @@ static int32_t comp_fieldnr_func (const FIELD_LIST_ELEM **p1, const FIELD_LIST_E
 
 
 // This function will remove debug infos if there are more than 2 with no corresponding process
-// dazugehoerigen Prozess sind. It will be removed always the oldest one
+// It will be removed always the oldest one
 static void check_if_somthing_schould_be_removed (void)
 {
     int32_t x;
@@ -289,14 +290,21 @@ static int32_t UnloadDebugInfos (DEBUG_INFOS_DATA *pappldata)
 
 int32_t DeleteDebugInfos (DEBUG_INFOS_DATA *pappldata)
 {
-    //ENTER_CRITICAL_SECTION (pappldata);
+#ifdef DEBUG_CRITICAL_SECTIONS
+    if ((DebugGlobalCriticalSectionLineNr == 0) ||
+        (DebugGlobalCriticalSectionThreadId == 0)) {
+        ThrowError(1, "internal error %s(%i): call DeleteDebugInfos() outside lock", __FILE__, __LINE__);
+    }
+    if ((pappldata->DebugCriticalSectionLineNr != 0) ||
+        (pappldata->DebugCriticalSectionThreadId != 0)) {
+        ThrowError(1, "internal error %s(%i): call DeleteDebugInfos() inside lock [line=%i]", __FILE__, __LINE__, pappldata->DebugCriticalSectionLineNr);
+    }
+#endif
     UnloadDebugInfos (pappldata);
     if (DebugFile != NULL) fprintf (DebugFile, "%X: %s (%i) DeleteDebugInfos(): Number %" PRIi64 "\n", (uint32_t)GetCurrentThreadId(), __FILE__, __LINE__, pappldata - DebugInfosDatas);
     pappldata->UsedFlag = 0;
-    //LEAVE_CRITICAL_SECTION (pappldata);
     DeleteCriticalSection (&(pappldata->CriticalSection));
-
-    memset (pappldata, 0, sizeof (pappldata[0]));
+    STRUCT_ZERO_INIT (*pappldata, DEBUG_INFOS_DATA);
     return 0;
 }
 
@@ -548,13 +556,9 @@ static int32_t LoadDebugInfos (DEBUG_INFOS_DATA *par_DebugInfos, char *par_Execu
         }
 #else
         ThrowError(1, "Visual PDB file not supported");
-        //if (parse_vc_pdb_file (PdbFilename, par_DebugInfos, par_DebugInfos->ImageBaseAddr, LinkerVersion)) {
-        //    DeleteDebugInfos (par_DebugInfos);
-        //    return -1;
-        //}
 #endif
 #else
-        ThrowError(1, "microsoft PDB files are not supported");
+        ThrowError(1, "Visual PDB file not supported");
         return -1;
 #endif
         break;
@@ -677,11 +681,11 @@ int32_t application_update_start_process (int32_t Pid, char *ProcessName, char *
 
     } else {
         IsRealtimeProcess = 0;
-        if (GetProcessNameWithoutPath (Pid, ShortProcessName)) return -1;
+        if (GetProcessNameWithoutPath (Pid, ShortProcessName, sizeof(ShortProcessName))) return -1;
         if ((DllName == NULL) || (strlen(DllName) == 0)) {
-            if (GetProcessExecutableName (Pid, ExecutableName)) return -1;
+            if (GetProcessExecutableName (Pid, ExecutableName, sizeof(ExecutableName))) return -1;
         } else {
-            memset (ExecutableName, 0, sizeof (ExecutableName));
+            MEMSET (ExecutableName, 0, sizeof (ExecutableName));
             strncpy(ExecutableName, DllName, sizeof (ExecutableName) - 1);
         }
         MachineType = GetExternProcessMachineType(Pid);
@@ -743,7 +747,7 @@ int32_t application_update_start_process (int32_t Pid, char *ProcessName, char *
         if (DebugFile != NULL) fprintf (DebugFile, "%X: %s (%i) application_update_start_process()  neuer Prozess anlegen\n", (uint32_t)GetCurrentThreadId(), __FILE__, __LINE__);
         for (x = 0; x < DEBUG_INFOS_MAX_PROCESSES; x++) {
             if (!DebugInfosAssociatedProcesses[x].UsedFlag) {
-                memset(&(DebugInfosAssociatedProcesses[x]), 0, sizeof (DebugInfosAssociatedProcesses[x]));
+                MEMSET(&(DebugInfosAssociatedProcesses[x]), 0, sizeof (DebugInfosAssociatedProcesses[x]));
                 DebugInfosAssociatedProcesses[x].UsedFlag = 1;
                 DebugInfosAssociatedProcesses[x].Pid = Pid;
                 DebugInfosAssociatedProcesses[x].IsRealtimeProcess = IsRealtimeProcess;
@@ -2399,7 +2403,7 @@ int32_t get_array_type_string_internal (int32_t typenr, int32_t elem_or_array_fl
                     if ((ret = local_strcat (ret_type_string, name, max_c, &pos)) <= 0) return ret;
                     if (!elem_or_array_flag) {
                         char sizestr[32];
-                        sprintf (sizestr, "[%i]", (int32_t)itemptr->array_elements);
+                        PrintFormatToString (sizestr, sizeof(sizestr), "[%i]", (int32_t)itemptr->array_elements);
                         if ((ret = local_strcat (ret_type_string, sizestr, max_c, &pos)) <= 0) return ret;
                     }
                     return pos;
@@ -2420,7 +2424,7 @@ __BASE_TYPE:
                             do {
                                 if (!elem_or_array_flag || (dim_count > 0))  {
                                     char sizestr[32];
-                                    sprintf (sizestr, "[%i]", (int32_t)itemptr_points_to->array_elements);
+                                    PrintFormatToString (sizestr, sizeof(sizestr), "[%i]", (int32_t)itemptr_points_to->array_elements);
                                     if ((ret = local_strcat (ret_type_string, sizestr, max_c, &pos)) <= 0) return ret;
                                 }
                                 if ((name = get_base_type (itemptr_points_to->pointsto)) != NULL) {  // Array of base -data types
@@ -2438,7 +2442,7 @@ __BASE_TYPE:
                 } else {
                     if (!elem_or_array_flag) {
                         char sizestr[32];
-                        sprintf (sizestr, "[%i]", (int32_t)itemptr->array_elements);
+                        PrintFormatToString (sizestr, sizeof(sizestr), "[%i]", (int32_t)itemptr->array_elements);
                         if ((ret = local_strcat (ret_type_string, sizestr, max_c, &pos)) <= 0) return ret;
                     }
                 }
@@ -3316,7 +3320,7 @@ PROCESS_APPL_DATA *ConnectToProcessDebugInfos (int32_t par_UniqueId,
     PROCESS_APPL_DATA *Ret = NULL;
     int32_t Found = 0;
 
-    TruncatePathFromProcessName (ShortProcessName, par_ProcessName);
+    TruncatePathFromProcessName (ShortProcessName, par_ProcessName, sizeof(ShortProcessName));
 
     ENTER_GLOBAL_CRITICAL_SECTION (&DebugInfosCriticalSection);
 
@@ -3333,7 +3337,7 @@ PROCESS_APPL_DATA *ConnectToProcessDebugInfos (int32_t par_UniqueId,
     for (x = 0; x < DEBUG_INFOS_MAX_CONNECTIONS; x++) {
         if (!DebugInfosAssociatedConnections[x].UsedFlag) {
             // New connection
-            memset(&(DebugInfosAssociatedConnections[x]), 0, sizeof (DebugInfosAssociatedConnections[x]));
+            MEMSET(&(DebugInfosAssociatedConnections[x]), 0, sizeof (DebugInfosAssociatedConnections[x]));
             DebugInfosAssociatedConnections[x].UsedFlag = 1;
             DebugInfosAssociatedConnections[x].UsedByUniqueId = par_UniqueId;
             DebugInfosAssociatedConnections[x].LoadUnloadCallBackFuncs = par_LoadUnloadCallBackFunc;
@@ -3372,7 +3376,7 @@ PROCESS_APPL_DATA *ConnectToProcessDebugInfos (int32_t par_UniqueId,
                 for (i = 0; i < DEBUG_INFOS_MAX_PROCESSES; i++) {
                     if (!DebugInfosAssociatedProcesses[i].UsedFlag) {
                         int32_t Pid;
-                        memset(&(DebugInfosAssociatedProcesses[i]), 0, sizeof (DebugInfosAssociatedProcesses[i]));
+                        MEMSET(&(DebugInfosAssociatedProcesses[i]), 0, sizeof (DebugInfosAssociatedProcesses[i]));
                         DebugInfosAssociatedProcesses[i].UsedFlag = 1;
                         DebugInfosAssociatedProcesses[i].ProcessName = StringMalloc (ShortProcessName);
                         DebugInfosAssociatedProcesses[i].ExeOrDllName = NULL;
@@ -3521,9 +3525,9 @@ static int32_t ReadRenamingListFromIni(DEBUG_INFOS_DATA *pappldata)
     char Line[INI_MAX_LINE_LENGTH];
     char *From, *To;
 
-    sprintf (Section, "DebugLabelRenamingListForProcesses %s", pappldata->ShortExecutableFileName);
+    PrintFormatToString (Section, sizeof(Section), "DebugLabelRenamingListForProcesses %s", pappldata->ShortExecutableFileName);
     for(i = 0; i < 10000; i++) {
-        sprintf (Entry, "e_%i", i);
+        PrintFormatToString (Entry, sizeof(Entry), "e_%i", i);
         if (IniFileDataBaseReadString(Section, Entry, "", Line, sizeof(Line), GetMainFileDescriptor()) <= 0) break;
         pappldata->RenamingListSize++;
         if (StringCommaSeparate(Line, &From, &To, NULL) == 2) {
@@ -3631,7 +3635,9 @@ DEBUG_INFOS_ASSOCIATED_CONNECTION *ReadDebufInfosNotConnectingToProcess (const c
 
 void DeleteDebufInfosNotConnectingToProcess(DEBUG_INFOS_ASSOCIATED_CONNECTION *pappldata)
 {
+    ENTER_GLOBAL_CRITICAL_SECTION (&DebugInfosCriticalSection);
     DeleteDebugInfos(pappldata->AssociatedProcess->AssociatedDebugInfos);
+    LEAVE_GLOBAL_CRITICAL_SECTION (&DebugInfosCriticalSection);
     my_free(pappldata->AssociatedProcess->AssociatedDebugInfos);
     my_free(pappldata->AssociatedProcess);
     my_free(pappldata);

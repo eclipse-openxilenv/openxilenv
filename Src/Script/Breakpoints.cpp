@@ -23,6 +23,8 @@
 
 extern "C" {
 #include "MyMemory.h"
+#include "StringMaxChar.h"
+#include "PrintFormatToString.h"
 #include "IniDataBase.h"
 #include "Files.h"
 }
@@ -57,17 +59,15 @@ int cBreakPoints::AddBreakPoint (int par_Active, int par_FileNr, const char *par
     BreakPointTable[PosInBreakPointTable].Ip = par_Ip;
     BreakPointTable[PosInBreakPointTable].HitCounter = 0;
     BreakPointTable[PosInBreakPointTable].MaxHitCounter = par_HitCount;
-    BreakPointTable[PosInBreakPointTable].Filename = static_cast<char*>(my_malloc (strlen (par_Filename)+1));
+    BreakPointTable[PosInBreakPointTable].Filename = StringMalloc (par_Filename);
     if (BreakPointTable[PosInBreakPointTable].Filename == nullptr) return -1;
-    strcpy (BreakPointTable[PosInBreakPointTable].Filename, par_Filename);
     if (par_Condition == nullptr) {
         BreakPointTable[PosInBreakPointTable].Condition = nullptr;
     } else if (strlen (par_Condition) == 0) {
         BreakPointTable[PosInBreakPointTable].Condition = nullptr;
     } else {
-        BreakPointTable[PosInBreakPointTable].Condition = static_cast<char*>(my_malloc (strlen (par_Condition)+1));
+        BreakPointTable[PosInBreakPointTable].Condition = StringMalloc (par_Condition);
         if (BreakPointTable[PosInBreakPointTable].Condition == nullptr) return -1;
-        strcpy (BreakPointTable[PosInBreakPointTable].Condition, par_Condition);
     }
     if (par_LastWriteTime != nullptr) {
         BreakPointTable[PosInBreakPointTable].LastWriteTime = *par_LastWriteTime;
@@ -137,7 +137,7 @@ int cBreakPoints::InitBreakPointsFromIni (cCmdTable *par_CmdTable)
     int Fd = GetMainFileDescriptor();
 
     for (int x = 0; x < 1000; x++) {
-        sprintf (Entry, "B%i", x); 
+        PrintFormatToString (Entry, sizeof(Entry), "B%i", x);
         if (IniFileDataBaseReadString (SCRIPT_BREAKBPOINT_INI_SECTION, Entry, "", Line, sizeof (Line), Fd)) {
             char *ActiveStr, *FilenameStr, *LineNrStr, *MaxHitCounterStr, *LastWriteTimeHighStr, *LastWriteTimeLowStr, *ConditionStr = nullptr;
             if (StringCommaSeparate (Line, &ActiveStr, &FilenameStr, &LineNrStr, &MaxHitCounterStr, &LastWriteTimeHighStr, &LastWriteTimeLowStr, &ConditionStr, nullptr) >= 4) {
@@ -169,11 +169,11 @@ int cBreakPoints::SaveBreakPointsToIni (void)
 
     IniFileDataBaseWriteString (SCRIPT_BREAKBPOINT_INI_SECTION, nullptr, nullptr, Fd);
     for (int x = 0; x < PosInBreakPointTable; x++) {
-        sprintf (Entry, "B%i", x); 
+        PrintFormatToString (Entry, sizeof(Entry), "B%i", x);
 #ifdef _WIN32
-        sprintf (Line, "%i, %s, %i, %i, %lu, %lu",
+        PrintFormatToString (Line, sizeof(Line), "%i, %s, %i, %i, %lu, %lu",
 #else
-        sprintf (Line, "%i, %s, %i, %i, %u, %lu",
+        PrintFormatToString (Line, sizeof(Line), "%i, %s, %i, %i, %u, %lu",
 #endif
                  (BreakPointTable[x].ActiveValid & BREAKPOINT_ACTIVE_MASK) == BREAKPOINT_ACTIVE_MASK,
                  BreakPointTable[x].Filename,
@@ -188,7 +188,7 @@ int cBreakPoints::SaveBreakPointsToIni (void)
 #endif
 
         if (BreakPointTable[x].Condition != nullptr) {
-            sprintf (Line + strlen (Line), ", %s",
+            PrintFormatToString (Line + strlen (Line), sizeof(Line) - strlen (Line), ", %s",
                      BreakPointTable[x].Condition);
         }
         IniFileDataBaseWriteString (SCRIPT_BREAKBPOINT_INI_SECTION, Entry, Line, Fd);
@@ -274,7 +274,7 @@ int cBreakPoints::CheckAllBreakPoints (cCmdTable *par_CmdTable)
     return Ret;  // Number of valid breakpoints
 }
 
-int cBreakPoints::GetBreakpointString (int par_Index, char *par_String)
+int cBreakPoints::GetBreakpointString (int par_Index, char *ret_String, int par_Maxc)
 {
     if (par_Index < PosInBreakPointTable) {
         const char *p;
@@ -292,12 +292,12 @@ int cBreakPoints::GetBreakpointString (int par_Index, char *par_String)
             p = "X ";
             break;
         }
-        sprintf (par_String, "%s \t%s\t%i\th=%i", p,
+        PrintFormatToString (ret_String, par_Maxc, "%s \t%s\t%i\th=%i", p,
                  BreakPointTable[par_Index].Filename,
                  BreakPointTable[par_Index].LineNr,
                  BreakPointTable[par_Index].MaxHitCounter);
         if (BreakPointTable[par_Index].Condition != nullptr) {
-            sprintf (par_String + strlen (par_String), ", c=%s", BreakPointTable[par_Index].Condition);
+            PrintFormatToString (ret_String + strlen (ret_String), par_Maxc - strlen (ret_String), ", c=%s", BreakPointTable[par_Index].Condition);
         }
         return 0;
     }

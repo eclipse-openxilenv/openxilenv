@@ -18,6 +18,7 @@
 #include "Platform.h"
 #include <stdio.h>
 #include <string.h>
+#include "PrintFormatToString.h"
 #include "MainValues.h"
 #include "ConfigurablePrefix.h"
 #include "ScriptDebugFile.h"
@@ -37,7 +38,7 @@ static char debugfilename [MAX_PATH_LAENGE] = "script.dbg";
 
 void init_debugfilename (char *prefix)
 {
-	sprintf (debugfilename, "%sscript.dbg", prefix);
+    PrintFormatToString (debugfilename, sizeof(debugfilename), "%sscript.dbg", prefix);
 }
 
 static void DeleteDebugFile(void);

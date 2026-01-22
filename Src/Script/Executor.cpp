@@ -22,6 +22,7 @@
 
 extern "C" {
 #include "MyMemory.h"
+#include "PrintFormatToString.h"
 #include "ConfigurablePrefix.h"
 #include "Files.h"
 #include "Scheduler.h"
@@ -51,7 +52,7 @@ cExecutor::cExecutor (void)
 
     DataForCmd = 0;
 
-    memset (DataArrayForCmd, 0, sizeof (DataArrayForCmd));
+    MEMSET (DataArrayForCmd, 0, sizeof (DataArrayForCmd));
 
     NextCmdInSameCycleFlag = 0;
 
@@ -215,7 +216,7 @@ int cExecutor::ReopenHtmlReportFile (void)
 int cExecutor::ReopenHtmlReportFile (char *par_HtmlReportFilename)
 {
     CloseHtmlReportFile ();
-    strcpy (HtmlReportFilename, par_HtmlReportFilename);
+    STRING_COPY_TO_ARRAY (HtmlReportFilename, par_HtmlReportFilename);
     HtmlReportFile = open_file (HtmlReportFilename, "a");
     return (HtmlReportFile == nullptr) ? -1 : 0;
 }
@@ -223,7 +224,7 @@ int cExecutor::ReopenHtmlReportFile (char *par_HtmlReportFilename)
 int cExecutor::OpenNewHtmlReportFile (char *par_HtmlReportFilename)
 {
     CloseHtmlReportFile ();
-    strcpy (HtmlReportFilename, par_HtmlReportFilename);
+    STRING_COPY_TO_ARRAY (HtmlReportFilename, par_HtmlReportFilename);
     HtmlReportFile = open_file (HtmlReportFilename, "w");
     return (HtmlReportFile == nullptr) ? -1 : 0;
 }
@@ -255,7 +256,7 @@ void cExecutor::Init (cCmdTable *par_CmdTable, cProcTable *par_ProcTable, cProc 
     WhileFlag = 0;
     DefProcFlag = 0;
     DataForCmd = 0;
-    memset (DataArrayForCmd, 0, sizeof (DataArrayForCmd));
+    MEMSET (DataArrayForCmd, 0, sizeof (DataArrayForCmd));
     TimeoutActiveFlag = 0;
     AtomicCounter = 0;
 
@@ -267,7 +268,7 @@ void cExecutor::Init (cCmdTable *par_CmdTable, cProcTable *par_ProcTable, cProc 
     StopAtIp = -1;
 
     // generate report file
-	sprintf (HtmlReportFilename, "%sreport.html", s_main_ini_val.ScriptOutputFilenamesPrefix);
+    PrintFormatToString (HtmlReportFilename, sizeof(HtmlReportFilename), "%sreport.html", s_main_ini_val.ScriptOutputFilenamesPrefix);
     HtmlReportFile = GenerateHTMLReportFile (HtmlReportFilename);
     init_html_strings ();
 }

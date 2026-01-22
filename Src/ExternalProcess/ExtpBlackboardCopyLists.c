@@ -22,7 +22,7 @@
 #include <sys/mman.h>
 #endif
 #include "XilEnvExtProc.h"
-
+#include "StringMaxChar.h"
 #include "ExtpMemoryAllocation.h"
 #include "ExtpMemoryAccess.h"
 #include "PipeMessagesShared.h"
@@ -75,12 +75,13 @@ static int XilEnvInternal_InsertVariableToCopyListsRdOrWr (EXTERN_PROCESS_TASK_I
     if (Name == NULL) {
         pList->pElems[pList->ElemCount].UniqueIdOrNamneAndUniqueId.UniqueId = UniqueId;
     } else {
-        pList->pElems[pList->ElemCount].UniqueIdOrNamneAndUniqueId.NameAndUniqueId = (NAME_AND_UNIQUE_ID*)XilEnvInternal_malloc(sizeof(NAME_AND_UNIQUE_ID) + strlen(Name));
+        int Len = strlen(Name) + 1;
+        pList->pElems[pList->ElemCount].UniqueIdOrNamneAndUniqueId.NameAndUniqueId = (NAME_AND_UNIQUE_ID*)XilEnvInternal_malloc(sizeof(NAME_AND_UNIQUE_ID) + Len);
         if (pList->pElems[pList->ElemCount].UniqueIdOrNamneAndUniqueId.NameAndUniqueId != NULL) {
             pList->pElems[pList->ElemCount].Dir = 0x4000;
             pList->pElems[pList->ElemCount].UniqueIdOrNamneAndUniqueId.NameAndUniqueId->UniqueId = UniqueId;
             pList->pElems[pList->ElemCount].UniqueIdOrNamneAndUniqueId.NameAndUniqueId->AttachCounter = 1;
-            strcpy(pList->pElems[pList->ElemCount].UniqueIdOrNamneAndUniqueId.NameAndUniqueId->Name, Name);
+            StringCopyMaxCharTruncate(pList->pElems[pList->ElemCount].UniqueIdOrNamneAndUniqueId.NameAndUniqueId->Name, Name, Len);
         }
     }
     pList->pElems[pList->ElemCount].Vid = Vid;

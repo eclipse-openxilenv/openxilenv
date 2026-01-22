@@ -24,6 +24,7 @@
 extern "C" {
 #include "Files.h"
 #include "MyMemory.h"
+#include "StringMaxChar.h"
 }
 
 cFileCache::cFileCache (void)
@@ -90,11 +91,10 @@ int cFileCache::Load (const char *par_FileName, int par_OnlyUsingFlag)
 #endif
 
     OnlyUsingFlag = par_OnlyUsingFlag;
-    Filename = static_cast<char*>(my_malloc (strlen (par_FileName)+1));
+    Filename = StringMalloc (par_FileName);
     if (Filename == nullptr) {
         return -1; 
     }
-    strcpy (Filename, par_FileName);
 #ifdef _WIN32
     hFile = CreateFile (par_FileName,
                         GENERIC_READ,

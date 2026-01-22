@@ -27,6 +27,7 @@
 #include <stdlib.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/un.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <arpa/inet.h>
@@ -40,6 +41,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#include "MemZeroAndCopy.h"
+#include "StringMaxChar.h"
+#include "PrintFormatToString.h"
 #include "RpcFuncBase.h"
 #include "RpcFuncLogin.h"
 #include "RpcClientSocket.h"
@@ -138,7 +142,7 @@ static int GetThreadReceiveBufferNo(void)
         }
 #else
         char ThreadProcFolderName[32];
-        sprintf(ThreadProcFolderName, "/proc/self/%i", RpcThreadBuffers[x].ThreadId);
+        PrintFormatToString (ThreadProcFolderName, sizeof(ThreadProcFolderName), "/proc/self/%i", RpcThreadBuffers[x].ThreadId);
         struct stat s;
         if (stat(ThreadProcFolderName, &s) != 0) {
             // Thread doesn't exist anymore -> reuse it
@@ -224,12 +228,12 @@ HANDLE ConnectToRemoteProcedureCallServer(char *par_ServerName, int par_Port)
 
     InitMutex();
 
-    memset(&hints, 0, sizeof(hints));
+    MEMSET(&hints, 0, sizeof(hints));
     hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_protocol = IPPROTO_TCP;
 
-    sprintf (PortString, "%i", par_Port);
+    PrintFormatToString (PortString, sizeof(PortString), "%i", par_Port);
     // Resolve the server address and port
     iResult = getaddrinfo(par_ServerName, PortString, &hints, &result);
     if (iResult != 0) {
@@ -274,7 +278,7 @@ HANDLE NamedPipeConnectToRemoteProcedureCallServer(const char *par_ServerName, c
 
     InitMutex();
 
-    sprintf (Pipename, "\\\\%s\\pipe\\" RPC_PIPE_NAME "_%s", (strlen(par_ServerName) == 0) ? "." : par_ServerName, par_Instance);
+    PrintFormatToString (Pipename, sizeof(Pipename), "\\\\%s\\pipe\\" RPC_PIPE_NAME "_%s", (strlen(par_ServerName) == 0) ? "." : par_ServerName, par_Instance);
     while (1) {
         WaitNamedPipe(Pipename, 100);
         hPipe = CreateFile (Pipename,       // pipe name
@@ -316,6 +320,37 @@ HANDLE NamedPipeConnectToRemoteProcedureCallServer(const char *par_ServerName, c
 
     return hPipe;
 }
+#else
+HANDLE UnixDomainSocketConnectToRemoteProcedureCallServer(const char *par_ServerName, const char *par_Instance, int par_Timout_ms)
+{
+    SOCKET Socket;
+    struct sockaddr_un address;
+    int iResult;
+    char Name[MAX_PATH + 100];
+
+    MEMSET(&address, 0, sizeof(address));
+    address.sun_family = AF_UNIX;
+
+    if (CheckOpenIPCFile(par_Instance, "unix_domain_rpc", Name, sizeof(Name), DIR_MUST_EXIST, FILENAME_MUST_EXIST) != 0) {
+        return INVALID_HANDLE_VALUE;
+    }
+    STRING_COPY_TO_ARRAY(address.sun_path, Name);
+
+    // Create a SOCKET for connecting to server
+    Socket = socket(PF_UNIX, SOCK_STREAM, 0);
+    if (Socket == INVALID_SOCKET) {
+        return INVALID_HANDLE_VALUE;
+    }
+
+    // Connect to server.
+    iResult = connect (Socket, (__CONST_SOCKADDR_ARG)&address, sizeof(address));
+    if (iResult == SOCKET_ERROR) {
+        close(Socket);
+        Socket = (SOCKET)INVALID_HANDLE_VALUE;
+        return INVALID_HANDLE_VALUE;
+    }
+    return (HANDLE)Socket;
+}
 #endif
 
 void DisconnectFromRemoteProcedureCallServer(int par_SocketOrNamedPipe, HANDLE Socket)
@@ -339,8 +374,11 @@ int SentToRemoteProcedureCallServer (int par_SocketOrNamedPipe, HANDLE par_Socke
     par_Req->Command = par_Command;
     do {
         int SendBytes;
+#ifdef _WIN32
         if (par_SocketOrNamedPipe) {
+#endif
             SendBytes = send ((SOCKET)par_Socket, (const char*)par_Req + buffer_pos, par_PackageSize - buffer_pos, 0);
+#ifdef _WIN32
         } else {
             DWORD NumberOfBytesWritten;
             BOOL Ret;
@@ -348,6 +386,7 @@ int SentToRemoteProcedureCallServer (int par_SocketOrNamedPipe, HANDLE par_Socke
             if (Ret == 0) SendBytes = SOCKET_ERROR;
             else SendBytes = NumberOfBytesWritten;
         }
+#endif
         if (SendBytes == SOCKET_ERROR) {
             return -1;
         }
@@ -365,8 +404,11 @@ static int ReceiveFromRemoteProcedureCallServer (int par_SocketOrNamedPipe, HAND
     do {
         int ReadBytes;
 __RETRAY:
+#ifdef _WIN32
         if (par_SocketOrNamedPipe) {
+#endif
             ReadBytes = recv ((SOCKET)par_Socket, (char*)ret_Data + buffer_pos, par_len - buffer_pos, 0);
+#ifdef _WIN32
         } else {
             BOOL Ret;
             DWORD BytesRead;
@@ -374,12 +416,12 @@ __RETRAY:
             if (Ret == 0) ReadBytes = 0;
             else ReadBytes = BytesRead;
         }
-
+#endif
         if (ReadBytes > 0) {
             if ((ReadBytes == sizeof(RPC_API_PING_TO_CLINT_MESSAGE)) && (ret_Data->Command == RPC_API_PING_TO_CLINT_CMD)) {
                 // answer to the alive ping
                 RPC_API_PING_TO_CLINT_MESSAGE_ACK Ack;
-                memset (&Ack, 0, sizeof(Ack));
+                MEMSET (&Ack, 0, sizeof(Ack));
                 if (SentToRemoteProcedureCallServer (par_SocketOrNamedPipe, par_Socket, RPC_API_PING_TO_CLINT_CMD, (RPC_API_BASE_MESSAGE*)&Ack, sizeof(Ack)) != 0) {
                     return -1;
                 }
@@ -459,8 +501,11 @@ int ReceiveFromRemoteProcedureCallServerDynBuf (int par_SocketOrNamedPipe, HANDL
     do {
         int ReadBytes;
 __RETRAY:
+#ifdef _WIN32
         if (par_SocketOrNamedPipe) {
+#endif
             ReadBytes = recv ((SOCKET)par_Socket, dyn_buffer + buffer_pos, sizeof(RPC_API_BASE_MESSAGE_ACK) - buffer_pos, 0);
+#ifdef _WIN32
         } else {
             BOOL Ret;
             DWORD BytesRead;
@@ -468,11 +513,12 @@ __RETRAY:
             if (Ret == 0) ReadBytes = 0;
             else ReadBytes = BytesRead;
         }
+#endif
         if (ReadBytes > 0) {
             if ((ReadBytes == sizeof(RPC_API_PING_TO_CLINT_MESSAGE)) && (((RPC_API_BASE_MESSAGE_ACK*)dyn_buffer)->Command == RPC_API_PING_TO_CLINT_CMD)) {
                 // answer to the alive ping
                 RPC_API_PING_TO_CLINT_MESSAGE_ACK Ack;
-                memset (&Ack, 0, sizeof(Ack));
+                MEMSET (&Ack, 0, sizeof(Ack));
                 if (SentToRemoteProcedureCallServer (par_SocketOrNamedPipe, par_Socket, RPC_API_PING_TO_CLINT_CMD, (RPC_API_BASE_MESSAGE*)&Ack, sizeof(Ack)) != 0) {
                     return -1;
                 }
@@ -496,8 +542,11 @@ __RETRAY:
 
     do {
         int ReadBytes;
+#ifdef _WIN32
         if (par_SocketOrNamedPipe) {
+#endif
             ReadBytes = recv ((SOCKET)par_Socket, dyn_buffer + buffer_pos, receive_message_size - buffer_pos, 0);
+#ifdef _WIN32
         } else {
             BOOL Ret;
             DWORD BytesRead;
@@ -505,7 +554,7 @@ __RETRAY:
             if (Ret == 0) ReadBytes = 0;
             else ReadBytes = BytesRead;
         }
-
+#endif
         if (ReadBytes > 0) {
             buffer_pos += ReadBytes;
         } else {
@@ -537,4 +586,39 @@ int RemoteProcedureCallTransactDynBuf (int par_SocketOrNamedPipe, HANDLE par_Soc
     }
     UnlockMutex();
     return -1;
+}
+
+#define UNUSED(x) (void)(x)
+
+void *__my_malloc (const char * const file, int line, size_t size)
+{
+    UNUSED(file);
+    UNUSED(line);
+    return malloc (size);
+}
+
+void *__my_calloc (const char * const file, int line, size_t nitems, size_t size)
+{
+    UNUSED(file);
+    UNUSED(line);
+    return calloc (nitems, size);
+}
+
+void my_free (void* block)
+{
+    free (block);
+}
+
+void *__my_realloc(const char * const file, int line, void *block, size_t size)
+{
+    UNUSED(file);
+    UNUSED(line);
+    return realloc (block, size);
+}
+
+int ThrowError(int level, const char *format, ...)
+{
+    UNUSED(level);
+    UNUSED(format);
+    return 0;
 }

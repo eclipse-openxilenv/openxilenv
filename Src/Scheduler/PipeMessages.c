@@ -20,8 +20,10 @@
 #include <malloc.h>
 #include <stdio.h>
 #include "config.h"
+#include "StringMaxChar.h"
 #include "ThrowError.h"
 #include "MyMemory.h"
+#include "PrintFormatToString.h"
 #include "Blackboard.h"
 #include "BlackboardAccess.h"
 #include "IniDataBase.h"
@@ -45,7 +47,7 @@ static HANDLE CreateLoginPipe (char *par_Prefix)
     HANDLE hPipe;
     char Pipename[MAX_PATH];
 
-    sprintf (Pipename, PIPE_NAME "_%s", par_Prefix);
+    PrintFormatToString (Pipename, sizeof(Pipename), PIPE_NAME "_%s", par_Prefix);
 
     hPipe = CreateNamedPipe (Pipename, PIPE_ACCESS_DUPLEX, PIPE_TYPE_MESSAGE | PIPE_WAIT, PIPE_UNLIMITED_INSTANCES, PIPE_MESSAGE_BUFSIZE, PIPE_MESSAGE_BUFSIZE, 0, NULL);
  
@@ -99,6 +101,7 @@ static HANDLE BuildHandleFrom32BitInt (ALIVE_PING_HANDLE_ULONG x)
 
 static int LoopFlag;
 static char *PipeNamePostfix;
+static int ThreadWillCallFirstAcceptState;
 
 static DWORD WINAPI LoginThreadProc (LPVOID lpParam)
 {
@@ -109,12 +112,12 @@ static DWORD WINAPI LoginThreadProc (LPVOID lpParam)
     PIPE_API_LOGIN_MESSAGE_ACK LoginMessageAck;
 
     // remember the pipe name for termination
-    PipeNamePostfix = my_malloc(strlen((char*)lpParam) + 1);
-    strcpy(PipeNamePostfix, (char*)lpParam);
+    PipeNamePostfix = StringMalloc((char*)lpParam);
     LoginMessage = (PIPE_API_LOGIN_MESSAGE*)my_malloc (PIPE_MESSAGE_BUFSIZE);
     while (LoopFlag) {  // endless loop
         if ((hPipe = CreateLoginPipe ((char *)lpParam)) != INVALID_HANDLE_VALUE) {
-            Connected = ConnectNamedPipe (hPipe, NULL) ? TRUE : (GetLastError() == ERROR_PIPE_CONNECTED); 
+            ThreadWillCallFirstAcceptState = 1;
+            Connected = ConnectNamedPipe (hPipe, NULL) ? TRUE : (GetLastError() == ERROR_PIPE_CONNECTED);
             if (Connected) {
                 Success = ReadFile (hPipe, (void*)LoginMessage, PIPE_MESSAGE_BUFSIZE, &BytesRead, NULL);
                 if (LoggingFlag) MessageLoggingToFile (LoggingFile,__LINE__, 0, -1, LoginMessage);
@@ -209,9 +212,10 @@ static int CreateLoginThread (char *par_Prefix)
     DWORD dwThreadId = 0; 
     static char StaticInstanceName[MAX_PATH];
 
-    strcpy (StaticInstanceName, par_Prefix);
+    STRING_COPY_TO_ARRAY (StaticInstanceName, par_Prefix);
     LoopFlag = 1;
-    hThread = CreateThread ( 
+    ThreadWillCallFirstAcceptState = 0;
+    hThread = CreateThread (
             NULL,                // no security attribute
             0,                   // default stack size
             LoginThreadProc,     // thread proc
@@ -234,6 +238,11 @@ static int CreateLoginThread (char *par_Prefix)
         LocalFree (lpMsgBuf);
         return -1;
     }
+    // wait until the login thread has called accept()
+    for(int x = 0; (x < 10) && !ThreadWillCallFirstAcceptState; x++) {
+        Sleep(10);
+    }
+    Sleep(10);
     return 0;
 }
 
@@ -256,7 +265,7 @@ int TerminatePipeMessages (void)
     if ((strlen(PIPE_NAME) + strlen(PipeNamePostfix) + 1) > sizeof(Pipename)) {
         return -1;
     }
-    sprintf (Pipename, PIPE_NAME "_%s", PipeNamePostfix);
+    PrintFormatToString (Pipename, sizeof(Pipename), PIPE_NAME "_%s", PipeNamePostfix);
     my_free(PipeNamePostfix);
 
     LoopFlag = 0;

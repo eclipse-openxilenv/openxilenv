@@ -86,6 +86,9 @@ public:
     void DeleteSignal(enum Side par_Side, int par_Number);
 
     QList<QColor> GetAllUsedColors();
+#ifdef QT_SVG_LIB
+    void PrintSvgToClipboard();
+#endif
 
 protected:
     virtual void dragEnterEvent(QDragEnterEvent *event) Q_DECL_OVERRIDE;

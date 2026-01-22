@@ -14,12 +14,15 @@
  * limitations under the License.
  */
 
-
+#include "PrintFormatToString.h"
 #include "OscilloscopeYAxis.h"
-
 #include "OscilloscopeDesc.h"
 #include "OscilloscopeWidget.h"
 #include "GetEventPos.h"
+
+extern "C" {
+#include "MainValues.h"
+}
 
 OscilloscopeYAxis::OscilloscopeYAxis(OscilloscopeWidget *par_OscilloscopeWidget, OSCILLOSCOPE_DATA *par_Data, enum Side par_Side, QWidget *parent) : QWidget(parent)
 {
@@ -39,14 +42,18 @@ OscilloscopeYAxis::~OscilloscopeYAxis()
 
 void OscilloscopeYAxis::paintEvent(QPaintEvent * /* event */)
 {
+    QPainter painter(this);
+    paint(painter, true);
+}
+
+void OscilloscopeYAxis::paint(QPainter &painter, bool border_flag)
+{
     int win_width, win_height;
     double value_window, value_min, value_max;
     double pixel_per_unit, pixel_per_line;
     double pixel_first_line, value_first_text;
     int x, y;
     char txt[128];
-
-    QPainter painter(this);
 
     /* min und max-Werte lesen */
     if (m_Side == Right) { /* rechts */
@@ -90,60 +97,71 @@ void OscilloscopeYAxis::paintEvent(QPaintEvent * /* event */)
     value_max = value_window / m_Data->y_zoom[m_Data->zoom_pos] + value_min;
 
     QPen PenSave = painter.pen();
-    painter.setPen(Qt::darkGray);
+    QPen Pen(Qt::darkGray);
+    Pen.setWidth(2);
+    painter.setPen(Pen);
 
     // Rahmen um Achse Zeichenen
     if (m_Side == Right) {  /* rechts */
-        painter.drawLine (win_width-1, 0, 0, 0);
         painter.drawLine (0, 0, 0, win_height-1);
-        painter.drawLine (0, win_height-1, win_width-1, win_height-1);
-        painter.drawLine (win_width-1, win_height-1, win_width-1, win_height - win_height % OSCILLOSCOPE_DESC_HIGHT);
+        if (border_flag) {
+            painter.drawLine (0, 0, 0, win_height-1);
+            painter.drawLine (0, win_height-1, win_width-1, win_height-1);
+            painter.drawLine (win_width-1, win_height-1, win_width-1, win_height - win_height % OSCILLOSCOPE_DESC_HIGHT);
+        }
     } else {      /* links */
-        painter.drawLine (0, 0, win_width-1, 0);
         painter.drawLine (win_width-1, 0, win_width-1, win_height-1);
-        painter.drawLine (win_width-1, win_height-1, 0, win_height-1);
-        painter.drawLine (0, win_height-1, 0, win_height - win_height % OSCILLOSCOPE_DESC_HIGHT);
+        if (border_flag) {
+            painter.drawLine (0, 0, win_width-1, 0);
+            painter.drawLine (win_width-1, win_height-1, 0, win_height-1);
+            painter.drawLine (0, win_height-1, 0, win_height - win_height % OSCILLOSCOPE_DESC_HIGHT);
+        }
     }
-    // Flaeche zum veraendern der Beschriftungsbreite
-    int Width = width ();
-    int Width3 = Width / 3;
-    int Width6 = Width3 >> 1;
-    int Width12 = Width / 12;
-    if (m_Side == Right) {
-        painter.drawRect (QRect (Width - Width3 - 1, 0, Width3, Width3));
-        x = Width - Width3 + 1;
-        y = Width6;
-        /*  /  */
-        painter.drawLine (x, y, x + Width12, y - Width12);
-        /*  \  */
-        painter.drawLine (x, y, x + Width12, y + Width12);
-        /* --  */
-        painter.drawLine (x, y, Width - 2, Width6);
-        x = Width - 2;
-        y = Width6;
-        /* \   */
-        painter.drawLine (x, y, x - (Width12), y - (Width12));
-        /* /   */
-        painter.drawLine (x, y, x - (Width12), y + (Width12));
-    } else if (m_Side == Left) {
-        painter.drawRect (QRect (0, 0, Width3, Width3));
-        x = 1;
-        y = Width6;
-        /*  /  */
-        painter.drawLine (x, y, x + (Width12), y - (Width12));
-        /*  \  */
-        painter.drawLine (x, y, x + (Width / 12), y + (Width12));
-        /* --  */
-        painter.drawLine (x, y, Width3 - 2, Width6);
-        x = Width3 - 2;
-        y = Width6;
-        /* \   */
-        painter.drawLine (x, y, x - (Width12), y - (Width12));
-        /* /   */
-        painter.drawLine (x, y, x - (Width12), y + (Width12));
+    if (!border_flag || !s_main_ini_val.DarkMode) {
+        painter.setPen (Qt::black);
+    } else {
+        painter.setPen (Qt::white);
     }
-
-    painter.setPen(PenSave);
+    if (border_flag) {
+        // Flaeche zum veraendern der Beschriftungsbreite
+        int Width = width ();
+        int Width3 = Width / 3;
+        int Width6 = Width3 >> 1;
+        int Width12 = Width / 12;
+        if (m_Side == Right) {
+            painter.drawRect (QRect (Width - Width3 - 1, 0, Width3, Width3));
+            x = Width - Width3 + 1;
+            y = Width6;
+            /*  /  */
+            painter.drawLine (x, y, x + Width12, y - Width12);
+            /*  \  */
+            painter.drawLine (x, y, x + Width12, y + Width12);
+            /* --  */
+            painter.drawLine (x, y, Width - 2, Width6);
+            x = Width - 2;
+            y = Width6;
+            /* \   */
+            painter.drawLine (x, y, x - (Width12), y - (Width12));
+            /* /   */
+            painter.drawLine (x, y, x - (Width12), y + (Width12));
+        } else if (m_Side == Left) {
+            painter.drawRect (QRect (0, 0, Width3, Width3));
+            x = 1;
+            y = Width6;
+            /*  /  */
+            painter.drawLine (x, y, x + (Width12), y - (Width12));
+            /*  \  */
+            painter.drawLine (x, y, x + (Width / 12), y + (Width12));
+            /* --  */
+            painter.drawLine (x, y, Width3 - 2, Width6);
+            x = Width3 - 2;
+            y = Width6;
+            /* \   */
+            painter.drawLine (x, y, x - (Width12), y - (Width12));
+            /* /   */
+            painter.drawLine (x, y, x - (Width12), y + (Width12));
+        }
+    }
 
     // Skala automatisch anpassen
     value_window = value_max - value_min;
@@ -185,8 +203,8 @@ void OscilloscopeYAxis::paintEvent(QPaintEvent * /* event */)
             }
             if (!(x%10)) {
                 if ((value_first_text > 1000000.0) || (value_first_text < -1000000.0))
-                    sprintf (txt, "%g", value_first_text);
-                else sprintf (txt, "%4.1lf", value_first_text);
+                    PrintFormatToString (txt, sizeof(txt), "%g", value_first_text);
+                else PrintFormatToString (txt, sizeof(txt), "%4.1lf", value_first_text);
                 if (m_Side == Right) {
                     painter.drawText (15, win_height - static_cast<int>(pixel_first_line), tr (txt));
                 } else {
@@ -198,6 +216,7 @@ void OscilloscopeYAxis::paintEvent(QPaintEvent * /* event */)
         pixel_first_line += pixel_per_line;
         x++;
     }
+    painter.setPen(PenSave);
 }
 
 

@@ -43,7 +43,7 @@ public:
     ~ConfigCalibrationTreeViewDialog();
 
     QString GetWindowName ();
-    void GetProcessName (char *ret_Processname);
+    void GetProcessName (char *ret_Processname, int par_Maxc);
     INCLUDE_EXCLUDE_FILTER *GetFilter ();
     int GetShowValue();
     int GetShowAddress();

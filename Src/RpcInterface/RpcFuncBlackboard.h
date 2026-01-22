@@ -563,6 +563,7 @@ typedef struct {
 #define RPC_API_WRITE_FRAME_MESSAGE_MEMBERS \
     RPC_API_BASE_MESSAGE Header;\
     int32_t Offset_int32_Elements_Vids;\
+    int32_t Offset_int8_Elements_PhysOrRaw;\
     int32_t Offset_double_Elements_ValueFrame;\
     int32_t Elements;\
     char Data[1];  // > 1Byte!
@@ -580,6 +581,7 @@ typedef struct {
 #define RPC_API_GET_FRAME_MESSAGE_MEMBERS \
     RPC_API_BASE_MESSAGE Header;\
     int32_t Offset_int32_Elements_Vids;\
+    int32_t Offset_int8_Elements_PhysOrRaw;\
     int32_t Elements;\
     char Data[1];  // > 1Byte!
     RPC_API_GET_FRAME_MESSAGE_MEMBERS
@@ -598,10 +600,12 @@ typedef struct {
 typedef struct {
 #define RPC_API_WRITE_FRAME_WAIT_READ_FRAME_MESSAGE_MEMBERS \
     RPC_API_BASE_MESSAGE Header;\
-    int32_t Offset_int32_WriteSize_WriteVids;\
-    int32_t Offset_double_WriteSize_WriteValues;\
+    int32_t Offset_int32_Write_Vids;\
+    int32_t Offset_int8_Write_PhysOrRaw;\
+    int32_t Offset_double_Write_Values;\
     int32_t WriteSize;\
-    int32_t Offset_int32_ReadSize_ReadVids;\
+    int32_t Offset_int32_Read_Vids;\
+    int32_t Offset_int8_Read_PhysOrRaw;\
     int32_t ReadSize;\
     char Data[1];  // > 1Byte!
     RPC_API_WRITE_FRAME_WAIT_READ_FRAME_MESSAGE_MEMBERS
@@ -610,7 +614,7 @@ typedef struct {
 typedef struct {
 #define RPC_API_WRITE_FRAME_WAIT_READ_FRAME_MESSAGE_ACK_MEMBERS \
     RPC_API_BASE_MESSAGE_ACK Header;\
-    int32_t Offset_double_ReadSize_ReadValuesRet;\
+    int32_t Offset_double_Read_ValuesRet;\
     int32_t ReadSize;\
     char Data[1];  // > 1Byte!
     RPC_API_WRITE_FRAME_WAIT_READ_FRAME_MESSAGE_ACK_MEMBERS
@@ -693,6 +697,38 @@ typedef struct {
     RPC_API_BASE_MESSAGE_ACK Header;
     RPC_API_SET_RAW_MESSAGE_ACK_MEMBERS
 } RPC_API_SET_RAW_MESSAGE_ACK;
+
+#define RPC_API_EXPORT_A2L_MEASUREMENT_LIST_CMD         (BLACKBOARD_CMD_OFFSET+41)
+typedef struct {
+#define RPC_API_EXPORT_A2L_MEASUREMENT_LIST_MESSAGE_MEMBERS \
+    RPC_API_BASE_MESSAGE Header;\
+        int32_t OffsetRefList;\
+        int32_t OffsetProcess;\
+        char Data[1];  // > 1Byte!
+    RPC_API_EXPORT_A2L_MEASUREMENT_LIST_MESSAGE_MEMBERS
+} RPC_API_EXPORT_A2L_MEASUREMENT_LIST_MESSAGE;
+
+typedef struct {
+#define RPC_API_EXPORT_A2L_MEASUREMENT_LIST_MESSAGE_ACK_MEMBERS \
+    RPC_API_BASE_MESSAGE_ACK Header;
+    RPC_API_EXPORT_A2L_MEASUREMENT_LIST_MESSAGE_ACK_MEMBERS
+} RPC_API_EXPORT_A2L_MEASUREMENT_LIST_MESSAGE_ACK;
+
+#define RPC_API_IMPORT_A2L_MEASUREMENT_LIST_CMD         (BLACKBOARD_CMD_OFFSET+42)
+typedef struct {
+#define RPC_API_IMPORT_A2L_MEASUREMENT_LIST_MESSAGE_MEMBERS \
+    RPC_API_BASE_MESSAGE Header;\
+        int32_t OffsetRefList;\
+        int32_t OffsetProcess;\
+        char Data[1];  // > 1Byte!
+    RPC_API_IMPORT_A2L_MEASUREMENT_LIST_MESSAGE_MEMBERS
+} RPC_API_IMPORT_A2L_MEASUREMENT_LIST_MESSAGE;
+
+typedef struct {
+#define RPC_API_IMPORT_A2L_MEASUREMENT_LIST_MESSAGE_ACK_MEMBERS \
+    RPC_API_BASE_MESSAGE_ACK Header;
+    RPC_API_IMPORT_A2L_MEASUREMENT_LIST_MESSAGE_ACK_MEMBERS
+} RPC_API_IMPORT_A2L_MEASUREMENT_LIST_MESSAGE_ACK;
 
 #pragma pack(pop)
 #ifdef _WIN32

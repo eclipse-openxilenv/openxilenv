@@ -20,9 +20,8 @@
 #include "StringHelpers.h"
 #include "Platform.h"
 extern "C" {
+#include "MemZeroAndCopy.h"
 #include "Scheduler.h"
-#include "MyMemory.h"
-#include "ThrowError.h"
 }
 
 #define UNUSED(x) (void)(x)
@@ -39,7 +38,7 @@ void MainWinowSyncWithOtherThreads::Init()
     m_GUIThreadId = my_GetCurrentThreadId();
     InitializeCriticalSection (&m_CriticalSection);
     InitializeConditionVariable(&m_ConditionVariable);
-    memset(&m_Processbars, 0, sizeof (m_Processbars));
+    MEMSET(&m_Processbars, 0, sizeof (m_Processbars));
 }
 
 void MainWinowSyncWithOtherThreads::SchedulerStateChanged(int par_State)

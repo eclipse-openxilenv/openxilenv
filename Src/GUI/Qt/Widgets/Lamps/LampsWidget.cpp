@@ -32,6 +32,7 @@
 #include "StringHelpers.h"
 
 extern "C"{
+#include "PrintFormatToString.h"
 #include "TextReplace.h"
 #include "BlackboardAccess.h"
 #include "MainValues.h"
@@ -265,7 +266,7 @@ bool LampsWidget::writeToIni()
         loc_BkColor += loc_BkQColor.green() << 8;
         loc_BkColor += loc_BkQColor.blue() << 16;
         char Help[32];
-        sprintf(Help, "0x%08X", loc_BkColor);
+        PrintFormatToString (Help, sizeof(Help), "0x%08X", loc_BkColor);
         loc_text = QString(Help);
         loc_entry = QString("BkColor");
         ScQt_IniFileDataBaseWriteString(loc_section, loc_entry, loc_text, Fd);

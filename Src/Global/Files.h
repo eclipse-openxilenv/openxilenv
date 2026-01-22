@@ -58,9 +58,4 @@ void LogFileAccess (const char *Filename);
 
 unsigned long long GetLastWriteTimeOfFile (char *Filename);
 
-// aus abwaerts Kobatibilitaet
-//#ifdef _WIN32
-//#include "EnvironmentVariables.h"
-//#endif
-
 #endif

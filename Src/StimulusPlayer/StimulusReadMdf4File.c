@@ -1,14 +1,20 @@
-/* ---------- read_mdf.c ------------------------------------------------- *\
- *                                                                         *
- *  Programm: Softcar                                                      *
- *                                                                         *
- *  Autor : Bieber         Abt.: TE-P          Datum: 27.11.2020           *
- *                                                                         *
- *  Funktion : Stimuli-File-Converter fuer dem HD-Player                   *
- *             fuer das MDF File Format                                    *
- *                                                                         *
-\* ------------------------------------------------------------------------*/
+/*
+ * Copyright 2024 ZF Friedrichshafen AG
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -26,6 +32,7 @@
 #include "MyMemory.h"
 #include "StringMaxChar.h"
 #include "EnvironmentVariables.h"
+#include "PrintFormatToString.h"
 #include "ThrowError.h"
 #include "StimulusReadFile.h"
 #include "Mdf4Structs.h"
@@ -133,7 +140,7 @@ static int IsValidDataType(int par_DataType, int par_BitSize)
     }
 }
 
-static uint64_t *ReadMdf4BlockLinkList(MY_FILE_HANDLE *fh, uint64_t *LinkList, int *RetSizeOfLinkListBuffer, int SizeOfLinkList)
+static uint64_t *ReadMdf4BlockLinkList(MY_FILE_HANDLE fh, uint64_t *LinkList, int *RetSizeOfLinkListBuffer, int SizeOfLinkList)
 {
     int ReadResult;
     if (SizeOfLinkList > *RetSizeOfLinkListBuffer) {
@@ -146,7 +153,7 @@ static uint64_t *ReadMdf4BlockLinkList(MY_FILE_HANDLE *fh, uint64_t *LinkList, i
     return LinkList;
 }
 
-static double *ReadMdf4BlockParList(MY_FILE_HANDLE *fh, double *ParList, int *RetSizeOfParListBuffer, int SizeOfParList)
+static double *ReadMdf4BlockParList(MY_FILE_HANDLE fh, double *ParList, int *RetSizeOfParListBuffer, int SizeOfParList)
 {
     int ReadResult;
     if (SizeOfParList > *RetSizeOfParListBuffer) {
@@ -284,10 +291,10 @@ char *Mdf4ReadStimulHeaderVariabeles (const char *par_Filename)
                                 return NULL;
                             }
                             if (VariableCount) {
-                                strcpy (Ret + Pos, ";");
+                                StringCopyMaxCharTruncate (Ret + Pos, ";", (LenOfRet + 1) - Pos);
                                 Pos += 1;
                             }
-                            strcpy (Ret + Pos, SignalName);
+                            StringCopyMaxCharTruncate (Ret + Pos, SignalName, (LenOfRet + 1) - Pos);
                             Pos += (int)strlen (SignalName);
                             VariableCount++;
                         }
@@ -342,7 +349,7 @@ static int AddDataGroupToCache(MDF4_STIMULI_FILE *par_Mdf, uint8_t par_SizeOfRec
         ErrorCleanCache(par_Mdf, "out of memory");
         return -1;
     }
-    memset(&(par_Mdf->Cache.DataGroups[par_Mdf->Cache.NumberOfDataGroups - 1]), 0, sizeof (MDF4_DATA_GROUP_CACHE));
+    MEMSET(&(par_Mdf->Cache.DataGroups[par_Mdf->Cache.NumberOfDataGroups - 1]), 0, sizeof (MDF4_DATA_GROUP_CACHE));
     par_Mdf->Cache.DataGroups[par_Mdf->Cache.NumberOfDataGroups - 1].SizeOfRecordID = par_SizeOfRecordID;
     par_Mdf->Cache.DataGroups[par_Mdf->Cache.NumberOfDataGroups - 1].CurrentBlock = -1;
 
@@ -364,7 +371,7 @@ static int AddDataBlockToDataGroupCache(MDF4_STIMULI_FILE *par_Mdf, int par_Inde
             ErrorCleanCache(par_Mdf, "out of memory");
             return -1;
         }
-        memset(&(DataGroup->Blocks[DataGroup->NoOfBlocks - 1]), 0, sizeof (MDF4_DATA_BLOCK_CACHE));
+        MEMSET(&(DataGroup->Blocks[DataGroup->NoOfBlocks - 1]), 0, sizeof (MDF4_DATA_BLOCK_CACHE));
         DataGroup->Blocks[DataGroup->NoOfBlocks - 1].OffsetInsideFile = par_OffsetInsideFile;
         DataGroup->Blocks[DataGroup->NoOfBlocks - 1].SizeOfBlock = par_SizeOfBlock;
         DataGroup->Blocks[DataGroup->NoOfBlocks - 1].SizeOfDeflatedBlock = par_SizeOfDeflatedBlock;
@@ -379,7 +386,9 @@ static int AddDataBlockToDataGroupCache(MDF4_STIMULI_FILE *par_Mdf, int par_Inde
         if (par_InflateType == 1) {
             DataGroup->HaveTransposedData = 1;
         }
-        if (DebugOut != NULL) { fprintf (DebugOut, "  Add data block to group %i: offset=%llx, size=%llx\n", DataGroup->NoOfBlocks - 1, par_OffsetInsideFile, par_SizeOfBlock); FFLUSH_DEBUGOUT; }
+
+        if (DebugOut != NULL) { fprintf (DebugOut, "  Add data block to group %i: offset=%" PRIx64 ", size=%" PRIx64 "\n",
+                                         DataGroup->NoOfBlocks - 1, par_OffsetInsideFile, par_SizeOfBlock); FFLUSH_DEBUGOUT; }
         return DataGroup->NoOfBlocks - 1;
     } else {
         return -1;
@@ -400,12 +409,13 @@ static int AddChannelGroupToCache(MDF4_STIMULI_FILE *par_Mdf, int par_BlockNumbe
         ErrorCleanCache(par_Mdf, "out of memory");
         return -1;
     }
-    memset(&DataBlock->Records[DataBlock->NumberOfChannelGroups - 1], 0, sizeof(MDF4_RECORD_CACHE));
+    MEMSET(&DataBlock->Records[DataBlock->NumberOfChannelGroups - 1], 0, sizeof(MDF4_RECORD_CACHE));
     DataBlock->Records[DataBlock->NumberOfChannelGroups - 1].Id = par_ChannelId;
     DataBlock->Records[DataBlock->NumberOfChannelGroups - 1].SizeOfOneRecord = par_SizeOfDataRecord;
     DataBlock->Records[DataBlock->NumberOfChannelGroups - 1].NumberOfRecords = par_NumberOfRecords;
     DataBlock->Records[DataBlock->NumberOfChannelGroups - 1].Name = par_Name;
-    if (DebugOut != NULL) { fprintf (DebugOut, "  Add channel group to block group %i: Id=%llu, size=%i, noof=%u, %s\n", par_BlockNumber, par_ChannelId, par_SizeOfDataRecord, par_NumberOfRecords, par_Name); FFLUSH_DEBUGOUT; }
+    if (DebugOut != NULL) { fprintf (DebugOut, "  Add channel group to block group %i: Id=%" PRIu64 ", size=%i, noof=%u, %s\n",
+                                     par_BlockNumber, par_ChannelId, par_SizeOfDataRecord, par_NumberOfRecords, par_Name); FFLUSH_DEBUGOUT; }
     return DataBlock->NumberOfChannelGroups - 1;
 }
 
@@ -451,7 +461,8 @@ static int AddVariableToCache(MDF4_STIMULI_FILE *par_Mdf, int par_BlockNumber, u
             (Record->TimeVariableOffset == 0.0)) {
             Record->TimeAreInNanoSec = 1;
         }
-        if (DebugOut != NULL) { fprintf (DebugOut, "    Add time signal to block group %i: Id=%llu\n", par_BlockNumber, par_ChannelId); FFLUSH_DEBUGOUT; }
+        if (DebugOut != NULL) { fprintf (DebugOut, "    Add time signal to block group %i: Id=%" PRIu64 "\n",
+                                         par_BlockNumber, par_ChannelId); FFLUSH_DEBUGOUT; }
     } else {
         DataBlock->NoOfAllSignals++;
         Record->NumberOfEntrys++;
@@ -460,23 +471,24 @@ static int AddVariableToCache(MDF4_STIMULI_FILE *par_Mdf, int par_BlockNumber, u
             ErrorCleanCache(par_Mdf, "out of memory");
             return -1;
         }
-        memset(&Record->Entrys[Record->NumberOfEntrys - 1], 0, sizeof(MDF4_RECORD_ENTRY));
+        MEMSET(&Record->Entrys[Record->NumberOfEntrys - 1], 0, sizeof(MDF4_RECORD_ENTRY));
         Record->Entrys[Record->NumberOfEntrys - 1].Vid = par_Vid;
         Record->Entrys[Record->NumberOfEntrys - 1].DataType = par_DataType;
         Record->Entrys[Record->NumberOfEntrys - 1].BbDataType = par_BbDataType;
         Record->Entrys[Record->NumberOfEntrys - 1].NumberOfBits = par_NumberOfBits;
         Record->Entrys[Record->NumberOfEntrys - 1].StartBitOffset = par_StartBitOffset;
-        if (DebugOut != NULL) { fprintf (DebugOut, "    Add signal \"%s\" to block group %i: Id=%llu\n", par_Name, par_BlockNumber, par_ChannelId); FFLUSH_DEBUGOUT; }
+        if (DebugOut != NULL) { fprintf (DebugOut, "    Add signal \"%s\" to block group %i: Id=%" PRIu64 "\n",
+                                         par_Name, par_BlockNumber, par_ChannelId); FFLUSH_DEBUGOUT; }
     }
     //check_memory_corrupted(__LINE__, __FILE__);
     return DataBlock->NumberOfChannelGroups - 1;
 }
 
-static void DoubleToString(double par_Value, char *ret_String)
+static void DoubleToString(double par_Value, char *ret_String, int par_Maxc)
 {
     int Prec = 15;
     while (1) {
-        sprintf (ret_String, "%.*g", Prec, par_Value);
+        PrintFormatToString (ret_String, par_Maxc, "%.*g", Prec, par_Value);
         if ((Prec++) == 18 || (par_Value == strtod (ret_String, NULL))) break;
     }
 }
@@ -504,15 +516,15 @@ static int MdfReadTextRangeTable(MDF4_STIMULI_FILE *Mdf, int par_Vid, int ParLis
 
     for (x = 0; x < (LinkListSize - 5); x++) {
         int Len;
-        DoubleToString(ParList[x * 2], LowerRangeString);
-        DoubleToString(ParList[x * 2] + 1, UpperRangeString);
+        DoubleToString(ParList[x * 2], LowerRangeString, sizeof(LowerRangeString));
+        DoubleToString(ParList[x * 2] + 1, UpperRangeString, sizeof(UpperRangeString));
         Len = (int)strlen(LowerRangeString);
-        strcpy(Conversion + PosInConversion, LowerRangeString);
+        StringCopyMaxCharTruncate(Conversion + PosInConversion, LowerRangeString, BBVARI_CONVERSION_SIZE - PosInConversion);
         PosInConversion += Len;
         Conversion[PosInConversion] = ' ';
         PosInConversion++;
         Len = (int)strlen(UpperRangeString);
-        strcpy(Conversion + PosInConversion, UpperRangeString);
+        StringCopyMaxCharTruncate(Conversion + PosInConversion, UpperRangeString, BBVARI_CONVERSION_SIZE - PosInConversion);
         PosInConversion += Len;
         Conversion[PosInConversion] = ' ';
         PosInConversion++;
@@ -562,13 +574,13 @@ static int MdfReadTextValueTable(MDF4_STIMULI_FILE *Mdf, int par_Vid, int ParLis
 
     for (x = 0; x < (LinkListSize - 5); x++) {
         int Len;
-        DoubleToString(ParList[x], ValueString);
+        DoubleToString(ParList[x], ValueString, sizeof(ValueString));
         Len = (int)strlen(ValueString);
-        strcpy(Conversion + PosInConversion, ValueString);
+        StringCopyMaxCharTruncate(Conversion + PosInConversion, ValueString, BBVARI_CONVERSION_SIZE - PosInConversion);
         PosInConversion += Len;
         Conversion[PosInConversion] = ' ';
         PosInConversion++;
-        strcpy(Conversion + PosInConversion, ValueString);
+        StringCopyMaxCharTruncate(Conversion + PosInConversion, ValueString, BBVARI_CONVERSION_SIZE - PosInConversion);
         PosInConversion += Len;
         Conversion[PosInConversion] = ' ';
         PosInConversion++;
@@ -644,33 +656,54 @@ static int MdfGetConversion (MDF4_STIMULI_FILE *Mdf, uint64_t par_ConversionOffs
         break;
     case 1:  // linear
         if (MdfCcBlock.NoOfValues == 2) {
-            char Help[64];
+            char Conversion[64];
             if  (par_Vid > 0) {
-                sprintf (Help, "$*%g+%g", ParList[1], ParList[0]);
-                set_bbvari_conversion(par_Vid, 1, Help);
+                PrintFormatToString (Conversion, sizeof(Conversion), "%.18g:%.18g", ParList[1], ParList[0]);
+                set_bbvari_conversion(par_Vid, BB_CONV_FACTOFF, Conversion);
             } else {
                 if (ret_Fac != NULL) *ret_Fac = ParList[1];
                 if (ret_Off != NULL) *ret_Off = ParList[0];
             }
         }
         break;
-    case 2: // rational
-   // case 3: // algebraic
+    case 2: // rational function
         if (MdfCcBlock.NoOfValues == 6) {
             if  (par_Vid > 0) {
-                char Help[256];
-                sprintf (Help, "(%g*$*$+%g*$+%g)/(%g*$*$+%g*$+%g)",
-                         ParList[0], ParList[1], ParList[2],
-                         ParList[3], ParList[4], ParList[5]);
-                set_bbvari_conversion(par_Vid, 1, Help);
+                char Conversion[6*32];
+                if ((ParList[0] == 0.0) &&   // a == 0
+                    (ParList[1] != 0.0) &&   // b != 0
+                    (ParList[3] == 0.0) &&   // d == 0
+                    (ParList[4] == 0.0)) {   // e == 0
+                    // it is a linear conversion
+                    PrintFormatToString (Conversion, sizeof(Conversion), "%.18g:%.18g",
+                            ParList[5] / ParList[1], ParList[2] / ParList[1]); // f/b, c/b
+                    set_bbvari_conversion(par_Vid, BB_CONV_FACTOFF, Conversion);
+                } else {
+                    PrintFormatToString (Conversion, sizeof(Conversion), "%.18g:%.18g:%.18g:%.18g:%.18g:%.18g",
+                             ParList[0], ParList[1], ParList[2],
+                             ParList[3], ParList[4], ParList[5]);
+                    set_bbvari_conversion(par_Vid, BB_CONV_RAT_FUNC, Conversion);
+                }
             }
         }
         break;
     case 4: // Value to value interpolation
     case 5: // Value to value
-    case 6: // Value range to value
-        // not implemented
-        goto __ERROR;
+        if  (par_Vid > 0) {
+            int x;
+            char *p;
+            int Size = ParListSize * 64;
+            char *Conversion = my_malloc(Size);   // 64 bytes for one sample point
+            if (Conversion != NULL) {
+                p = Conversion;
+                for (x = 0; x < ParListSize / 2; x++) {
+                    p += PrintFormatToString (p, Size - (p - Conversion), (x == 0) ? "%.18g/%.18g" : ":%.18g/%.18g", ParList[2 * x + 1], ParList[2 * x]);  // phys/raw
+                }
+                set_bbvari_conversion(par_Vid, (MdfCcBlock.Type == 4) ? BB_CONV_TAB_INTP : BB_CONV_TAB_NOINTP, Conversion);
+                my_free(Conversion);
+            }
+        }
+        break;
     case 7: // Value to text
         if (MdfReadTextValueTable(Mdf, par_Vid, MdfCcBlock.NoOfValues, ParList, (int)BlockHeader.LinkCount, LinkList)) {
             goto __ERROR;
@@ -1053,7 +1086,7 @@ __ERROR:
     if (Ret != NULL) my_free(Ret);
     if (Mdf != NULL) {
         CleanCache(Mdf);
-        if (Mdf->fh != NULL) my_close(Mdf->fh);
+        if (Mdf->fh != MY_INVALID_HANDLE_VALUE) my_close(Mdf->fh);
         if (Mdf->vids != NULL) my_free(Mdf->vids);
         if (Mdf->dtypes != NULL) my_free(Mdf->dtypes);
         my_free(Mdf);
@@ -1117,7 +1150,7 @@ static int UpdateCache(MDF4_STIMULI_FILE *par_Mdf, MDF4_DATA_GROUP_CACHE *DataBl
         if (DataBlock->CurrentBlock < DataBlock->NoOfBlocks) {
             uint64_t Left = DataBlock->EndCacheFilePos - DataBlock->CurrentFilePos;
             if (Left > 0) {
-                memcpy (DataBlock->BlockData,
+                MEMCPY (DataBlock->BlockData,
                         DataBlock->BlockData + (DataBlock->CurrentFilePos - DataBlock->StartCacheFilePos),
                         Left);
             }
@@ -1130,7 +1163,7 @@ static int UpdateCache(MDF4_STIMULI_FILE *par_Mdf, MDF4_DATA_GROUP_CACHE *DataBl
     }
     // Switch to next block if there are one
     if ((Data != NULL) && (DataBlock->CurrentBlock < DataBlock->NoOfBlocks)) {
-        if (DebugOut != NULL) { fprintf (DebugOut, "Update cache %i: offset=%llx, size=%llx\n",
+        if (DebugOut != NULL) { fprintf (DebugOut, "Update cache %i: offset=%" PRIx64 ", size=%" PRIx64 "\n",
                                          (int)(DataBlock - par_Mdf->Cache.DataGroups),
                                          DataBlock->Blocks[DataBlock->CurrentBlock].OffsetInsideFile, DataBlock->Blocks[DataBlock->CurrentBlock].SizeOfBlock); FFLUSH_DEBUGOUT; }
 
@@ -1139,7 +1172,7 @@ static int UpdateCache(MDF4_STIMULI_FILE *par_Mdf, MDF4_DATA_GROUP_CACHE *DataBl
             if (DataBlock->Blocks[DataBlock->CurrentBlock].InflateType == 0) {
                 z_stream s;
                 int Ret;
-                memset(&s, 0, sizeof(s));
+                MEMSET(&s, 0, sizeof(s));
                 Ret = inflateInit(&s);
                 if (Ret != Z_OK) {
                     ThrowError(1, "cannot inflate");
@@ -1162,7 +1195,7 @@ static int UpdateCache(MDF4_STIMULI_FILE *par_Mdf, MDF4_DATA_GROUP_CACHE *DataBl
             } else if (DataBlock->Blocks[DataBlock->CurrentBlock].InflateType == 1) {
                 z_stream s;
                 int Ret;
-                memset(&s, 0, sizeof(s));
+                MEMSET(&s, 0, sizeof(s));
                 Ret = inflateInit(&s);
                 if (Ret != Z_OK) {
                     ThrowError(1, "cannot inflate");
@@ -1206,7 +1239,7 @@ static int UpdateCache(MDF4_STIMULI_FILE *par_Mdf, MDF4_DATA_GROUP_CACHE *DataBl
 __inline static int ConvWithSign (uint64_t value, int size, int sign, union FloatOrInt64 *ret_value)
 {
     if (sign) {
-        if ((0x1ULL << (size - 1)) & value) { // ist Vorzeichenbit gesetzt?
+        if ((0x1ULL << (size - 1)) & value) { // is sign bit set?
             if (size < 64) {
                 ret_value->qw = (int64_t)(value - (0x1ULL << size));
             } else {
@@ -1248,7 +1281,7 @@ __inline static uint64_t GetValue (unsigned char *par_Data, int par_ByteOrder, i
     if (par_BitSize == 64) {
         return Ret;
     } else {
-        return Ret &= ~(0xFFFFFFFFFFFFFFFFULL << par_BitSize);
+        return Ret & ~(0xFFFFFFFFFFFFFFFFULL << par_BitSize);
     }
 }
 
@@ -1448,7 +1481,7 @@ static void FreeDataStruct(MDF4_STIMULI_FILE *par_Mdf)
 {
     if (par_Mdf != NULL) {
         int x;
-        if (par_Mdf->fh != NULL) my_close(par_Mdf->fh);
+        if (par_Mdf->fh != MY_INVALID_HANDLE_VALUE) my_close(par_Mdf->fh);
         if (par_Mdf->vids != NULL) my_free(par_Mdf->vids);
         if (par_Mdf->dtypes != NULL) my_free(par_Mdf->dtypes);
         for (x = 0; x < par_Mdf->Cache.NumberOfDataGroups; x++) {

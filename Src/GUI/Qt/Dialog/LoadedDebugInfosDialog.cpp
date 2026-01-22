@@ -19,6 +19,7 @@
 #include "ui_LoadedDebugInfosDialog.h"
 
 extern "C" {
+#include "PrintFormatToString.h"
 #include "DebugInfoDB.h"
 }
 
@@ -53,10 +54,10 @@ LoadedDebugInfosDialog::LoadedDebugInfosDialog(QWidget *parent) : Dialog(parent)
             ui->ConnectionsTableWidget->setItem (Row, 0, Item);
             Item = new QTableWidgetItem(QString ().number(DebugInfosAssociatedConnections[x].UsedByUniqueId));
             ui->ConnectionsTableWidget->setItem (Row, 1, Item);
-            sprintf(Help, "0x%p", DebugInfosAssociatedConnections[x].LoadUnloadCallBackFuncsSchedThread);
+            PrintFormatToString (Help, sizeof(Help), "0x%p", DebugInfosAssociatedConnections[x].LoadUnloadCallBackFuncsSchedThread);
             Item = new QTableWidgetItem(QString (Help));
             ui->ConnectionsTableWidget->setItem (Row, 2, Item);
-            sprintf(Help, "0x%p", DebugInfosAssociatedConnections[x].LoadUnloadCallBackFuncParUsers);
+            PrintFormatToString (Help, sizeof(Help), "0x%p", DebugInfosAssociatedConnections[x].LoadUnloadCallBackFuncParUsers);
             Item = new QTableWidgetItem(QString (Help));
             ui->ConnectionsTableWidget->setItem (Row, 3, Item);
 

@@ -18,6 +18,9 @@
 #include "ThrowError.h"
 #include "MainWinowSyncWithOtherThreads.h"
 #include "MainValues.h"
+#include "MemZeroAndCopy.h"
+#include "EquationParser.h"
+#include "ExecutionStack.h"
 #include "Scheduler.h"
 #include "SchedEnableDisable.h"
 
@@ -58,7 +61,7 @@ int InitStopRequest(SCHEDULER_STOP_REQ *par_Requests)
     fprintf (DisableEnableLog, "%06llu (%i) InitStopRequest()\n", GetSchedulerInfos(0)->Cycle, __LINE__);
     fflush (DisableEnableLog);
 #endif
-    memset(par_Requests, 0, sizeof(*par_Requests));
+    MEMSET(par_Requests, 0, sizeof(*par_Requests));
     InitializeCriticalSection (&(par_Requests->StopStartRequestCriticalSection));
     InitializeConditionVariable(&(par_Requests->WaitForSchedulerContinueConditionVariable));
     par_Requests->WaitForSchedulerContinueCriticalSectionLineNr = 0;
@@ -281,24 +284,47 @@ int StopRequestWithCallback(SCHEDULER_STOP_REQ *par_Requests, int par_FromThread
 }
 
 
+// Return -1 if an error occur and the stop scheduler request are not added.
+// Or 0 stop scheduler request are added during the scheduler is running.
+// Or 1 if stop scheduler request are added but the scheduler was already stopped.
+// Or 2 the stop scheduler request are not added because the condition are already true.
 int AddTimedStopRequest(SCHEDULER_STOP_REQ *par_Requests, int par_FromThreadId, int par_FromUser,
-                        uint64_t par_AtCycle,
+                        uint64_t par_AtCycle, const char *par_Equation,
                         void (*par_Callback)(void* par_Parameter), void *par_Parameter,
                         int par_ContinueFlag)
 {
     int Ret = 0;
+    struct EXEC_STACK_ELEM *ExecStack;
+    char *ErrString;
 
     if (s_main_ini_val.ConnectToRemoteMaster) {
         return Ret;
     }
+
+    if (par_Equation != NULL) {
+        ExecStack = solve_equation_err_string ((char*)par_Equation, &ErrString);
+        if (ExecStack == NULL) {
+            ThrowError(1, "cannot set stop request condition because \"%s\"", (ErrString == NULL) ? "unknown" : ErrString);
+        } else {
+            // Don't stop the scheduler if conditons is already true
+            double Value = execute_stack(ExecStack);
+            if (Value >= 0.5) {
+                remove_exec_stack(ExecStack);
+                return 2;
+            }
+        }
+    } else {
+        ExecStack = NULL;
+    }
+
     ENTER_CRITICAL_SECTION_LOG (&par_Requests->StopStartRequestCriticalSection);
 
 #ifdef DEBUG_ENABLE_DISABLE_SCHED_LOG
-    fprintf (DisableEnableLog, "%06llu (%i) AddTimedStopRequest(%p, %i, %i, %" PRIu64 ", %p, %p, %i)\n", GetSchedulerInfos(0)->Cycle, __LINE__,
-             par_Requests,  par_FromThreadId, par_FromUser,
-             par_AtCycle,
-             par_Callback, par_Parameter,
-             par_ContinueFlag);
+    fprintf (DisableEnableLog, "%06llu (%i) AddTimedStopRequest(%p, %i, %i, %llu, %p, %p, %i)\n", GetSchedulerInfos(0)->Cycle, __LINE__,
+            par_Requests,  par_FromThreadId, par_FromUser,
+            par_AtCycle,
+            par_Callback, par_Parameter,
+            par_ContinueFlag);
     fflush (DisableEnableLog);
 #endif
 
@@ -308,6 +334,7 @@ int AddTimedStopRequest(SCHEDULER_STOP_REQ *par_Requests, int par_FromThreadId, 
         par_Requests->StopRequestElems[par_Requests->OpenStopRequestCount].Parameter = par_Parameter;
         par_Requests->StopRequestElems[par_Requests->OpenStopRequestCount].FromUser = par_FromUser;
         par_Requests->StopRequestElems[par_Requests->OpenStopRequestCount].AtCycle = par_AtCycle;
+        par_Requests->StopRequestElems[par_Requests->OpenStopRequestCount].ExecStack = ExecStack;
         par_Requests->OpenStopRequestCount++;
     } else {
         Ret = -1;
@@ -351,7 +378,6 @@ int AddTimedStopRequest(SCHEDULER_STOP_REQ *par_Requests, int par_FromThreadId, 
     return Ret;
 }
 
-
 int RemoveAllStopRequest(SCHEDULER_STOP_REQ *par_Requests)
 {
     int x;
@@ -390,7 +416,14 @@ static int ShouldSchedulerStoppedAndAckAllStopRequest(SCHEDULER_STOP_REQ *par_Re
     fflush (DisableEnableLog);
 #endif
     for (x = 0; x < par_Requests->OpenStopRequestCount; x++) {
-        if (par_Requests->StopRequestElems[x].AtCycle <= par_CurrentCycle) {
+        int EquationHit = 0;
+        if (par_Requests->StopRequestElems[x].ExecStack != NULL) {
+            double Value = execute_stack(par_Requests->StopRequestElems[x].ExecStack);
+            if (Value >= 0.5) {
+                EquationHit = 1;
+            }
+        }
+        if (EquationHit || (par_Requests->StopRequestElems[x].AtCycle <= par_CurrentCycle)) {
             int y;
             if (par_Requests->StopRequestElems[x].Callback != NULL) {
                 Callbacks[CallbackCount] = par_Requests->StopRequestElems[x].Callback;
@@ -438,6 +471,10 @@ static int ShouldSchedulerStoppedAndAckAllStopRequest(SCHEDULER_STOP_REQ *par_Re
         (par_Requests->RpcEnableDisableCounter)) {
         Ret = 1;  // Should be stopped
         par_Requests->SchedulerDisabledFlag = 1;
+        if (par_Requests->StopRequestElems[x].ExecStack != NULL) {
+            remove_exec_stack(par_Requests->StopRequestElems[x].ExecStack);
+            par_Requests->StopRequestElems[x].ExecStack = NULL;
+        }
         for (x = 0; x < par_Requests->StopCallbackCount; x++) {
             Callbacks[CallbackCount] = par_Requests->StopCallbackElems[x].Callback;
             CallbackParameters[CallbackCount] = par_Requests->StopCallbackElems[x].Parameter;

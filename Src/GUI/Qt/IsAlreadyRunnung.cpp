@@ -21,6 +21,7 @@
 
 extern "C" {
 #include "MyMemory.h"
+#include "StringMaxChar.h"
 #include "CheckIfAlreadyRunning.h"
 }
 
@@ -28,10 +29,7 @@ IsAlreadyRunnung::IsAlreadyRunnung(char *par_InstanceName, QWidget *parent) : QW
 {
     m_ReturnValue = 0;
 
-    m_InstanceName = static_cast<char*>(my_malloc (strlen(par_InstanceName)+1));
-    if (m_InstanceName != nullptr) {
-        strcpy(m_InstanceName, par_InstanceName);
-    }
+    m_InstanceName = StringMalloc (par_InstanceName);
 
     QString LabelText = QString("XilEnv with instance\n"
                         "\"%1\"\n"

@@ -22,6 +22,8 @@
 #include <time.h>
 
 #include "Config.h"
+#include "StringMaxChar.h"
+#include "PrintFormatToString.h"
 #include "ConfigurablePrefix.h"
 #include "Files.h"
 #include "InterfaceToScript.h"
@@ -65,7 +67,7 @@ void init_html_strings(void)
     NoLevel6 = 0;
 }
 
-int get_html_strings(char *st1,char *st2,char *keywordstring)
+int get_html_strings(char *st1, int st1_maxc, char *st2, int st2_maxc, char *keywordstring)
 {
     int Keyword[MAX_ANZAHL_KEYWORDS];
     char Separator[]= " ";
@@ -129,145 +131,171 @@ int get_html_strings(char *st1,char *st2,char *keywordstring)
     }
 
     // Delete string before and behind
-    memset(StringBefore,'\0',sizeof(StringBefore));
-    memset(StringBehind,'\0',sizeof(StringBehind));
+    MEMSET(StringBefore,'\0',sizeof(StringBefore));
+    MEMSET(StringBehind,'\0',sizeof(StringBehind));
 
 
     for(i=0;i<KeywordCount;i++) {
-        memset(string_bef,'\0',sizeof(string_bef));
-        memset(string_beh,'\0',sizeof(string_beh));
-        memset(StringWithNumber,'\0',sizeof(StringWithNumber));
-        memset(StringNoLevel1,'\0',sizeof(StringNoLevel1));
-        memset(StringNoLevel2,'\0',sizeof(StringNoLevel1));
-        memset(StringNoLevel3,'\0',sizeof(StringNoLevel1));
-        memset(StringNoLevel4,'\0',sizeof(StringNoLevel1));
-        memset(StringNoLevel5,'\0',sizeof(StringNoLevel1));
-        memset(StringNoLevel6,'\0',sizeof(StringNoLevel1));
+        string_bef[0] = 0;
+        string_beh[0] = 0;
+        StringWithNumber[0] = 0;
+        StringNoLevel1[0] = 0;
+        StringNoLevel2[0] = 0;
+        StringNoLevel3[0] = 0;
+        StringNoLevel4[0] = 0;
+        StringNoLevel5[0] = 0;
+        StringNoLevel6[0] = 0;
 
         switch(Keyword[i]) {
         case HTML_GREEN:
-            strcpy(string_bef,"\n<font color=\\#00C000\\>");
-            strcpy(string_beh,"</font><br>");
+        {
+            STRING_COPY_TO_ARRAY(string_bef,"\n<font color=\\#00C000\\>");
+            STRING_COPY_TO_ARRAY(string_beh,"</font><br>");
             break;
+        }
         case HTML_RED:
-            strcpy(string_bef,"\n<font color=\"#FF0000\">");
-            strcpy(string_beh,"</font><br>");
+        {
+            STRING_COPY_TO_ARRAY(string_bef,"\n<font color=\"#FF0000\">");
+            STRING_COPY_TO_ARRAY(string_beh,"</font><br>");
             break;
+        }
         case HTML_BLUE:
-            strcpy(string_bef,"\n<font color=\"#0000FF\">");
-            strcpy(string_beh,"</font><br>");
+        {
+            STRING_COPY_TO_ARRAY(string_bef,"\n<font color=\"#0000FF\">");
+            STRING_COPY_TO_ARRAY(string_beh,"</font><br>");
             break;
+        }
         case HTML_BLACK:
-            strcpy(string_bef,"\n<font color=\"#000000\">");
-            strcpy(string_beh,"</font><br>");
+        {
+            STRING_COPY_TO_ARRAY(string_bef,"\n<font color=\"#000000\">");
+            STRING_COPY_TO_ARRAY(string_beh,"</font><br>");
             break;
+        }
         case HTML_YELLOW:
-            strcpy(string_bef,"\n<font color=\"#FFFF00\">");
-            strcpy(string_beh,"</font><br>");
+        {
+            STRING_COPY_TO_ARRAY(string_bef,"\n<font color=\"#FFFF00\">");
+            STRING_COPY_TO_ARRAY(string_beh,"</font><br>");
             break;
+        }
         case HTML_BOLD:
-            strcpy(string_bef,"\n<strong>");
-            strcpy(string_beh,"</strong>");
+        {
+            STRING_COPY_TO_ARRAY(string_bef,"\n<strong>");
+            STRING_COPY_TO_ARRAY(string_beh,"</strong>");
             break;
+        }
         case HTML_LINE:
-            strcpy(string_bef,"\n<hr />");
-            strcpy(string_beh,"\n");
+        {
+            STRING_COPY_TO_ARRAY(string_bef,"\n<hr />");
+            STRING_COPY_TO_ARRAY(string_beh,"\n");
             break;
+        }
         case HTML_HEADER_1:
+        {
             NoLevel1++;
-            strcpy(string_bef,"\n<h1>\n");
-            sprintf(StringNoLevel1,"%d.",NoLevel1);
-            strcat(string_bef,StringNoLevel1);
-            strcpy(string_beh,"</h1>\n");
+            STRING_COPY_TO_ARRAY(string_bef,"\n<h1>\n");
+            PrintFormatToString (StringNoLevel1, sizeof(StringNoLevel1),"%d.",NoLevel1);
+            STRING_APPEND_TO_ARRAY(string_bef,StringNoLevel1);
+            STRING_COPY_TO_ARRAY(string_beh,"</h1>\n");
             NoLevel2=0;
             NoLevel3=0;
             NoLevel4=0;
             NoLevel5=0;
             NoLevel6=0;
             break;
+        }
         case HTML_HEADER_2:
+        {
             NoLevel2++;
-            strcpy(string_bef,"\n<h2>");
-            sprintf(StringNoLevel1,"%d.",NoLevel1);
-            sprintf(StringNoLevel2,"%d.",NoLevel2);
-            strcat(string_bef,StringNoLevel1);
-            strcat(string_bef,StringNoLevel2);
-            strcpy(string_beh,"</h2>\n");
+            STRING_COPY_TO_ARRAY(string_bef,"\n<h2>");
+            PrintFormatToString (StringNoLevel1, sizeof(StringNoLevel1),"%d.",NoLevel1);
+            PrintFormatToString (StringNoLevel2, sizeof(StringNoLevel2),"%d.",NoLevel2);
+            STRING_APPEND_TO_ARRAY(string_bef,StringNoLevel1);
+            STRING_APPEND_TO_ARRAY(string_bef,StringNoLevel2);
+            STRING_COPY_TO_ARRAY(string_beh,"</h2>\n");
             NoLevel3=0;
             NoLevel4=0;
             NoLevel5=0;
             NoLevel6=0;
             break;
+        }
         case HTML_HEADER_3:
+        {
             NoLevel3++;
-            strcpy(string_bef,"\n<h3>");
-            sprintf(StringNoLevel1,"%d.",NoLevel1);
-            sprintf(StringNoLevel2,"%d.",NoLevel2);
-            sprintf(StringNoLevel3,"%d.",NoLevel3);
-            strcat(string_bef,StringNoLevel1);
-            strcat(string_bef,StringNoLevel2);
-            strcat(string_bef,StringNoLevel3);
-            strcpy(string_beh,"</h3>\n");
+            STRING_COPY_TO_ARRAY(string_bef,"\n<h3>");
+            PrintFormatToString (StringNoLevel1, sizeof(StringNoLevel1),"%d.",NoLevel1);
+            PrintFormatToString (StringNoLevel2, sizeof(StringNoLevel2),"%d.",NoLevel2);
+            PrintFormatToString (StringNoLevel3, sizeof(StringNoLevel3),"%d.",NoLevel3);
+            STRING_APPEND_TO_ARRAY(string_bef,StringNoLevel1);
+            STRING_APPEND_TO_ARRAY(string_bef,StringNoLevel2);
+            STRING_APPEND_TO_ARRAY(string_bef,StringNoLevel3);
+            STRING_COPY_TO_ARRAY(string_beh,"</h3>\n");
             NoLevel4=0;
             NoLevel5=0;
             NoLevel6=0;
             break;
+        }
         case HTML_HEADER_4:
+        {
             NoLevel4++;
-            strcpy(string_bef,"\n<h4>");
-            strcpy(string_beh,"</h4>\n");
-            sprintf(StringNoLevel1,"%d.",NoLevel1);
-            sprintf(StringNoLevel2,"%d.",NoLevel2);
-            sprintf(StringNoLevel3,"%d.",NoLevel3);
-            sprintf(StringNoLevel4,"%d.",NoLevel4);
-            strcat(string_bef,StringNoLevel1);
-            strcat(string_bef,StringNoLevel2);
-            strcat(string_bef,StringNoLevel3);
-            strcat(string_bef,StringNoLevel4);
+            STRING_COPY_TO_ARRAY(string_bef,"\n<h4>");
+            STRING_COPY_TO_ARRAY(string_beh,"</h4>\n");
+            PrintFormatToString (StringNoLevel1, sizeof(StringNoLevel1),"%d.",NoLevel1);
+            PrintFormatToString (StringNoLevel2, sizeof(StringNoLevel2),"%d.",NoLevel2);
+            PrintFormatToString (StringNoLevel3, sizeof(StringNoLevel3),"%d.",NoLevel3);
+            PrintFormatToString (StringNoLevel4, sizeof(StringNoLevel4),"%d.",NoLevel4);
+            STRING_APPEND_TO_ARRAY(string_bef,StringNoLevel1);
+            STRING_APPEND_TO_ARRAY(string_bef,StringNoLevel2);
+            STRING_APPEND_TO_ARRAY(string_bef,StringNoLevel3);
+            STRING_APPEND_TO_ARRAY(string_bef,StringNoLevel4);
             NoLevel5=0;
             NoLevel6=0;
             break;
+        }
         case HTML_HEADER_5:
+        {
             NoLevel5++;
-            strcpy(string_bef,"\n<h5>");
-            strcpy(string_beh,"</h5>\n");
-            sprintf(StringNoLevel1,"%d.",NoLevel1);
-            sprintf(StringNoLevel2,"%d.",NoLevel2);
-            sprintf(StringNoLevel3,"%d.",NoLevel3);
-            sprintf(StringNoLevel4,"%d.",NoLevel4);
-            sprintf(StringNoLevel5,"%d.",NoLevel5);
-            strcat(string_bef,StringNoLevel1);
-            strcat(string_bef,StringNoLevel2);
-            strcat(string_bef,StringNoLevel3);
-            strcat(string_bef,StringNoLevel4);
-            strcat(string_bef,StringNoLevel5);
+            STRING_COPY_TO_ARRAY(string_bef,"\n<h5>");
+            STRING_COPY_TO_ARRAY(string_beh,"</h5>\n");
+            PrintFormatToString (StringNoLevel1, sizeof(StringNoLevel1),"%d.",NoLevel1);
+            PrintFormatToString (StringNoLevel2, sizeof(StringNoLevel2),"%d.",NoLevel2);
+            PrintFormatToString (StringNoLevel3, sizeof(StringNoLevel3),"%d.",NoLevel3);
+            PrintFormatToString (StringNoLevel4, sizeof(StringNoLevel4),"%d.",NoLevel4);
+            PrintFormatToString (StringNoLevel5, sizeof(StringNoLevel5),"%d.",NoLevel5);
+            STRING_APPEND_TO_ARRAY(string_bef,StringNoLevel1);
+            STRING_APPEND_TO_ARRAY(string_bef,StringNoLevel2);
+            STRING_APPEND_TO_ARRAY(string_bef,StringNoLevel3);
+            STRING_APPEND_TO_ARRAY(string_bef,StringNoLevel4);
+            STRING_APPEND_TO_ARRAY(string_bef,StringNoLevel5);
             NoLevel6=0;
             break;
+        }
         case HTML_HEADER_6:
+        {
             NoLevel6++;
-            strcpy(string_bef,"\n<h6>");
-            strcpy(string_beh,"</h6>\n");
-            sprintf(StringNoLevel1,"%d.",NoLevel1);
-            sprintf(StringNoLevel2,"%d.",NoLevel2);
-            sprintf(StringNoLevel3,"%d.",NoLevel3);
-            sprintf(StringNoLevel4,"%d.",NoLevel4);
-            sprintf(StringNoLevel5,"%d.",NoLevel5);
-            sprintf(StringNoLevel6,"%d.",NoLevel6);
-            strcat(string_bef,StringNoLevel1);
-            strcat(string_bef,StringNoLevel2);
-            strcat(string_bef,StringNoLevel3);
-            strcat(string_bef,StringNoLevel4);
-            strcat(string_bef,StringNoLevel5);
-            strcat(string_bef,StringNoLevel6);
+            STRING_COPY_TO_ARRAY(string_bef,"\n<h6>");
+            STRING_COPY_TO_ARRAY(string_beh,"</h6>\n");
+            PrintFormatToString (StringNoLevel1, sizeof(StringNoLevel1),"%d.",NoLevel1);
+            PrintFormatToString (StringNoLevel2, sizeof(StringNoLevel2),"%d.",NoLevel2);
+            PrintFormatToString (StringNoLevel3, sizeof(StringNoLevel3),"%d.",NoLevel3);
+            PrintFormatToString (StringNoLevel4, sizeof(StringNoLevel4),"%d.",NoLevel4);
+            PrintFormatToString (StringNoLevel5, sizeof(StringNoLevel5),"%d.",NoLevel5);
+            PrintFormatToString (StringNoLevel6, sizeof(StringNoLevel6),"%d.",NoLevel6);
+            STRING_APPEND_TO_ARRAY(string_bef,StringNoLevel1);
+            STRING_APPEND_TO_ARRAY(string_bef,StringNoLevel2);
+            STRING_APPEND_TO_ARRAY(string_bef,StringNoLevel3);
+            STRING_APPEND_TO_ARRAY(string_bef,StringNoLevel4);
+            STRING_APPEND_TO_ARRAY(string_bef,StringNoLevel5);
+            STRING_APPEND_TO_ARRAY(string_bef,StringNoLevel6);
             break;
             default:
             break;
         }
-        strcat(StringBefore, string_bef);
-        strcat(StringBehind, string_beh);
+        }
+        STRING_APPEND_TO_ARRAY(StringBefore, string_bef);
+        STRING_APPEND_TO_ARRAY(StringBehind, string_beh);
     }
-    strcpy(st1,StringBefore);
-    strcpy(st2,StringBehind);
+    StringCopyMaxCharTruncate(st1,StringBefore,st1_maxc);
+    StringCopyMaxCharTruncate(st2,StringBehind,st2_maxc);
 
     return ret;
 }

@@ -20,14 +20,15 @@
 
 #include <stdint.h>
 
-int AddNewVarianteIni (char *name, char *desc, int brate);
-int AddNewObjectIni (int vnr, char *name, char *desc,uint32_t id,
-					 int size, char *dir, char *type, int mux_startbit,
-					 int mux_bitsize, int mux_value, char *azg_type, int ext);
-int AddNewSignalIni (int vnr, int onr, char *name, char *desc, char *unit,
-					 double convert, double offset, int startbit, int bitsize,
-					 char *byteorder, double startvalue, int mux_startbit,
-					 int mux_bitsize, int mux_value, char *type, char *bbtype, char *sign);
+int AddNewVarianteIni (int Fd, int index, char *name, char *desc, int BaudRate, double SamplePoint,
+                      int J1939, int CanFd, int DataBaudRate, double DataSamplePoint);
+int AddNewObjectIni (int Fd, int vnr, char *name, char *desc, uint32_t id,
+                    int size, char *dir, char *type, int mux_startbit,
+                    int mux_bitsize, int mux_value, char *azg_type, int ext);
+int AddNewSignalIni (int Fd, int vnr, int onr, char *name, char *desc, char *unit,
+                    double convert, double offset, int startbit, int bitsize,
+                    char *byteorder, double startvalue, int mux_startbit,
+                    int mux_bitsize, int mux_value, char *type, char *bbtype, char *sign);
 int ImportGlobalIni (int c, int v,uint32_t address, int irq);
 
 int SearchVarianteByName (char *name, int NotIdx);
@@ -50,8 +51,12 @@ int ScriptGetCANTransmitCycleRateOrId  (int Channel, char *ObjectName, int What)
 
 void ReadCANCardInfosFromQueue (void);
 
-int SetCanObjectCycleById (int Vnr, unsigned int Id, int ExtFlag, unsigned int Cycle);
-
+#define SET_CAN_OBJECT_PROPERY_DELAY         0
+#define SET_CAN_OBJECT_PROPERY_CYCLE         1
+#define SET_CAN_OBJECT_PROPERY_FRAMEFORMAT   2
+#define SET_CAN_OBJECT_PROPERY_STARTDELAY    3
+#define SET_CAN_OBJECT_PROPERY_NOTHING      -1
+int SetCanObjectPropertyById (int Fd, int Vnr, unsigned int Id, int ExtFlag, unsigned int ProperyType, unsigned int Value);
 
 int CopySignal (int vnr, int new_vnr, int onr, int new_onr, int snr, int new_snr, int DstFile, int SrcFile);
 

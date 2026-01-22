@@ -21,6 +21,8 @@
 #include <stdarg.h>
 #include "Platform.h"
 #include "MyMemory.h"
+#include "MemZeroAndCopy.h"
+#include "PrintFormatToString.h"
 #ifdef _WIN32
 #include <process.h>
 #endif
@@ -47,7 +49,7 @@ int StartExeAndWait(char *exename,char *aufrufparameter)
     BOOL returnwert;
     char hstring[2048+2];
 
-    memset (&sStartInfo, 0, sizeof (sStartInfo));
+    MEMSET (&sStartInfo, 0, sizeof (sStartInfo));
     sStartInfo.cb            = sizeof(STARTUPINFO);
     sStartInfo.dwFlags       = STARTF_USESHOWWINDOW;
     sStartInfo.wShowWindow   = SW_SHOWDEFAULT;
@@ -66,7 +68,7 @@ int StartExeAndWait(char *exename,char *aufrufparameter)
     }
     sProcInfo.hProcess = 0;
 
-    sprintf(hstring,"%s %s",exename,aufrufparameter);
+    PrintFormatToString(hstring,sizeof(hstring),"%s %s",exename,aufrufparameter);
     returnwert = CreateProcess(NULL,
                           hstring,
                           NULL,
@@ -113,8 +115,9 @@ int StartExeAndWait(char *exename,char *aufrufparameter)
 #else
     char *CommandLine;
     int Ret;
-    CommandLine = my_malloc (strlen (exename) + strlen (aufrufparameter) + 32);
-    sprintf (CommandLine, "%s %s", exename, aufrufparameter);
+    int Len = strlen (exename) + strlen (aufrufparameter) + 32;
+    CommandLine = my_malloc (Len);
+    PrintFormatToString (CommandLine, Len, "%s %s", exename, aufrufparameter);
     Ret = system (CommandLine);
     my_free (CommandLine);
     return Ret;

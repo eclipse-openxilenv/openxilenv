@@ -27,6 +27,9 @@
 
 extern "C" {
     #include "MyMemory.h"
+    #include "MemZeroAndCopy.h"
+    #include "PrintFormatToString.h"
+    #include "PrintFormatToString.h"
     #include "ThrowError.h"
     #include "TextReplace.h"
     #include "BlackboardAccess.h"
@@ -35,6 +38,7 @@ extern "C" {
     #include "ReadWriteValue.h"
     #include "DebugInfoAccessExpression.h"
     #include "GetNextStructEntry.h"
+    #include "BlackboardConversion.h"
     #include "BlackboardConvertFromTo.h"
     #include "Compare2DoubleEqual.h"
     #include "A2LLink.h"
@@ -61,7 +65,7 @@ A2LCalSingleData::A2LCalSingleData()
     m_DecIncOffset = 1.0;
 
     m_PhysicalFlag = false;
-    memset(&m_Info, 0, sizeof(m_Info));
+    STRUCT_ZERO_INIT(m_Info, A2L_DATA);
 }
 
 A2LCalSingleData::~A2LCalSingleData()
@@ -120,7 +124,16 @@ A2L_DATA *A2LCalSingleData::GetData()
 
 void A2LCalSingleData::SetData(A2L_DATA *par_Data)
 {
-    m_Data = par_Data;
+    if (m_Data == nullptr) {
+        m_Data = DupA2lData(par_Data);
+        m_HasChanged = true;
+    } else {
+        m_HasChanged = !CompareIfA2lDataAreEqual(m_Data, par_Data);
+        if (m_HasChanged) {
+            FreeA2lData(m_Data);
+            m_Data = DupA2lData(par_Data);
+        }
+    }
 }
 
 int A2LCalSingleData::GetLinkNo()
@@ -245,34 +258,25 @@ double A2LCalSingleData::GetRawValue()
     return ConvertRawValueToDouble(Value);
 }
 
-double A2LCalSingleData::GetDoubleValue()
-{
-    A2L_SINGLE_VALUE *ValuePtr = GetValue();
-    if (ValuePtr == nullptr) return 0.0;
-    double Value = GetRawValue();
-    return Conv(Value, m_Info);
-}
-
-
 QString A2LCalSingleData::ConvertToString(double Value, CHARACTERISTIC_AXIS_INFO &AxisInfo)
 {
     switch (AxisInfo.m_ConvType) {
     default:
-    case 0: // no conversion
-        {
-            A2L_SINGLE_VALUE Help;
-            Help.Type = A2L_ELEM_TYPE_PHYS_DOUBLE;
-            Help.Value.Double = Value;
-            return ConvertValueToString(&Help);
-        }
-    case 1: // formula
+        return QString ("no valid conversion defined");
+    case BB_CONV_NONE:
+    case BB_CONV_FORMULA:
+    case BB_CONV_FACTOFF:
+    case BB_CONV_OFFFACT:
+    case BB_CONV_TAB_INTP:
+    case BB_CONV_TAB_NOINTP:
+    case BB_CONV_RAT_FUNC:
         {
             A2L_SINGLE_VALUE Help;
             Help.Type = A2L_ELEM_TYPE_PHYS_DOUBLE;
             Help.Value.Double = Conv(Value, AxisInfo);
             return ConvertValueToString(&Help);
         }
-    case 2: // text replace
+    case BB_CONV_TEXTREP:
         {
             char Help[256];
             int Color;
@@ -307,23 +311,23 @@ QString A2LCalSingleData::ConvertValueToString(A2L_SINGLE_VALUE *par_Value)
     char Help[32];
     switch (par_Value->Type) {
     case A2L_ELEM_TYPE_INT:
-        sprintf(Help, "%" PRIi64 " (i)", par_Value->Value.Int);
+        PrintFormatToString (Help, sizeof(Help), "%" PRIi64 " (i)", par_Value->Value.Int);
         Ret = QString(Help);
         break;
     case A2L_ELEM_TYPE_UINT:
-        sprintf(Help, "%" PRIu64 " (u)", par_Value->Value.Uint);
+        PrintFormatToString (Help, sizeof(Help), "%" PRIu64 " (u)", par_Value->Value.Uint);
         Ret = QString(Help);
         break;
     case A2L_ELEM_TYPE_DOUBLE:
-        sprintf(Help, "%f (f)", par_Value->Value.Double);
+        PrintFormatToString (Help, sizeof(Help), "%f (f)", par_Value->Value.Double);
         Ret = QString(Help);
         break;
     case A2L_ELEM_TYPE_PHYS_DOUBLE:
-        sprintf(Help, "%f (p)", par_Value->Value.Double);
+        PrintFormatToString (Help, sizeof(Help), "%f (p)", par_Value->Value.Double);
         Ret = QString(Help);
         break;
     case A2L_ELEM_TYPE_TEXT_REPLACE:
-        sprintf(Help, "\"%s\" (s)", par_Value->Value.String);
+        PrintFormatToString (Help, sizeof(Help), "\"%s\" (s)", par_Value->Value.String);
         Ret = QString(Help);
         break;
     case A2L_ELEM_TYPE_ERROR:
@@ -338,23 +342,56 @@ QString A2LCalSingleData::ConvertValueToString(A2L_SINGLE_VALUE *par_Value)
 double A2LCalSingleData::Conv (double par_Value, CHARACTERISTIC_AXIS_INFO &par_AxisInfo)
 {
     double Ret;
+    bool ConvError = false;
     if (m_PhysicalFlag) {
-        if (par_AxisInfo.m_ConvType == 1) {
+        switch (par_AxisInfo.m_ConvType) {
+        default:
+        case BB_CONV_NONE:
+            Ret = par_Value;
+            break;
+        case BB_CONV_FORMULA:
             if ((par_AxisInfo.m_Conversion != nullptr) && (strlen (par_AxisInfo.m_Conversion) > 0)) {
                 if (direct_solve_equation_err_state_replace_value (par_AxisInfo.m_Conversion, par_Value, &Ret)) {
-                    ThrowError (1, "remove the X axis conversation \"%s\" from the label \"%s\"",
-                           par_AxisInfo.m_Conversion, QStringToConstChar(m_CharacteristicName));
-                    m_PhysicalFlag = false;  // switch back to raw!
-                    Ret = par_Value;   // Fehler in Umrechnung
+                    ConvError = true;
                 }
             } else {
-                Ret = par_Value;   // keine Umrechnung
+                Ret = par_Value;
             }
-        } else {
-            Ret = par_Value;   // keine Umrechnung
+            break;
+        case BB_CONV_FACTOFF:
+            if (Conv_FactorOffsetRawToPhysFromString(par_AxisInfo.m_Conversion, par_Value, &Ret)) {
+                ConvError = true;
+            }
+            break;
+        case BB_CONV_OFFFACT:
+            if (Conv_OffsetFactorRawToPhysFromString(par_AxisInfo.m_Conversion, par_Value, &Ret)) {
+                ConvError = true;
+            }
+            break;
+        case BB_CONV_TAB_INTP:
+            if (Conv_TableInterpolRawToPhysFromString(par_AxisInfo.m_Conversion, par_Value, &Ret)) {
+                ConvError = true;
+            }
+            break;
+        case BB_CONV_TAB_NOINTP:
+            if (Conv_TableNoInterpolRawToPhysFromString(par_AxisInfo.m_Conversion, par_Value, &Ret)) {
+                ConvError = true;
+            }
+            break;
+        case BB_CONV_RAT_FUNC:
+            if (Conv_RationalFunctionRawToPhysFromString(par_AxisInfo.m_Conversion, par_Value, &Ret)) {
+                ConvError = true;
+            }
+            break;
+        }
+        if (ConvError) {
+            ThrowError (1, "switch to raw view because of errors inside conversion \"%s\" from the label \"%s\"",
+                       par_AxisInfo.m_Conversion, m_CharacteristicName.toLatin1().data());
+            m_PhysicalFlag = false;  // switch back to raw!
+            Ret = par_Value;
         }
     } else {
-        Ret = par_Value;   // keine Umrechnung
+        Ret = par_Value;   // no conversion
     }
     return Ret;
 }
@@ -512,77 +549,6 @@ void A2LCalSingleData::SetValue (A2L_SINGLE_VALUE *par_Value, union BB_VARI par_
     ToString(true);
 }
 
-/*
-// Divider muss positiv sein!
-double A2LCalSingleData::DivideButMinumumDecByOne (double Value, int Type, double Divider)
-{
-#if 0
-    double Help_double = Value / Divider;
-    double Min, Max;
-    get_datatype_min_max_value (Type, &Min, &Max);
-    if ((Help_double >= Max) && (Divider <= 1.0)) return Max;
-    if ((Help_double <= Min) && (Divider >= 1.0)) return Min;
-    // Wenn es ein Integer Datenty ist:
-    if ((Type >= BB_BYTE) && (Type <= BB_UDWORD)) {
-       int64_t Help_i64 = static_cast<int64_t>(Help_double + 0.5);
-       if (static_cast<int64_t>(Value) == Help_i64) {
-           // Wert hat sich nicht geaendert dann mind. um 1 veraendern
-           if (Divider > 1.0) {
-               Help_i64--;
-           } else {
-               Help_i64++;
-           }
-       }
-       return static_cast<double>(Help_i64);
-    } else if ((Type >= BB_FLOAT) && (Type <= BB_DOUBLE)) {
-        if (Help_double == 0.0) {
-            if (Divider > 1.0) {
-                Help_double = -(ZAxisMax - ZAxisMin) / 1000.0;
-            } else {
-                Help_double = (ZAxisMax - ZAxisMin) / 1000.0;
-            }
-        }
-    }
-    return Help_double;
-#endif
-    return 0.0;
-}
-
-// Factor muss positiv sein!
-double A2LCalSingleData::MutiplyButMinumumIncByOne (double Value, int Type, double Factor)
-{
-#if 0
-    double Help_double = Value * Factor;
-    double Min, Max;
-    get_datatype_min_max_value (Type, &Min, &Max);
-    if ((Help_double >= Max) && (Factor >= 1.0)) return Max;
-    if ((Help_double <= Min) && (Factor <= 1.0)) return Min;
-    // Wenn es ein Integer Datenty ist:
-    if ((Type >= BB_BYTE) && (Type <= BB_UDWORD)) {
-       int64_t Help_i64 = static_cast<int64_t>(Help_double + 0.5);
-       if (static_cast<int64_t>(Value) == Help_i64) {
-           // Wert hat sich nicht geaendert dann mind. um 1 veraendern
-           if (Factor > 1.0) {
-               Help_i64++;
-           } else {
-               Help_i64--;
-           }
-       }
-       return static_cast<double>(Help_i64);
-    } else if ((Type >= BB_FLOAT) && (Type <= BB_DOUBLE)) {
-        if (Help_double == 0.0) {
-            if (Factor > 1.0) {
-                Help_double = (ZAxisMax - ZAxisMin) / 1000.0;
-            } else {
-                Help_double = -(ZAxisMax - ZAxisMin) / 1000.0;
-            }
-        }
-    }
-    return Help_double;
-#endif
-    return 0.0;
-}
-*/
 
 double A2LCalSingleData::AddButMinumumIncOrDecByOne (double Value, int Type, double Add)
 {
@@ -698,10 +664,11 @@ int A2LCalSingleData::ChangeValueInsideExternProcess(int op, const QVariant par_
         break;
     }
     INDEX_DATA_BLOCK *idb = GetIndexDataBlock(1);
+    idb->Data->LinkNo = m_LinkNo;
     idb->Data->Index = m_Index;
     idb->Data->Data = m_Data;
     idb->Data->Flags = 0;
-    idb->Data->User = par_Row;
+    idb->Data->User = (uint64_t)par_Row | (1ULL << 32); // Update always
     int Ret = A2LGetDataFromLinkReq(par_GetDataChannelNo, 1, idb);
     if (Ret) {
         //NotifyDataChangedToSyncObject(m_LinkNo, m_Index, m_Data);
@@ -712,7 +679,7 @@ int A2LCalSingleData::ChangeValueInsideExternProcess(int op, const QVariant par_
     return 0;
 }
 
-static void CalcRawMinMaxValuesOneAxis(CHARACTERISTIC_AXIS_INFO *par_AxisInfo, const char *par_AxisName)
+void A2LCalSingleData::CalcRawMinMaxValuesOneAxis(CHARACTERISTIC_AXIS_INFO *par_AxisInfo, const char *par_AxisName)
 {
     double Help;
     char *errstring;
@@ -745,21 +712,6 @@ void A2LCalSingleData::CalcRawMinMaxValues()
     CalcRawMinMaxValuesOneAxis(&m_Info, "");
 }
 
-/*
-int A2LCalSingleData::Update()
-{
-    const char *Error;
-    if ((m_LinkNo < 0) || (m_Index < 0)) return -1;
-    if (Debug_fh != nullptr) {fprintf(Debug_fh, "Update()"); fflush(Debug_fh);}
-    m_Data = (A2L_DATA*)A2LGetDataFromLink(m_LinkNo, m_Index, m_Data, 0, &Error);
-    if (Debug_fh != nullptr) {fprintf(Debug_fh, " m_Data = %p\n", m_Data); fflush(Debug_fh);}
-    if (m_Data == nullptr) {
-        return -1;
-    }
-    return 0;
-}
-*/
-
 void A2LCalSingleData::SetToNotExiting()
 {
     m_Exists = false;
@@ -767,10 +719,6 @@ void A2LCalSingleData::SetToNotExiting()
     m_LinkNo = -1;
     m_Index = -1;
     m_ValueStr.clear();
-
-    // m_NamePixelWidth;
-    // m_ValuePixelWidth;
-    // m_UnitPixelWidth;
 
     if (m_Info.m_Conversion != nullptr) {
         my_free(m_Info.m_Conversion);
@@ -822,6 +770,11 @@ void A2LCalSingleData::SetValueStr(QString par_String)
 void A2LCalSingleData::SetDisplayType(int par_DisplayType)
 {
     m_DisplayType = par_DisplayType;
+    if (m_DisplayType == 3) {  // 3 == physical
+        m_PhysicalFlag =  true;
+    } else {
+        m_PhysicalFlag =  false;
+    }
 }
 
 
@@ -894,54 +847,12 @@ static int64_t ConvertToInt64(A2L_SINGLE_VALUE *par_Value)
     }
 }
 
-static QString ConvertTextReplace(A2L_SINGLE_VALUE *par_Value, char *par_Conversion)
-{
-    char Help[256];
-    int Color;
-    if (convert_value2textreplace (ConvertToInt64(par_Value), par_Conversion,
-                                   Help, sizeof(Help), &Color) == 0) {
-        return QString(Help);
-    } else {
-        return QString("conversion error");
-    }
-}
-
-static int ConvertFormula(A2L_SINGLE_VALUE *par_Value, char *par_Conversion, double *ret_Value)
-{
-    double Help = ConvertToDouble(par_Value);
-    if (direct_solve_equation_err_state_replace_value (par_Conversion, Help, ret_Value)) {
-        *ret_Value = Help;   // keine Umrechnung
-        return -1;
-    }
-    return 0;
-}
-
-
-static QString ConvertPhys(A2L_SINGLE_VALUE *par_Value, char *par_Conversion, int par_ConversionType, int par_Precision)
-{
-    double Help;
-    switch (par_ConversionType) {
-    default:
-    case 0:  // no conversion
-        return QString("no conversion defined");
-    case 1:  // formula
-        if (ConvertFormula(par_Value, par_Conversion, &Help)) {
-            return QString("conversion error");
-        } else {
-            return QString().number(Help, 'f', par_Precision);
-        }
-    case 2:
-        return ConvertTextReplace(par_Value, par_Conversion);
-    }
-}
-
-
 static QString ConvetDoubleToString (double par_Value)
 {
     char String[128];
     int Prec = 15;
     while (1) {
-        sprintf (String, "%.*g", Prec, par_Value);
+        PrintFormatToString (String, sizeof(String), "%.*g", Prec, par_Value);
         if ((Prec++) == 18 || (par_Value == strtod (String, NULL))) break;
     }
     return QString(String);
@@ -1028,10 +939,7 @@ int A2LCalSingleData::ToString(bool par_UpdateAlways)
                     }
                     break;
                 case 3: // Phys
-                     m_ValueStr = ConvertPhys(ValuePtr,
-                                              m_Info.m_Conversion,
-                                              m_Info.m_ConvType,
-                                              m_Info.m_FormatLayout); //m_Precision);
+                    m_ValueStr = ConvertToString(ConvertToDouble(ValuePtr), m_Info);
                     break;
                 default:
                     m_ValueStr = QString("unknown display type (%1)").arg(m_DisplayType);

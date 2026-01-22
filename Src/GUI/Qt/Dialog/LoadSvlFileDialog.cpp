@@ -23,6 +23,7 @@
 
 extern "C"
 {
+    #include "StringMaxChar.h"
     #include "LoadSaveToFile.h"
     #include "IniDataBase.h"
     #include "Scheduler.h"
@@ -76,7 +77,7 @@ void loadsvlfiledialog::accept()
     char SvlFileName[MAX_PATH], CurProcess[MAX_PATH];
     int idx;
 
-    strcpy(SvlFileName, QStringToConstChar(ui->lineEditSVL->text()));
+    STRING_COPY_TO_ARRAY(SvlFileName, QStringToConstChar(ui->lineEditSVL->text()));
     if (!file_exists(SvlFileName)) {
         ThrowError(MESSAGE_STOP, "No SVL-File selected !");
         return;
@@ -89,7 +90,7 @@ void loadsvlfiledialog::accept()
     }
     else {
         idx = ui->listWidgetProcesses->currentIndex().row();
-        strcpy(CurProcess, QStringToConstChar(ui->listWidgetProcesses->item(idx)->text()));
+        STRING_COPY_TO_ARRAY(CurProcess, QStringToConstChar(ui->listWidgetProcesses->item(idx)->text()));
     }
 
     IniFileDataBaseWriteString("BasicCalibrationSettings",

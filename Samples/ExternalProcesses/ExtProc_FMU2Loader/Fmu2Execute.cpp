@@ -17,6 +17,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #ifdef _WIN32
 #include <windows.h>
 #else
@@ -27,13 +28,62 @@ extern "C" {
 }
 #include "Fmu2Struct.h"
 
+// The logger will rise a popup message except fmi2OK.
+// If the environment variable FMU_LOGGING_FOLDER is set to a folder, the logger will write a log file (name is <model name>.log)
+void loggerFunction(void *componentEnvironment, fmi2String instanceName, fmi2Status status, fmi2String category, fmi2String message, ...)
+{
+    FMU* Fmu = (FMU *)componentEnvironment;
 
-// Logger is only a PopUp in Softcar, nothing more... many parameters are ignored
-void loggerFunction(void *componentEnvironment, fmi2String instanceName, fmi2Status status, fmi2String category, fmi2String message, ...) {
-	//ignore *componentEnvironment
-	//ignore instanceName
-	//ignore status
-	//ignore category
+    if (Fmu != NULL) {
+        if (Fmu->LoggingEnable) {
+            if (Fmu->LoggingFile == nullptr) {
+                char* LoggingPath = (char*)malloc(strlen(Fmu->LoggingFolder) + strlen(Fmu->ModelName) + 6);
+                strcpy(LoggingPath, Fmu->LoggingFolder);
+#ifdef _WIN32
+                strcat(LoggingPath, "\\");
+#else
+                strcat(LoggingPath, "/");
+#endif
+                strcat(LoggingPath, Fmu->ModelName);
+                strcat(LoggingPath, ".log");
+                Fmu->LoggingFile = fopen(LoggingPath, "wt");
+                if (Fmu->LoggingFile == nullptr) {
+                    ThrowError(1, "cannot open logging file \"%s\" -> logging disabled", LoggingPath);
+                    Fmu->LoggingEnable = false;
+                }
+            }
+            if (Fmu->LoggingFile != nullptr) {
+                va_list argptr;
+                va_start(argptr, message);
+                switch (status) {
+                case fmi2OK:
+                    fprintf(Fmu->LoggingFile, "fmi2OK: ");
+                    break;
+                case fmi2Warning:
+                    fprintf(Fmu->LoggingFile, "fmi2Warning: ");
+                    break;
+                case fmi2Discard:
+                    fprintf(Fmu->LoggingFile, "fmi2Discard: ");
+                    break;
+                case fmi2Error:
+                    fprintf(Fmu->LoggingFile, "fmi2Error: ");
+                    break;
+                case fmi2Fatal:
+                    fprintf(Fmu->LoggingFile, "fmi2Fatal: ");
+                    break;
+                case fmi2Pending:
+                    fprintf(Fmu->LoggingFile, "fmi2Pending: ");
+                    break;
+                default:
+                    fprintf(Fmu->LoggingFile, "unknown: ");
+                    break;
+                }
+                vfprintf(Fmu->LoggingFile, message, argptr);
+                fprintf(Fmu->LoggingFile, "\n");
+                va_end(argptr);
+            }
+        }
+    }
     if (status != fmi2OK) {
         va_list argptr;
         va_start(argptr,message);
@@ -73,7 +123,7 @@ static void SyncAllInputVariables(FMU *par_Fmu)
     if (par_Fmu->Inputs.Integer.Count > 0) {
         par_Fmu->fmi2SetInteger(par_Fmu->Component, par_Fmu->Inputs.Integer.References, par_Fmu->Inputs.Integer.Count, par_Fmu->Inputs.Integer.Values);
     }
-    if (par_Fmu->Outputs.Boolean.Count > 0) {
+    if (par_Fmu->Inputs.Boolean.Count > 0) {
         par_Fmu->fmi2SetBoolean(par_Fmu->Component, par_Fmu->Inputs.Boolean.References, par_Fmu->Inputs.Boolean.Count, par_Fmu->Inputs.Boolean.Values);
     }
 }
@@ -108,15 +158,17 @@ int FmuInit(FMU *par_Fmu)
 {
     int Vid;
     bool SyncParametersWithBlackboardSave;
+    long long  SchedulerPeriod;
     // Initialization
     // Set callback functions
     static const fmi2CallbackFunctions cbf = {loggerFunction, //const fmi2CallbackLogger         logger;
                                               CallbackAllocateMemory, // const fmi2CallbackAllocateMemory allocateMemory;
                                               free, // const fmi2CallbackFreeMemory     freeMemory;
                                               NULL, //StepFinished, //const fmi2StepFinished           stepFinished;
-                                              NULL}; //const fmi2ComponentEnvironment   componentEnvironment;;
+                                              par_Fmu}; //const fmi2ComponentEnvironment   componentEnvironment;;
     //Instantiate
-    fmi2Component Component = par_Fmu->fmi2Instantiate(par_Fmu->ModelName , fmi2CoSimulation, par_Fmu->Guid, par_Fmu->ResourceDirectory, &cbf, fmi2False, fmi2False); //fmi2True, fmi2True);
+    fmi2Component Component = par_Fmu->fmi2Instantiate(par_Fmu->ModelName , fmi2CoSimulation, par_Fmu->Guid, par_Fmu->ResourceDirectory, &cbf,
+                                                       fmi2False, par_Fmu->LoggingEnable);
     if (Component == NULL) {
         return -1;
     }
@@ -138,9 +190,9 @@ int FmuInit(FMU *par_Fmu)
     par_Fmu->Status = par_Fmu->fmi2ExitInitializationMode(par_Fmu->Component);
 
     // Communication step size
-    Vid = attach_bbvari("XilEnv.SampleTime");
-    par_Fmu->TimeStep = read_bbvari_double(Vid);
-    remove_bbvari(Vid);
+    SchedulerPeriod = 0;
+    GetSchedulingInformation(nullptr, nullptr, &SchedulerPeriod, nullptr, nullptr, nullptr, nullptr);
+    par_Fmu->TimeStep = (double)SchedulerPeriod * 0.000000001; // convert from ns to s
 
     par_Fmu->SimTime = 0.0;
 
@@ -152,6 +204,7 @@ int FmuOneCycle(FMU *par_Fmu)
     fmi2Boolean boolVal;
     double TimeStep = par_Fmu->TimeStep * (double)get_cycle_period();
     if (par_Fmu->Status != fmi2Discard) {
+
         SyncAllInputVariables(par_Fmu);
         par_Fmu->Status = par_Fmu->fmi2DoStep(par_Fmu->Component, par_Fmu->SimTime, TimeStep, fmi2True);
         switch (par_Fmu->Status) {

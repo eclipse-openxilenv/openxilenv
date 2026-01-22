@@ -24,6 +24,7 @@
 
 extern "C"
 {
+    #include "StringMaxChar.h"
     #include "IniDataBase.h"
     #include "FileExtensions.h"
     #include "ThrowError.h"
@@ -97,7 +98,7 @@ int UserDefinedEnvironmentVariableDialog::SaveListBox (int par_Fd, int OnlySelec
     for (x = 0; x < Count; x++) {
         if (!OnlySelectedFlag || ui->listWidgetEnvironmentVariables->item(x)->isSelected()) {
             // First selected element
-            strcpy(Line, QStringToConstChar(ui->listWidgetEnvironmentVariables->item(x)->text()));
+            STRING_COPY_TO_ARRAY(Line, QStringToConstChar(ui->listWidgetEnvironmentVariables->item(x)->text()));
             p = Line;
             while (*p != '=') p++;
             *(p-1) = 0;
@@ -134,8 +135,8 @@ int UserDefinedEnvironmentVariableDialog::FillListBox (int par_Fd, int ResetFlag
     }
     EntryIdx = 0;
     while ((EntryIdx = IniFileDataBaseGetNextEntryName(EntryIdx, "UserDefinedEnvironmentVariables", VarName, sizeof(VarName), par_Fd)) >= 0) {
-        strcpy (VarValue, VarName);
-        strcat (VarValue, " = ");
+        STRING_COPY_TO_ARRAY (VarValue, VarName);
+        STRING_APPEND_TO_ARRAY (VarValue, " = ");
         Len = strlen (VarValue);
         IniFileDataBaseReadString ("UserDefinedEnvironmentVariables", VarName, "", VarValue + Len, static_cast<DWORD>(sizeof (VarValue) - Len), par_Fd);
         ui->listWidgetEnvironmentVariables->addItem(VarValue);
@@ -155,12 +156,12 @@ void UserDefinedEnvironmentVariableDialog::on_pushButtonChange_clicked()
         return;
     }
 
-    strcpy(Line, QStringToConstChar(ui->lineEditName->text()));
+    STRING_COPY_TO_ARRAY(Line, QStringToConstChar(ui->lineEditName->text()));
     RemoveWhitespacesOnlyAtBeginingAndEnd (Line);
-    strcat (Line, " = ");
-    strcpy(LineValue, QStringToConstChar(ui->lineEditValue->text()));
+    STRING_APPEND_TO_ARRAY (Line, " = ");
+    STRING_COPY_TO_ARRAY(LineValue, QStringToConstChar(ui->lineEditValue->text()));
     RemoveWhitespacesOnlyAtBeginingAndEnd (LineValue);
-    strcat(Line, LineValue);
+    STRING_APPEND_TO_ARRAY (Line, LineValue);
     QListWidgetItem *SelectedItem = ui->listWidgetEnvironmentVariables->currentItem();
     delete SelectedItem;
     ui->listWidgetEnvironmentVariables->addItem(Line);
@@ -171,12 +172,12 @@ void UserDefinedEnvironmentVariableDialog::on_pushButtonAdd_clicked()
     char Line[INI_MAX_LINE_LENGTH];
     char LineValue[INI_MAX_LINE_LENGTH];
 
-    strcpy(Line, QStringToConstChar(ui->lineEditName->text()));
+    STRING_COPY_TO_ARRAY(Line, QStringToConstChar(ui->lineEditName->text()));
     RemoveWhitespacesOnlyAtBeginingAndEnd (Line);
-    strcat (Line, " = ");
-    strcpy(LineValue, QStringToConstChar(ui->lineEditValue->text()));
+    STRING_APPEND_TO_ARRAY (Line, " = ");
+    STRING_COPY_TO_ARRAY(LineValue, QStringToConstChar(ui->lineEditValue->text()));
     RemoveWhitespacesOnlyAtBeginingAndEnd (LineValue);
-    strcat(Line, LineValue);
+    STRING_APPEND_TO_ARRAY(Line, LineValue);
     ui->listWidgetEnvironmentVariables->addItem(Line);
 }
 
@@ -184,7 +185,7 @@ void UserDefinedEnvironmentVariableDialog::on_listWidgetEnvironmentVariables_ite
 {
     char *p, Line[INI_MAX_LINE_LENGTH];
 
-    strcpy(Line, QStringToConstChar(item->text()));
+    STRING_COPY_TO_ARRAY(Line, QStringToConstChar(item->text()));
     p = Line;
     while (*p != '=') p++;
     *(p-1) = 0;

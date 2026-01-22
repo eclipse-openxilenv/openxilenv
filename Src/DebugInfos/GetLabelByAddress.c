@@ -21,6 +21,8 @@
 #include "RunTimeMeasurement.h"
 #include "Blackboard.h"
 #include "MyMemory.h"
+#include "StringMaxChar.h"
+#include "PrintFormatToString.h"
 #include "ThrowError.h"
 #include "MainValues.h"
 #include "Scheduler.h"
@@ -37,6 +39,7 @@ static int GetStructElemByAddr (int32_t parent_typenr,
                                 uint64_t address,              //  Address search for
                                 int *pbbtype,
                                 char *buffer,
+                                int size_of_buffer,
                                 PROCESS_APPL_DATA *pappldata);
 
 static int GetArrayElemByAddr (int32_t parent_typenr,
@@ -45,11 +48,13 @@ static int GetArrayElemByAddr (int32_t parent_typenr,
                                uint64_t address,              // Address search for
                                int *pbbtype,
                                char *buffer,
+                               int size_of_buffer,
                                PROCESS_APPL_DATA *pappldata);
 
 
 int GetStructEntryByAddress (uint64_t address,             // in  symbol address
                              char *buffer,                 // out return of the expanded label name
+                             int size_of_buffer,
                              int *pbbtype,                 // out data type
                              PROCESS_APPL_DATA *pappldata) // in  ...
 {
@@ -62,14 +67,13 @@ int GetStructEntryByAddress (uint64_t address,             // in  symbol address
     int32_t *pbase_typenr_idx;      // Pointer to the index inside the type table of the base symbols
     uint64_t base_addr;
 
-    BEGIN_RUNTIME_MEASSUREMENT ("GetStructEntryByAddress")
     if ((lname = get_label_by_address_ex (address,   // in
                                           &base_addr,  // out
                                           &base_typenr,   // out
                                           &base_typenr_idx,  // out
                                           &pbase_typenr_idx, // out 
                                           pappldata)) != NULL) {
-        strcpy (buffer, lname);   // copy label name to the return buffer
+        StringCopyMaxCharTruncate(buffer, lname, size_of_buffer);   // copy label name to the return buffer
         what = get_what_is_typenr (&base_typenr,       // in out
                                    &base_typenr_idx,   // in out
                                    pappldata);
@@ -94,6 +98,7 @@ int GetStructEntryByAddress (uint64_t address,             // in  symbol address
                                        address,
                                        pbbtype,
                                        buffer,
+                                       size_of_buffer,
                                        pappldata);
             break;
         case 3:  // Array
@@ -103,6 +108,7 @@ int GetStructEntryByAddress (uint64_t address,             // in  symbol address
                                       address,
                                       pbbtype,
                                       buffer,
+                                      size_of_buffer,
                                       pappldata);
             break;
         case 4:      // Pointer and
@@ -111,7 +117,6 @@ int GetStructEntryByAddress (uint64_t address,             // in  symbol address
         }
     }
     ret = err;
-    END_RUNTIME_MEASSUREMENT
     return ret;
 }
 
@@ -123,6 +128,7 @@ static int GetStructElemByAddr (int32_t parent_typenr,
                                 uint64_t address,              // Address search for
                                 int *pbbtype,
                                 char *buffer,
+                                int size_of_buffer,
                                 PROCESS_APPL_DATA *pappldata)
 {
     char *name;
@@ -146,9 +152,9 @@ static int GetStructElemByAddr (int32_t parent_typenr,
                                            &typenr,
                                            &field_idx,
                                            pappldata)) != NULL) {
-        if (it_is_a_bclass) strcat (buffer, "::");
-        else strcat (buffer, ".");
-        strcat (buffer, name);
+        if (it_is_a_bclass) StringAppendMaxCharTruncate(buffer, "::", size_of_buffer);
+        else StringAppendMaxCharTruncate (buffer, ".", size_of_buffer);
+        StringAppendMaxCharTruncate (buffer, name, size_of_buffer);
         if ((what = get_what_is_typenr (&typenr, &typenr_idx, pappldata)) < 0) {
             err = -1;
             ret = err;
@@ -172,6 +178,7 @@ static int GetStructElemByAddr (int32_t parent_typenr,
                                        address,
                                        pbbtype,
                                        buffer,
+                                       size_of_buffer,
                                        pappldata);
             break;
         case 3:  // Array
@@ -181,6 +188,7 @@ static int GetStructElemByAddr (int32_t parent_typenr,
                                       address,
                                       pbbtype,
                                       buffer,
+                                      size_of_buffer,
                                       pappldata);
             break;
         case 4:      // Pointer and
@@ -204,6 +212,7 @@ static int GetArrayElemByAddr (int32_t parent_typenr,
                                uint64_t address,              // Address search for
                                int *pbbtype,
                                char *buffer,
+                               int size_of_buffer,
                                PROCESS_APPL_DATA *pappldata)
 
 {
@@ -226,11 +235,11 @@ static int GetArrayElemByAddr (int32_t parent_typenr,
     sizeof_array_element = array_size / array_elements;
     if (sizeof_array_element <= 0) {
         ThrowError (1, "internal error %s(%i)", __FILE__, __LINE__);
-        ret = err = -1;
+        ret = -1;
         goto __OUT;
     }
     index = (int32_t)(address - parent_address) / sizeof_array_element;
-    sprintf (buffer + strlen(buffer), "[%i]", index);
+    PrintFormatToString (buffer + strlen(buffer), size_of_buffer -  strlen(buffer), "[%i]", index);
     switch (arrayelem_of_what) {
     case 1:   // Base data type
         *pbbtype = get_base_type_bb_type_ex (arrayelem_typenr, pappldata);
@@ -249,6 +258,7 @@ static int GetArrayElemByAddr (int32_t parent_typenr,
                                     address,
                                     pbbtype,
                                     buffer,
+                                    size_of_buffer,
                                     pappldata);
         break;
     case 3:  // Array
@@ -258,6 +268,7 @@ static int GetArrayElemByAddr (int32_t parent_typenr,
                                   address,
                                   pbbtype,
                                   buffer,
+                                  size_of_buffer,
                                   pappldata);
         break;
     case 4:      // Pointer und
@@ -281,7 +292,7 @@ int DbgInfoTranslatePointerToLabel (uint64_t ptr, char *label, int maxc, int *pb
     int Pid;
 
     BEGIN_RUNTIME_MEASSUREMENT ("DbgInfoTranslatePointerToLabel")
-    if (get_name_by_pid (pid, buffer)) {
+    if (get_name_by_pid (pid, buffer, sizeof(buffer))) {
         goto __OUT;
     }
 
@@ -298,6 +309,7 @@ int DbgInfoTranslatePointerToLabel (uint64_t ptr, char *label, int maxc, int *pb
     }
     if (GetStructEntryByAddress (ptr,
                                  buffer,
+                                sizeof(buffer),
                                  &bbtype,
                                  pappldata) == -1) {
         ret = ADDRESS_NO_VALID_LABEL;
@@ -305,7 +317,7 @@ int DbgInfoTranslatePointerToLabel (uint64_t ptr, char *label, int maxc, int *pb
     }
     *pbbtype = bbtype; 
     ConvertLabelAsapCombatible (buffer, sizeof(buffer), 0);
-    strncpy (label, buffer, (size_t)(maxc-1));
+    StringCopyMaxCharTruncate(label, buffer, (size_t)(maxc-1));
     label[maxc-1] = 0;
     ret = (strlen (buffer) >= BBVARI_NAME_SIZE) ? LABEL_NAME_TOO_LONG : 0;
   __OUT:

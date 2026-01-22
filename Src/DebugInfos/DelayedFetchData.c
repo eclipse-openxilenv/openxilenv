@@ -363,7 +363,7 @@ int IsDataBlockGroupEmpty(int par_DataGroupNo)
 
 int GetDataFromDataBlockGroup(int par_DataGroupNo, uint64_t par_StartAddress, uint32_t par_BlockSize, char *ret_Data)
 {
-    memset(ret_Data, 0, par_BlockSize);
+    MEMSET(ret_Data, 0, par_BlockSize);
     EnterCriticalSection(&CriticalSection);
     DEBUG_LOG("GetDataFromDataBlockGroup(%i, 0x%" PRIX64 ", %u)\n", par_DataGroupNo, par_StartAddress, par_BlockSize);
     if ((par_DataGroupNo >= 0) && (par_DataGroupNo < DataBlockGroupCount)) {

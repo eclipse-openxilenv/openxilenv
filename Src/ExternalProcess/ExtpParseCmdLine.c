@@ -20,6 +20,7 @@
 #include <string.h>
 #include <stdarg.h>
 #include "Platform.h"
+#include "StringMaxChar.h"
 #include "XilEnvExtProc.h"
 #include "ExtpParseCmdLine.h"
 
@@ -39,6 +40,7 @@ int XilEnvInternal_ParseCmdLine (char *par_Line,
     char *s, *d;
     int i;
     int quotation_mark;
+    int len;
 
     if (ret_CallFrom != NULL) ret_CallFrom[0] = 0;
     if (ret_Instance != NULL) ret_Instance[0] = 0;
@@ -56,12 +58,13 @@ int XilEnvInternal_ParseCmdLine (char *par_Line,
     if (ret_NoXcp != NULL) *ret_NoXcp = 0;
     if (ret_WriteBackExeToDir != NULL) ret_WriteBackExeToDir[0] = 0;
 
-    s = (char*)malloc (strlen (par_Line) + 1);  // this memory will not been freed
+    len = strlen (par_Line) + 1;
+    s = (char*)malloc (len);  // this memory will not been freed
     if (s == NULL) {
         ThrowError (1, "out of memory");
         return -1;
     }
-    strcpy(s, par_Line);
+    StringCopyMaxCharTruncate(s, par_Line, len);
     while (*s != 0) {
         while (isspace (*s)) s++;
     	quotation_mark = 0;

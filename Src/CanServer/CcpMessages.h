@@ -20,7 +20,7 @@
 
 #include <stdint.h>
 
-//Empfangened Messages:
+// Receiving messages:
 #define CCP_AKTIVATE                19001
 #define CCP_DEAKTIVATE              19002
 #define CCP_DTO_ACTIVATE_TIMEOUT    19003
@@ -35,7 +35,8 @@ typedef struct {
 
 #define CCP_SET_CRM_AND_DTOS_IDS    19005
 #define CPP_DTOS_DATA_STRUCTS       19006
-// Sendende Messages:
+
+// Transmitting messages:
 #define CCP_CRM_ACK                 19007
 #define CCP_DTO_TIMEOUT             19008
 #define CCP_SET_ACTIVE_CON_NO       19888
@@ -57,26 +58,26 @@ typedef struct {
     int ExtIds;
     int ByteOrder;
     uint32_t CRO_id;       // Command
-    uint32_t CRM_id;       // Command ACK
-    uint32_t DTO_id;      // Daten
+    uint32_t CRM_id;       // Command Aack
+    uint32_t DTO_id;       // Data
     int Timeout;
     int Prescaler;
     int StationAddress;
     int EventChannel;
-    int OnlyBytePointerInDAQ;  // noch nicht implementiert!
+    int OnlyBytePointerInDAQ;  // this is not implemented
     int SeedKeyFlag;
 #define CCP_NO_SEED_AND_KEY       0
 #define CCP_SEED_AND_KEY          1
-#define CCP_SEED_AND_KEY_SIM      3    // Wenn Seed&Key-DLL-String "BB"
+#define CCP_SEED_AND_KEY_SIM      2
 
     char SeedKeyDll[256];
     char SeedKeyDllCal[256];
     int CalibrationEnable;                
     int MoveROM2RAM;
     int SelCalPage;
-    uint32_t CalibROMStartAddr;   // zB: EB1 0xA0000
-    uint32_t CalibRAMStartAddr;   // zB: EB1 0x220000
-    uint32_t CalibROMRAMSize;     // zB: EB1 0x20000
+    uint32_t CalibROMStartAddr;
+    uint32_t CalibRAMStartAddr;
+    uint32_t CalibROMRAMSize;
     int ReadParameterAfterCalib;
     int CcpVersion;  
     int XcpOrCcp;     // 1 -> XCP 0 -> CCP
@@ -110,18 +111,12 @@ typedef struct {
 typedef struct {
    int DTOPackagesCount;
    CCP_DTO_PACKAGE DTO_Packages[CCP_MAX_DTO_PACKAGES];
-   //int Timeouts[CCP_MAX_DTO_PACKAGES];
-   char Data[1];       //  Umrechnungen aller in DTOs enthaltenen Variablen
-                       //  ist auf jeden Fall groesser als 1 Byte!!
-                       //  wird zZ nicht verwendet!
 } CCP_VARIABLES_CONFIG;
-
-
 
 typedef struct {
     unsigned char major_version;
     unsigned char minor_version;
-    char TCU_ID[256];
+    char TargetIdentifier[256];
     unsigned char ResourceAvailabilityMask;
     unsigned char ResourceProtectionMask;
     int DAQ_Size;

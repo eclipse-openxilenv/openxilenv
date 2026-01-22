@@ -21,6 +21,8 @@
 #include <string.h>
 #include <malloc.h>
 #include "Config.h"
+#include "MemZeroAndCopy.h"
+#include "PrintFormatToString.h"
 #include "StringMaxChar.h"
 #include "CanFifo.h"
 
@@ -305,17 +307,17 @@ static int ConvertToString(A2L_SINGLE_VALUE *Value, char *ret_Value, int MaxLen)
     if (Value == NULL) return 0;
     switch(Value->Type) {
     case A2L_ELEM_TYPE_INT:
-        sprintf (Help, "%lli", Value->Value.Int);
+        PrintFormatToString (Help, sizeof(Help), "%lli", Value->Value.Int);
         return StringCopy(ret_Value, Help, MaxLen);
     case A2L_ELEM_TYPE_UINT:
-        sprintf (Help, "%llu", Value->Value.Uint);
+        PrintFormatToString (Help, sizeof(Help), "%llu", Value->Value.Uint);
         return StringCopy(ret_Value, Help, MaxLen);
     case A2L_ELEM_TYPE_DOUBLE:
     case A2L_ELEM_TYPE_PHYS_DOUBLE:
         {
             int Prec = 15;
             while (1) {
-                sprintf (Help, "%.*g", Prec, Value->Value.Double);
+                PrintFormatToString (Help, sizeof(Help), "%.*g", Prec, Value->Value.Double);
                 if ((Prec++) == 18 || (Value->Value.Double == strtod (Help, NULL))) break;
             }
         }

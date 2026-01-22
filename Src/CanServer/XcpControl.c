@@ -29,6 +29,7 @@
 #include "ThrowError.h"
 #include "MyMemory.h"
 #include "StringMaxChar.h"
+#include "PrintFormatToString.h"
 #include "EnvironmentVariables.h"
 #include "LoadSaveToFile.h"
 #include "ConfigurablePrefix.h"
@@ -335,7 +336,7 @@ static char *XcpErrorStr (int ErrCode)
 
 static void FillCanObject (CCP_CRO_CAN_OBJECT *pCanObj, XCP_CONNECTTION *pCon)
 {
-    memset (pCanObj->Data, 0, 8);
+    MEMSET (pCanObj->Data, 0, 8);
     pCanObj->Channel = pCon->XcpConfig.Channel;
     pCanObj->Id = pCon->XcpConfig.CRO_id;
     pCanObj->ExtFlag = pCon->XcpConfig.ExtIds;
@@ -741,7 +742,7 @@ static int XcpReadConfigFromIni (int Connection)
     int Fd = GetMainFileDescriptor();
 
     pCon = &XcpConnections[Connection];
-    sprintf (Section, "XCP Configuration for Target %i", Connection);
+    PrintFormatToString (Section, sizeof(Section), "XCP Configuration for Target %i", Connection);
     IniFileDataBaseReadString (Section, "DebugMessages", "no", txt, sizeof (txt), Fd);
     if (!strcmpi ("yes", txt)) pCon->XcpConfig.DebugMessages = 1;
     else pCon->XcpConfig.DebugMessages = 0;
@@ -858,9 +859,9 @@ static int DeleteCalibrationList (int Connection)
     return -1;
 }
 
-static int BuildCalibrationList (int var_count, char **vars, int Connection)
+static int BuildCalibrationList (int par_ParamCount, char **par_Params, int par_Connection)
 {
-    int x, v;
+    int x, p;
     char Section[256];
     char txt[INI_MAX_LINE_LENGTH];
     char entry[32];
@@ -872,25 +873,51 @@ static int BuildCalibrationList (int var_count, char **vars, int Connection)
     XCP_CONNECTTION *pCon;
     char *Unit, *Conversion, *MinString, *MaxString;
     int Fd = GetMainFileDescriptor();
+    int *ParamIdxs = NULL;
+    int Ret = 0;
 
-    pCon = &XcpConnections[Connection];
-    sprintf (Section, "XCP Configuration for Target %i", Connection);
-    DeleteCalibrationList (Connection);
-    pCon->XcpCalParamList = (XcpCalParamItem*)my_malloc ((size_t)var_count * sizeof (XcpCalParamItem));
+    pCon = &XcpConnections[par_Connection];
+    PrintFormatToString (Section, sizeof(Section), "XCP Configuration for Target %i", par_Connection);
+    DeleteCalibrationList (par_Connection);
+    pCon->XcpCalParamList = (XcpCalParamItem*)my_malloc ((size_t)par_ParamCount * sizeof (XcpCalParamItem));
     if (pCon->XcpCalParamList == NULL) {
         ThrowError (1, "out of memory");
         return -1;
     }
-    pCon->XcpCalParamListSize = var_count;
+    ParamIdxs = (int*)my_calloc ((size_t)par_ParamCount, sizeof (int));
+    if (ParamIdxs == NULL) {
+        ThrowError (1, "out of memory");
+        return -1;
+    }
+    for (x = 0; x < par_ParamCount; x++) {
+        ParamIdxs[x] = -1;
+    }
+    // first search all parameters and store it's index
+    for (p = 0; ; p++) {
+        PrintFormatToString (entry, sizeof(entry), "p%i", p);
+        if (IniFileDataBaseReadString(Section, entry, "", txt, sizeof (txt), Fd) == 0) {
+            break;
+        }
+        if (StringCommaSeparate (txt, &dtype_str, &name, NULL) == 2) {
+            for (x = 0; x < par_ParamCount; x++) {
+                if (!strcmp (name, par_Params[x])) {
+                    ParamIdxs[x] = p;
+                    break;
+                }
+            }
+        }
+    }
+    pCon->XcpCalParamListSize = par_ParamCount;
     pCon->XcpCalParamPos = 0;
-    for (x = 0; x < var_count; x++) {
+    for (x = 0; x < par_ParamCount; x++) {
         found = 0;
-        for (v = 0; ; v++) {
-            sprintf (entry, "p%i", v);
+        if (ParamIdxs[x] >= 0) {
+            p = ParamIdxs[x];
+            PrintFormatToString (entry, sizeof(entry), "p%i", p);
             if (IniFileDataBaseReadString(Section, entry, "", txt, sizeof (txt), Fd) == 0) break;
             Unit = Conversion = MinString = MaxString = NULL;
             if (StringCommaSeparate (txt, &dtype_str, &name, &address_str, &Unit, &Conversion, &MinString, &MaxString, NULL) >= 3) {
-                if (!strcmp (name, vars[x])) {
+                if (!strcmp (name, par_Params[x])) {
                     dtype = get_bbvari_type (dtype_str);
                     pCon->XcpCalParamList[x].Address = strtoul (address_str, NULL, 0);
                     pCon->XcpCalParamList[x].vid = add_bbvari (name, dtype,
@@ -912,16 +939,17 @@ static int BuildCalibrationList (int var_count, char **vars, int Connection)
                 } 
             } else {
                 ThrowError (1, "missing parameter in string %s", txt);
-                return -1;
+                Ret = -1;
             }
-        }
-        if (!found) {
-            ThrowError (1, "XCP parameter \"%s\" is not configured and cannot calibrate", vars[x]); 
+        } else {
+            ThrowError (1, "XCP parameter \"%s\" is not configured and cannot calibrate", par_Params[x]);
             pCon->XcpCalParamList[x].Address = 0;
             pCon->XcpCalParamList[x].vid = -1;
+            Ret = -1;
         }
     }
-    return 0;
+    if (ParamIdxs != NULL) my_free(ParamIdxs);
+    return Ret;
 }
 
 static int DeleteDTOsBBVariable (int Connection)
@@ -964,14 +992,35 @@ static int BuildDTOs (CCP_VARIABLES_CONFIG *dto_conf, int var_count, char **vars
     char *Unit, *Conversion, *MinString, *MaxString;
     char *VariableFoundArray;
     int Fd = GetMainFileDescriptor();
+    int *VarIdxs;
 
     DeleteDTOsBBVariable (Connection);
-    sprintf (Section, "XCP Configuration for Target %i", Connection);
-    memset (used_bytes, 0, sizeof(used_bytes));
+    PrintFormatToString (Section, sizeof(Section), "XCP Configuration for Target %i", Connection);
+    MEMSET (used_bytes, 0, sizeof(used_bytes));
     // alles nullen
-    memset (dto_conf, 0, sizeof (CCP_VARIABLES_CONFIG));
+    MEMSET (dto_conf, 0, sizeof (CCP_VARIABLES_CONFIG));
 
+    VarIdxs = (int*)my_calloc ((size_t)var_count, sizeof (int));
+    for (x = 0; x < var_count; x++) {
+        VarIdxs[x] = -1;
+    }
     VariableFoundArray = my_calloc ((size_t)var_count, sizeof (char));
+    // first search all signals and store it's index
+    for (v = 0; ; v++) {
+        PrintFormatToString (entry, sizeof(entry), "v%i", v);
+        if (IniFileDataBaseReadString(Section, entry, "", txt, sizeof (txt), Fd) == 0) {
+            break;
+        }
+        if (StringCommaSeparate (txt, &dtype_str, &name, NULL) == 2) {
+            for (x = 0; x < var_count; x++) {
+                if (!strcmp (name, vars[x])) {
+                    VarIdxs[x] = v;
+                    break;
+                }
+            }
+        }
+    }
+
     // 3 walkthroughs
     // inide first time running all 4 Byte-Variables
     // inide second time running all 2 Byte-Variables
@@ -980,8 +1029,9 @@ static int BuildDTOs (CCP_VARIABLES_CONFIG *dto_conf, int var_count, char **vars
     for (run = 0; run < 3; run++) {
         pid = 0;
         for (x = 0; x < var_count; x++) {
-            for (v = 0; ; v++) {
-                sprintf (entry, "v%i", v);
+          if (VarIdxs[x] >= 0) {
+                v = VarIdxs[x];
+                PrintFormatToString (entry, sizeof(entry), "v%i", v);
                 if (IniFileDataBaseReadString(Section, entry, "", txt, sizeof (txt), Fd) == 0) {
                     break;
                 }
@@ -1020,6 +1070,7 @@ static int BuildDTOs (CCP_VARIABLES_CONFIG *dto_conf, int var_count, char **vars
                                 if (pid >= max_dto_packages) {
                                     ThrowError (1, "too many variables max. dto packages %i", max_dto_packages);
                                     my_free (VariableFoundArray);
+                                    my_free (VarIdxs);
                                     return -1;
                                 }
                             }
@@ -1037,8 +1088,14 @@ static int BuildDTOs (CCP_VARIABLES_CONFIG *dto_conf, int var_count, char **vars
                 } else {
                     ThrowError (1, "missing parameter in string %s", txt);
                     my_free (VariableFoundArray);
+                    my_free (VarIdxs);
                     return -1;
                 }
+            } else {
+                ThrowError (1, "cannot find variable \"%s\"", vars[x]);
+                my_free (VariableFoundArray);
+                my_free (VarIdxs);
+                return -1;
             }
         }
     }
@@ -1048,6 +1105,7 @@ static int BuildDTOs (CCP_VARIABLES_CONFIG *dto_conf, int var_count, char **vars
         }
     }
     my_free (VariableFoundArray);
+    my_free (VarIdxs);
     dto_conf->DTOPackagesCount = pid_max + 1;
     write_message (get_pid_by_name ("CANServer"), CCP_SET_ACTIVE_CON_NO, sizeof (int), (char*)&Connection);
     write_message (get_pid_by_name ("CANServer"), CPP_DTOS_DATA_STRUCTS, sizeof (CCP_VARIABLES_CONFIG), (char*)dto_conf);
@@ -1193,14 +1251,18 @@ static void ReadECUInfosCommandScheduer (XCP_CONNECTTION *pCon, int Connection)
             PrintACKMessage ("GET_ID", pCon);
             pCon->SizeOfTCUString = *(uint32_t*)(void*)&(pCon->AckCanData[4]);
             SWAP_TO_MSB_FIRST (&pCon->SizeOfTCUString, 4);
-            if (pCon->SizeOfTCUString > (sizeof (pCon->ccp_infos.TCU_ID) - 2)) {
-                ThrowError(INFO_NO_STOP, "length of TCU string (%i) is larger than = %i", pCon->SizeOfTCUString, sizeof (pCon->ccp_infos.TCU_ID) - 2);
-                pCon->SizeOfTCUString = sizeof (pCon->ccp_infos.TCU_ID) - 2;
+            if (pCon->SizeOfTCUString > (sizeof (pCon->ccp_infos.TargetIdentifier) - 2)) {
+                ThrowError(INFO_NO_STOP, "length of TCU string (%i) is larger than = %i", pCon->SizeOfTCUString, sizeof (pCon->ccp_infos.TargetIdentifier) - 2);
+                pCon->SizeOfTCUString = sizeof (pCon->ccp_infos.TargetIdentifier) - 2;
             }
             if (pCon->XcpConfig.DebugMessages) ThrowError(INFO_NO_STOP, "length of TCU string = %i", pCon->SizeOfTCUString);
             pCon->TCUStringPointer = 0;
-            memset (pCon->ccp_infos.TCU_ID, 0, sizeof (pCon->ccp_infos.TCU_ID));
-            pCon->XcpCommand = XCP_UPLOAD;
+            MEMSET (pCon->ccp_infos.TargetIdentifier, 0, sizeof (pCon->ccp_infos.TargetIdentifier));
+            if (pCon->SizeOfTCUString == 0) {
+                pCon->XcpCommand = XCP_READ_TCU_INFO_FINISHED;
+            } else {
+                pCon->XcpCommand = XCP_UPLOAD;
+            }
         }
         XCP_CHECK_TIMEOUT();
         break;
@@ -1213,17 +1275,17 @@ static void ReadECUInfosCommandScheduer (XCP_CONNECTTION *pCon, int Connection)
         switch (XcpCheckAckMessage (pCon, 0)) {
         case 1:
             PrintACKMessage ("UPLOAD", pCon);
-            MEMCPY (&(pCon->ccp_infos.TCU_ID[pCon->TCUStringPointer]), &(pCon->AckCanData[1]), x__MIN ((pCon->SizeOfTCUString - pCon->TCUStringPointer), 7));
+            MEMCPY (&(pCon->ccp_infos.TargetIdentifier[pCon->TCUStringPointer]), &(pCon->AckCanData[1]), x__MIN ((pCon->SizeOfTCUString - pCon->TCUStringPointer), 7));
             pCon->TCUStringPointer += x__MIN ((pCon->SizeOfTCUString - pCon->TCUStringPointer), 7);
             if (pCon->SizeOfTCUString == pCon->TCUStringPointer) {
-                if (pCon->XcpConfig.DebugMessages) ThrowError(INFO_NO_STOP, "TCU string = %s", pCon->ccp_infos.TCU_ID);
+                if (pCon->XcpConfig.DebugMessages) ThrowError(INFO_NO_STOP, "TCU string = %s", pCon->ccp_infos.TargetIdentifier);
                 pCon->XcpCommand = XCP_READ_TCU_INFO_FINISHED;
             } else {
                 pCon->XcpCommand = XCP_UPLOAD;
             }
             break;
         case -1:
-            pCon->ccp_infos.TCU_ID[0] = 0;
+            pCon->ccp_infos.TargetIdentifier[0] = 0;
             if (pCon->XcpConfig.DebugMessages) ThrowError(INFO_NO_STOP, "no TCU string available");
             pCon->XcpCommand = XCP_READ_TCU_INFO_FINISHED;
             break;
@@ -1388,14 +1450,18 @@ static void StartMeasurement_CommandScheduer (XCP_CONNECTTION *pCon, int Connect
             PrintACKMessage ("GET_ID", pCon);
             pCon->SizeOfTCUString = *(uint32_t*)(void*)&(pCon->AckCanData[4]);
             SWAP_TO_MSB_FIRST (&pCon->SizeOfTCUString, 4);
-            if (pCon->SizeOfTCUString > (sizeof (pCon->ccp_infos.TCU_ID) - 2)) {
-                ThrowError(INFO_NO_STOP, "length of TCU string (%i) is larger than = %i", pCon->SizeOfTCUString, sizeof (pCon->ccp_infos.TCU_ID) - 2);
-                pCon->SizeOfTCUString = sizeof (pCon->ccp_infos.TCU_ID) - 2;
+            if (pCon->SizeOfTCUString > (sizeof (pCon->ccp_infos.TargetIdentifier) - 2)) {
+                ThrowError(INFO_NO_STOP, "length of TCU string (%i) is larger than = %i", pCon->SizeOfTCUString, sizeof (pCon->ccp_infos.TargetIdentifier) - 2);
+                pCon->SizeOfTCUString = sizeof (pCon->ccp_infos.TargetIdentifier) - 2;
             }
             if (pCon->XcpConfig.DebugMessages) ThrowError(INFO_NO_STOP, "length of TCU string = %i", pCon->SizeOfTCUString);
             pCon->TCUStringPointer = 0;
-            memset (pCon->ccp_infos.TCU_ID, 0, sizeof (pCon->ccp_infos.TCU_ID));
-            pCon->XcpCommand = XCP_UPLOAD;
+            MEMSET (pCon->ccp_infos.TargetIdentifier, 0, sizeof (pCon->ccp_infos.TargetIdentifier));
+            if (pCon->SizeOfTCUString == 0) {
+                pCon->XcpCommand = XCP_GET_DAQ_PROCESSOR_INFO;
+            } else {
+                pCon->XcpCommand = XCP_UPLOAD;
+            }
         }
         XCP_CHECK_TIMEOUT();
         break;
@@ -1408,17 +1474,17 @@ static void StartMeasurement_CommandScheduer (XCP_CONNECTTION *pCon, int Connect
         switch (XcpCheckAckMessage (pCon, 0)) {
         case 1:
             PrintACKMessage ("UPLOAD", pCon);
-            MEMCPY (&(pCon->ccp_infos.TCU_ID[pCon->TCUStringPointer]), &(pCon->AckCanData[1]), x__MIN ((pCon->SizeOfTCUString - pCon->TCUStringPointer), 7));
+            MEMCPY (&(pCon->ccp_infos.TargetIdentifier[pCon->TCUStringPointer]), &(pCon->AckCanData[1]), x__MIN ((pCon->SizeOfTCUString - pCon->TCUStringPointer), 7));
             pCon->TCUStringPointer += x__MIN ((pCon->SizeOfTCUString - pCon->TCUStringPointer), 7);
             if (pCon->SizeOfTCUString == pCon->TCUStringPointer) {
-                if (pCon->XcpConfig.DebugMessages) ThrowError(INFO_NO_STOP, "TCU string = %s", pCon->ccp_infos.TCU_ID);
+                if (pCon->XcpConfig.DebugMessages) ThrowError(INFO_NO_STOP, "TCU string = %s", pCon->ccp_infos.TargetIdentifier);
                 pCon->XcpCommand = XCP_GET_DAQ_PROCESSOR_INFO;
             } else {
                 pCon->XcpCommand = XCP_UPLOAD;
             }
             break;
         case -1:
-            pCon->ccp_infos.TCU_ID[0] = 0;
+            pCon->ccp_infos.TargetIdentifier[0] = 0;
             if (pCon->XcpConfig.DebugMessages) ThrowError(INFO_NO_STOP, "no TCU string available (ignoring)");
             pCon->XcpCommand = XCP_GET_DAQ_PROCESSOR_INFO;
             break;
@@ -1855,14 +1921,18 @@ static void StartCalibration_CommandScheduer (XCP_CONNECTTION *pCon, int Connect
             PrintACKMessage ("GET_ID", pCon);
             pCon->SizeOfTCUString = *(uint32_t*)(void*)&(pCon->AckCanData[4]);
             SWAP_TO_MSB_FIRST (&pCon->SizeOfTCUString, 4);
-            if (pCon->SizeOfTCUString > (sizeof (pCon->ccp_infos.TCU_ID) - 2)) {
-                ThrowError(INFO_NO_STOP, "length of TCU string (%i) is larger than = %i", pCon->SizeOfTCUString, sizeof (pCon->ccp_infos.TCU_ID) - 2);
-                pCon->SizeOfTCUString = sizeof (pCon->ccp_infos.TCU_ID) - 2;
+            if (pCon->SizeOfTCUString > (sizeof (pCon->ccp_infos.TargetIdentifier) - 2)) {
+                ThrowError(INFO_NO_STOP, "length of TCU string (%i) is larger than = %i", pCon->SizeOfTCUString, sizeof (pCon->ccp_infos.TargetIdentifier) - 2);
+                pCon->SizeOfTCUString = sizeof (pCon->ccp_infos.TargetIdentifier) - 2;
             }
             if (pCon->XcpConfig.DebugMessages) ThrowError(INFO_NO_STOP, "length of TCU string = %i", pCon->SizeOfTCUString);
             pCon->TCUStringPointer = 0;
-            memset (pCon->ccp_infos.TCU_ID, 0, sizeof (pCon->ccp_infos.TCU_ID));
-            pCon->XcpCommand = XCP_UPLOAD;
+            MEMSET (pCon->ccp_infos.TargetIdentifier, 0, sizeof (pCon->ccp_infos.TargetIdentifier));
+            if (pCon->SizeOfTCUString == 0) {
+                goto __NO_ECU_NAME;
+            } else {
+                pCon->XcpCommand = XCP_UPLOAD;
+            }
         }
         XCP_CHECK_TIMEOUT();
         break;
@@ -1877,17 +1947,17 @@ static void StartCalibration_CommandScheduer (XCP_CONNECTTION *pCon, int Connect
             switch (XcpCheckAckMessage (pCon, 0)) {
             case 1:
                 PrintACKMessage ("UPLOAD", pCon);
-                MEMCPY (&(pCon->ccp_infos.TCU_ID[pCon->TCUStringPointer]), &(pCon->AckCanData[1]), x__MIN ((pCon->SizeOfTCUString - pCon->TCUStringPointer), 7));
+                MEMCPY (&(pCon->ccp_infos.TargetIdentifier[pCon->TCUStringPointer]), &(pCon->AckCanData[1]), x__MIN ((pCon->SizeOfTCUString - pCon->TCUStringPointer), 7));
                 pCon->TCUStringPointer += x__MIN ((pCon->SizeOfTCUString - pCon->TCUStringPointer), 7);
                 if (pCon->SizeOfTCUString == pCon->TCUStringPointer) {
-                    if (pCon->XcpConfig.DebugMessages) ThrowError(INFO_NO_STOP, "TCU string = %s", pCon->ccp_infos.TCU_ID);
+                    if (pCon->XcpConfig.DebugMessages) ThrowError(INFO_NO_STOP, "TCU string = %s", pCon->ccp_infos.TargetIdentifier);
                     Ack = 1;
                 } else {
                     pCon->XcpCommand = XCP_UPLOAD;
                 }
                 break;
             case -1:
-                pCon->ccp_infos.TCU_ID[0] = 0;
+                pCon->ccp_infos.TargetIdentifier[0] = 0;
                 if (pCon->XcpConfig.DebugMessages) ThrowError(INFO_NO_STOP, "no TCU string available");
                 Ack = 1;
                 break;
@@ -1895,6 +1965,7 @@ static void StartCalibration_CommandScheduer (XCP_CONNECTTION *pCon, int Connect
                 break;
             }
             if (Ack) {
+__NO_ECU_NAME:
                 if (pCon->XcpConfig.MoveROM2RAM) {
                     pCon->XcpCommand = XCP_COPY_CAL_PAGE;
                 } else if (pCon->XcpConfig.Xcp.SetCalPage) {
@@ -2240,11 +2311,11 @@ static int init_xcp_control (void)
         pCon->gXcpConnected = 0;
         pCon->XcpErrCode = 0;
 
-        sprintf (txt, "%s.XCP[%i].Status", Prefix, x);
+        PrintFormatToString (txt, sizeof(txt), "%s.XCP[%i].Status", Prefix, x);
         pCon->XCPStatusVid = add_bbvari (txt, BB_UDWORD, "");
-        sprintf (txt, "%s.XCP[%i].Command", Prefix, x);
+        PrintFormatToString (txt, sizeof(txt), "%s.XCP[%i].Command", Prefix, x);
         pCon->XCPCommandVid = add_bbvari (txt, BB_UDWORD, "");
-        sprintf (txt, "%s.XCP[%i].CommandSequence", Prefix, x);
+        PrintFormatToString (txt, sizeof(txt), "%s.XCP[%i].CommandSequence", Prefix, x);
         pCon->XCPCommandSequenceVid = add_bbvari (txt, BB_UDWORD, "");
         SetStatusVariableTextReplaces (pCon);
         // Send a ping every 200ms if only calibartion is active
@@ -2316,7 +2387,7 @@ int Start_XCP (int ConnectionNo, int CalibOrMeasurment, int Count, char **Variab
             if ((pCon->CcpMeasurementLabelList = my_malloc ((size_t)Count * sizeof (char*))) != NULL) {
                 p = pCon->CcpMeasurementLabelListBuffer;
                 for (i = 0; i < Count; i++) {
-                    strcpy (p, Variables[i]);
+                    StringCopyMaxCharTruncate (p, Variables[i], BufferSize - (p - pCon->CcpMeasurementLabelListBuffer));
                     pCon->CcpMeasurementLabelList[i] = p;
                     p += strlen (p) + 1;
                 }
@@ -2428,11 +2499,11 @@ int GetECUString_XCP (int ConnectionNo, char *String, int maxc)
     pCon = &XcpConnections[ConnectionNo];
     if (((pCon->gXcpConnected & MESSUREMENT_RUNNING_MASK) == MESSUREMENT_RUNNING_MASK) ||
         ((pCon->gXcpConnected & CALIBRATION_ACTIVE_MASK) == CALIBRATION_ACTIVE_MASK)) {
-        pCon->ccp_infos.TCU_ID[sizeof(pCon->ccp_infos.TCU_ID)-1] = 0;
-        sprintf (String, "%s", pCon->ccp_infos.TCU_ID);
+        pCon->ccp_infos.TargetIdentifier[sizeof(pCon->ccp_infos.TargetIdentifier)-1] = 0;
+        PrintFormatToString (String, maxc, "%s", pCon->ccp_infos.TargetIdentifier);
         Ret = 0;
     } else {
-        sprintf (String, "XCP %i conection not active", ConnectionNo);
+        PrintFormatToString (String, maxc, "XCP %i conection not active", ConnectionNo);
         Ret = -1;
     }
 
@@ -2453,8 +2524,8 @@ int LoadConfig_XCP (int ConnectionNo, char *fname)
         return -1;
     }
 
-    sprintf (SectionSrc, "XCP Configuration");
-    sprintf (SectionDst, "XCP Configuration for Target %i", ConnectionNo);
+    PrintFormatToString (SectionSrc, sizeof(SectionSrc), "XCP Configuration");
+    PrintFormatToString (SectionDst, sizeof(SectionDst), "XCP Configuration for Target %i", ConnectionNo);
 
     if (IniFileDataBaseCopySection(GetMainFileDescriptor(), Fd, SectionDst, SectionSrc)) {
         return -1;
@@ -2469,8 +2540,8 @@ int SaveConfig_XCP (int ConnectionNo, char *fname)
     char SectionSrc[256];
     char SectionDst[256];
 
-    sprintf (SectionDst, "XCP Configuration"); 
-    sprintf (SectionSrc, "XCP Configuration for Target %i", ConnectionNo);  
+    PrintFormatToString (SectionDst, sizeof(SectionDst), "XCP Configuration");
+    PrintFormatToString (SectionSrc, sizeof(SectionSrc), "XCP Configuration for Target %i", ConnectionNo);
 
     remove (fname);
     Fd = IniFileDataBaseCreateAndOpenNewIniFile(fname);

@@ -49,13 +49,23 @@
 
 static int GetAlignments(A2L_LINK *par_Link, ASAP2_MODULE_DATA* par_Module, ASAP2_RECORD_LAYOUT *par_RecordLayout, A2L_ALIGNMENTS *ret_Alignments)
 {
-    ret_Alignments->AlignmentByte = 1;
-    ret_Alignments->AlignmentWord = 1;
-    ret_Alignments->AlignmentLong = 1;
-    ret_Alignments->AlignmentInt64 = 1;
-    ret_Alignments->AlignmentFloat16 = 1;
-    ret_Alignments->AlignmentFloat32 = 1;
-    ret_Alignments->AlignmentFloat64 = 1;
+    if ((par_Link->Flags & A2L_LINK_DEFAUT_ALIGNMENT_FLAG) == A2L_LINK_DEFAUT_ALIGNMENT_FLAG) {
+        ret_Alignments->AlignmentByte = 1;
+        ret_Alignments->AlignmentWord = 2;
+        ret_Alignments->AlignmentLong = 4;
+        ret_Alignments->AlignmentInt64 = 8;
+        ret_Alignments->AlignmentFloat16 = 2;
+        ret_Alignments->AlignmentFloat32 = 4;
+        ret_Alignments->AlignmentFloat64 = 8;
+    } else {
+        ret_Alignments->AlignmentByte = 1;
+        ret_Alignments->AlignmentWord = 1;
+        ret_Alignments->AlignmentLong = 1;
+        ret_Alignments->AlignmentInt64 = 1;
+        ret_Alignments->AlignmentFloat16 = 1;
+        ret_Alignments->AlignmentFloat32 = 1;
+        ret_Alignments->AlignmentFloat64 = 1;
+    }
 
     if ((par_Link->Flags & A2L_LINK_IGNORE_MOD_COMMON_ALIGNMENTS_FLAG) == 0) {
         // first check the record layout.
@@ -319,7 +329,7 @@ static int GetAckOneRawValue(A2L_LINK *par_Link, uint64_t par_Address, uint32_t 
                     // Byte must be copied local because of multiple parameter with same address but different mask.
                     uint8_t Buffer[8];
                     if (Size > 8) Size = 8;
-                    memcpy(Buffer, Bytes, Size);
+                    MEMCPY(Buffer, Bytes, Size);
                     Bytes = Buffer;
                     if (par_ByteOrder) SwapBytes(Bytes, Size);
                     MaskBits(Bytes, Size, par_Mask);
@@ -1024,36 +1034,41 @@ A2L_DATA *GetCharacteristicData(A2L_LINK *par_Link, ASAP2_DATABASE *Database, A2
     Ret->StructPos = sizeof(A2L_DATA);
 
     Ret->Type = Characteristic->Type;
-    switch(Ret->Type) {
+ switch(Ret->Type) {
     case A2L_DATA_TYPE_MEASUREMENT:
     case A2L_DATA_TYPE_VALUE:
         Ret->ArrayCount = 0;
+        DimensionCount = 0;
         break;
     case A2L_DATA_TYPE_ASCII:
     case A2L_DATA_TYPE_VAL_BLK:
         Ret->ArrayCount = 1;
+        DimensionCount = 1;
         break;
     case A2L_DATA_TYPE_CURVE:
         Ret->ArrayCount = 2;
+        DimensionCount = 1;
         break;
     case A2L_DATA_TYPE_MAP:
         Ret->ArrayCount = 3;
+        DimensionCount = 2;
         break;
     case A2L_DATA_TYPE_CUBOID:
         Ret->ArrayCount = 4;
+        DimensionCount = 3;
         break;
     case A2L_DATA_TYPE_CUBE_4:
         Ret->ArrayCount = 5;
+        DimensionCount = 4;
         break;
     case A2L_DATA_TYPE_CUBE_5:
         Ret->ArrayCount = 6;
+        DimensionCount = 5;
         break;
     default:
     case A2L_DATA_TYPE_ERROR:
         break;
     }
-
-    //Ret->Flags = ValueFlags;
 
     GetAlignments(par_Link, Module, RecordLayout, &Alignments);
 
@@ -1132,7 +1147,6 @@ A2L_DATA *GetCharacteristicData(A2L_LINK *par_Link, ASAP2_DATABASE *Database, A2
                         Dimensions[0] = XDim;
                         Dimensions[1] = YDim;
                         Dimensions[2] = ZDim;
-                        DimensionCount = Ret->ArrayCount - 1;
                         if ((Ret = AddValueArrayHeaderToStruct(Ret, Ret->ArrayCount - 1, DimensionCount, Dimensions, ZDim * YDim * XDim, ValueFlags, &ValueOffsets)) == NULL) {
                             *ret_Error = "out of memory";
                             goto __ERROUT;
@@ -2436,10 +2450,31 @@ void FreeA2lData(void *par_Data)
     A2L_DATA_FREE(par_Data);
 }
 
-void *DupA2lData(void *par_Data)
+A2L_DATA *DupA2lData(void *par_Data)
 {
-    A2L_DATA* Ret = (A2L_DATA*)par_Data;
-    Ret = (A2L_DATA*)A2L_DATA_MALLOC(Ret->StructSize);
-    MEMCPY(Ret, par_Data, Ret->StructSize);
+    A2L_DATA* Src = (A2L_DATA*)par_Data;
+    A2L_DATA* Ret;
+    if (Src != NULL) {
+        Ret = (A2L_DATA*)A2L_DATA_MALLOC(Src->StructSize);
+        MEMCPY(Ret, par_Data, Src->StructSize);
+    } else {
+        Ret = NULL;
+    }
     return Ret;
+}
+
+int CompareIfA2lDataAreEqual(A2L_DATA *par_Data1, A2L_DATA *par_Data2)
+{
+    if (par_Data1->Type == par_Data2->Type) {
+        if (par_Data1->StructPos == par_Data2->StructPos) {
+            int x;
+            for (x = sizeof(A2L_DATA); x < par_Data1->StructPos; x++) {
+                if (((char*)par_Data1)[x] != ((char*)par_Data2)[x]) {
+                    return 0;  // not equal
+                }
+            }
+            return 1; // are equal
+        }
+    }
+    return 0;  // not equal
 }

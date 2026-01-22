@@ -18,6 +18,8 @@
 #include "Platform.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include "StringMaxChar.h"
+#include "PrintFormatToString.h"
 #include "IniDataBase.h"
 #include "DebugInfos.h"
 #include "MainValues.h"
@@ -79,7 +81,7 @@ int IsIn_AllWindowOfTypeList (int par_Fd, char *WindowList, const char *WindowNa
     if (WindowList == NULL) return 0;
 
     for (x = StartIdx;;x++) {
-        sprintf (Entry, "W%i", x);
+        PrintFormatToString (Entry, sizeof(Entry), "W%i", x);
         if (IniFileDataBaseReadString (WindowList, Entry, "", RefName, sizeof (RefName), par_Fd) == 0) {
             ret = -1;
             break;
@@ -89,7 +91,7 @@ int IsIn_AllWindowOfTypeList (int par_Fd, char *WindowList, const char *WindowNa
             break;
         }
     }
-    return x;
+    return ret;
 }
 
 int IsIn_Sheet (int par_Fd, const char *SheetFilter, const char *WindowName)
@@ -101,9 +103,9 @@ int IsIn_Sheet (int par_Fd, const char *SheetFilter, const char *WindowName)
     char SheetName[INI_MAX_SECTION_LENGTH];
 
     for (s = 0;; s++) {
-        sprintf (Section, "GUI/OpenWindowsForSheet%i", s);
+        PrintFormatToString (Section, sizeof(Section), "GUI/OpenWindowsForSheet%i", s);
         if (s == 0) {  // default sheet
-            strcpy (SheetName, "default");
+            STRING_COPY_TO_ARRAY (SheetName, "default");
         } else {
             if (IniFileDataBaseReadString (Section, "SheetName", "",
                                            SheetName, sizeof(SheetName), par_Fd) == 0) {
@@ -112,7 +114,7 @@ int IsIn_Sheet (int par_Fd, const char *SheetFilter, const char *WindowName)
         }
         if (!Compare2StringsWithWildcardsCaseSensitive (SheetName, SheetFilter, 1)) {
             for (x = 1;;x++) {
-                sprintf (Entry, "W%i", x);
+                PrintFormatToString (Entry, sizeof(Entry), "W%i", x);
                 if (IniFileDataBaseReadString(Section, Entry, "", RefWindowName, sizeof (RefWindowName), par_Fd) == 0)
                     break;   // End of the list
                 if (!strcmp (WindowName, RefWindowName)) {

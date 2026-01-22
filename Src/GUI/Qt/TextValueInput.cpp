@@ -19,6 +19,7 @@
 #include "TextValueInput.h"
 #include <QResizeEvent>
 extern "C" {
+#include "PrintFormatToString.h"
 #include "ThrowError.h"
 }
 
@@ -125,7 +126,7 @@ void TextValueInput::SetValue (double par_Value)
     char Help[256];
     int Prec = 15;
     while (1) {
-        sprintf (Help, "%.*g", Prec, par_Value);
+        PrintFormatToString (Help, sizeof(Help), "%.*g", Prec, par_Value);
         if ((Prec++) == 18 || (par_Value == strtod(Help, nullptr))) break;
     }
     setText(QString(Help));

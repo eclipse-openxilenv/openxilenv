@@ -23,6 +23,7 @@
 #include "ThrowError.h"
 #include "MyMemory.h"
 #include "StringMaxChar.h"
+#include "PrintFormatToString.h"
 #include "IniDataBase.h"
 #include "Blackboard.h"
 #include "BlackboardAccess.h"
@@ -501,7 +502,7 @@ static NEW_CAN_SERVER_CONFIG *SetInitDataOfCANObject (NEW_CAN_SERVER_CONFIG *csc
     if (Size < 8) Size = 8;
 
     InitBytes = _alloca ((size_t)Size);
-    memset (InitBytes, 0, (size_t)Size);
+    MEMSET (InitBytes, 0, (size_t)Size);
 
 #ifdef _WIN32
     Help_u64  = _strtoui64 (InitDataString, NULL, 0);
@@ -642,11 +643,79 @@ int CheckCanFdPossibleMessageSize(int par_Size)
     }
 }
 
+int ReadBaudrateConfig(NEW_CAN_SERVER_CONFIG *csc, int c, int VariantenCount, char *VariantsPerChannel, int par_Fd)
+{
+    char Line[1024];
+    char Section[256];
+    char Entry[256];
+
+    PrintFormatToString (Entry, sizeof(Entry), "can_controller%i_baudrate_config", c+1);
+    csc->channels[c].BaudrateConfig = IniFileDataBaseReadInt ("CAN/Global", Entry, 0, par_Fd);
+
+    if ((csc->channels[c].BaudrateConfig & 0xF0000) == 0x10000) {  // read from blackboard
+        // do not use the baud rate from the variant configuration, read the baudrate from some blackboard variables
+        PrintFormatToString (Line, sizeof(Line), "SoftcarRT.CAN%i.Baudrate", c);
+        csc->channels[c].bus_frq = (uint32_t)(direct_solve_equation(Line) + 0.5);
+        PrintFormatToString (Line, sizeof(Line), "SoftcarRT.CAN%i.FdEnable", c);
+        csc->channels[c].can_fd_enabled = (direct_solve_equation(Line) >= 0.5);
+        PrintFormatToString (Line, sizeof(Line), "SoftcarRT.CAN%i.SamplePoint", c);
+        csc->channels[c].sample_point = direct_solve_equation(Line);
+        if (csc->channels[c].can_fd_enabled) {
+            PrintFormatToString (Line, sizeof(Line), "SoftcarRT.CAN%i.DataSamplePoint", c);
+            csc->channels[c].data_sample_point =  direct_solve_equation(Line);
+            PrintFormatToString (Line, sizeof(Line), "SoftcarRT.CAN%i.DataBaudrate", c);
+            csc->channels[c].data_baud_rate = (uint32_t)(direct_solve_equation(Line) + 0.5);
+        }
+    } else if ((csc->channels[c].BaudrateConfig & 0xF0000) == 0x40000) {  // user
+        PrintFormatToString (Entry, sizeof(Entry), "can_controller%i_user_config_fd", c+1);
+        csc->channels[c].can_fd_enabled = IniFileDataBaseReadYesNo ("CAN/Global", Entry, 0, par_Fd);
+        PrintFormatToString (Entry, sizeof(Entry), "can_controller%i_user_config_baud_rate", c+1);
+        csc->channels[c].bus_frq = IniFileDataBaseReadInt ("CAN/Global", Entry, 500, par_Fd);
+        PrintFormatToString (Entry, sizeof(Entry), "can_controller%i_user_config_sample_point", c+1);
+        csc->channels[c].sample_point = IniFileDataBaseReadFloat ("CAN/Global", Entry, 0.75, par_Fd);
+        PrintFormatToString (Entry, sizeof(Entry), "can_controller%i_user_config_data_baud_rate", c+1);
+        csc->channels[c].data_baud_rate = IniFileDataBaseReadInt ("CAN/Global", Entry, 4000, par_Fd);
+        PrintFormatToString (Entry, sizeof(Entry), "can_controller%i_user_config_data_sample_point", c+1);
+        csc->channels[c].data_sample_point = IniFileDataBaseReadFloat ("CAN/Global", Entry, 0.8, par_Fd);
+    } else {
+        int VariantNo;
+        int VariantPerChannelCount = 0;
+        char *p;
+        int BaudRateConfigVariant = csc->channels[c].BaudrateConfig & 0xFFFF;
+
+        PrintFormatToString (Entry, sizeof(Entry), "can_controller%i_variante", c+1);
+        IniFileDataBaseReadString ("CAN/Global", Entry, "", Line, sizeof (Line), par_Fd);
+        p = VariantsPerChannel;
+        while (isdigit (*p)) {
+            int LastOne = 0;
+            VariantNo = strtol (p, &p, 0);
+            if (*p == ',') p++;
+            else LastOne = 1;
+            if ((((csc->channels[c].BaudrateConfig & 0xF0000) == 0x20000) && (VariantPerChannelCount == 0)) || // read from first variant
+                (((csc->channels[c].BaudrateConfig & 0xF0000) == 0x30000) && LastOne) || // read from last variant
+                (((csc->channels[c].BaudrateConfig & 0xF0000) == 0x0) && (VariantPerChannelCount == BaudRateConfigVariant))) {  // use a selected variant
+                if ((VariantNo < 0) || (VariantNo >= VariantenCount))  {
+                    ThrowError (1, "wrong variante number %i (0...%i)", VariantNo, VariantenCount);
+                    return -1;
+                }
+                PrintFormatToString (Section, sizeof(Section), "CAN/Variante_%i", VariantNo);
+                csc->channels[c].bus_frq = IniFileDataBaseReadInt (Section, "baud rate", 0, par_Fd);
+                csc->channels[c].can_fd_enabled = IniFileDataBaseReadYesNo (Section, "can fd", 0, par_Fd);
+                csc->channels[c].sample_point = IniFileDataBaseReadFloat (Section, "sample point", 0.75, par_Fd);
+                csc->channels[c].data_sample_point = IniFileDataBaseReadFloat (Section, "data sample point", 0.8, par_Fd);
+                csc->channels[c].data_baud_rate = IniFileDataBaseReadInt (Section, "data baud rate", 4000, par_Fd);
+            }
+            VariantPerChannelCount++;
+        }
+    }
+    return 0;
+}
+
 NEW_CAN_SERVER_CONFIG *ReadCanConfig (int par_Fd)
 {
     NEW_CAN_SERVER_CONFIG *csc;
     char txt[INI_MAX_LINE_LENGTH];
-    char txt2[INI_MAX_LINE_LENGTH];
+    char VariantsPerChannel[INI_MAX_LINE_LENGTH];
     char section[INI_MAX_SECTION_LENGTH];
     char entry[256];
     int varianten;
@@ -674,7 +743,7 @@ NEW_CAN_SERVER_CONFIG *ReadCanConfig (int par_Fd)
     // index should never be 0 so we add a not used string at the beginning
     csc = AddByteCode2CanCfg (csc, &HelpInt, "CAN-Config", 11);
 
-    sprintf (section, "CAN/Global");
+    PrintFormatToString (section, sizeof(section), "CAN/Global");
     // do not use units in signal definitions for blackboard variable descriptions
     csc->dont_use_units_for_bb = IniFileDataBaseReadInt (section, "dont use units for blackboard", 0, par_Fd);
     csc->dont_use_init_values_for_existing_variables = s_main_ini_val.DontUseInitValuesForExistingCanVariables;
@@ -730,16 +799,26 @@ NEW_CAN_SERVER_CONFIG *ReadCanConfig (int par_Fd)
         }
     }
     for (c = 0; c < csc->channel_count; c++) {
+        int VariantCount = 0;
         oo = 0;
         csc->channels[c].object_count = 0;
         rxc = txc = 0;
-        sprintf (section, "CAN/Global");
+        PrintFormatToString (section, sizeof(section), "CAN/Global");
         csc->channels[c].enable = 0x0;
-        sprintf (entry, "can_controller%i_startup_state", c+1);
+        PrintFormatToString (entry, sizeof(entry), "can_controller%i_startup_state", c+1);
+        csc->channels[c].StartupState = IniFileDataBaseReadInt ("CAN/Global", entry, 1, par_Fd);
+        PrintFormatToString (entry, sizeof(entry), "can_controller%i_variante", c+1);
+        IniFileDataBaseReadString ("CAN/Global", entry, "", VariantsPerChannel, sizeof (VariantsPerChannel), par_Fd);
+
+        if (ReadBaudrateConfig(csc, c, can_varianten_count, VariantsPerChannel, par_Fd)) {
+            remove_canserver_config (csc);
+            return NULL;
+        }
+        p = VariantsPerChannel;
         csc->channels[c].StartupState =  IniFileDataBaseReadInt ("CAN/Global", entry, 1, par_Fd);
-        sprintf (entry, "can_controller%i_variante", c+1);
-        IniFileDataBaseReadString ("CAN/Global", entry, "", txt2, sizeof (txt2), par_Fd);
-        p = txt2;
+        PrintFormatToString (entry, sizeof(entry), "can_controller%i_variante", c+1);
+        IniFileDataBaseReadString ("CAN/Global", entry, "", VariantsPerChannel, sizeof (VariantsPerChannel), par_Fd);
+        p = VariantsPerChannel;
         csc->channels[c].j1939_flag = 0;
         for (x = 0; x < J1939TP_MP_MAX_SRC_ADDRESSES; x++) {
             csc->channels[c].J1939_src_addr[x] = (unsigned char)0xFF;
@@ -755,12 +834,7 @@ NEW_CAN_SERVER_CONFIG *ReadCanConfig (int par_Fd)
                 return NULL;
             }
 
-            sprintf (section, "CAN/Variante_%i", varianten);
-            csc->channels[c].bus_frq = IniFileDataBaseReadInt (section, "baud rate", 0, par_Fd);
-            csc->channels[c].can_fd_enabled = IniFileDataBaseReadYesNo (section, "can fd", 0, par_Fd);
-            csc->channels[c].sample_point = IniFileDataBaseReadFloat (section, "sample point", 0.75, par_Fd);
-            csc->channels[c].data_sample_point = IniFileDataBaseReadFloat (section, "sample point", 0.8, par_Fd);
-            csc->channels[c].data_baud_rate = IniFileDataBaseReadInt (section, "data baud rate", 4000, par_Fd);
+            PrintFormatToString (section, sizeof(section), "CAN/Variante_%i", varianten);
             IniFileDataBaseReadString (section, "name", "", VarianteName, sizeof (VarianteName), par_Fd);
 
             IniFileDataBaseReadString (section, "ControlBbName", "PrefixId", txt, sizeof (txt), par_Fd);
@@ -783,7 +857,7 @@ NEW_CAN_SERVER_CONFIG *ReadCanConfig (int par_Fd)
             for (x = 0; x < 4; x++) {
                 unsigned char Addr;
                 int i;
-                sprintf (entry, "j1939 src addr %i", x);
+                PrintFormatToString (entry, sizeof(entry), "j1939 src addr %i", x);
                 Addr = (unsigned char)IniFileDataBaseReadInt (section, entry, 0xFF, par_Fd);
                 if (Addr != 0xFF) {
                     for (i = 0; i < J1939TP_MP_MAX_SRC_ADDRESSES; i++) {
@@ -815,7 +889,7 @@ NEW_CAN_SERVER_CONFIG *ReadCanConfig (int par_Fd)
                     remove_canserver_config (csc);
                     return NULL;
                 }
-                sprintf (section, "CAN/Variante_%i/Object_%i", varianten, o);
+                PrintFormatToString (section, sizeof(section), "CAN/Variante_%i/Object_%i", varianten, o);
 
                 IniFileDataBaseReadString (section, "direction", "", txt, sizeof (txt), par_Fd);
                 if (!strcmpi ("write", txt) || !strcmpi ("write_variable_id", txt)) {
@@ -828,7 +902,11 @@ NEW_CAN_SERVER_CONFIG *ReadCanConfig (int par_Fd)
                     }
                     txc++;
                 } else {
-                    csc->objects[o_pos].dir = READ_OBJECT;
+                    if (!strcmpi ("read_startup_variable_id", txt)) {
+                        csc->objects[o_pos].dir = READ_STARTUP_VARIABLE_ID_OBJECT;
+                    } else {
+                        csc->objects[o_pos].dir = READ_OBJECT;
+                    }
                     if (rxc >= (MAX_RX_OBJECTS_ONE_CHANNEL-1)) {
                         ThrowError (1, "max. %i RX objects for one channals allowed", (int)(MAX_RX_OBJECTS_ONE_CHANNEL-1));
                         remove_canserver_config (csc);
@@ -845,24 +923,25 @@ __TRY_AGAIN:
                     IniFileDataBaseReadString (section, "name", "", txt, sizeof (txt), par_Fd);
                     break;
                 case PrefixObjName:
-                    sprintf (txt, "%s.CAN%i.", GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_CAN_NAMES), c);
+                    PrintFormatToString (txt, sizeof(txt), "%s.CAN%i.", GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_CAN_NAMES), c);
                     IniFileDataBaseReadString (section, "name", "", txt+strlen(txt), sizeof (txt)-(DWORD)strlen(txt), par_Fd);
                     break;
                 case NoPrefixVarObjName:
-                    sprintf (txt, "%s.", VarianteName);
+                    PrintFormatToString (txt, sizeof(txt), "%s.", VarianteName);
                     IniFileDataBaseReadString (section, "name", "", txt+strlen(txt), sizeof (txt)-(DWORD)strlen(txt), par_Fd);
                     break;
                 case PrefixVarObjName:
-                    sprintf (txt, "%s.CAN%i.%s.", GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_CAN_NAMES), c, VarianteName);
+                    PrintFormatToString (txt, sizeof(txt), "%s.CAN%i.%s.", GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_CAN_NAMES), c, VarianteName);
                     IniFileDataBaseReadString (section, "name", "", txt+strlen(txt), sizeof (txt)-(DWORD)strlen(txt), par_Fd);
                     break;
                 case PrefixId:
                 //default:
-                    if (csc->objects[o_pos].dir == WRITE_VARIABLE_ID_OBJECT) {
-                        sprintf (txt, "%s.CAN%i.%s.", GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_CAN_NAMES), c, VarianteName);
+                    if ((csc->objects[o_pos].dir == WRITE_VARIABLE_ID_OBJECT) ||
+                        (csc->objects[o_pos].dir == READ_STARTUP_VARIABLE_ID_OBJECT)) {
+                        PrintFormatToString (txt, sizeof(txt), "%s.CAN%i.%s.", GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_CAN_NAMES), c, VarianteName);
                         IniFileDataBaseReadString (section, "name", "", txt+strlen(txt), sizeof (txt)-(DWORD)strlen(txt), par_Fd);
                     } else {
-                        sprintf (txt, "%s.CAN%i.0x%X", GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_CAN_NAMES), c, csc->objects[o_pos].id);
+                        PrintFormatToString (txt, sizeof(txt), "%s.CAN%i.0x%X", GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_CAN_NAMES), c, csc->objects[o_pos].id);
                     }
                     break;
                 }
@@ -875,6 +954,14 @@ __TRY_AGAIN:
                 }
                 if (csc->objects[o_pos].vid <= 0) {
                     ThrowError(1, "cannot add blackboard variable \"%s\" (%i)", txt, csc->objects[o_pos].vid);
+                } else {
+                    if (csc->objects[o_pos].dir == READ_STARTUP_VARIABLE_ID_OBJECT) {
+                        uint32_t Id = (uint32_t)(read_bbvari_convert_double(csc->objects[o_pos].vid) + 0.5);
+                        if (Id > 0) {
+                            csc->objects[o_pos].id = Id;
+                        }
+                        csc->objects[o_pos].dir = READ_OBJECT;  // only the ID will be read from the Blackboard than switch to normal read object
+                    }
                 }
                 IniFileDataBaseReadString (section, "extended", "", txt, sizeof (txt), par_Fd);
                 if (!strcmpi ("yes", txt)) csc->objects[o_pos].ext = EXTENDED_ID;
@@ -1007,7 +1094,7 @@ __TRY_AGAIN:
                 for (xx = x = 0; x < MAX_ADDITIONAL_EQUS; x++) {  // max. 100 equations
                     int dtype;
                     char *p, *n, *d;
-                    sprintf (entry, "additional_variable_%i", x);
+                    PrintFormatToString (entry, sizeof(entry), "additional_variable_%i", x);
                     if (IniFileDataBaseReadString (section, entry, "", txt, sizeof (txt), par_Fd) <= 0) {
                         break;
                     }
@@ -1037,7 +1124,7 @@ __TRY_AGAIN:
                 // additional equations before transmit/receive CAN message
                 for (xx = x = 0; x < MAX_ADDITIONAL_EQUS; x++) {  // max. 100 Equations
                     int UseCANData;
-                    sprintf (entry, "equ_before_%i", x);
+                    PrintFormatToString (entry, sizeof(entry), "equ_before_%i", x);
                     if (IniFileDataBaseReadString (section, entry, "", txt, sizeof (txt), par_Fd) <= 0) {
                         break;
                     }
@@ -1059,7 +1146,7 @@ __TRY_AGAIN:
                 // additional equations behind transmit/receive CAN message
                 for (xx = x = 0; x < MAX_ADDITIONAL_EQUS; x++) {  // max. 100 equations
                     int UseCANData;
-                    sprintf (entry, "equ_behind_%i", x);
+                    PrintFormatToString (entry, sizeof(entry), "equ_behind_%i", x);
                     if (IniFileDataBaseReadString (section, entry, "", txt, sizeof (txt), par_Fd) <= 0) {
                         break;
                     }
@@ -1090,7 +1177,7 @@ __TRY_AGAIN:
                         remove_canserver_config (csc);
                         return NULL;
                     }
-                    sprintf (section, "CAN/Variante_%i/Object_%i/Signal_%i", varianten, o, s);
+                    PrintFormatToString (section, sizeof(section), "CAN/Variante_%i/Object_%i/Signal_%i", varianten, o, s);
                     if (IniFileDataBaseReadString (section, "name", "", Name, 512, par_Fd) <= 0) {
                         ThrowError (ERROR_NO_STOP, "signal \"%s\" seems to be missing or \"signal_count\" of the parent object are wrong", section);
                         csc->objects[o_pos].signal_count = s;
@@ -1239,6 +1326,7 @@ __TRY_AGAIN:
                 csc->channels[c].objects[oo] = (int16_t)o_pos;
                 o_pos++;
             }
+            VariantCount++;
         }
 
         // all Objects of the channel
@@ -1274,7 +1362,8 @@ __TRY_AGAIN:
         csc->channels[c].rx_object_count = csc->channels[c].tx_object_count = 0;
         for (o = 0; o < csc->channels[c].object_count; o++) {
             o_p = csc->channels[c].objects[o];
-            if (csc->objects[o_p].dir == READ_OBJECT) {       // read object
+            if ((csc->objects[o_p].dir == READ_OBJECT) ||
+                (csc->objects[o_pos].dir == READ_STARTUP_VARIABLE_ID_OBJECT)) {        // read object
                 if ((csc->objects[o_p].type == NORMAL_OBJECT) ||   // normal object
                     (csc->objects[o_p].type == J1939_22_MULTI_C_PG) ||   // J1939 22 multi C_PG
                     // J1939 Objekt nicht einsortieren

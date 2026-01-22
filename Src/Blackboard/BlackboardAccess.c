@@ -37,6 +37,7 @@ static inline uint64_t _umul128(uint64_t a, uint64_t b, uint64_t *ret_HighPart)
 #include "Scheduler.h"
 #include "Blackboard.h"
 #include "BlackboardHashIndex.h"
+#include "BlackboardConversion.h"
 #include "ExecutionStack.h"
 #include "TextReplace.h"
 #include "StringMaxChar.h"
@@ -53,12 +54,79 @@ static inline uint64_t _umul128(uint64_t a, uint64_t b, uint64_t *ret_HighPart)
 
 #define UNUSED(x) (void)(x)
 
+
+static int convert_physical_internal(int vid_index, double raw_value, double *ret_phys_value)
+{
+    // Check if conversion type matches
+    switch (blackboard[vid_index].pAdditionalInfos->Conversion.Type) {
+    case BB_CONV_FORMULA:
+        *ret_phys_value = execute_stack_replace_variable_with_parameter((struct EXEC_STACK_ELEM *)blackboard[vid_index].pAdditionalInfos->Conversion.Conv.Formula.FormulaByteCode,
+                                                                        blackboard[vid_index].Vid,
+                                                                        raw_value);
+        //*ret_phys_value = execute_stack_whith_parameter ((struct EXEC_STACK_ELEM *)blackboard[vid_index].pAdditionalInfos->Conversion.Conv.Formula.FormulaByteCode,
+        //                                                 raw_value);
+        return 0;
+    case BB_CONV_FACTOFF:
+        *ret_phys_value = blackboard[vid_index].pAdditionalInfos->Conversion.Conv.FactorOffset.Factor * raw_value +
+                          blackboard[vid_index].pAdditionalInfos->Conversion.Conv.FactorOffset.Offset;
+        return 0;
+    case BB_CONV_OFFFACT:
+        *ret_phys_value = raw_value + (blackboard[vid_index].pAdditionalInfos->Conversion.Conv.FactorOffset.Offset) *
+                          blackboard[vid_index].pAdditionalInfos->Conversion.Conv.FactorOffset.Factor;
+        return 0;
+    case BB_CONV_TAB_INTP:
+    case BB_CONV_TAB_NOINTP:
+    {
+        int x, Size;
+        double m, RawDelta, PhysDelta;
+        struct CONVERSION_TABLE_VALUE_PAIR *Values;
+
+        Size = blackboard[vid_index].pAdditionalInfos->Conversion.Conv.Table.Size;
+        Values = blackboard[vid_index].pAdditionalInfos->Conversion.Conv.Table.Values;
+        for (x = 0; x < Size; x++) {
+            if (Values[x].Raw >= raw_value) {
+                if (x == 0) {
+                    *ret_phys_value = Values[x].Phys;
+                } else {
+                    if (blackboard[vid_index].pAdditionalInfos->Conversion.Type == BB_CONV_TAB_INTP) {
+                        RawDelta = Values[x].Raw - Values[x-1].Raw;
+                        if ((RawDelta <= 0.0) && (RawDelta >= 0.0)) {  // == 0.0
+                            *ret_phys_value = Values[x-1].Phys;  // use the smallest one
+                        } else {
+                            PhysDelta = Values[x].Phys - Values[x-1].Phys;
+                            m = PhysDelta / RawDelta;
+                            *ret_phys_value = Values[x-1].Phys + m * (raw_value - Values[x-1].Raw);
+                        }
+                    } else {
+                        *ret_phys_value = Values[x].Phys;
+                    }
+                }
+                break;  // for(;;)
+            }
+        }
+        if (x == Size) {
+            *ret_phys_value = Values[Size - 1].Phys;
+        }
+        return 0;
+        break;
+    }
+    case BB_CONV_RAT_FUNC:
+        if (Conv_RationalFunctionRawToPhys(&blackboard[vid_index].pAdditionalInfos->Conversion, raw_value,ret_phys_value) == 0) {
+            return 0;
+        }
+        break;
+    default:
+        break;
+    }
+    return -1;
+}
+
 void write_bbvari_byte_x (PID pid, VID vid, int8_t v)
 {
     int vid_index;
     int pid_index;
 
-    // Is blackboard exists here or inside the remote master or not at al
+    // Is blackboard exists here or inside the remote master or not at all
     if (blackboard == NULL) {
 #ifndef REMOTE_MASTER
         if (s_main_ini_val.ConnectToRemoteMaster) {
@@ -100,7 +168,7 @@ void write_bbvari_ubyte_x (PID pid, VID vid, uint8_t v)
     int vid_index;
     int pid_index;
 
-    // Is blackboard exists here or inside the remote master or not at al
+    // Is blackboard exists here or inside the remote master or not at all
     if (blackboard == NULL) {
 #ifndef REMOTE_MASTER
         if (s_main_ini_val.ConnectToRemoteMaster) {
@@ -142,7 +210,7 @@ void write_bbvari_word_x (PID pid, VID vid, int16_t v)
     int vid_index;
     int pid_index;
 
-    // Is blackboard exists here or inside the remote master or not at al
+    // Is blackboard exists here or inside the remote master or not at all
     if (blackboard == NULL) {
 #ifndef REMOTE_MASTER
         if (s_main_ini_val.ConnectToRemoteMaster) {
@@ -184,7 +252,7 @@ void write_bbvari_uword_x (PID pid, VID vid, uint16_t v)
     int vid_index;
     int pid_index;
 
-    // Is blackboard exists here or inside the remote master or not at al
+    // Is blackboard exists here or inside the remote master or not at all
     if (blackboard == NULL) {
 #ifndef REMOTE_MASTER
         if (s_main_ini_val.ConnectToRemoteMaster) {
@@ -226,7 +294,7 @@ void write_bbvari_dword_x (PID pid, VID vid, int32_t v)
     int vid_index;
     int pid_index;
 
-    // Is blackboard exists here or inside the remote master or not at al
+    // Is blackboard exists here or inside the remote master or not at all
     if (blackboard == NULL) {
 #ifndef REMOTE_MASTER
         if (s_main_ini_val.ConnectToRemoteMaster) {
@@ -268,7 +336,7 @@ void write_bbvari_udword_x (PID pid, VID vid, uint32_t v)
     int vid_index;
     int pid_index;
 
-    // Is blackboard exists here or inside the remote master or not at al
+    // Is blackboard exists here or inside the remote master or not at all
     if (blackboard == NULL) {
 #ifndef REMOTE_MASTER
         if (s_main_ini_val.ConnectToRemoteMaster) {
@@ -310,7 +378,7 @@ void write_bbvari_udword_without_check(VID vid, uint32_t v)
 {
 	int vid_index;
 
-    // Is blackboard exists here or inside the remote master or not at al
+    // Is blackboard exists here or inside the remote master or not at all
 	if (blackboard == NULL) {
 		return;
 	}
@@ -332,7 +400,7 @@ void write_bbvari_qword_x (PID pid, VID vid, int64_t v)
     int vid_index;
     int pid_index;
 
-    // Is blackboard exists here or inside the remote master or not at al
+    // Is blackboard exists here or inside the remote master or not at all
     if (blackboard == NULL) {
 #ifndef REMOTE_MASTER
         if (s_main_ini_val.ConnectToRemoteMaster) {
@@ -374,7 +442,7 @@ void write_bbvari_uqword_x (PID pid, VID vid, uint64_t v)
     int vid_index;
     int pid_index;
 
-    // Is blackboard exists here or inside the remote master or not at al
+    // Is blackboard exists here or inside the remote master or not at all
     if (blackboard == NULL) {
 #ifndef REMOTE_MASTER
         if (s_main_ini_val.ConnectToRemoteMaster) {
@@ -416,7 +484,7 @@ void write_bbvari_float_x (PID pid, VID vid, float v)
     int vid_index;
     int pid_index;
 
-    // Is blackboard exists here or inside the remote master or not at al
+    // Is blackboard exists here or inside the remote master or not at all
     if (blackboard == NULL) {
 #ifndef REMOTE_MASTER
         if (s_main_ini_val.ConnectToRemoteMaster) {
@@ -458,7 +526,7 @@ void write_bbvari_double_x (PID pid, VID vid, double v)
     int vid_index;
     int pid_index;
 
-    // Is blackboard exists here or inside the remote master or not at al
+    // Is blackboard exists here or inside the remote master or not at all
     if (blackboard == NULL) {
 #ifndef REMOTE_MASTER
         if (s_main_ini_val.ConnectToRemoteMaster) {
@@ -500,7 +568,7 @@ void write_bbvari_double_without_check(VID vid, double v)
 {
 	int vid_index;
 
-    // Is blackboard exists here or inside the remote master or not at al
+    // Is blackboard exists here or inside the remote master or not at all
 	if (blackboard == NULL) {
 		return;
 	}
@@ -522,7 +590,7 @@ void write_bbvari_union_x (PID pid, VID vid, union BB_VARI v)
     int vid_index;
     int pid_index;
 
-    // Is blackboard exists here or inside the remote master or not at al
+    // Is blackboard exists here or inside the remote master or not at all
     if (blackboard == NULL) {
 #ifndef REMOTE_MASTER
         if (s_main_ini_val.ConnectToRemoteMaster) {
@@ -560,7 +628,7 @@ void write_bbvari_union_pid (int Pid, VID vid, int DataType, union BB_VARI v)
     int vid_index;
     int pid_index;
 
-    // Is blackboard exists here or inside the remote master or not at al
+    // Is blackboard exists here or inside the remote master or not at all
     if (blackboard == NULL) {
 #ifndef REMOTE_MASTER
         if (s_main_ini_val.ConnectToRemoteMaster) {
@@ -705,7 +773,7 @@ void ConvertDoubleToUnion(enum BB_DATA_TYPES Type,
         ret_Value->d = Value;
         break;
     default:
-        memset(ret_Value, 0, sizeof (union BB_VARI));
+        STRUCT_ZERO_INIT(*ret_Value, union BB_VARI);
         break;
     }
 }
@@ -746,7 +814,7 @@ void ConvertRawMemoryToUnion(enum BB_DATA_TYPES Type,
         ret_Value->d =  *(double*)RawMemValue;
         break;
     default:
-        memset(ret_Value, 0, sizeof (union BB_VARI));
+        STRUCT_ZERO_INIT(*ret_Value, union BB_VARI);
         break;
     }
 }
@@ -756,7 +824,7 @@ void write_bbvari_minmax_check_pid (PID pid, VID vid, double v)
     int vid_index;
     int pid_index;
 
-    // Is blackboard exists here or inside the remote master or not at al
+    // Is blackboard exists here or inside the remote master or not at all
     if (blackboard == NULL) {
 #ifndef REMOTE_MASTER
         if (s_main_ini_val.ConnectToRemoteMaster) {
@@ -845,7 +913,7 @@ int write_bbvari_convert_to (PID pid, VID vid, int convert_from_type, void *ret_
     int vid_index;
     int pid_index;
 
-    // Is blackboard exists here or inside the remote master or not at al
+    // Is blackboard exists here or inside the remote master or not at all
     if (blackboard != NULL) {
         // Determine the vid index
         if ((vid_index = get_variable_index(vid)) >= 0) {
@@ -1145,7 +1213,127 @@ static int write_bbvari_phys_minmax_check_inner(int vid_index, double new_phys_v
             }
         }
     }
-    // Not outsie the data type range
+    // Not outside the data type range
+    if (new_raw_value > max) {
+        new_raw_value = max;
+    }
+    if (new_raw_value < min) {
+        new_raw_value = min;
+    }
+    ConvertDoubleToUnion(blackboard[vid_index].Type, new_raw_value, ret_Value);
+    return 0;
+}
+
+static int write_bbvari_factor_offset_minmax_check_inner(int vid_index, double new_phys_value, union BB_VARI *ret_Value, double *ret_phys_value)
+{
+    double old_raw_value;
+    double new_raw_value;
+    double min;
+    double max;
+
+    get_datatype_min_max_value (blackboard[vid_index].Type, &min, &max);
+
+    if (bbvari_to_double (blackboard[vid_index].Type, blackboard[vid_index].Value, &old_raw_value) == -1) {
+        return -1;
+    }
+    if (blackboard[vid_index].pAdditionalInfos->Conversion.Type == BB_CONV_FACTOFF) {
+        new_raw_value = new_phys_value * blackboard[vid_index].pAdditionalInfos->Conversion.Conv.FactorOffset.Factor +
+                        blackboard[vid_index].pAdditionalInfos->Conversion.Conv.FactorOffset.Offset;
+    } else {
+        new_raw_value = (new_phys_value + blackboard[vid_index].pAdditionalInfos->Conversion.Conv.FactorOffset.Factor) *
+                        blackboard[vid_index].pAdditionalInfos->Conversion.Conv.FactorOffset.Factor;
+    }
+    // Not outside the data type range
+    if (new_raw_value > max) {
+        new_raw_value = max;
+    }
+    if (new_raw_value < min) {
+        new_raw_value = min;
+    }
+    ConvertDoubleToUnion(blackboard[vid_index].Type, new_raw_value, ret_Value);
+    return 0;
+}
+
+static int write_bbvari_table_minmax_check_inner(int vid_index, double new_phys_value, union BB_VARI *ret_Value, double *ret_phys_value)
+{
+    double old_raw_value;
+    double new_raw_value;
+    double min;
+    double max;
+    int x, Size;
+    double m, PhysDelta, RawDelta;
+    struct CONVERSION_TABLE_VALUE_PAIR *Values;
+
+    get_datatype_min_max_value (blackboard[vid_index].Type, &min, &max);
+
+    if (bbvari_to_double (blackboard[vid_index].Type, blackboard[vid_index].Value, &old_raw_value) == -1) {
+        return -1;
+    }
+    Size = blackboard[vid_index].pAdditionalInfos->Conversion.Conv.Table.Size;
+    Values = blackboard[vid_index].pAdditionalInfos->Conversion.Conv.Table.Values;
+
+    for (x = 0; x < Size; x++) {
+        if (Values[x].Phys >= new_phys_value) {
+            if (x == 0) {
+                new_raw_value = Values[x].Raw;
+            } else {
+                if (blackboard[vid_index].pAdditionalInfos->Conversion.Type == BB_CONV_TAB_INTP) {
+                    PhysDelta = Values[x].Phys - Values[x-1].Phys;
+                    if ((PhysDelta <= 0.0) && (PhysDelta >= 0.0)) {  // == 0.0
+                        new_raw_value = Values[x-1].Raw;  // use the smallest one
+                    } else {
+                        RawDelta = Values[x].Raw - Values[x-1].Raw;
+                        m = RawDelta / PhysDelta;
+                        new_raw_value = Values[x-1].Raw + m * (new_phys_value - Values[x-1].Phys);
+                    }
+                } else {
+                    new_raw_value = Values[x].Raw;
+                }
+            }
+            break;  // for(;;)
+        }
+    }
+    if (x == Size) {
+        new_raw_value = Values[Size - 1].Raw;
+    }
+    // Not outside the data type range
+    if (new_raw_value > max) {
+        new_raw_value = max;
+    }
+    if (new_raw_value < min) {
+        new_raw_value = min;
+    }
+    ConvertDoubleToUnion(blackboard[vid_index].Type, new_raw_value, ret_Value);
+    return 0;
+}
+
+static int write_bbvari_rational_function_minmax_check_inner(int vid_index, double new_phys_value, union BB_VARI *ret_Value, double *ret_phys_value)
+{
+    double old_raw_value;
+    double new_raw_value;
+    double min;
+    double max;
+    double a, b;
+
+    get_datatype_min_max_value (blackboard[vid_index].Type, &min, &max);
+
+    if (bbvari_to_double (blackboard[vid_index].Type, blackboard[vid_index].Value, &old_raw_value) == -1) {
+        return -1;
+    }
+    // f(x)=(axx + bx + c)/(dxx + ex + f)
+    // Raw = f(Phys)
+    a = blackboard[vid_index].pAdditionalInfos->Conversion.Conv.RatFunc.a * new_phys_value * new_phys_value +
+        blackboard[vid_index].pAdditionalInfos->Conversion.Conv.RatFunc.b * new_phys_value +
+        blackboard[vid_index].pAdditionalInfos->Conversion.Conv.RatFunc.c;
+    b = blackboard[vid_index].pAdditionalInfos->Conversion.Conv.RatFunc.d * new_phys_value * new_phys_value +
+        blackboard[vid_index].pAdditionalInfos->Conversion.Conv.RatFunc.e * new_phys_value +
+        blackboard[vid_index].pAdditionalInfos->Conversion.Conv.RatFunc.f;
+    if (b != 0.0) {
+        new_raw_value = a / b;
+    } else {
+        new_raw_value = DBL_MAX;
+    }
+    // Not outside the data type range
     if (new_raw_value > max) {
         new_raw_value = max;
     }
@@ -1164,7 +1352,7 @@ int write_bbvari_phys_minmax_check_pid_cs (PID pid, VID vid, double new_phys_val
     double phys_value;   // will not be used
 
 
-    // Is blackboard exists here or inside the remote master or not at al
+    // Is blackboard exists here or inside the remote master or not at all
     if (blackboard == NULL) {
 #ifndef REMOTE_MASTER
         if (s_main_ini_val.ConnectToRemoteMaster) {
@@ -1187,19 +1375,67 @@ int write_bbvari_phys_minmax_check_pid_cs (PID pid, VID vid, double new_phys_val
         blackboard[vid_index].WrEnableFlags & (1ULL << pid_index)) {
 
         // Is there a conversion defined
-        if (blackboard[vid_index].pAdditionalInfos->Conversion.Type == BB_CONV_FORMULA) {
+        switch (blackboard[vid_index].pAdditionalInfos->Conversion.Type) {
+        case BB_CONV_FORMULA:
+        {
             int ret;
             ret = write_bbvari_phys_minmax_check_inner(vid_index, new_phys_value, &Value, &phys_value);
             if (ret != 0) {
                 if (cs) LeaveBlackboardCriticalSection();
                 return ret;
             }
-            // Now rite the calculated raw value
+            // Now write the calculated raw value
             blackboard[vid_index].WrFlags = ALL_WRFLAG_MASK;
             blackboard[vid_index].Value = Value;
             blackboard[vid_index].WrFlags = ALL_WRFLAG_MASK;
-        } else {
-            // no formula are now an error
+            break;
+        }
+        case BB_CONV_FACTOFF:
+        case BB_CONV_OFFFACT:
+        {
+            int ret;
+            ret = write_bbvari_factor_offset_minmax_check_inner(vid_index, new_phys_value, &Value, &phys_value);
+            if (ret != 0) {
+                if (cs) LeaveBlackboardCriticalSection();
+                return ret;
+            }
+            // Now write the calculated raw value
+            blackboard[vid_index].WrFlags = ALL_WRFLAG_MASK;
+            blackboard[vid_index].Value = Value;
+            blackboard[vid_index].WrFlags = ALL_WRFLAG_MASK;
+            break;
+        }
+        case BB_CONV_TAB_INTP:
+        case BB_CONV_TAB_NOINTP:
+        {
+            int ret;
+            ret = write_bbvari_table_minmax_check_inner(vid_index, new_phys_value, &Value, &phys_value);
+            if (ret != 0) {
+                if (cs) LeaveBlackboardCriticalSection();
+                return ret;
+            }
+            // Now write the calculated raw value
+            blackboard[vid_index].WrFlags = ALL_WRFLAG_MASK;
+            blackboard[vid_index].Value = Value;
+            blackboard[vid_index].WrFlags = ALL_WRFLAG_MASK;
+            break;
+        }
+        case BB_CONV_RAT_FUNC:
+        {
+            int ret;
+            ret = write_bbvari_rational_function_minmax_check_inner(vid_index, new_phys_value, &Value, &phys_value);
+            if (ret != 0) {
+                if (cs) LeaveBlackboardCriticalSection();
+                return ret;
+            }
+            // Now write the calculated raw value
+            blackboard[vid_index].WrFlags = ALL_WRFLAG_MASK;
+            blackboard[vid_index].Value = Value;
+            blackboard[vid_index].WrFlags = ALL_WRFLAG_MASK;
+            break;
+        }
+        default:
+            // no formula are an error
             if (cs) LeaveBlackboardCriticalSection();
             return -2;
         }
@@ -1227,7 +1463,7 @@ int get_phys_value_for_raw_value (VID vid, double raw_value, double *ret_phys_va
 {
     int vid_index;
 
-    // Is blackboard exists here or inside the remote master or not at al
+    // Is blackboard exists here or inside the remote master or not at all
     if (blackboard == NULL) {
 #ifndef REMOTE_MASTER
         if (s_main_ini_val.ConnectToRemoteMaster) {
@@ -1240,10 +1476,13 @@ int get_phys_value_for_raw_value (VID vid, double raw_value, double *ret_phys_va
     if ((vid_index = get_variable_index(vid)) == -1) {
         return -1;
     }
-    if (blackboard[vid_index].pAdditionalInfos->Conversion.Type != BB_CONV_FORMULA) {
+    //if (blackboard[vid_index].pAdditionalInfos->Conversion.Type != BB_CONV_FORMULA) {
+    //    return -2;
+    //}
+    if (convert_physical_internal(vid_index, raw_value, ret_phys_value)) {
         return -2;
     }
-    *ret_phys_value = execute_stack_replace_variable_with_parameter ((struct EXEC_STACK_ELEM *)blackboard[vid_index].pAdditionalInfos->Conversion.Conv.Formula.FormulaByteCode, vid, raw_value);
+    //*ret_phys_value = execute_stack_replace_variable_with_parameter ((struct EXEC_STACK_ELEM *)blackboard[vid_index].pAdditionalInfos->Conversion.Conv.Formula.FormulaByteCode, vid, raw_value);
     return 0;
 }
 
@@ -1253,7 +1492,7 @@ int get_raw_value_for_phys_value (VID vid, double phys_value, double *ret_raw_va
     union BB_VARI Value;
     int vid_index;
 
-    // Is blackboard exists here or inside the remote master or not at al
+    // Is blackboard exists here or inside the remote master or not at all
     if (blackboard == NULL) {
 #ifndef REMOTE_MASTER
         if (s_main_ini_val.ConnectToRemoteMaster) {
@@ -1266,25 +1505,41 @@ int get_raw_value_for_phys_value (VID vid, double phys_value, double *ret_raw_va
     if ((vid_index = get_variable_index(vid)) == -1) {
         return -1;
     }
-    if (blackboard[vid_index].pAdditionalInfos->Conversion.Type != BB_CONV_FORMULA) {
-        return -1;
+    switch(blackboard[vid_index].pAdditionalInfos->Conversion.Type) {
+    case BB_CONV_FORMULA:
+        ret = write_bbvari_phys_minmax_check_inner(vid_index, phys_value, &Value, ret_phys_value);
+        break;
+    case BB_CONV_FACTOFF:
+    case BB_CONV_OFFFACT:
+        ret = write_bbvari_factor_offset_minmax_check_inner(vid_index, phys_value, &Value, ret_phys_value);
+        break;
+    case BB_CONV_TAB_INTP:
+    case BB_CONV_TAB_NOINTP:
+        ret = write_bbvari_table_minmax_check_inner(vid_index, phys_value, &Value, ret_phys_value);
+        break;
+    case BB_CONV_RAT_FUNC:
+        ret = write_bbvari_rational_function_minmax_check_inner(vid_index, phys_value, &Value, ret_phys_value);
+        break;
+    default:
+        ret = -1;
     }
-    ret = write_bbvari_phys_minmax_check_inner(vid_index, phys_value, &Value, ret_phys_value);
-    if (ret != 0) return ret;
-    if (bbvari_to_double (blackboard[vid_index].Type,
-                          Value,
-                          ret_raw_value) == -1) {
-        return -1;
+    if (ret == 0) {
+        if (bbvari_to_double(blackboard[vid_index].Type,
+                             Value,
+                             ret_raw_value) == -1) {
+            ret = -1;
+        } else {
+            ret = 0;
+        }
     }
-
-    return 0;
+    return ret;
 }
 
 int8_t read_bbvari_byte(VID vid)
 {
     int vid_index;
 
-    // Is blackboard exists here or inside the remote master or not at al
+    // Is blackboard exists here or inside the remote master or not at all
     if (blackboard == NULL) {
 #ifndef REMOTE_MASTER
         if (s_main_ini_val.ConnectToRemoteMaster) {
@@ -1309,7 +1564,7 @@ uint8_t read_bbvari_ubyte(VID vid)
 {
     int vid_index;
 
-    // Is blackboard exists here or inside the remote master or not at al
+    // Is blackboard exists here or inside the remote master or not at all
     if (blackboard == NULL) {
 #ifndef REMOTE_MASTER
         if (s_main_ini_val.ConnectToRemoteMaster) {
@@ -1334,7 +1589,7 @@ int16_t read_bbvari_word(VID vid)
 {
     int vid_index;
 
-    // Is blackboard exists here or inside the remote master or not at al
+    // Is blackboard exists here or inside the remote master or not at all
     if (blackboard == NULL) {
 #ifndef REMOTE_MASTER
         if (s_main_ini_val.ConnectToRemoteMaster) {
@@ -1359,7 +1614,7 @@ uint16_t read_bbvari_uword(VID vid)
 {
     int vid_index;
 
-    // Is blackboard exists here or inside the remote master or not at al
+    // Is blackboard exists here or inside the remote master or not at all
     if (blackboard == NULL) {
 #ifndef REMOTE_MASTER
         if (s_main_ini_val.ConnectToRemoteMaster) {
@@ -1384,7 +1639,7 @@ int32_t read_bbvari_dword(VID vid)
 {
     int vid_index;
 
-    // Is blackboard exists here or inside the remote master or not at al
+    // Is blackboard exists here or inside the remote master or not at all
     if (blackboard == NULL) {
 #ifndef REMOTE_MASTER
         if (s_main_ini_val.ConnectToRemoteMaster) {
@@ -1409,7 +1664,7 @@ uint32_t read_bbvari_udword(VID vid)
 {
     int vid_index;
 
-    // Is blackboard exists here or inside the remote master or not at al
+    // Is blackboard exists here or inside the remote master or not at all
     if (blackboard == NULL) {
 #ifndef REMOTE_MASTER
         if (s_main_ini_val.ConnectToRemoteMaster) {
@@ -1434,7 +1689,7 @@ int64_t read_bbvari_qword (VID vid)
 {
     int vid_index;
 
-    // Is blackboard exists here or inside the remote master or not at al
+    // Is blackboard exists here or inside the remote master or not at all
     if (blackboard == NULL) {
 #ifndef REMOTE_MASTER
         if (s_main_ini_val.ConnectToRemoteMaster) {
@@ -1459,7 +1714,7 @@ uint64_t read_bbvari_uqword (VID vid)
 {
     int vid_index;
 
-    // Is blackboard exists here or inside the remote master or not at al
+    // Is blackboard exists here or inside the remote master or not at all
     if (blackboard == NULL) {
 #ifndef REMOTE_MASTER
         if (s_main_ini_val.ConnectToRemoteMaster) {
@@ -1484,7 +1739,7 @@ float read_bbvari_float (VID vid)
 {
     int vid_index;
 
-    // Is blackboard exists here or inside the remote master or not at al
+    // Is blackboard exists here or inside the remote master or not at all
     if (blackboard == NULL) {
 #ifndef REMOTE_MASTER
         if (s_main_ini_val.ConnectToRemoteMaster) {
@@ -1509,7 +1764,7 @@ double read_bbvari_double (VID vid)
 {
     int vid_index;
 
-    // Is blackboard exists here or inside the remote master or not at al
+    // Is blackboard exists here or inside the remote master or not at all
     if (blackboard == NULL) {
 #ifndef REMOTE_MASTER
         if (s_main_ini_val.ConnectToRemoteMaster) {
@@ -1535,7 +1790,7 @@ union BB_VARI read_bbvari_union (VID vid)
     int vid_index;
     union BB_VARI error_ret;
 
-    // Is blackboard exists here or inside the remote master or not at al
+    // Is blackboard exists here or inside the remote master or not at all
     if (blackboard == NULL) {
 #ifndef REMOTE_MASTER
         if (s_main_ini_val.ConnectToRemoteMaster) {
@@ -1557,7 +1812,7 @@ enum BB_DATA_TYPES read_bbvari_union_type (VID vid, union BB_VARI *ret_Value)
 {
     int vid_index;
 
-    // Is blackboard exists here or inside the remote master or not at al
+    // Is blackboard exists here or inside the remote master or not at all
     if (blackboard == NULL) {
 #ifndef REMOTE_MASTER
         if (s_main_ini_val.ConnectToRemoteMaster) {
@@ -1578,7 +1833,7 @@ int read_bbvari_union_type_frame (int Number, VID *Vids, enum BB_DATA_TYPES *ret
 {
     int x, vid_index;
 
-    // Is blackboard exists here or inside the remote master or not at al
+    // Is blackboard exists here or inside the remote master or not at all
     if (blackboard == NULL) {
 #ifndef REMOTE_MASTER
         if (s_main_ini_val.ConnectToRemoteMaster) {
@@ -1605,7 +1860,7 @@ double read_bbvari_equ (VID vid)
     int vid_index;
     double Value;
 
-    // Is blackboard exists here or inside the remote master or not at al
+    // Is blackboard exists here or inside the remote master or not at all
     if (blackboard == NULL) {
 #ifndef REMOTE_MASTER
         if (s_main_ini_val.ConnectToRemoteMaster) {
@@ -1619,15 +1874,19 @@ double read_bbvari_equ (VID vid)
         return 0.0;
     }
     // Check if conversion type matches
-    if (blackboard[vid_index].pAdditionalInfos->Conversion.Type != BB_CONV_FORMULA) {
-        return 0.0;
-    }
+    //if (blackboard[vid_index].pAdditionalInfos->Conversion.Type != BB_CONV_FORMULA) {
+    //    return 0.0;
+    //}
     if (bbvari_to_double (blackboard[vid_index].Type,
                           blackboard[vid_index].Value, &Value)) {
         return 0.0;
     } else {
-        return execute_stack_whith_parameter ((struct EXEC_STACK_ELEM *)blackboard[vid_index].pAdditionalInfos->Conversion.Conv.Formula.FormulaByteCode,
-                                              Value);
+        if (convert_physical_internal(vid_index, Value, &Value)) {
+            return 0.0;
+        }
+        return Value;
+        //return execute_stack_whith_parameter ((struct EXEC_STACK_ELEM *)blackboard[vid_index].pAdditionalInfos->Conversion.Conv.Formula.FormulaByteCode,
+        //                                      Value);
     }
 }
 #endif
@@ -1637,7 +1896,7 @@ double read_bbvari_convert_double (VID vid)
     int vid_index;
     double ret_value;
 
-    // Is blackboard exists here or inside the remote master or not at al
+    // Is blackboard exists here or inside the remote master or not at all
     if (blackboard == NULL) {
 #ifndef REMOTE_MASTER
         if (s_main_ini_val.ConnectToRemoteMaster) {
@@ -1663,7 +1922,7 @@ int read_bbvari_convert_to (VID vid, int convert_to_type, union BB_VARI *ret_Ptr
 {
     int vid_index;
 
-    // Is blackboard exists here or inside the remote master or not at al
+    // Is blackboard exists here or inside the remote master or not at all
     if (blackboard == NULL) {
 #ifndef REMOTE_MASTER
         if (s_main_ini_val.ConnectToRemoteMaster) {
@@ -1717,7 +1976,7 @@ int read_bbvari_textreplace (VID vid, char *txt, int maxc, int *pcolor)
     int vid_index;
     int64_t value;
 
-    // Is blackboard exists here or inside the remote master or not at al
+    // Is blackboard exists here or inside the remote master or not at all
     if (blackboard == NULL) {
 #ifndef REMOTE_MASTER
         if (s_main_ini_val.ConnectToRemoteMaster) {
@@ -1749,7 +2008,7 @@ int read_bbvari_convert_to_FloatAndInt64(VID vid, union FloatOrInt64 *ret_Value)
     int vid_index;
     int Ret;
 
-    // Is blackboard exists here or inside the remote master or not at al
+    // Is blackboard exists here or inside the remote master or not at all
     if (blackboard == NULL) {
 #ifndef REMOTE_MASTER
         if (s_main_ini_val.ConnectToRemoteMaster) {
@@ -2159,7 +2418,7 @@ void write_bbvari_convert_with_FloatAndInt64_pid_cs(PID pid, VID vid, union Floa
     int vid_index;
     int pid_index;
 
-    // Is blackboard exists here or inside the remote master or not at al
+    // Is blackboard exists here or inside the remote master or not at all
     if (blackboard == NULL) {
 #ifndef REMOTE_MASTER
         if (s_main_ini_val.ConnectToRemoteMaster) {
@@ -2242,7 +2501,7 @@ void write_bbvari_binary_FloatAndInt64_pid_cs(PID pid, VID vid, union FloatOrInt
     int vid_index;
     int pid_index;
 
-    // Is blackboard exists here or inside the remote master or not at al
+    // Is blackboard exists here or inside the remote master or not at all
     if (blackboard == NULL) {
         return;
     }
@@ -2317,7 +2576,7 @@ static int read_bbvari_by_name_x(const char *name, int vid, union FloatOrInt64 *
     int32_t P1, P2;
 #endif
 
-    // Is blackboard exists here or inside the remote master or not at al
+    // Is blackboard exists here or inside the remote master or not at all
     if (blackboard == NULL) {
 #ifndef REMOTE_MASTER
         if (s_main_ini_val.ConnectToRemoteMaster) {
@@ -2410,17 +2669,22 @@ __VID:
                             double Value;
                             *ret_byte_width = 8;
                             // Check if conversion type matches
-                            if (blackboard[vid_index].pAdditionalInfos->Conversion.Type != BB_CONV_FORMULA) {
-                                ret_value->d = 0.0;
-                                return FLOAT_OR_INT_64_TYPE_INVALID;
-                            }
+                            //if (blackboard[vid_index].pAdditionalInfos->Conversion.Type != BB_CONV_FORMULA) {
+                            //    ret_value->d = 0.0;
+                            //    return FLOAT_OR_INT_64_TYPE_INVALID;
+                            //}
                             if (bbvari_to_double (blackboard[vid_index].Type,
                                                   blackboard[vid_index].Value, &Value)) {
                                 ret_value->d = 0.0;
                                 return FLOAT_OR_INT_64_TYPE_INVALID;
                             } else {
-                                ret_value->d = execute_stack_whith_parameter ((struct EXEC_STACK_ELEM *)blackboard[vid_index].pAdditionalInfos->Conversion.Conv.Formula.FormulaByteCode,
-                                                                              Value);
+                                if (convert_physical_internal(vid_index, Value, &Value)) {
+                                    ret_value->d = 0.0;
+                                    return FLOAT_OR_INT_64_TYPE_INVALID;
+                                }
+                                ret_value->d = Value;
+                                //ret_value->d = execute_stack_whith_parameter ((struct EXEC_STACK_ELEM *)blackboard[vid_index].pAdditionalInfos->Conversion.Conv.Formula.FormulaByteCode,
+                                //                                              Value);
                                 return FLOAT_OR_INT_64_TYPE_F64;
                             }
                         }
@@ -2543,7 +2807,7 @@ int write_bbvari_by_name(PID pid, const char *name, union FloatOrInt64 value, in
     int vid;
     int ret = -1;
 
-    // Is blackboard exists here or inside the remote master or not at al
+    // Is blackboard exists here or inside the remote master or not at all
     if (blackboard == NULL) {
 #ifndef REMOTE_MASTER
         if (s_main_ini_val.ConnectToRemoteMaster) {
@@ -2621,7 +2885,7 @@ int convert_value_textreplace (VID vid, int32_t value, char *txt, int maxc, int 
 {
     int vid_index;
 
-    // Is blackboard exists here or inside the remote master or not at al
+    // Is blackboard exists here or inside the remote master or not at all
     if (blackboard == NULL) {
 #ifndef REMOTE_MASTER
         if (s_main_ini_val.ConnectToRemoteMaster) {
@@ -2647,7 +2911,7 @@ int convert_textreplace_value (VID vid, char *txt, int64_t *pfrom, int64_t *pto)
 {
     int vid_index;
 
-    // Is blackboard exists here or inside the remote master or not at al
+    // Is blackboard exists here or inside the remote master or not at all
     if (blackboard == NULL) {
         return -1;
     }
@@ -2664,51 +2928,103 @@ int convert_textreplace_value (VID vid, char *txt, int64_t *pfrom, int64_t *pto)
                                       txt, pfrom, pto);
 }
 
-int read_bbvari_frame (VID *Vids, double *RetFrameValues, int Size)
+int read_bbvari_frame (VID *Vids, int8_t *PhysOrRaw, double *RetFrameValues, int Size)
 {
     int x;
     int VidIdx;
+    int Ret = 0;
 
-    // Is blackboard exists here or inside the remote master or not at al
+
+    // Is blackboard exists here or inside the remote master or not at all
     if (blackboard == NULL) {
 #ifndef REMOTE_MASTER
         if (s_main_ini_val.ConnectToRemoteMaster) {
-            return rm_read_bbvari_frame (Vids, RetFrameValues, Size);
+            return rm_read_bbvari_frame (Vids, PhysOrRaw, RetFrameValues, Size);
         }
 #endif
         return -1;
     }
-
+    EnterBlackboardCriticalSection();
     for (x = 0; x < Size; x++) {
-    // Determine the vid index
+        // Variablenindex ermitteln
         if ((VidIdx = get_variable_index(Vids[x])) == -1) {
             RetFrameValues[x] = 0.0;
+            Ret--;
         } else {
-            bbvari_to_double (blackboard[VidIdx].Type,
-                              blackboard[VidIdx].Value, &RetFrameValues[x]);
+            if ((PhysOrRaw == NULL) ||  // all raw value
+                (PhysOrRaw[x] == 0)) {   // this value read as raw
+                bbvari_to_double (blackboard[VidIdx].Type,
+                                 blackboard[VidIdx].Value, &RetFrameValues[x]);
+            } else {
+                //if (blackboard[VidIdx].pAdditionalInfos->Conversion.Type == BB_CONV_FORMULA) {
+                    double Value;
+                    if (bbvari_to_double (blackboard[VidIdx].Type,
+                                         blackboard[VidIdx].Value, &Value)) {
+                        Ret--;
+                    } else {
+                        if (convert_physical_internal(VidIdx, Value, &Value)) {
+                            RetFrameValues[x] = 0.0;
+                            Ret--;
+                        } else {
+                            RetFrameValues[x] = Value;
+                        }
+                        //RetFrameValues[x] = execute_stack_whith_parameter ((struct EXEC_STACK_ELEM *)blackboard[VidIdx].pAdditionalInfos->Conversion.Conv.Formula.FormulaByteCode,
+                        //                                                  Value);
+                    }
+                //} else {
+                //    Ret--;
+                //}
+            }
         }
     }
-    return 0;
+    LeaveBlackboardCriticalSection();
+    return Ret;
 }
 
-int write_bbvari_frame_pid (PID pid, VID *Vids, double *FrameValues, int Size)
+int write_bbvari_frame_pid (PID pid, VID *Vids, int8_t *PhysOrRaw, double *FrameValues, int Size)
 {
     int x;
+    int VidIdx;
+    int Ret = 0;
 
-    for (x = 0; x < Size; x++) {
-        write_bbvari_minmax_check_pid(pid, Vids[x], FrameValues[x]);
+    // Is blackboard exists here or inside the remote master or not at all
+    if (blackboard == NULL) {
+#ifndef REMOTE_MASTER
+        if (s_main_ini_val.ConnectToRemoteMaster) {
+            return rm_write_bbvari_frame(pid, Vids, PhysOrRaw, FrameValues, Size);
+        }
+#endif
+        return -1;
     }
-    return 0;
-}
-
-int write_bbvari_frame(VID *Vids, double *FrameValues, int Size)
-{
-    int x;
-
-    int pid = GET_PID();
-
+    EnterBlackboardCriticalSection();
     for (x = 0; x < Size; x++) {
-        write_bbvari_minmax_check_pid(pid, Vids[x], FrameValues[x]);
+        if ((PhysOrRaw == NULL) ||  // all raw value
+            (PhysOrRaw[x] == 0)) {   // this value read as raw
+            write_bbvari_minmax_check_pid(pid, Vids[x], FrameValues[x]);
+        } else {
+            if (write_bbvari_phys_minmax_check_pid_cs (pid, Vids[x], FrameValues[x], 0)) {
+                Ret--;
+            }
+#if 0
+            if ((VidIdx = get_variable_index(Vids[x])) == -1) {
+                Ret--;
+            } else {
+                if (blackboard[VidIdx].pAdditionalInfos->Conversion.Type == BB_CONV_FORMULA) {
+                    union BB_VARI Value;
+                    double DoubleValue;
+                    if (write_bbvari_phys_minmax_check_inner(VidIdx, FrameValues[x], &Value, &DoubleValue)) {
+                        Ret--;
+                    }
+                    blackboard[VidIdx].WrFlags = ALL_WRFLAG_MASK;
+                    blackboard[VidIdx].Value = Value;
+                    blackboard[VidIdx].WrFlags = ALL_WRFLAG_MASK;
+                } else {
+                    Ret--;
+                }
+            }
+#endif
+        }
     }
-    return 0;
+    LeaveBlackboardCriticalSection();
+    return Ret;
 }

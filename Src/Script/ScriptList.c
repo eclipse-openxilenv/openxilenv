@@ -20,6 +20,7 @@
 #include <stdio.h>
 
 #include "MyMemory.h"
+#include "StringMaxChar.h"
 #include "ThrowError.h"
 #include "Blackboard.h"
 #include "Scheduler.h"
@@ -164,7 +165,7 @@ int ScriptAddReferenceVariList (char *ProcessName, int Pid, int Connection, int 
                 if (!scm_ref_vari (address, (short)Pid, variname, type, 0x3)) {
                     ScriptReferenceVaris[ScriptReferenceVarisCount].Varis[x].Address = address;
                     ScriptReferenceVaris[ScriptReferenceVarisCount].Varis[x].Type = type;
-                    ScriptReferenceVaris[ScriptReferenceVarisCount].Varis[x].Name = my_malloc (strlen (variname) + 1); 
+                    ScriptReferenceVaris[ScriptReferenceVarisCount].Varis[x].Name = StringMalloc (variname);
                     if (ScriptReferenceVaris[ScriptReferenceVarisCount].Varis[x].Name == NULL) {
                         ThrowError (ERROR_SYSTEM_CRITICAL, "out of memory stop!");
                         RemoveConnectFromProcessDebugInfos(UniqueId);
@@ -172,7 +173,6 @@ int ScriptAddReferenceVariList (char *ProcessName, int Pid, int Connection, int 
                         UnLockProcess (Pid);
                         return -1;
                     }
-                    strcpy (ScriptReferenceVaris[ScriptReferenceVarisCount].Varis[x].Name, variname);
                 }
             }
         }

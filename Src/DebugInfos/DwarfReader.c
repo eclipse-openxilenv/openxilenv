@@ -25,6 +25,7 @@
 #include "ThrowError.h"
 #include "MyMemory.h"
 #include "StringMaxChar.h"
+#include "PrintFormatToString.h"
 #include "MainValues.h"
 #include "Files.h"
 #include "Scheduler.h"
@@ -1644,7 +1645,7 @@ static unsigned char *ParseOneTagAndHisAtributes (DEBUG_SECTIONS *ds,
     uint64_t Help64 = 0;
     uint64_t AttribValue;
 
-    memset (&(ret_DieAttributes->Flags), 0, sizeof (ret_DieAttributes->Flags));
+    MEMSET (&(ret_DieAttributes->Flags), 0, sizeof (ret_DieAttributes->Flags));
 
     AbbrevEnd = (unsigned char*)ds->debug_abbrev + ds->debug_abbrev_len;
 
@@ -1865,7 +1866,7 @@ static unsigned char *ParseArraySubRangeTags (DEBUG_SECTIONS *ds,
                 return NULL;
             }
         }
-        memset (&DieAttributes, 0, sizeof (DieAttributes));
+        MEMSET (&DieAttributes, 0, sizeof (DieAttributes));
         Ptr = ParseOneTagAndHisAtributes (ds,
                                           CompileUnit,
                                           AbbrevCodeTable,
@@ -2050,6 +2051,12 @@ static unsigned char *ParseStructMemberTags (DEBUG_SECTIONS *ds,
                            0L, 0L, 0L, ds->pappldata);
         }
         break;
+    case DW_TAG_ptr_to_member_type:
+        // Pointer to member are offsets inside the structure/class. We will use a *void type so you cannot follow this pointers.
+        insert_struct (POINTER_ELEM, (int32_t)(StartEntryPtr - (unsigned char*)ds->debug_info) + TYPEID_OFFSET,
+                      "", 0L, 0L, 33,   // 33 -> "void", 133 -> "*void"
+                      0L, 0L, 0L, ds->pappldata);
+        break;
     case DW_TAG_pointer_type:
     case DW_TAG_reference_type:
         insert_struct (POINTER_ELEM, (int32_t)(StartEntryPtr - (unsigned char*)ds->debug_info) + TYPEID_OFFSET,
@@ -2078,12 +2085,12 @@ static unsigned char *ParseStructMemberTags (DEBUG_SECTIONS *ds,
                 ArrayOfTypeId = ds->HelpIdActiveFieldList + TYPEID_OFFSET;
                 ds->HelpIdActiveFieldList++;
             }
-            sprintf (Help, "[%i]", ArrayDims[0]);
+            PrintFormatToString (Help, sizeof(Help), "[%i]", ArrayDims[0]);
             insert_struct (ARRAY_ELEM, ArrayTypeId, Help, 0L, 0L, ArrayOfTypeId,
                            ArrayDims[0], ArrayOfTypeId, (DWORD)0, ds->pappldata);
 
             for (x = 1; x < DimCount; x++) {
-                sprintf (Help, "[%u]", ArrayDims[x]);
+                PrintFormatToString (Help, sizeof(Help), "[%u]", ArrayDims[x]);
                 ArrayTypeId = ArrayOfTypeId;
                 if (x < (DimCount-1)) {
                     ArrayOfTypeId = ds->HelpIdActiveFieldList;
@@ -2309,6 +2316,12 @@ unsigned char *ParseOneDie (DEBUG_SECTIONS *ds,
                            0L, 0L, 0L, ds->pappldata);
         }
         break;
+    case DW_TAG_ptr_to_member_type:
+        // Pointer to member are offsets inside the structure/class. We will use a *void type so you cannot follow this pointers.
+        insert_struct (POINTER_ELEM, (int32_t)(StartEntryPtr - (unsigned char*)ds->debug_info) + TYPEID_OFFSET,
+                      "", 0L, 0L, 33,   // 33 -> "void", 133 -> "*void"
+                      0L, 0L, 0L, ds->pappldata);
+        break;
     case DW_TAG_pointer_type:
     case DW_TAG_reference_type:
         insert_struct (POINTER_ELEM, (int32_t)(StartEntryPtr - (unsigned char*)ds->debug_info) + TYPEID_OFFSET,
@@ -2337,12 +2350,12 @@ unsigned char *ParseOneDie (DEBUG_SECTIONS *ds,
                 ArrayOfTypeId = ds->HelpIdActiveFieldList + TYPEID_OFFSET;
                 ds->HelpIdActiveFieldList++;
             }
-            sprintf (Help, "[%u]", ArrayDims[0]);
+            PrintFormatToString (Help, sizeof(Help), "[%u]", ArrayDims[0]);
             insert_struct (ARRAY_ELEM, ArrayTypeId, Help, 0L, 0L, ArrayOfTypeId,
                            ArrayDims[0], ArrayOfTypeId, (DWORD)0, ds->pappldata);
 
             for (x = 1; x < DimCount; x++) {
-                sprintf (Help, "[%u]", ArrayDims[x]);
+                PrintFormatToString (Help, sizeof(Help), "[%u]", ArrayDims[x]);
                 ArrayTypeId = ArrayOfTypeId;
                 if (x < (DimCount-1)) {
                     ArrayOfTypeId = ds->HelpIdActiveFieldList + TYPEID_OFFSET;
@@ -2846,14 +2859,14 @@ int32_t parse_dwarf_from_exe_file (char *par_ExeFileName, DEBUG_INFOS_DATA *papp
 #ifndef DebugOut
     char DebugPrintFileName[MAX_PATH];
 #ifdef _WIN32
-    strcpy (DebugPrintFileName, "c:\\temp\\debug_dwarf.txt");
+    STRING_COPY_TO_ARRAY (DebugPrintFileName, "c:\\temp\\debug_dwarf.txt");
 #else
-    strcpy (DebugPrintFileName, "/tmp/debug_dwarf.txt");
+    STRING_COPY_TO_ARRAY (DebugPrintFileName, "/tmp/debug_dwarf.txt");
 #endif
 #ifdef PER_PROCESS_LOGGING
-    strcpy (DebugPrintFileName, "c:\\temp\\");
+    STRING_COPY_TO_ARRAY (DebugPrintFileName, "c:\\temp\\");
     if (GetProcessNameWithoutPath (pappldata->pid, DebugPrintFileName + strlen (DebugPrintFileName)) == 0) {
-        strcat (DebugPrintFileName, ".txt");
+        STRING_APPEND_TO_ARRAY (DebugPrintFileName, ".txt");
 #endif
         DebugOut = fopen (DebugPrintFileName, "wt");
         // no file buffer!
@@ -2872,7 +2885,7 @@ int32_t parse_dwarf_from_exe_file (char *par_ExeFileName, DEBUG_INFOS_DATA *papp
         ThrowError (1, "out of memmory");
         Ret = -1;
     } else {
-        memset (DebugSections, 0, sizeof (DEBUG_SECTIONS));
+        MEMSET (DebugSections, 0, sizeof (DEBUG_SECTIONS));
 
         // Are the debug infos inside an own *.dbg file?
         DebugInfoFile = par_ExeFileName;

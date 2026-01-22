@@ -99,6 +99,10 @@ enum BB_CONV_TYPES {
     BB_CONV_FORMULA,
     BB_CONV_TEXTREP,
     BB_CONV_FACTOFF,
+    BB_CONV_OFFFACT,
+    BB_CONV_TAB_INTP, // Table with interpolation
+    BB_CONV_TAB_NOINTP, // Table without interpolation
+    BB_CONV_RAT_FUNC,
     BB_CONV_REF
 };
 

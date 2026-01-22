@@ -23,6 +23,7 @@
 #include <string.h>
 
 #include "Config.h"
+#include "StringMaxChar.h"
 #include "Blackboard.h"
 #include "BlackboardAccess.h"
 #include "Scheduler.h"
@@ -39,6 +40,7 @@
 #include "DebugInfos.h"
 #include "ExtProcessReferences.h"
 #include "ExtProcessRefFilter.h"
+#include "EquationParser.h"
 #include "EquationList.h"
 #include "RpcSocketServer.h"
 #include "UniqueNumber.h"
@@ -138,6 +140,7 @@ int StartupInit (void * par_Application)
         return -1;
     }
 
+    InitEquatuinParser();
     InitEquationList ();
 
     // check the command line parameters
@@ -167,7 +170,7 @@ int StartupInit (void * par_Application)
         ThrowError(ERROR_NO_CRITICAL_STOP, "Error while reading INI-File %s (no basic settings)!!!", Fd);
         return -1;
     }
-    strcpy (s_main_ini_val.InstanceName, InstanceName);
+    STRING_COPY_TO_ARRAY (s_main_ini_val.InstanceName, InstanceName);
     s_main_ini_val.QtApplicationPointer = par_Application;
 
     if (s_main_ini_val.ConnectToRemoteMaster) {
@@ -216,13 +219,13 @@ int StartupInit (void * par_Application)
 
         if (!SetCurrentDirectory (TempString)) {
             char txt[2*MAX_PATH+50];
-            strcpy (txt, "work directory %s not exist, use ");
+            STRING_COPY_TO_ARRAY (txt, "work directory %s not exist, use ");
             GetCurrentDirectory ((DWORD)(sizeof (txt) - strlen (txt)), txt + strlen (txt));
             ThrowError(ERROR_NO_CRITICAL_STOP, txt, TempString);
         }
     } else {
         // If there is no working directory defined use the current one
-        strcpy (s_main_ini_val.WorkDir, ".");
+        STRING_COPY_TO_ARRAY (s_main_ini_val.WorkDir, ".");
     }
 
     // Store the  working directory directly after starting XilEnv

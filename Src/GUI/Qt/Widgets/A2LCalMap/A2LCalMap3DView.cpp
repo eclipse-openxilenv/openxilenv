@@ -23,6 +23,8 @@
 
 extern "C" {
 #include "Config.h"
+#include "StringMaxChar.h"
+#include "PrintFormatToString.h"
 #include "Blackboard.h"
 #include "BlackboardAccess.h"
 }
@@ -296,12 +298,15 @@ void A2LCalMap3DView::axis_txt (QPainter *Painter, int xp, int yp, const char *i
 {
     char help[BBVARI_NAME_SIZE + BBVARI_UNIT_SIZE + 10];
 
-    if (input != nullptr) strcpy (help, input);
-    else strcpy(help, "no input");
+    if (input != nullptr) {
+        STRING_COPY_TO_ARRAY (help, input);
+    } else {
+        STRING_COPY_TO_ARRAY(help, "no input");
+    }
     if ((unit != nullptr) && (strlen(unit))) {
-        strcat (help, " [");
-        strcat (help, unit);
-        strcat (help, "]");
+        STRING_APPEND_TO_ARRAY (help, " [");
+        STRING_APPEND_TO_ARRAY (help, unit);
+        STRING_APPEND_TO_ARRAY (help, "]");
     }
 
     Painter->drawText (xp, yp, help);
@@ -713,14 +718,14 @@ void A2LCalMap3DView::paintEvent(QPaintEvent *event)
         x = m_Data->GetRawValue (X_AXIS_NO, ipick, 0);
         y = m_Data->GetRawValue (Y_AXIS_NO, jpick, 0);
         z = m_Data->GetRawValue (MAP_NO, ipick, jpick);
-        sprintf (BottonLine, "%s  X = %g %s  Y = %g %s  Z = %g %s",
+        PrintFormatToString (BottonLine, sizeof(BottonLine), "%s  X = %g %s  Y = %g %s  Z = %g %s",
                  s,
                  x, m_Data->GetXUnit(),
                  y, m_Data->GetYUnit(),
                  z, m_Data->GetMapUnit());
         if (((m_Data->GetType() == 2) && (m_Data->GetYVid() > 0) && (m_Data->GetXVid() > 0)) ||
             ((m_Data->GetType() == 1) && (m_Data->GetXVid() > 0))) {
-            sprintf (BottonLine + strlen(BottonLine), "  AP = %g %s",
+            PrintFormatToString (BottonLine + strlen(BottonLine), sizeof(BottonLine) - strlen(BottonLine), "  AP = %g %s",
                      value, m_Data->GetMapUnit());
         }
         Painter.drawText (QRect(0, height() - 20, width(), 20), Qt::AlignCenter, QString (BottonLine));

@@ -29,6 +29,8 @@
 
 #include "Config.h"
 #include "MyMemory.h"
+#include "StringMaxChar.h"
+#include "PrintFormatToString.h"
 #include "Files.h"
 #include "ThrowError.h"
 #include "MainValues.h"
@@ -321,12 +323,11 @@ static int IniFileDataBaseOpenInternal(const char *par_Filename, int par_FilterP
     INI_ENTER_CS(&IniDBCriticalSection);
 
     if (!strcmp("stdin", par_Filename) || !strcmp("stdout", par_Filename)) {
-        FullName = (char*)my_malloc(strlen(par_Filename) + 1);
+        FullName = StringMalloc(par_Filename);
         if (FullName == NULL) {
             Ret = -1;
             goto __ERROUT;
         }
-        strcpy(FullName, par_Filename);
     } else {
 #ifdef _WIN32
         int NeedSize, Size = MAX_PATH;
@@ -359,6 +360,13 @@ static int IniFileDataBaseOpenInternal(const char *par_Filename, int par_FilterP
                 IniFileSize = ((uint64_t)Attributes.nFileSizeHigh << 32) + (uint64_t)Attributes.nFileSizeLow;
             }
         }
+        // on windows store pathes with \ slashes and in large letters
+        p = FullName;
+        while (*p != 0) {
+            if (*p == '/') *p = '\\';
+            else *p = FILE_CHAR_UPPER(*p);
+            p++;
+        }
 #else
         p = realpath(par_Filename, NULL);
         if (p == NULL) {
@@ -366,12 +374,11 @@ static int IniFileDataBaseOpenInternal(const char *par_Filename, int par_FilterP
             goto __ERROUT;
         }
         // make a copy with my_malloc
-        FullName = (char*)my_malloc(strlen(p) + 1);
+        FullName = StringMalloc(p);
         if (FullName == NULL) {
             Ret = -1;
             goto __ERROUT;
         }
-        strcpy(FullName, p);
         free(p);
         {
             struct stat st;
@@ -380,12 +387,6 @@ static int IniFileDataBaseOpenInternal(const char *par_Filename, int par_FilterP
             }
         }
 #endif
-        p = FullName;
-        while (*p != 0) {
-            if (*p == '\\') *p = '/';
-            else *p = FILE_CHAR_UPPER(*p);
-            p++;
-        }
     }
     // Check if file already loaded
     for (x = 0; x < MAX_INI_FILES; x++) {
@@ -475,7 +476,7 @@ static int IniFileDataBaseOpenInternal(const char *par_Filename, int par_FilterP
                 return -1;
             }
             else {
-                sprintf(VersionString, "%d.%d.%d", XILENV_INIFILE_MIN_VERSION, XILENV_INIFILE_MIN_MINOR_VERSION, XILENV_INIFILE_MIN_PATCH_VERSION);
+                PrintFormatToString(VersionString, sizeof(VersionString), "%d.%d.%d", XILENV_INIFILE_MIN_VERSION, XILENV_INIFILE_MIN_MINOR_VERSION, XILENV_INIFILE_MIN_PATCH_VERSION);
                 IniFileDataBaseWriteString(OPT_FILE_INFOS, OPT_FILE_VERSION, VersionString, FileDescriptor);
             }
         }
@@ -659,6 +660,21 @@ static int SortEntryCompareFunction (const void *a, const void *b)
     return strcmp(*EntryA, *EntryB);
  }
 
+static int IniFileDataBaseRenameFileNoLock (const char *par_NewName, int par_FileDescriptor)
+{
+    int FileIndex;
+    int Ret = -1;
+    FileIndex = GetIndexByDescriptor(par_FileDescriptor);
+    if (FileIndex >= 0) {
+        char *NewName = StringMalloc(par_NewName);
+        if (NewName != NULL) {
+            my_free(AllLoadedIniFiles[FileIndex].Filename);
+            AllLoadedIniFiles[FileIndex].Filename = NewName;
+            Ret = 0;
+        }
+    }
+    return Ret;
+}
 
 /* par_Operation == 0 -> Only save it. Do nothing more
    par_Operation == 1 -> rename file to DestFileName
@@ -707,7 +723,7 @@ static int IniFileDataBaseSaveInternal(int par_FileDescriptor, const char *par_D
     // Inside every INI file store the version
     if ((par_Operation != INIFILE_DATABAE_OPERATION_WRITE_TO_STDOUT_WITHOUT_VERSION_INFO) && 
         (par_Operation != INIFILE_DATABAE_OPERATION_WRITE_ONLY_WITHOUT_VERSION_INFO)) {
-        sprintf(txt, "%d.%d.%d", XILENV_VERSION, XILENV_MINOR_VERSION, XILENV_PATCH_VERSION);
+        PrintFormatToString(txt, sizeof(txt), "%d.%d.%d", XILENV_VERSION, XILENV_MINOR_VERSION, XILENV_PATCH_VERSION);
         IniFileDataBaseWriteString(OPT_FILE_INFOS, OPT_FILE_VERSION, txt, par_FileDescriptor);
     }
     SortedStore = s_main_ini_val.SaveSortedINIFiles;   // Should the INI file stored sorted?
@@ -725,9 +741,10 @@ static int IniFileDataBaseSaveInternal(int par_FileDescriptor, const char *par_D
             Filename = SrcFilename;
         }
         if (_access (Filename, 0) == 0) {  // Existence only
-            char *BackupFile = my_malloc(strlen(Filename) + 5);     // than make a backup file
-            strcpy (BackupFile, Filename);
-            strcat (BackupFile, ".bak");
+            int Size = strlen(Filename) + 5;
+            char *BackupFile = my_malloc(Size);     // than make a backup file
+            StringCopyMaxCharTruncate (BackupFile, Filename, Size);
+            StringAppendMaxCharTruncate (BackupFile, ".bak", Size);
             if (_access(BackupFile, 0) == 0) { // Exists a backup file
                 remove (BackupFile);           // remove it before
             }
@@ -760,7 +777,7 @@ static int IniFileDataBaseSaveInternal(int par_FileDescriptor, const char *par_D
         goto __ERROUT;
     }
 
-    sprintf (txt, "Write INI-File %s", GetFileNameByDescriptor(par_FileDescriptor));
+    PrintFormatToString (txt, sizeof(txt), "Write INI-File %s", GetFileNameByDescriptor(par_FileDescriptor));
     ProgressBarID = OpenProgressBarFromOtherThread("(Write INI)");
 
     if (SortedStore) {
@@ -797,7 +814,7 @@ static int IniFileDataBaseSaveInternal(int par_FileDescriptor, const char *par_D
         DeleteFromIniFileDataBase(FileIndex);
         break;
     case INIFILE_DATABAE_OPERATION_RENAME:
-        IniFileDataBaseRenameFile(par_DstFileName, par_FileDescriptor);
+        IniFileDataBaseRenameFileNoLock(par_DstFileName, par_FileDescriptor);
         break;
     case INIFILE_DATABAE_OPERATION_WRITE_ONLY:
     case INIFILE_DATABAE_OPERATION_WRITE_TO_STDOUT:
@@ -891,9 +908,9 @@ static char* AddNewEntry(INI_DB_SECTION_ELEM *par_Section, const char *par_Entry
     if (NewEntryLine == NULL) {
         return NULL;
     }
-    memcpy(NewEntryLine, par_Entry, par_EntrySize);
+    MEMCPY(NewEntryLine, par_Entry, par_EntrySize);
     NewEntryLine[par_EntrySize] = '=';
-    memcpy(NewEntryLine + par_EntrySize + 1, par_Text, par_TextSize + 1);
+    MEMCPY(NewEntryLine + par_EntrySize + 1, par_Text, par_TextSize + 1);
     par_Section->Entrys[par_Section->EntryCount] = NewEntryLine;
     par_Section->EntryCount++;
     return NewEntryLine;
@@ -917,9 +934,9 @@ static int RplaceOrAddNewEntry(INI_DB_SECTION_ELEM *par_Section, const char *par
                     par_Section->Entrys[e] = par_Section->Entrys[e + 1];
                 }
             } else {
-                memcpy(EntryLine, par_Entry, EntryLen);
+                MEMCPY(EntryLine, par_Entry, EntryLen);
                 EntryLine[EntryLen] = '=';
-                memcpy(EntryLine + EntryLen + 1, par_Text, TextLen + 1);
+                MEMCPY(EntryLine + EntryLen + 1, par_Text, TextLen + 1);
                 par_Section->Entrys[e] = EntryLine;
             }
             Ret = 1;
@@ -999,7 +1016,7 @@ static INI_DB_SECTION_ELEM *AddNewSection(int par_FileIndex, const char *par_Sec
         my_free(NewSection);
         return NULL;
     }
-    memcpy(NewSection->Name, par_Section, Len);
+    MEMCPY(NewSection->Name, par_Section, Len);
     AllLoadedIniFiles[par_FileIndex].Sections[AllLoadedIniFiles[par_FileIndex].SectionCount] = NewSection;
     AllLoadedIniFiles[par_FileIndex].SectionCount++;
     return NewSection;
@@ -1088,21 +1105,21 @@ int IniFileDataBaseWriteString (const char* par_Section, const char* par_Entry, 
 int IniFileDataBaseWriteInt (const char* par_Section, const char* par_Entry, int par_DefaultValue, int par_FileDescriptor)
 {
     char Help[64];
-    sprintf (Help, "%i", par_DefaultValue);
+    PrintFormatToString (Help, sizeof(Help), "%i", par_DefaultValue);
     return IniFileDataBaseWriteString (par_Section, par_Entry, Help, par_FileDescriptor);
 }
 
 int IniFileDataBaseWriteUInt (const char* par_Section, const char* par_Entry, unsigned int par_DefaultValue, int par_FileDescriptor)
 {
     char Help[64];
-    sprintf (Help, "%u", par_DefaultValue);
+    PrintFormatToString (Help, sizeof(Help), "%u", par_DefaultValue);
     return IniFileDataBaseWriteString (par_Section, par_Entry, Help, par_FileDescriptor);
 }
 
 int IniFileDataBaseWriteUIntHex (const char* par_Section, const char* par_Entry, unsigned int par_DefaultValue, int par_FileDescriptor)
 {
     char Help[64];
-    sprintf (Help, "0x%X", par_DefaultValue);
+    PrintFormatToString (Help, sizeof(Help), "0x%X", par_DefaultValue);
     return IniFileDataBaseWriteString (par_Section, par_Entry, Help, par_FileDescriptor);
 }
 
@@ -1111,7 +1128,7 @@ int IniFileDataBaseWriteFloat (const char* par_Section, const char* par_Entry, d
     char Help[128];
     int Prec = 15;
     while (1) {
-        sprintf (Help, "%.*g", Prec, par_DefaultValue);
+        PrintFormatToString (Help, sizeof(Help), "%.*g", Prec, par_DefaultValue);
         if ((Prec++) == 18 || (par_DefaultValue == strtod (Help, NULL))) break;
     }
     return IniFileDataBaseWriteString (par_Section, par_Entry, Help, par_FileDescriptor);
@@ -1211,11 +1228,7 @@ char *IniFileDataBaseReadStringBufferNoDef (const char* par_Section, const char*
                 char *EntryLine = Section->Entrys[e];
                 const char *Text = CompareEntryOfLine(par_Entry, EntryLine);
                 if (Text != NULL) {
-                    int Len = strlen(Text) + 1;
-                    Ret = my_malloc(Len);
-                    if (Ret != NULL) {
-                        strcpy(Ret, Text);
-                    }
+                    Ret = StringMalloc(Text);
                     break;
                 }
             }
@@ -1249,7 +1262,7 @@ int IniFileDataBaseReadInt (const char* par_Section, const char* par_Entry, int 
     char BufferDef[64];
     char Buffer[64];
 
-    sprintf (BufferDef, "%i", (int32_t)par_DefaultValue);
+    PrintFormatToString (BufferDef, sizeof(BufferDef), "%i", (int32_t)par_DefaultValue);
     IniFileDataBaseReadString(par_Section, par_Entry, BufferDef, Buffer, 64, par_FileDescriptor);
     return strtol (Buffer, NULL, 0);
 }
@@ -1259,7 +1272,7 @@ unsigned int IniFileDataBaseReadUInt (const char* par_Section, const char* par_E
     char BufferDef[64];
     char Buffer[64];
 
-    sprintf (BufferDef, "%u", par_DefaultValue);
+    PrintFormatToString (BufferDef, sizeof(BufferDef), "%u", par_DefaultValue);
     IniFileDataBaseReadString(par_Section, par_Entry, BufferDef, Buffer, 64, par_FileDescriptor);
     return strtoul (Buffer, NULL, 0);
 }
@@ -1269,7 +1282,7 @@ double IniFileDataBaseReadFloat (const char* par_Section, const char* par_Entry,
     char BufferDef[64];
     char Buffer[64];
 
-    sprintf (BufferDef, "%g", par_DefaultValue);
+    PrintFormatToString (BufferDef, sizeof(BufferDef), "%g", par_DefaultValue);
     IniFileDataBaseReadString(par_Section, par_Entry, BufferDef, Buffer, 64, par_FileDescriptor);
     return strtod (Buffer, NULL);
 }
@@ -1324,7 +1337,7 @@ int IniFileDataBaseReadSection (const char* par_Section, char* par_Text, int par
                 int Len = strlen(EntryLine) + 1;
                 c += Len;
                 if (c < par_MaxSize) {
-                    memcpy(d, EntryLine, Len);
+                    MEMCPY(d, EntryLine, Len);
                     d += Len;
                 }
             }
@@ -1379,7 +1392,7 @@ char *IniFileDataBaseReadSectionBuffer (const char* par_Section, int par_FileDes
                     char *EntryLine = Section->Entrys[e];
                     int Len = strlen(EntryLine) + 1;
                     c += Len;
-                    memcpy(d, EntryLine, Len);
+                    MEMCPY(d, EntryLine, Len);
                     d += Len;
                 }
                 *d = 0;
@@ -1452,7 +1465,7 @@ int IniFileDataBaseWriteByteImage (const char* par_Section, const char* par_Entr
                             if (x > 0) {
                                 // Write line into INI file
                                 *d = 0;  // terminate line
-                                sprintf (EntryHelp, "%s_%i", par_EntryPrefix, LineCounter);
+                                PrintFormatToString (EntryHelp, sizeof(EntryHelp), "%s_%i", par_EntryPrefix, LineCounter);
                                 LineCounter++;
                                 if (!RplaceOrAddNewEntry(Section, EntryHelp, Line)) {
                                     Ret = 0;
@@ -1462,7 +1475,7 @@ int IniFileDataBaseWriteByteImage (const char* par_Section, const char* par_Entr
                                 d = Line;
                             } else {
                                 // First new line: put in front total length and CRC
-                                sprintf (Line, "%i,%u,0x%08X,", par_Type, par_Len, crc32);
+                                PrintFormatToString (Line, sizeof(Line), "%i,%u,0x%08X,", par_Type, par_Len, crc32);
                                 d = Line + strlen(Line);
                             }
                         }
@@ -1474,7 +1487,7 @@ int IniFileDataBaseWriteByteImage (const char* par_Section, const char* par_Entr
                     if (d != Line) {
                         // Write last line to INI file
                         *d = 0;  // terminate line
-                        sprintf (EntryHelp, "%s_%i", par_EntryPrefix, LineCounter);
+                        PrintFormatToString (EntryHelp, sizeof(EntryHelp), "%s_%i", par_EntryPrefix, LineCounter);
                         LineCounter++;
                         if (!RplaceOrAddNewEntry(Section, EntryHelp, Line)) {
                             Ret = 0;
@@ -1483,7 +1496,7 @@ int IniFileDataBaseWriteByteImage (const char* par_Section, const char* par_Entr
                     }
                     // Remove all additional entrys with prefix
                     for (; ; LineCounter++) {
-                        sprintf (EntryHelp, "%s_%i", par_EntryPrefix, LineCounter);
+                        PrintFormatToString (EntryHelp, sizeof(EntryHelp), "%s_%i", par_EntryPrefix, LineCounter);
                         if (!DeleteEntry(Section, (char*)EntryHelp)) {
                             break;
                         }
@@ -1549,7 +1562,7 @@ int IniFileDataBaseReadByteImage (const char* par_Section, const char* par_Entry
         Section = GetSection(FileIndex, par_Section);
         if (Section != NULL) {
             // First line contains name and size
-            sprintf (EntryHelp, "%s_%i", par_EntryPrefix, LineCounter);
+            PrintFormatToString (EntryHelp, sizeof(EntryHelp), "%s_%i", par_EntryPrefix, LineCounter);
             LineCounter++;
             Text = GetEntry(Section, EntryHelp);
             if (Text == NULL) {
@@ -1597,7 +1610,7 @@ int IniFileDataBaseReadByteImage (const char* par_Section, const char* par_Entry
                 int idx;
                 if (((x & 0x1FF) == 0) && (x != 0)) {
                     // Read line from INI file
-                    sprintf (EntryHelp, "%s_%i", par_EntryPrefix, LineCounter);
+                    PrintFormatToString (EntryHelp, sizeof(EntryHelp), "%s_%i", par_EntryPrefix, LineCounter);
                     LineCounter++;
                     Text = GetEntry(Section, EntryHelp);
                     if (Text == NULL) {
@@ -1712,7 +1725,7 @@ int IniFileDataBaseCopySection (int par_DstFileDescriptor, int par_SrcFileDescri
                             int Len = strlen(SrcSection->Entrys[e]) + 1;
                             DstSection->Entrys[e] = my_malloc(Len);
                             if (DstSection->Entrys[e] == NULL) goto __ERROUT;
-                            memcpy(DstSection->Entrys[e], SrcSection->Entrys[e], Len);
+                            MEMCPY(DstSection->Entrys[e], SrcSection->Entrys[e], Len);
                         }
                         DstSection->EntryCount = SrcSection->EntryCount;
                         DstSection->EntrySize = SrcSection->EntrySize;
@@ -1745,18 +1758,8 @@ int IniFileDataBaseCopySectionSameFile (int par_FileDescriptor, const char *par_
 int IniFileDataBaseRenameFile (const char *par_NewName, int par_FileDescriptor)
 {
     int FileIndex;
-    int Ret = -1;
     INI_ENTER_CS (&IniDBCriticalSection);
-    FileIndex = GetIndexByDescriptor(par_FileDescriptor);
-    if (FileIndex >= 0) {
-        char *NewName = my_malloc(strlen(par_NewName)+1);
-        if (NewName != NULL) {
-            strcpy(NewName, par_NewName);
-            my_free(AllLoadedIniFiles[FileIndex].Filename);
-            AllLoadedIniFiles[FileIndex].Filename = NewName;
-            Ret = 0;
-        }
-    }
+    int Ret = IniFileDataBaseRenameFileNoLock(par_NewName, par_FileDescriptor);
     INI_LEAVE_CS (&IniDBCriticalSection);
     return Ret;
 }

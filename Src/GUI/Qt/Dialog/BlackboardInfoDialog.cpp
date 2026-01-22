@@ -22,10 +22,14 @@
 #include <QColorDialog>
 
 #include "EditTextReplaceDialog.h"
+#include "EditRationalFunctionDialog.h"
+#include "EditTableDialog.h"
+#include "EditFactorOffsetDialog.h"
 #include "MainWindow.h"
 #include "StringHelpers.h"
 
 extern "C" {
+#include "PrintFormatToString.h"
 #include "Blackboard.h"
 #include "BlackboardAccess.h"
 #include "MyMemory.h"
@@ -42,11 +46,14 @@ BlackboardInfoDialog::BlackboardInfoDialog(QWidget *parent) : Dialog(parent),
     ui->ConversionTypeComboBox->addItem ("none");  // BB_CONV_NONE
     ui->ConversionTypeComboBox->addItem ("formula");  // BB_CONV_FORMULA
     ui->ConversionTypeComboBox->addItem ("text replace");  // BB_CONV_TEXTREP
-    ui->ConversionTypeComboBox->addItem ("factor offset");  // BB_CONV_FACTOFF
+    ui->ConversionTypeComboBox->addItem ("# * factor + offset");  // BB_CONV_FACTOFF
+    ui->ConversionTypeComboBox->addItem ("factor * (# + offset)");  // BB_CONV_OFFFACT
+    ui->ConversionTypeComboBox->addItem ("table with interpolation");  // BB_CONV_TAB_INTP
+    ui->ConversionTypeComboBox->addItem ("table without interpolation");  // BB_CONV_TAB_NOINTP
+    ui->ConversionTypeComboBox->addItem ("fractional rational function");  // BB_CONV_RAT_FUNC
     ui->ConversionTypeComboBox->addItem ("reference");  // BB_CONV_REF
-    // factor offset und reference are not implemented
-    qobject_cast<QStandardItemModel*>(ui->ConversionTypeComboBox->model())->item(3)->setEnabled (false);
-    qobject_cast<QStandardItemModel*>(ui->ConversionTypeComboBox->model())->item(4)->setEnabled (false);
+    // reference are not implemented yet
+    qobject_cast<QStandardItemModel*>(ui->ConversionTypeComboBox->model())->item(8)->setEnabled (false);
 
     connect(ui->VariableListView->selectionModel(),
             SIGNAL(selectionChanged(QItemSelection,QItemSelection)),
@@ -106,6 +113,39 @@ void BlackboardInfoDialog::NewVariableSelected (QString VariableName)
             case BB_CONV_TEXTREP:
                 New.ConversionString = QString (AdditionalInfos.Conversion.Conv.TextReplace.EnumString);
                 break;
+            case BB_CONV_FACTOFF:
+                New.ConversionString = QString().number(AdditionalInfos.Conversion.Conv.FactorOffset.Factor);
+                New.ConversionString.append(":");
+                New.ConversionString.append(QString().number(AdditionalInfos.Conversion.Conv.FactorOffset.Offset));
+                break;
+            case BB_CONV_OFFFACT:
+                New.ConversionString = QString().number(AdditionalInfos.Conversion.Conv.FactorOffset.Offset);
+                New.ConversionString.append(":");
+                New.ConversionString.append(QString().number(AdditionalInfos.Conversion.Conv.FactorOffset.Factor));
+                break;
+            case BB_CONV_RAT_FUNC:
+                New.ConversionString = QString().number(AdditionalInfos.Conversion.Conv.RatFunc.a);
+                New.ConversionString.append(":");
+                New.ConversionString.append(QString().number(AdditionalInfos.Conversion.Conv.RatFunc.b));
+                New.ConversionString.append(":");
+                New.ConversionString.append(QString().number(AdditionalInfos.Conversion.Conv.RatFunc.c));
+                New.ConversionString.append(":");
+                New.ConversionString.append(QString().number(AdditionalInfos.Conversion.Conv.RatFunc.d));
+                New.ConversionString.append(":");
+                New.ConversionString.append(QString().number(AdditionalInfos.Conversion.Conv.RatFunc.e));
+                New.ConversionString.append(":");
+                New.ConversionString.append(QString().number(AdditionalInfos.Conversion.Conv.RatFunc.f));
+                break;
+            case BB_CONV_TAB_INTP:
+            case BB_CONV_TAB_NOINTP:
+                New.ConversionString = QString();
+                for(int x = 0; x < AdditionalInfos.Conversion.Conv.Table.Size; x++) {
+                    if (x > 0) New.ConversionString.append(":");
+                    New.ConversionString.append(QString().number(AdditionalInfos.Conversion.Conv.Table.Values[x].Phys));
+                    New.ConversionString.append(QString ("/"));
+                    New.ConversionString.append(QString().number(AdditionalInfos.Conversion.Conv.Table.Values[x].Raw));
+                }
+                break;
             case BB_CONV_REF:
                 New.ConversionString = QString (AdditionalInfos.Conversion.Conv.Reference.Name);
                 break;
@@ -143,16 +183,16 @@ void BlackboardInfoDialog::NewVariableSelected (QString VariableName)
         ui->ColorLineEdit->setVisible(P.ColorValid);
         char Help[64];
         if (P.ColorValid) {
-            sprintf (Help , "0x%02X:0x%02X:0x%02X", P.Color.red(), P.Color.green(), P.Color.blue());
+            PrintFormatToString (Help, sizeof(Help), "0x%02X:0x%02X:0x%02X", P.Color.red(), P.Color.green(), P.Color.blue());
         } else {
-            sprintf (Help, "not set");
+            PrintFormatToString (Help, sizeof(Help), "not set");
         }
         ui->ColorLineEdit->setText(Help);
         SetColorView (P.Color);
         ui->WidthLineEdit->setText (QString ("%1").arg (P.Width));
         ui->PrecisionLineEdit->setText (QString ("%1").arg (P.Precision));
 
-        sprintf (Help , "0x%X", P.Vid);
+        PrintFormatToString (Help, sizeof(Help), "0x%X", P.Vid);
         ui->VariableIdLineEdit->setText (Help);
 
         ui->DataTypeLineEdit->setText(GetDataTypeName (P.DataType));
@@ -247,11 +287,56 @@ void BlackboardInfoDialog::accept()
 
 void BlackboardInfoDialog::on_ConversionEditPushButton_clicked()
 {
-    QString TextReplace = ui->ConversionLineEdit->text();
-    EditTextReplaceDialog Dlg (TextReplace);
-    if (Dlg.exec() == QDialog::Accepted) {
-        TextReplace = Dlg.GetModifiedTextReplaceString();
-        ui->ConversionLineEdit->setText(TextReplace);
+    QString Text = ui->ConversionLineEdit->text();
+    switch(ui->ConversionTypeComboBox->currentIndex()) {
+    case BB_CONV_TEXTREP:
+    {
+        EditTextReplaceDialog Dlg (Text);
+        if (Dlg.exec() == QDialog::Accepted) {
+            Text = Dlg.GetModifiedTextReplaceString();
+            ui->ConversionLineEdit->setText(Text);
+        }
+        break;
+    }
+    case BB_CONV_FACTOFF:
+    {
+        EditFactorOffsetDialog Dlg (Text, EditFactorOffsetDialog::FACTOR_OFFSET_TYPE);
+        if (Dlg.exec() == QDialog::Accepted) {
+            Text = Dlg.GetModifiedFactorOffsetString();
+            ui->ConversionLineEdit->setText(Text);
+        }
+        break;
+    }
+    case BB_CONV_OFFFACT:
+    {
+        EditFactorOffsetDialog Dlg (Text, EditFactorOffsetDialog::OFFSET_FACTOR_TYPE);
+        if (Dlg.exec() == QDialog::Accepted) {
+            Text = Dlg.GetModifiedFactorOffsetString();
+            ui->ConversionLineEdit->setText(Text);
+        }
+        break;
+    }
+    case BB_CONV_RAT_FUNC:
+    {
+        EditRationalFunctionDialog Dlg (Text);
+        if (Dlg.exec() == QDialog::Accepted) {
+            Text = Dlg.GetModifiedRationalFunctionString();
+            ui->ConversionLineEdit->setText(Text);
+        }
+        break;
+    }
+    case BB_CONV_TAB_INTP:
+    case BB_CONV_TAB_NOINTP:
+    {
+        EditTableDialog Dlg (Text);
+        if (Dlg.exec() == QDialog::Accepted) {
+            Text = Dlg.GetModifiedTableString();
+            ui->ConversionLineEdit->setText(Text);
+        }
+        break;
+    }
+    default:
+        break;
     }
 }
 
@@ -267,7 +352,7 @@ void BlackboardInfoDialog::on_ChoiceColorPushButton_clicked()
         Color = Dlg.currentColor();
         ui->ColorValidCheckBox->setChecked(true);
         char Help[64];
-        sprintf (Help , "0x%02X:0x%02X:0x%02X", Color.red(), Color.green(), Color.blue());
+        PrintFormatToString (Help, sizeof(Help), "0x%02X:0x%02X:0x%02X", Color.red(), Color.green(), Color.blue());
         ui->ColorLineEdit->setText(Help);
         SetColorView (Color);
     }
@@ -287,11 +372,6 @@ void BlackboardInfoDialog::on_ColorLineEdit_editingFinished()
     SetColorView (Color);
 }
 
-void BlackboardInfoDialog::on_ConversionTypeComboBox_currentTextChanged(const QString &ConversionType)
-{
-    ui->ConversionEditPushButton->setDisabled (ConversionType.compare (QString ("text replace")));
-}
-
 void BlackboardInfoDialog::handleSelectionChanged(const QItemSelection &selected, const QItemSelection &deselected)
 {
     if (!deselected.isEmpty()) {
@@ -308,5 +388,16 @@ void BlackboardInfoDialog::on_ColorValidCheckBox_stateChanged(int arg1)
 {
     ui->ColorViewLabel->setVisible(arg1);
     ui->ColorLineEdit->setVisible(arg1);
+}
+
+
+void BlackboardInfoDialog::on_ConversionTypeComboBox_currentIndexChanged(int index)
+{
+    ui->ConversionEditPushButton->setEnabled((index == BB_CONV_TEXTREP) ||
+                                             (index == BB_CONV_FACTOFF) ||
+                                             (index == BB_CONV_OFFFACT) ||
+                                             (index == BB_CONV_RAT_FUNC) ||
+                                             (index == BB_CONV_TAB_INTP) ||
+                                             (index == BB_CONV_TAB_NOINTP));
 }
 

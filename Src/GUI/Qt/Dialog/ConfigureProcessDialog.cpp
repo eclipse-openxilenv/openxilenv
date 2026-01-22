@@ -26,6 +26,8 @@
 #include "QtIniFile.h"
 
 extern "C" {
+#include "PrintFormatToString.h"
+#include "StringMaxChar.h"
 #include "Scheduler.h"
 #include "ThrowError.h"
 #include "Files.h"
@@ -78,7 +80,7 @@ ConfigureProcessDialog::~ConfigureProcessDialog()
 struct ConfigureProcessDialog::DialogData ConfigureProcessDialog::ReadProcessInfos(QString &SelectedProcess)
 {
     struct DialogData Ret;
-    memset (&Ret, 0, sizeof (Ret));
+    MEMSET (&Ret, 0, sizeof (Ret));
     int Prio;
     int Cycles;
     int Delay;
@@ -159,19 +161,19 @@ struct ConfigureProcessDialog::DialogData ConfigureProcessDialog::ReadProcessInf
                                     &Ret.m_TimeSteps,
                                     &Ret.m_Delay,
                                     &Ret.m_Timeout,
-                                    Ret.m_RangeErrorCounter,
-                                    Ret.m_RangeControl,
+                                    Ret.m_RangeErrorCounter, sizeof(Ret.m_RangeErrorCounter),
+                                    Ret.m_RangeControl, sizeof( Ret.m_RangeControl),
                                     &RangeControlFlags,
-                                    Ret.m_BBPrefix,
-                                    Ret.m_SchedulerName,
-                                    Ret.m_BarriersBeforeOnlySignal,
-                                    Ret.m_BarriersBeforeSignalAndWait,
-                                    Ret.m_BarriersBehindOnlySignal,
-                                    Ret.m_BarriersBehindSignalAndWait,
-                                    Ret.m_BarriersLoopOutBeforeOnlySignal,
-                                    Ret.m_BarriersLoopOutBeforeSignalAndWait,
-                                    Ret.m_BarriersLoopOutBehindOnlySignal,
-                                    Ret.m_BarriersLoopOutBehindSignalAndWait) != 0) {
+                                    Ret.m_BBPrefix, sizeof(Ret.m_BBPrefix),
+                                    Ret.m_SchedulerName, sizeof(Ret.m_SchedulerName),
+                                    Ret.m_BarriersBeforeOnlySignal, sizeof(Ret.m_BarriersBeforeOnlySignal),
+                                    Ret.m_BarriersBeforeSignalAndWait, sizeof(Ret.m_BarriersBeforeSignalAndWait),
+                                    Ret.m_BarriersBehindOnlySignal, sizeof(Ret.m_BarriersBehindOnlySignal),
+                                    Ret.m_BarriersBehindSignalAndWait, sizeof(Ret.m_BarriersBehindSignalAndWait),
+                                    Ret.m_BarriersLoopOutBeforeOnlySignal, sizeof(Ret.m_BarriersLoopOutBeforeOnlySignal),
+                                    Ret.m_BarriersLoopOutBeforeSignalAndWait, sizeof(Ret.m_BarriersLoopOutBeforeSignalAndWait),
+                                    Ret.m_BarriersLoopOutBehindOnlySignal, sizeof(Ret.m_BarriersLoopOutBehindOnlySignal),
+                                    Ret.m_BarriersLoopOutBehindSignalAndWait, sizeof(Ret.m_BarriersLoopOutBehindSignalAndWait)) != 0) {
         ;  // nix
     }
     if (PrioCyclesDelaysValid) {
@@ -194,8 +196,8 @@ struct ConfigureProcessDialog::DialogData ConfigureProcessDialog::ReadProcessInf
 
     GetBeforeProcessEquationFileName (QStringToConstChar(SelectedProcess), Ret.m_EquationBefore);
     GetBehindProcessEquationFileName (QStringToConstChar(SelectedProcess), Ret.m_EquationBehind);
-    GetSVLFileLoadedBeforeInitProcessFileName (QStringToConstChar(SelectedProcess), Ret.m_SvlFile);
-    GetA2LFileAssociatedProcessFileName(QStringToConstChar(SelectedProcess), Ret.m_A2LFile, &Ret.m_UpdateA2LFileFlags);
+    GetSVLFileLoadedBeforeInitProcessFileName (QStringToConstChar(SelectedProcess), Ret.m_SvlFile, sizeof(Ret.m_SvlFile));
+    GetA2LFileAssociatedProcessFileName(QStringToConstChar(SelectedProcess), Ret.m_A2LFile, sizeof(Ret.m_A2LFile), &Ret.m_UpdateA2LFileFlags);
 
     return Ret;
 }
@@ -209,16 +211,16 @@ struct ConfigureProcessDialog::DialogData ConfigureProcessDialog::GetProcessInfo
     Ret.m_Priority = ui->ProcessOrderLineEdit->text().toInt();
     QString EquationBefore = ui->EquationBeforeLineEdit->text().trimmed();
     EquationBefore.truncate(sizeof (Ret.m_EquationBefore)-1);
-    strcpy (Ret.m_EquationBefore, QStringToConstChar(EquationBefore));
+    STRING_COPY_TO_ARRAY (Ret.m_EquationBefore, QStringToConstChar(EquationBefore));
     QString EquationBehind = ui->EquationBehindLineEdit->text().trimmed();
     EquationBehind.truncate(sizeof (Ret.m_EquationBehind)-1);
-    strcpy (Ret.m_EquationBehind, QStringToConstChar(EquationBehind));
+    STRING_COPY_TO_ARRAY (Ret.m_EquationBehind, QStringToConstChar(EquationBehind));
     QString SvlFile = ui->SVLLineEdit->text().trimmed();
     SvlFile.truncate(sizeof (Ret.m_SvlFile)-1);
-    strcpy (Ret.m_SvlFile, QStringToConstChar(SvlFile));
+    STRING_COPY_TO_ARRAY (Ret.m_SvlFile, QStringToConstChar(SvlFile));
     QString A2LFile = ui->A2LLineEdit->text().trimmed();
     A2LFile.truncate(sizeof (Ret.m_A2LFile)-1);
-    strcpy (Ret.m_A2LFile, QStringToConstChar(A2LFile));
+    STRING_COPY_TO_ARRAY (Ret.m_A2LFile, QStringToConstChar(A2LFile));
     Ret.m_UpdateA2LFileFlags = 0;
     if (ui->UpdateA2LCheckBox->isChecked()) Ret.m_UpdateA2LFileFlags |= A2L_LINK_UPDATE_FLAG;
     if (ui->UpdateDLLA2LCheckBox->isChecked()) Ret.m_UpdateA2LFileFlags |= A2L_LINK_ADDRESS_TRANSLATION_DLL_FLAG;
@@ -226,6 +228,8 @@ struct ConfigureProcessDialog::DialogData ConfigureProcessDialog::GetProcessInfo
     if (ui->IgnoreModCommonAlignmentsCheckBox->isChecked()) Ret.m_UpdateA2LFileFlags |= A2L_LINK_IGNORE_MOD_COMMON_ALIGNMENTS_FLAG;
     if (ui->IgnoreRecordLayoutAlignmentsCheckBox->isChecked()) Ret.m_UpdateA2LFileFlags |= A2L_LINK_IGNORE_RECORD_LAYOUT_ALIGNMENTS_FLAG;
     if (ui->RememberReferencedCheckBox->isChecked()) Ret.m_UpdateA2LFileFlags |= A2L_LINK_REMEMBER_REFERENCED_LABELS_FLAG;
+    if (ui->IgnoreReadOnlyCheckBox->isChecked()) Ret.m_UpdateA2LFileFlags |= A2L_LINK_IGNORE_READ_ONLY_FLAG;
+    if (ui->DefaultAlignmentCheckBox->isChecked()) Ret.m_UpdateA2LFileFlags |= A2L_LINK_DEFAUT_ALIGNMENT_FLAG;
 
     Ret.m_RangeErrorCounterFlag = ui->RangeControlErrorCounterCheckBox->isChecked();
     Ret.m_RangeControlBeforeActiveFlag = ui->RangeControlBeforeProceesCheckBox->isChecked();
@@ -236,11 +240,11 @@ struct ConfigureProcessDialog::DialogData ConfigureProcessDialog::GetProcessInfo
     Ret.m_RangeControlPhysFlag = ui->RangeControlPhysicalCheckBox->isChecked();
     Ret.m_RangeControlStopSchedFlag = ui->RangeControlStopSchedulerCheckBox->isChecked();
     Ret.m_RangeControlLimitValuesFlag = ui->RangeControlLimitValuesProceesCheckBox->isChecked();
-    memset (Ret.m_RangeControl, 0, sizeof (Ret.m_RangeControl));
+    MEMSET (Ret.m_RangeControl, 0, sizeof (Ret.m_RangeControl));
     if (Ret.m_RangeControlVarFlag) {
         strncpy (Ret.m_RangeControl, QStringToConstChar(ui->RangeControlVariableLineEdit->text()), sizeof (Ret.m_RangeControl) - 1);
     }
-    memset (Ret.m_RangeErrorCounter, 0, sizeof (Ret.m_RangeErrorCounter));
+    MEMSET (Ret.m_RangeErrorCounter, 0, sizeof (Ret.m_RangeErrorCounter));
     if (Ret.m_RangeErrorCounterFlag) {
         strncpy (Ret.m_RangeErrorCounter, QStringToConstChar(ui->RangeControlErrorCounterLineEdit->text()), sizeof (Ret.m_RangeErrorCounter) - 1);
     }
@@ -255,9 +259,9 @@ struct ConfigureProcessDialog::DialogData ConfigureProcessDialog::GetProcessInfo
     QString SchedulerName = ui->SchedulerComboBox->currentText();
     if (!SchedulerName.isEmpty()) {
          SchedulerName.truncate(sizeof (Ret.m_SchedulerName));
-         strcpy (Ret.m_SchedulerName, QStringToConstChar(SchedulerName));
+         STRING_COPY_TO_ARRAY (Ret.m_SchedulerName, QStringToConstChar(SchedulerName));
     } else {
-        strcpy (Ret.m_SchedulerName, "");
+        STRING_COPY_TO_ARRAY (Ret.m_SchedulerName, "");
     }
     QList<QListWidgetItem*> AllItems;
     int Count;
@@ -265,64 +269,64 @@ struct ConfigureProcessDialog::DialogData ConfigureProcessDialog::GetProcessInfo
     Ret.m_BarriersBeforeOnlySignal[0] = 0;
     Count = 0;
     foreach (QListWidgetItem *Item, AllItems) {
-        if (Count++) strcat (Ret.m_BarriersBeforeOnlySignal, ";");
-        strcat (Ret.m_BarriersBeforeOnlySignal, QStringToConstChar(Item->data(Qt::DisplayRole).toString()));
+        if (Count++) STRING_APPEND_TO_ARRAY (Ret.m_BarriersBeforeOnlySignal, ";");
+        STRING_APPEND_TO_ARRAY (Ret.m_BarriersBeforeOnlySignal, QStringToConstChar(Item->data(Qt::DisplayRole).toString()));
     }
 
     AllItems = ui->BeforeBarrierWaitListWidget->findItems(QString("*"), Qt::MatchWrap | Qt::MatchWildcard);
     Ret.m_BarriersBeforeSignalAndWait[0] = 0;
     Count = 0;
     foreach (QListWidgetItem *Item, AllItems) {
-        if (Count++) strcat (Ret.m_BarriersBeforeSignalAndWait, ";");
-        strcat (Ret.m_BarriersBeforeSignalAndWait, QStringToConstChar(Item->data(Qt::DisplayRole).toString()));
+        if (Count++) STRING_APPEND_TO_ARRAY (Ret.m_BarriersBeforeSignalAndWait, ";");
+        STRING_APPEND_TO_ARRAY (Ret.m_BarriersBeforeSignalAndWait, QStringToConstChar(Item->data(Qt::DisplayRole).toString()));
     }
 
     AllItems = ui->BehindBarrierListWidget->findItems(QString("*"), Qt::MatchWrap | Qt::MatchWildcard);
     Ret.m_BarriersBehindOnlySignal[0] = 0;
     Count = 0;
     foreach (QListWidgetItem *Item, AllItems) {
-        if (Count++) strcat (Ret.m_BarriersBehindOnlySignal, ";");
-        strcat (Ret.m_BarriersBehindOnlySignal, QStringToConstChar(Item->data(Qt::DisplayRole).toString()));
+        if (Count++) STRING_APPEND_TO_ARRAY (Ret.m_BarriersBehindOnlySignal, ";");
+        STRING_APPEND_TO_ARRAY (Ret.m_BarriersBehindOnlySignal, QStringToConstChar(Item->data(Qt::DisplayRole).toString()));
     }
 
     AllItems = ui->BehindBarrierWaitListWidget->findItems(QString("*"), Qt::MatchWrap | Qt::MatchWildcard);
     Ret.m_BarriersBehindSignalAndWait[0] = 0;
     Count = 0;
     foreach (QListWidgetItem *Item, AllItems) {
-        if (Count++) strcat (Ret.m_BarriersBehindSignalAndWait, ";");
-        strcat (Ret.m_BarriersBehindSignalAndWait, QStringToConstChar(Item->data(Qt::DisplayRole).toString()));
+        if (Count++) STRING_APPEND_TO_ARRAY (Ret.m_BarriersBehindSignalAndWait, ";");
+        STRING_APPEND_TO_ARRAY (Ret.m_BarriersBehindSignalAndWait, QStringToConstChar(Item->data(Qt::DisplayRole).toString()));
     }
 // Loop out
     AllItems = ui->BeforeBarrierLoopOutListWidget->findItems(QString("*"), Qt::MatchWrap | Qt::MatchWildcard);
     Ret.m_BarriersLoopOutBeforeOnlySignal[0] = 0;
     Count = 0;
     foreach (QListWidgetItem *Item, AllItems) {
-        if (Count++) strcat (Ret.m_BarriersLoopOutBeforeOnlySignal, ";");
-        strcat (Ret.m_BarriersLoopOutBeforeOnlySignal, QStringToConstChar(Item->data(Qt::DisplayRole).toString()));
+        if (Count++) STRING_APPEND_TO_ARRAY (Ret.m_BarriersLoopOutBeforeOnlySignal, ";");
+        STRING_APPEND_TO_ARRAY (Ret.m_BarriersLoopOutBeforeOnlySignal, QStringToConstChar(Item->data(Qt::DisplayRole).toString()));
     }
 
     AllItems = ui->BeforeBarrierLoopOutWaitListWidget->findItems(QString("*"), Qt::MatchWrap | Qt::MatchWildcard);
     Ret.m_BarriersLoopOutBeforeSignalAndWait[0] = 0;
     Count = 0;
     foreach (QListWidgetItem *Item, AllItems) {
-        if (Count++) strcat (Ret.m_BarriersLoopOutBeforeSignalAndWait, ";");
-        strcat (Ret.m_BarriersLoopOutBeforeSignalAndWait, QStringToConstChar(Item->data(Qt::DisplayRole).toString()));
+        if (Count++) STRING_APPEND_TO_ARRAY (Ret.m_BarriersLoopOutBeforeSignalAndWait, ";");
+        STRING_APPEND_TO_ARRAY (Ret.m_BarriersLoopOutBeforeSignalAndWait, QStringToConstChar(Item->data(Qt::DisplayRole).toString()));
     }
 
     AllItems = ui->BehindBarrierLoopOutListWidget->findItems(QString("*"), Qt::MatchWrap | Qt::MatchWildcard);
     Ret.m_BarriersLoopOutBehindOnlySignal[0] = 0;
     Count = 0;
     foreach (QListWidgetItem *Item, AllItems) {
-        if (Count++) strcat (Ret.m_BarriersLoopOutBehindOnlySignal, ";");
-        strcat (Ret.m_BarriersLoopOutBehindOnlySignal, QStringToConstChar(Item->data(Qt::DisplayRole).toString()));
+        if (Count++) STRING_APPEND_TO_ARRAY (Ret.m_BarriersLoopOutBehindOnlySignal, ";");
+        STRING_APPEND_TO_ARRAY (Ret.m_BarriersLoopOutBehindOnlySignal, QStringToConstChar(Item->data(Qt::DisplayRole).toString()));
     }
 
     AllItems = ui->BehindBarrierLoopOutWaitListWidget->findItems(QString("*"), Qt::MatchWrap | Qt::MatchWildcard);
     Ret.m_BarriersLoopOutBehindSignalAndWait[0] = 0;
     Count = 0;
     foreach (QListWidgetItem *Item, AllItems) {
-        if (Count++) strcat (Ret.m_BarriersLoopOutBehindSignalAndWait, ";");
-        strcat (Ret.m_BarriersLoopOutBehindSignalAndWait, QStringToConstChar(Item->data(Qt::DisplayRole).toString()));
+        if (Count++) STRING_APPEND_TO_ARRAY (Ret.m_BarriersLoopOutBehindSignalAndWait, ";");
+        STRING_APPEND_TO_ARRAY (Ret.m_BarriersLoopOutBehindSignalAndWait, QStringToConstChar(Item->data(Qt::DisplayRole).toString()));
     }
     return Ret;
 }
@@ -338,7 +342,7 @@ void ConfigureProcessDialog::UpdateProcessListView()
     for (i = m_ProcessInfos.begin(); i != m_ProcessInfos.end(); ++i) {
         QString ProcessName(i.key());
         QListWidgetItem *Item = new QListWidgetItem(ProcessName,ui->ProceessListWidget);
-        GetProcessLongName(get_pid_by_name (QStringToConstChar(i.key())), LongProcessName);
+        GetProcessLongName(get_pid_by_name (QStringToConstChar(i.key())), LongProcessName, sizeof(LongProcessName));
         Item->setToolTip(QString(LongProcessName));
     }
 }
@@ -415,7 +419,7 @@ void ConfigureProcessDialog::InsertAllSchedulerAndBarrier()
     ui->SchedulerComboBox->addItem (QString ("Scheduler"));
 
     for (int s = 1; ; s++) {
-        sprintf (Entry, "Scheduler_%i", s);
+        PrintFormatToString (Entry, sizeof(Entry), "Scheduler_%i", s);
         if (IniFileDataBaseReadString (SCHED_INI_SECTION, Entry, "", SchedulerName, sizeof (SchedulerName), GetMainFileDescriptor()) <= 0) {
             break;
         }
@@ -427,7 +431,7 @@ void ConfigureProcessDialog::InsertAllSchedulerAndBarrier()
     ui->AvailableBeforeBarrierLoopOutListWidget->clear();
     ui->AvailableBehindBarrierLoopOutListWidget->clear();
     for (int b = 0; ; b++) {
-        sprintf (Entry, "Barrier_%i", b);
+        PrintFormatToString (Entry, sizeof(Entry), "Barrier_%i", b);
         if (IniFileDataBaseReadString ("SchedulerBarriersConfiguration", Entry, "", Line, sizeof (Line), GetMainFileDescriptor()) <= 0) {
             break;
         }
@@ -537,8 +541,8 @@ void ConfigureProcessDialog::SetProcessInfos (QString &SelectedProcess)
         ui->BlackboardMaskLineEdit->setText (QString ().number(Data.m_Mask, 16));
 
         char LongProcessName[MAX_PATH];
-        strcpy (LongProcessName, "");
-        GetProcessLongName (Data.m_Pid, LongProcessName);
+        STRING_COPY_TO_ARRAY (LongProcessName, "");
+        GetProcessLongName (Data.m_Pid, LongProcessName, sizeof(LongProcessName));
         ui->LongProcessNameLineEdit->setText (CharToQString(LongProcessName));
 
         if (!Data.m_IsRunning) {
@@ -581,7 +585,11 @@ void ConfigureProcessDialog::SetProcessInfos (QString &SelectedProcess)
         ui->UpdateA2LCheckBox->setChecked((Data.m_UpdateA2LFileFlags & A2L_LINK_UPDATE_FLAG) != 0);
         ui->UpdateDLLA2LCheckBox->setChecked((Data.m_UpdateA2LFileFlags & A2L_LINK_ADDRESS_TRANSLATION_DLL_FLAG) != 0);
         ui->UpdateMultiDLLA2LCheckBox->setChecked((Data.m_UpdateA2LFileFlags & A2L_LINK_ADDRESS_TRANSLATION_MULTI_DLL_FLAG) != 0);
+        ui->IgnoreModCommonAlignmentsCheckBox->setChecked((Data.m_UpdateA2LFileFlags & A2L_LINK_IGNORE_MOD_COMMON_ALIGNMENTS_FLAG) != 0);
+        ui->IgnoreRecordLayoutAlignmentsCheckBox->setChecked((Data.m_UpdateA2LFileFlags & A2L_LINK_IGNORE_RECORD_LAYOUT_ALIGNMENTS_FLAG) != 0);
         ui->RememberReferencedCheckBox->setChecked((Data.m_UpdateA2LFileFlags & A2L_LINK_REMEMBER_REFERENCED_LABELS_FLAG) != 0);
+        ui->IgnoreReadOnlyCheckBox->setChecked((Data.m_UpdateA2LFileFlags & A2L_LINK_IGNORE_READ_ONLY_FLAG) != 0);
+        ui->DefaultAlignmentCheckBox->setChecked((Data.m_UpdateA2LFileFlags & A2L_LINK_DEFAUT_ALIGNMENT_FLAG) != 0);
 
         if (strlen (Data.m_BBPrefix)) {
             ui->PrefixCheckBox->setCheckState(Qt::Checked);
@@ -731,7 +739,7 @@ void ConfigureProcessDialog::StoreProcessInfos (QString &par_ProcessName, struct
                 // process is running
                 char OldA2LFile[512+64];
                 int OldUpdateA2LFileFlags;
-                if (GetA2LFileAssociatedProcessFileName(QStringToConstChar(par_ProcessName), OldA2LFile, &OldUpdateA2LFileFlags) > 0) {
+                if (GetA2LFileAssociatedProcessFileName(QStringToConstChar(par_ProcessName), OldA2LFile, sizeof(OldA2LFile), &OldUpdateA2LFileFlags) > 0) {
 #ifdef _WIN32
                     if (strcmpi(OldA2LFile, par_Data.m_A2LFile) ||
 #else
@@ -796,7 +804,7 @@ void ConfigureProcessDialog::on_AddProcessPushButton_clicked()
         if (!NewProcess.isEmpty()) {
             if (!ContainsProcessName (NewProcess)) {
                 struct DialogData New;
-                memset (&New, 0, sizeof (New));
+                MEMSET (&New, 0, sizeof (New));
                 New.m_Changed = 1;  // Mark process immediately as changed otherwise it will not stored
                 m_ProcessInfos.insert (NewProcess, New);
                 UpdateProcessListView();

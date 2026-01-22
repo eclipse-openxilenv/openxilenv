@@ -30,7 +30,7 @@
 #include <sys/types.h>
 #include <sched.h>
 
-
+#include "MemZeroAndCopy.h"
 #include "ThrowError.h"
 #include "MemoryAllocation.h"
 
@@ -85,7 +85,7 @@ void *connection_handler(void *socket_desc)
 #ifdef LOG_REMOTE_MASTER_CALL
 	FILE *fh;
 	char log_name[100];
-	sprintf(log_name, "%s_%i.txt", LOG_REMOTE_MASTER_CALL, sock);
+    PrintFormatToString (log_name, sizeof(log_name), "%s_%i.txt", LOG_REMOTE_MASTER_CALL, sock);
 	fh = fopen(log_name, "wt");
 #endif
 
@@ -98,7 +98,7 @@ void *connection_handler(void *socket_desc)
 	if (pthread_setaffinity_np(thread, sizeof(mask), &mask) != 0) {
 		printf("Could not set CPU affinity to CPU %d\n", 1);
 	}
-	memset(&schedp, 0, sizeof(schedp));
+	MEMSET(&schedp, 0, sizeof(schedp));
 	schedp.sched_priority = 99;
     if (sched_setscheduler(0, SCHED_FIFO, &schedp)) {
         printf("failed to set priority to %d\n", 99);

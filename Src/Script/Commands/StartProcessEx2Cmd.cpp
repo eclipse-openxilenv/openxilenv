@@ -115,6 +115,9 @@ int cStartProcessEx2Cmd::Execute (cParser *par_Parser, cExecutor *par_Executor)
             } else if (!stricmp(par_Parser->GetParameter (7 + Offset), "A2L_IGNORE_READ_ONLY")) {
                 Offset++;
                 A2LFlags |= A2L_LINK_IGNORE_READ_ONLY_FLAG;
+            } else if (!stricmp(par_Parser->GetParameter (7 + Offset), "A2L_LINK_DEFAUT_ALIGNMENT")) {
+                Offset++;
+                A2LFlags |= A2L_LINK_DEFAUT_ALIGNMENT_FLAG;
             } else{
                 break; // for(;;)
             }
@@ -231,7 +234,7 @@ int cStartProcessEx2Cmd::Wait (cParser *par_Parser, cExecutor *par_Executor, int
 
 static cStartProcessEx2Cmd StartProcessEx2Cmd ("START_PROCESS_EX2",
                                              1, 
-                                             24,
+                                             25,
                                              nullptr,
                                              FALSE, 
                                              FALSE,  

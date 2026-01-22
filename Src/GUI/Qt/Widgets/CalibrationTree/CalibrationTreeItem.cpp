@@ -28,6 +28,7 @@
 
 extern "C" {
 #include "MyMemory.h"
+#include "PrintFormatToString.h"
 #include "Blackboard.h"
 #include "ReadWriteValue.h"
 #include "ThrowError.h"
@@ -96,7 +97,7 @@ void CalibrationTreeItem::ExpandPointer ()
             name = "";
         }
 
-        sprintf (struct_structname, "[0]");
+        PrintFormatToString (struct_structname, sizeof(struct_structname), "[0]");
         expand = 0;
         switch (points_to_what) {
         case 1:   // Base data type
@@ -247,7 +248,7 @@ void CalibrationTreeItem::ExpandArray ()
         for (x = 0; x < array_elements; x++) {
             address = m_Address + static_cast<uint64_t>(x * (array_size / array_elements));
 
-            sprintf (arrayelemname, "[%i]", x);
+            PrintFormatToString (arrayelemname, sizeof(arrayelemname), "[%i]", x);
 
             expand = 0;
             switch (arrayelem_of_what) {
@@ -521,7 +522,7 @@ QVariant CalibrationTreeItem::GetLabelValueString (bool *ret_DelayedReadFlag)
 QVariant CalibrationTreeItem::GetLabelAddressString ()
 {
     char Help[256];
-    sprintf (Help, "0x%08" PRIX64, m_Address);
+    PrintFormatToString (Help, sizeof(Help), "0x%08" PRIX64, m_Address);
     QString ValueString (Help);
     return ValueString;
 }
@@ -550,7 +551,7 @@ int CalibrationTreeItem::DelayedGetLabelValueString(bool ErrMsgFlag)
             if (ErrMsgFlag) {
                 char Processname[MAX_PATH];
                 QString CompleteName;
-                if (get_name_by_pid(Pid,Processname) == 0) {
+                if (get_name_by_pid(Pid, Processname, sizeof(Processname)) == 0) {
                     CompleteName = GetLabelCompleteName();
                 } else {
                     Processname[0] = 0;

@@ -23,6 +23,7 @@
 
 extern "C"
 {
+    #include "StringMaxChar.h"
     #include "Scheduler.h"
     #include "DebugInfos.h"
     #include "ThrowError.h"
@@ -69,7 +70,7 @@ void writesectiontoexedialog::accept()
         msgWarnBox.exec();
         return;
     }
-    strcpy(ProcessName, QStringToConstChar(ui->listWidgetProcesses->currentItem()->text()));
+    STRING_COPY_TO_ARRAY(ProcessName, QStringToConstChar(ui->listWidgetProcesses->currentItem()->text()));
 
     pid = get_pid_by_name (ProcessName);
     if (pid <= 0) {
@@ -77,7 +78,7 @@ void writesectiontoexedialog::accept()
         return;
     }
     for (x = 0; x < ui->listWidgetSelectedSection->count(); x++) {
-        strcpy(Section, QStringToConstChar(ui->listWidgetSelectedSection->item(x)->text()));
+        STRING_COPY_TO_ARRAY(Section, QStringToConstChar(ui->listWidgetSelectedSection->item(x)->text()));
         if (scm_write_section_to_exe (pid, Section)) {
             ThrowError (1, "cannot write section \"%s\" to \"%s\"", Section, ProcessName);
         }
@@ -107,7 +108,7 @@ void writesectiontoexedialog::on_pushButtonDel_clicked()
 void writesectiontoexedialog::on_listWidgetProcesses_itemClicked(QListWidgetItem *item)
 {
     char ProcessName[MAX_PATH];
-    strcpy(ProcessName, QStringToConstChar(item->text()));
+    STRING_COPY_TO_ARRAY(ProcessName, QStringToConstChar(item->text()));
     ui->listWidgetSelectedSection->clear();
     ui->listWidgetAvailableSection->clear();
     AddSectionToListBox(ProcessName);

@@ -38,7 +38,8 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-
+#include "StringMaxChar.h"
+#include "PrintFormatToString.h"
 #include "Blackboard.h"
 #include "BlackboardAccess.h"
 #include "ThrowError.h"
@@ -247,20 +248,20 @@ void OscilloscopeDesc::BuildHexString (const char *Prefix, uint64_t Value, int T
     switch (Type) {
     case BB_BYTE:
     case BB_UBYTE:
-        sprintf (String, "%s 0x%02X", Prefix, static_cast<uint32_t>(Value));
+        PrintFormatToString (String, sizeof(String), "%s 0x%02X", Prefix, static_cast<uint32_t>(Value));
         break;
     case BB_WORD:
     case BB_UWORD:
-        sprintf (String, "%s 0x%04X", Prefix, static_cast<uint32_t>(Value));
+        PrintFormatToString (String, sizeof(String), "%s 0x%04X", Prefix, static_cast<uint32_t>(Value));
         break;
     default:
     case BB_DWORD:
     case BB_UDWORD:
-        sprintf (String, "%s 0x%08X", Prefix, static_cast<uint32_t>(Value));
+        PrintFormatToString (String, sizeof(String), "%s 0x%08X", Prefix, static_cast<uint32_t>(Value));
         break;
     case BB_QWORD:
     case BB_UQWORD:
-        sprintf (String, "%s 0x%016" PRIX64, Prefix, Value);
+        PrintFormatToString (String, sizeof(String), "%s 0x%016" PRIX64, Prefix, Value);
         break;
     }
 }
@@ -320,21 +321,21 @@ int OscilloscopeDesc::CalcDiffEnumString (double Value, int left_right, int pos,
         if (left_right) {
             convert_value_textreplace (m_Data->vids_right[pos],
                                        static_cast<int32_t>(RefValue), DiffEnumStr, maxc - 4, pcolor);
-            strcat (DiffEnumStr, " -> ");
+            StringAppendMaxCharTruncate (DiffEnumStr, " -> ", maxc);
             help = static_cast<int>(strlen (DiffEnumStr));
             convert_value_textreplace (m_Data->vids_right[pos],
                                        static_cast<int32_t>(Value), DiffEnumStr + help, maxc - help - 1, pcolor);
         } else {
             convert_value_textreplace (m_Data->vids_left[pos],
                                        static_cast<int32_t>(RefValue), DiffEnumStr, maxc - 4, pcolor);
-            strcat (DiffEnumStr, " -> ");
+            StringAppendMaxCharTruncate (DiffEnumStr, " -> ", maxc);
             help = static_cast<int>(strlen (DiffEnumStr));
             convert_value_textreplace (m_Data->vids_left[pos],
                                        static_cast<int32_t>(Value), DiffEnumStr + help, maxc - help - 1, pcolor);
         }
         return 0;
     } else {
-        strcpy (DiffEnumStr, "no valid ref point");
+        StringCopyMaxCharTruncate (DiffEnumStr, "no valid ref point", maxc);
         return -1;
     }
 }
@@ -342,10 +343,10 @@ int OscilloscopeDesc::CalcDiffEnumString (double Value, int left_right, int pos,
 int OscilloscopeDesc::ValueToString (int Pos,
                                      const char *Prefix, int left_right, int Vid, double Value,
                                      int dec_phys_flag, int dec_hex_bin_flag, int Type,
-                                     char *String, int *pcolor)
+                                     char *String, int maxc, int *pcolor)
 {
     if (_isnan (Value)) {
-        strcpy (String, "doesn't exist");
+        StringCopyMaxCharTruncate (String, "doesn't exist", maxc);
         return -1;
     } else {
         if ((get_bbvari_conversiontype (Vid) == 2) && dec_phys_flag) {
@@ -368,7 +369,7 @@ int OscilloscopeDesc::ValueToString (int Pos,
                 }
             }
             if (dec_phys_flag || (Type == BB_FLOAT) || (Type == BB_DOUBLE)) {
-                sprintf (String, "%s %*.*lf", Prefix,
+                PrintFormatToString (String, sizeof(String), "%s %*.*lf", Prefix,
                          get_bbvari_format_width (Vid),
                          get_bbvari_format_prec (Vid),
                          Value);
@@ -382,7 +383,7 @@ int OscilloscopeDesc::ValueToString (int Pos,
                     break;
                 case 0:
                 default:
-                    sprintf (String, "%s %0.0f", Prefix, Value);
+                    PrintFormatToString (String, sizeof(String), "%s %0.0f", Prefix, Value);
                     break;
                 }
             }
@@ -391,7 +392,7 @@ int OscilloscopeDesc::ValueToString (int Pos,
     }
 }
 
-int OscilloscopeDesc::read_value_desc_txt (char *txt, int left_right, int pos, int *pcolor)
+int OscilloscopeDesc::read_value_desc_txt (char *txt, int maxc, int left_right, int pos, int *pcolor)
 {
     int ret;
     double value;
@@ -410,9 +411,9 @@ int OscilloscopeDesc::read_value_desc_txt (char *txt, int left_right, int pos, i
                 ret = ValueToString (pos,
                                      Prefix, left_right, m_Data->vids_right[pos], value,
                                      m_Data->dec_phys_right[pos], m_Data->dec_hex_bin_right[pos],
-                                     get_bbvaritype (m_Data->vids_right[pos]), txt, pcolor);
+                                     get_bbvaritype (m_Data->vids_right[pos]), txt, maxc, pcolor);
             } else {
-                strcpy (txt, "doesn't exist");
+                StringCopyMaxCharTruncate (txt, "doesn't exist", maxc);
                 ret = 0;
             }
         } else {
@@ -426,9 +427,9 @@ int OscilloscopeDesc::read_value_desc_txt (char *txt, int left_right, int pos, i
                 ret = ValueToString (pos,
                                      Prefix, left_right, m_Data->vids_left[pos], value,
                                      m_Data->dec_phys_left[pos], m_Data->dec_hex_bin_left[pos],
-                                     get_bbvaritype (m_Data->vids_left[pos]), txt, pcolor);
+                                     get_bbvaritype (m_Data->vids_left[pos]), txt, maxc, pcolor);
             } else {
-                strcpy (txt, "doesn't exist");
+                StringCopyMaxCharTruncate (txt, "doesn't exist", maxc);
                 ret = 0;
             }
         } else {
@@ -440,6 +441,12 @@ int OscilloscopeDesc::read_value_desc_txt (char *txt, int left_right, int pos, i
 }
 
 void OscilloscopeDesc::paintEvent(QPaintEvent * /* event */)
+{
+    QPainter painter(this);
+    paint(painter, true);
+}
+
+void OscilloscopeDesc::paint(QPainter &painter, bool border_flag)
 {
     char vari_name[4+BBVARI_NAME_SIZE];
     int sel_pos;
@@ -457,8 +464,6 @@ void OscilloscopeDesc::paintEvent(QPaintEvent * /* event */)
     if ((m_Number > end_pos) || (m_Number > 19)) {
         return;
     }
-
-    QPainter painter(this);
 
     EnterOsciWidgetCriticalSection (m_Data->CriticalSectionNumber);
 
@@ -481,14 +486,17 @@ void OscilloscopeDesc::paintEvent(QPaintEvent * /* event */)
     if (m_Side == Left) {
         if (m_Data->vids_left[m_Number] > 0) {
             if (m_Data->xy_view_flag) {
-                if ((m_Number & 0x1) == 0x1) strcpy(vari_name, "x = ");
-                else  strcpy(vari_name, "y = ");
+                if ((m_Number & 0x1) == 0x1) {
+                    STRING_COPY_TO_ARRAY(vari_name, "x = ");
+                } else  {
+                    STRING_COPY_TO_ARRAY(vari_name, "y = ");
+                }
             } else vari_name[0] = 0;
-            if (m_Data->name_left[m_Number] != nullptr) strcat (vari_name, m_Data->name_left[m_Number]);
+            if (m_Data->name_left[m_Number] != nullptr) STRING_APPEND_TO_ARRAY (vari_name, m_Data->name_left[m_Number]);
             if (m_Data->vars_disable_left[m_Number]) {
                 value_string[0] = 0;
             } else {
-                visable = read_value_desc_txt (value_string, 0, m_Number, &color) == 0;
+                visable = read_value_desc_txt (value_string, sizeof(value_string), 0, m_Number, &color) == 0;
                 Value = QString(value_string);
                 if ((m_Data->dec_phys_left[m_Number])  || DisplayUnitForNonePhysicalValues) {
                     get_bbvari_unit (m_Data->vids_left[m_Number], unit, sizeof (unit));
@@ -499,18 +507,22 @@ void OscilloscopeDesc::paintEvent(QPaintEvent * /* event */)
         } else {
             vari_name[0] = '\0';
             value_string[0] = '\0';
+            visable = 0;
         }
     } else {
         if (m_Data->vids_right[m_Number] > 0) {
             if (m_Data->xy_view_flag) {
-                if ((m_Number & 0x1) == 0x1) strcpy(vari_name, "x = ");
-                else  strcpy(vari_name, "y = ");
+                if ((m_Number & 0x1) == 0x1) {
+                    STRING_COPY_TO_ARRAY(vari_name, "x = ");
+                } else  {
+                    STRING_COPY_TO_ARRAY(vari_name, "y = ");
+                }
             } else vari_name[0] = 0;
-            if (m_Data->name_right[m_Number] != nullptr) strcat (vari_name, m_Data->name_right[m_Number]);
+            if (m_Data->name_right[m_Number] != nullptr) STRING_APPEND_TO_ARRAY (vari_name, m_Data->name_right[m_Number]);
             if (m_Data->vars_disable_right[m_Number]) {
                 value_string[0] = 0;
             } else {
-                visable = read_value_desc_txt (value_string, 1, m_Number, &color) == 0;
+                visable = read_value_desc_txt (value_string, sizeof(value_string), 1, m_Number, &color) == 0;
                 Value = QString(value_string);
                 if ((m_Data->dec_phys_right[m_Number])  || DisplayUnitForNonePhysicalValues) {
                     get_bbvari_unit (m_Data->vids_right[m_Number], unit, sizeof (unit));
@@ -521,6 +533,7 @@ void OscilloscopeDesc::paintEvent(QPaintEvent * /* event */)
         } else {
             vari_name[0] = '\0';
             value_string[0] = '\0';
+            visable = 0;
         }
     }
 
@@ -539,70 +552,73 @@ void OscilloscopeDesc::paintEvent(QPaintEvent * /* event */)
     wh8 = win_height/8;
 
     QPen PenSave = painter.pen();
-    painter.setPen(Qt::darkGray);
+    QPen Pen(Qt::darkGray);
+    Pen.setWidth(2);
+    painter.setPen(Pen);
 
     if (m_Side == Left) {
-        // Paint the border
-        if (!m_Data->xy_view_flag || ((m_Number & 0x1) == 0x0)) {
-            if (m_Number == 0) painter.drawLine (win_width-1, 0, 0, 0);
-            else painter.drawLine (win_width-wh3, 0, 0, 0);
-        }
-        painter.drawLine (0, 0, 0, win_height-1);
-        if (!m_Data->xy_view_flag || ((m_Number & 0x1) == 0x1)) {
-            if (m_Number == end_pos) {
-                painter.drawLine (0, win_height-1, win_width-1, win_height-1);
-                if (m_Data->xy_view_flag) {
-                    if ((m_Number/2) != (sel_pos/2)) painter.drawLine (win_width-1, win_height-1, win_width-1, wh3);
-                } else {
-                    if (m_Number != sel_pos) painter.drawLine (win_width-1, win_height-1, win_width-1, wh3);
-                }
-            } else {
-                painter.drawLine (0, win_height-1, win_width-wh3, win_height-1);
-            }
-        }
-        bool Before;
-        bool Behind;
-        if (m_Data->xy_view_flag) {
-            Before = ((sel_pos/2) < (m_Number/2));
-            Behind = ((sel_pos/2) > (m_Number/2));
-        } else {
-            Before = (sel_pos < m_Number);
-            Behind = (sel_pos > m_Number);
-        }
-        if (Before) {
+        if (border_flag) {
+            // Paint the border
             if (!m_Data->xy_view_flag || ((m_Number & 0x1) == 0x0)) {
-                painter.drawLine (win_width-wh3, 0, win_width-1, wh3);  /* \ */
+                if (m_Number == 0) painter.drawLine (win_width-1, 0, 0, 0);
+                else painter.drawLine (win_width-wh3, 0, 0, 0);
             }
-            painter.drawLine (win_width-1, wh3, win_width-1, win_height-1);
+            painter.drawLine (0, 0, 0, win_height-1);
+            if (!m_Data->xy_view_flag || ((m_Number & 0x1) == 0x1)) {
+                if (m_Number == end_pos) {
+                    painter.drawLine (0, win_height-1, win_width-1, win_height-1);
+                    if (m_Data->xy_view_flag) {
+                        if ((m_Number/2) != (sel_pos/2)) painter.drawLine (win_width-1, win_height-1, win_width-1, wh3);
+                    } else {
+                        if (m_Number != sel_pos) painter.drawLine (win_width-1, win_height-1, win_width-1, wh3);
+                    }
+                } else {
+                    painter.drawLine (0, win_height-1, win_width-wh3, win_height-1);
+                }
+            }
+            bool Before;
+            bool Behind;
             if (m_Data->xy_view_flag) {
-                if ((sel_pos/2) != ((m_Number-1)/2)) {
-                    painter.drawLine(win_width-1, 0, win_width-1, wh3);
-                }
+                Before = ((sel_pos/2) < (m_Number/2));
+                Behind = ((sel_pos/2) > (m_Number/2));
             } else {
-                if (sel_pos != m_Number-1) {
-                    painter.drawLine(win_width-1, 0, win_width-1, wh3);
-                }
+                Before = (sel_pos < m_Number);
+                Behind = (sel_pos > m_Number);
             }
-        } else if (Behind) {
-            if (m_Number == end_pos) {
-                painter.drawLine (win_width-1, 0, win_width-1, win_height-1);
-            } else {
-                painter.drawLine (win_width-1, 0, win_width-1, win_height-wh3);
-                if (!m_Data->xy_view_flag || ((m_Number & 0x1) == 0x1)) {
-                    painter.drawLine (win_width-1, win_height-wh3, win_width-wh3, win_height-1);  /* \ */
+            if (Before) {
+                if (!m_Data->xy_view_flag || ((m_Number & 0x1) == 0x0)) {
+                    painter.drawLine (win_width-wh3, 0, win_width-1, wh3);  /* \ */
                 }
-            }
-            if (m_Data->xy_view_flag) {
-                if ((sel_pos/2) != ((m_Number+1)/2)) {
-                    painter.drawLine (win_width-1, win_height, win_width-1, win_height-wh3);
+                painter.drawLine (win_width-1, wh3, win_width-1, win_height-1);
+                if (m_Data->xy_view_flag) {
+                    if ((sel_pos/2) != ((m_Number-1)/2)) {
+                        painter.drawLine(win_width-1, 0, win_width-1, wh3);
+                    }
+                } else {
+                    if (sel_pos != m_Number-1) {
+                        painter.drawLine(win_width-1, 0, win_width-1, wh3);
+                    }
                 }
-            } else {
-                if (sel_pos != m_Number+1) {
-                    painter.drawLine (win_width-1, win_height, win_width-1, win_height-wh3);
+            } else if (Behind) {
+                if (m_Number == end_pos) {
+                    painter.drawLine (win_width-1, 0, win_width-1, win_height-1);
+                } else {
+                    painter.drawLine (win_width-1, 0, win_width-1, win_height-wh3);
+                    if (!m_Data->xy_view_flag || ((m_Number & 0x1) == 0x1)) {
+                        painter.drawLine (win_width-1, win_height-wh3, win_width-wh3, win_height-1);  /* \ */
+                    }
+                }
+                if (m_Data->xy_view_flag) {
+                    if ((sel_pos/2) != ((m_Number+1)/2)) {
+                        painter.drawLine (win_width-1, win_height, win_width-1, win_height-wh3);
+                    }
+                } else {
+                    if (sel_pos != m_Number+1) {
+                        painter.drawLine (win_width-1, win_height, win_width-1, win_height-wh3);
+                    }
                 }
             }
         }
-
         if (visable || !s_main_ini_val.SuppressDisplayNonExistValues) {
             if (m_Data->vars_disable_left[m_Number]) {
                 // crossed out the variable
@@ -616,8 +632,6 @@ void OscilloscopeDesc::paintEvent(QPaintEvent * /* event */)
                     painter.drawLine (wh3, wh3-font_height/2, string_width, wh3-font_height/2);
                 }
             }
-            painter.setPen(PenSave);
-
             // paint a solid line with the corresponding color
             if (visable) {
                 QPen SavePen = painter.pen();
@@ -633,75 +647,90 @@ void OscilloscopeDesc::paintEvent(QPaintEvent * /* event */)
                 painter.drawLine (wh3, wh3*2+wh3/2, wh3*3, wh3*2+wh3/2);
                 painter.setPen (SavePen);
             }
-
+            if (m_Number == m_Data->sel_pos_left) {
+                QFont Font = painter.font();
+                Font.setBold(true);
+                painter.setFont(Font);
+            }
+            if (!border_flag || !s_main_ini_val.DarkMode) {
+                painter.setPen (Qt::black);
+            } else {
+                painter.setPen (Qt::white);
+            }
             // Print variable name and value
             if (m_Data->txt_align_left[m_Number]) {
                 painter.drawText (wh8, wh8, win_width-wh8*2, font_height+wh8, Qt::AlignRight, VariableName);
             } else {
                 painter.drawText (wh8, wh8, win_width-wh8*2, font_height+wh8, Qt::AlignLeft, VariableName);
             }
+            if (m_Number == m_Data->sel_pos_left) {
+                QFont Font = painter.font();
+                Font.setBold(false);
+                painter.setFont(Font);
+            }
             painter.drawText (wh3, wh3 + font_height + font_height / 4 + wh8, Value);
         }
     } else { // (m_Side == Right)
-        // Paint the border
-        if (!m_Data->xy_view_flag || ((m_Number & 0x1) == 0x0)) {
-            if (m_Number == 0) painter.drawLine (0, 0, win_width-1, 0);
-            else painter.drawLine (wh3, 0, win_width-1, 0);
-        }
-        painter.drawLine (win_width-1, 0, win_width-1, win_height-1);
-        if (!m_Data->xy_view_flag || ((m_Number & 0x1) == 0x1)) {
-            if (m_Number == end_pos) {
-                painter.drawLine (win_width-1, win_height-1, 0, win_height-1);
-                if (m_Data->xy_view_flag) {
-                    if ((m_Number/2) != (sel_pos/2)) painter.drawLine (0, win_height-1, 0, wh3);
-                } else {
-                    if (m_Number != sel_pos) painter.drawLine (0, win_height-1, 0, wh3);
-                }
-            } else painter.drawLine (win_width-1, win_height-1, wh3, win_height-1);
-        }
-        bool Before;
-        bool Behind;
-        if (m_Data->xy_view_flag) {
-            Before = ((sel_pos/2) < (m_Number/2));
-            Behind = ((sel_pos/2) > (m_Number/2));
-        } else {
-            Before = (sel_pos < m_Number);
-            Behind = (sel_pos > m_Number);
-        }
-        if (Before) {
+        if (border_flag) {
+            // Paint the border
             if (!m_Data->xy_view_flag || ((m_Number & 0x1) == 0x0)) {
-                painter.drawLine (wh3, 0, 0, wh3);  /* / */
+                if (m_Number == 0) painter.drawLine (0, 0, win_width-1, 0);
+                else painter.drawLine (wh3, 0, win_width-1, 0);
             }
-            painter.drawLine (0, wh3, 0, win_height-1);
+            painter.drawLine (win_width-1, 0, win_width-1, win_height-1);
+            if (!m_Data->xy_view_flag || ((m_Number & 0x1) == 0x1)) {
+                if (m_Number == end_pos) {
+                    painter.drawLine (win_width-1, win_height-1, 0, win_height-1);
+                    if (m_Data->xy_view_flag) {
+                        if ((m_Number/2) != (sel_pos/2)) painter.drawLine (0, win_height-1, 0, wh3);
+                    } else {
+                        if (m_Number != sel_pos) painter.drawLine (0, win_height-1, 0, wh3);
+                    }
+                } else painter.drawLine (win_width-1, win_height-1, wh3, win_height-1);
+            }
+            bool Before;
+            bool Behind;
             if (m_Data->xy_view_flag) {
-                if ((sel_pos/2) != ((m_Number-1)/2)) {
-                    painter.drawLine (0, 0, 0, wh3);
-                }
+                Before = ((sel_pos/2) < (m_Number/2));
+                Behind = ((sel_pos/2) > (m_Number/2));
             } else {
-                if (sel_pos != m_Number-1) {
-                    painter.drawLine (0, 0, 0, wh3);
-                }
+                Before = (sel_pos < m_Number);
+                Behind = (sel_pos > m_Number);
             }
-        } else if (Behind) {
-            if (m_Number == end_pos) {
-                painter.drawLine (0, 0, 0, win_height-1);
-            } else {
-                painter.drawLine (0, 0, 0, win_height-wh3);
-                if (!m_Data->xy_view_flag || ((m_Number & 0x1) == 0x1)) {
-                    painter.drawLine (0, win_height-wh3, wh3, win_height-1);  /* \ */
+            if (Before) {
+                if (!m_Data->xy_view_flag || ((m_Number & 0x1) == 0x0)) {
+                    painter.drawLine (wh3, 0, 0, wh3);  /* / */
                 }
-            }
-            if (m_Data->xy_view_flag) {
-                if ((sel_pos/2) != ((m_Number+1)/2)) {
-                    painter.drawLine (0, win_height, 0, win_height-wh3);
+                painter.drawLine (0, wh3, 0, win_height-1);
+                if (m_Data->xy_view_flag) {
+                    if ((sel_pos/2) != ((m_Number-1)/2)) {
+                        painter.drawLine (0, 0, 0, wh3);
+                    }
+                } else {
+                    if (sel_pos != m_Number-1) {
+                        painter.drawLine (0, 0, 0, wh3);
+                    }
                 }
-            } else {
-                if (sel_pos != m_Number+1) {
-                    painter.drawLine (0, win_height, 0, win_height-wh3);
+            } else if (Behind) {
+                if (m_Number == end_pos) {
+                    painter.drawLine (0, 0, 0, win_height-1);
+                } else {
+                    painter.drawLine (0, 0, 0, win_height-wh3);
+                    if (!m_Data->xy_view_flag || ((m_Number & 0x1) == 0x1)) {
+                        painter.drawLine (0, win_height-wh3, wh3, win_height-1);  /* \ */
+                    }
+                }
+                if (m_Data->xy_view_flag) {
+                    if ((sel_pos/2) != ((m_Number+1)/2)) {
+                        painter.drawLine (0, win_height, 0, win_height-wh3);
+                    }
+                } else {
+                    if (sel_pos != m_Number+1) {
+                        painter.drawLine (0, win_height, 0, win_height-wh3);
+                    }
                 }
             }
         }
-
         if (visable || !s_main_ini_val.SuppressDisplayNonExistValues) {
             if (m_Data->vars_disable_right[m_Number]) {
                 // crossed out the variable
@@ -715,8 +744,6 @@ void OscilloscopeDesc::paintEvent(QPaintEvent * /* event */)
                     painter.drawLine (wh3, wh3-font_height/2, wh3+string_width, wh3-font_height/2);
                 }
             }
-            painter.setPen(PenSave);
-
             // paint a solid line with the corresponding color
             if (visable) {
                 QPen SavePen = painter.pen();
@@ -732,16 +759,31 @@ void OscilloscopeDesc::paintEvent(QPaintEvent * /* event */)
                 painter.drawLine (2*wh3, wh3*2+wh3/2, wh3*5, wh3*2+wh3/2);
                 painter.setPen (SavePen);
             }
-
+            if (m_Number == m_Data->sel_pos_right) {
+                QFont Font = painter.font();
+                Font.setBold(true);
+                painter.setFont(Font);
+            }
+            if (!border_flag || !s_main_ini_val.DarkMode) {
+                painter.setPen (Qt::black);
+            } else {
+                painter.setPen (Qt::white);
+            }
             // Print variable name and value
             if (m_Data->txt_align_right[m_Number]) {
                 painter.drawText (wh8, wh8, win_width-wh8*2, font_height+wh8, Qt::AlignRight, VariableName);
             } else {
                 painter.drawText (wh8, wh8, win_width-wh8*2, font_height+wh8, Qt::AlignLeft, VariableName);
             }
+            if (m_Number == m_Data->sel_pos_right) {
+                QFont Font = painter.font();
+                Font.setBold(false);
+                painter.setFont(Font);
+            }
             painter.drawText (wh3, wh3 + font_height + font_height / 4 + wh8, Value);
         }
     }
+    painter.setPen(PenSave);
     LeaveOsciWidgetCriticalSection (m_Data->CriticalSectionNumber);
 }
 

@@ -20,7 +20,6 @@
 
 #include <ColorHelpers.h>
 
-
 //#define DEBUG_COLOR_SELECT
 
 static QColor GetDiffColor(const QColor &par_Color1, const QColor &par_Color2, bool par_Clockwise)
@@ -32,6 +31,7 @@ static QColor GetDiffColor(const QColor &par_Color1, const QColor &par_Color2, b
     par_Color2.getHsl(&Hue2, &Saturation2, &Lightness2);
 
 #ifdef DEBUG_COLOR_SELECT
+
     FILE *fh = fopen("c:\\temp\\color.txt", "at");
     fprintf(fh, "\nGetDiffColor:\n");
     fprintf(fh, "color1 %i, %i , %i:\n", Hue1, Saturation1, Lightness1);
@@ -77,22 +77,25 @@ QColor GetColorProposal(QList<QColor> &par_UsedColors)
         Color1.getHsl(&Hue1, &Saturation1, &Lightness1);
         if (Hue1 >= 0) { // don't add black, gray to whith
             int y;
-            for (y = 0; y < (SortedUsedColors.count()); y++) {
-                QColor Color2 = SortedUsedColors.at(y);
-                Color2.getHsl(&Hue2, &Saturation2, &Lightness2);
-                if (Hue1 <= Hue2) {
-                    break;
+            if (SortedUsedColors.count() == 0) {
+                SortedUsedColors.insert(0, Color1);
+            } else {
+                for (y = 0; y < (SortedUsedColors.count()); y++) {
+                    QColor Color2 = SortedUsedColors.at(y);
+                    Color2.getHsl(&Hue2, &Saturation2, &Lightness2);
+                    if (Hue1 <= Hue2) {
+                        break;
+                    }
                 }
-            }
-            // don't add same
-            if (Hue1 != Hue2) {
-                SortedUsedColors.insert(y, Color1);
+                // don't add same
+                if (Hue1 != Hue2) {
+                    SortedUsedColors.insert(y, Color1);
+                }
             }
         }
     }
 
     if (SortedUsedColors.count() >= 2) {
-
         int HueDiff;
         int HueDiffMax;
         int HueDiffMaxX;
@@ -101,7 +104,7 @@ QColor GetColorProposal(QList<QColor> &par_UsedColors)
 
 #ifdef DEBUG_COLOR_SELECT
         FILE *fh = fopen("c:\\temp\\color.txt", "wt");
-        fprintf (fh, "List of all colors:\n");
+        fprintf (fh, "List of all sorted colors:\n");
         for (int x = 0; x < (SortedUsedColors.count()); x++) {
             QColor Color1 =  SortedUsedColors.at(x);
             Color1.getHsl(&Hue1, &Saturation1, &Lightness1);
@@ -149,7 +152,6 @@ QColor GetColorProposal(QList<QColor> &par_UsedColors)
             return Ret;
         }
     } else if (SortedUsedColors.count() == 1){
-        // only one color
         int Hue, Saturation, Lightness;
         SortedUsedColors.at(0).getHsl(&Hue, &Saturation, &Lightness);
         Hue += 180;

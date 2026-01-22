@@ -44,6 +44,8 @@ public:
     QString GetCharacteristicName();
     void SetCharacteristicName(QString &par_Characteristic);
 
+    int GetLinkNo();
+    int GetIndex();
     int GetType();
     bool IsPhysical();
     void SetPhysical(bool par_Physical);
@@ -123,7 +125,7 @@ private:
 
     double Conv (double par_Value, CHARACTERISTIC_AXIS_INFO &par_AxisInfo);
     double ConvNorm (double par_Value, CHARACTERISTIC_AXIS_INFO &par_AxisInfo);
-    QString ConvertToString(double Value, CHARACTERISTIC_AXIS_INFO &AxisInfo);
+    QString ConvertToString(double Value, CHARACTERISTIC_AXIS_INFO &AxisInfo, bool par_PhysFlag);
 
     bool m_NoRecursiveSetPickMapFlag;  // verhindert dass die schon ausgewaehlen wieder geloescht werden
 

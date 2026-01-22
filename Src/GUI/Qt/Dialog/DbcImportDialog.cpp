@@ -20,12 +20,15 @@
 
 #include "StringHelpers.h"
 #include "QtIniFile.h"
+#include "FileDialog.h"
 
 extern "C" {
 #include "MyMemory.h"
+#include "StringMaxChar.h"
 #include "ThrowError.h"
 #include "CanDataBase.h"
 #include "ImportDbc.h"
+#include "FileExtensions.h"
 }
 
 DbcImportDialog::DbcImportDialog(QString &par_Filename, QWidget *parent) :
@@ -34,6 +37,9 @@ DbcImportDialog::DbcImportDialog(QString &par_Filename, QWidget *parent) :
 {
     ui->setupUi(this);
     char *MemberNames, *p;
+
+    ui->UserDefinedLineEdit->setText("new imported variante");
+    ui->SameAsDbcFileNameRadioButton->setChecked(true);
 
     m_Filename = par_Filename;
     DbcImportDialogFillComboboxWithVariante();
@@ -66,7 +72,7 @@ char *DbcImportDialog::GetTransmitBusMembersList()
         Size += Len;
         Ret = static_cast<char*>(my_realloc (Ret, static_cast<size_t>(Size)));
         if (Ret == nullptr) return nullptr;
-        strcpy (Ret + Pos, QStringToConstChar(MemberName));
+        StringCopyMaxCharTruncate (Ret + Pos, QStringToConstChar(MemberName), Size);
         Pos += Len;
     }
     Ret[Pos] = 0;  // terminating 0 char
@@ -85,7 +91,7 @@ char *DbcImportDialog::GetReceiveBusMembersList()
         Size += Len;
         Ret = static_cast<char*>(my_realloc (Ret, static_cast<size_t>(Size)));
         if (Ret == nullptr) return nullptr;
-        strcpy (Ret + Pos, QStringToConstChar(MemberName));
+        StringCopyMaxCharTruncate (Ret + Pos, QStringToConstChar(MemberName), Size);
         Pos += Len;
     }
     Ret[Pos] = 0;  // terminating 0 char
@@ -154,6 +160,40 @@ bool DbcImportDialog::SortSignals()
     return ui->SortSignalsCheckBox->isChecked();
 }
 
+bool DbcImportDialog::ExportToFile()
+{
+    return ui->ExportToFileCheckBox->isChecked();
+}
+
+QString DbcImportDialog::ExportToFileName()
+{
+    return ui->ExportToFileLineEdit->text();
+}
+
+QString DbcImportDialog::VariantName()
+{
+    if (ui->UserDefinedRadioButton->isChecked()) {
+        return ui->UserDefinedLineEdit->text();
+    } else {
+        int StartPos = m_Filename.lastIndexOf("/");
+        if (StartPos < 0) {
+            StartPos = m_Filename.lastIndexOf("\\");
+        }
+        int EndPos = m_Filename.lastIndexOf(".");
+        if ((StartPos >= 0) && (EndPos >= 0)) {
+            StartPos++;
+            return m_Filename.mid(StartPos, EndPos - StartPos);
+        } else {
+            return QString("cannot extract name");
+        }
+    }
+}
+
+bool DbcImportDialog::ObjectNameDoublePoint()
+{
+    return ui->ObjectNameWithDoublepointCheckBox->isChecked();
+}
+
 int DbcImportDialog::DbcImportDialogFillComboboxWithVariante()
 {
     int i, x;
@@ -175,18 +215,21 @@ void DbcImportDialog::accept()
     char *TxMembers = GetTransmitBusMembersList();
     char *RxMembers = GetReceiveBusMembersList();
     CANDB_Import (QStringToConstChar(m_Filename),
-                        TxMembers, RxMembers,
-                        QStringToConstChar(AdditionalSignalPrefix()),
-                        QStringToConstChar(AdditionalSignalPostfix()),
-                        (TransferSettingsVarianteIndex() >= 0),
-                        TransferSettingsVarianteIndex(),
-                        ObjectAdditionalEquations(),
-                        SortSignals(),
-                        SignalDatatType(),
-                        SignalEquations(),
-                        SignalInitValues(),
-                        ObjectInitData(),
-                        ExtendSignalNameWithObject());
+                  (ExportToFile()) ? ExportToFileName().toLatin1().data() : NULL,
+                  VariantName().toLatin1().data(),
+                  TxMembers, RxMembers,
+                  QStringToConstChar(AdditionalSignalPrefix()),
+                  QStringToConstChar(AdditionalSignalPostfix()),
+                  (TransferSettingsVarianteIndex() >= 0),
+                  TransferSettingsVarianteIndex(),
+                  ObjectAdditionalEquations(),
+                  SortSignals(),
+                  SignalDatatType(),
+                  SignalEquations(),
+                  SignalInitValues(),
+                  ObjectInitData(),
+                  ExtendSignalNameWithObject(),
+                 ObjectNameDoublePoint());
     CANDB_FreeMembersList (TxMembers);
     CANDB_FreeMembersList (RxMembers);
 
@@ -251,3 +294,12 @@ void DbcImportDialog::on_TransferSettingsCheckBox_toggled(bool checked)
     ui->SignalEquationsCheckBox->setEnabled(checked);
     ui->SortSignalsCheckBox->setEnabled(checked);
 }
+
+void DbcImportDialog::on_FilePushButton_clicked()
+{
+    QString Filename = FileDialog::getSaveFileName(this,  QString("Export CAN variant to"), QString(), QString(CAN_EXT));
+    if (!Filename.isEmpty()) {
+        ui->ExportToFileLineEdit->setText(Filename);
+    }
+}
+

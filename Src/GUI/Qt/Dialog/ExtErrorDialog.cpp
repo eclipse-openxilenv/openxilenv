@@ -97,7 +97,7 @@ QVariant ExtErrorModel::data(const QModelIndex &index, int role) const
                 return QString().number(m_ExtErrorMessageLines[Row].Cycle);
             } else if (Column == 2) {
                 char ProcessName[MAX_PATH];
-                if (GetProcessShortName (m_ExtErrorMessageLines[Row].Pid, ProcessName)) {
+                if (GetProcessShortName (m_ExtErrorMessageLines[Row].Pid, ProcessName, sizeof(ProcessName))) {
                     return QString().number(m_ExtErrorMessageLines[Row].Pid);
                 } else {
                     return QString(ProcessName);

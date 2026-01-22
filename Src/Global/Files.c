@@ -30,6 +30,8 @@
 #include "Scheduler.h"
 #include "BlackboardAccess.h"
 #include "MainValues.h"
+#include "StringMaxChar.h"
+#include "PrintFormatToString.h"
 #include "MyMemory.h"
 #include "ThrowError.h"
 #include "IniDataBase.h"
@@ -94,10 +96,7 @@ static void LogFileAccessNoC (const char *Filename)
         }
     }
     if (FileNameArray != NULL) {
-        FileNameArray[x] = (char*)my_malloc (strlen (FullPath) + 1);
-        if (FileNameArray[x] != NULL) {
-            strcpy (FileNameArray[x], FullPath);
-        }
+        FileNameArray[x] = StringMalloc (FullPath);
     }
 }
 
@@ -164,7 +163,7 @@ FILE *open_file (const char * const name, const char *flags)
              LEAVE_CS (&FilesCriticalSection);
              return NULL;
          }
-         if ((ofl_elem->name = my_malloc (strlen (help)+1)) == NULL) {
+         if ((ofl_elem->name = StringMalloc (help)) == NULL) {
              LEAVE_CS (&FilesCriticalSection);
              return NULL;
          }
@@ -179,7 +178,6 @@ FILE *open_file (const char * const name, const char *flags)
      }
 
      ofl_elem->pid = GET_PID ();
-     strcpy (ofl_elem->name, help);
      ofl_elem->fh = file;
      ofl_elem->next = open_file_list;
      open_file_list = ofl_elem;
@@ -223,7 +221,7 @@ char* get_open_files_infos (int index)
 
     ENTER_CS (&FilesCriticalSection);
     for (cblock = open_file_list; cblock != NULL; cblock = cblock->next) {
-        sprintf (buffer, "%i. (%i): %s", ++items, cblock->pid, cblock->name);
+        PrintFormatToString (buffer, sizeof(buffer), "%i. (%i): %s", ++items, cblock->pid, cblock->name);
         if(index == (items-1))
         {
             return buffer;
@@ -373,7 +371,7 @@ int expand_filename (const char *src_name, char *dst_name, int maxc)
         free(path);
         return -1;
     }
-    strcpy(dst_name, path);
+    StringCopyMaxCharTruncate(dst_name, path, maxc);
     free(path);
 #endif
     return 0;
@@ -443,9 +441,9 @@ FILE *OpenFile4WriteWithPrefix (char *name, char *flags)
              max_count *= 10;
          }
          for (x = 0; x < max_count; x++) {
-             strncpy(txt, name, (size_t)qpos);      // File name till the first '?'
-             sprintf (&(txt[qpos]),"%0*i", qsize, x);
-             strcpy (&(txt[qpos+qsize]), &(name[qpos+qsize]));
+             StringCopyMaxCharTruncate(txt, name, (size_t)qpos);      // File name till the first '?'
+             PrintFormatToString (&(txt[qpos]), sizeof(txt) - qpos, "%0*i", qsize, x);
+             StringCopyMaxCharTruncate (&(txt[qpos+qsize]), &(name[qpos+qsize]), sizeof(txt) - (qpos+qsize));
              SearchAndReplaceEnvironmentStrings (txt, txt2, sizeof (txt2));
 #ifdef _WIN32
              h = CreateFile(txt2, GENERIC_WRITE, FILE_SHARE_READ, NULL,
@@ -467,7 +465,7 @@ FILE *OpenFile4WriteWithPrefix (char *name, char *flags)
              }
 #endif
          }
-     } else strcpy (txt, name);
+     } else StringCopyMaxCharTruncate (txt, name, sizeof(txt));
      file = open_file (txt, flags);
 
      return file;

@@ -21,8 +21,9 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <string.h>
-//#include <malloc.h>
 #include "MyMemory.h"
+#include "StringMaxChar.h"
+#include "PrintFormatToString.h"
 #include "A2LBuffer.h"
 #include "A2LTokenizer.h"
 #include "A2LParser.h"
@@ -62,11 +63,11 @@ int ThrowParserError (struct ASAP2_PARSER_STRUCT *Parser, char *SourceFile, int 
     Parser->SourceFile = SourceFile;
     Parser->LineNumber = LineNumber;
 
-    sprintf (Parser->ErrorString, "%s [%i]: ", (Parser->Filename == NULL) ? "" : Parser->Filename, (Parser->Cache == NULL) ? -1 : Parser->Cache->LineCounter);
+    PrintFormatToString (Parser->ErrorString, sizeof(Parser->ErrorString), "%s [%i]: ", (Parser->Filename == NULL) ? "" : Parser->Filename, (Parser->Cache == NULL) ? -1 : Parser->Cache->LineCounter);
 
     Size = (int)strlen (Parser->ErrorString);
     va_start (args, ErrorString);
-    vsnprintf(Parser->ErrorString + Size, sizeof(Parser->ErrorString) - Size, ErrorString, args);
+    VariableArgumentsListPrintFormatToString(Parser->ErrorString + Size, sizeof(Parser->ErrorString) - Size, ErrorString, args);
     va_end (args);
     Parser->ErrorString[sizeof(Parser->ErrorString)-1] = 0;  // ist das noetig?
 
@@ -81,9 +82,9 @@ int GetParserErrorString (struct ASAP2_PARSER_STRUCT *Parser, char *ErrString, i
 {
     if (ErrString != NULL) {
         if (Parser->State == PARSER_STATE_ERROR) {
-            strncpy (ErrString, Parser->ErrorString, MaxSize);
+            StringCopyMaxCharTruncate (ErrString, Parser->ErrorString, MaxSize);
         } else {
-            strncpy (ErrString, "no error", MaxSize);
+            StringCopyMaxCharTruncate (ErrString, "no error", MaxSize);
         }
         ErrString[MaxSize-1] = 0;
     }
@@ -134,7 +135,6 @@ int GetNextOptionalParameter (struct ASAP2_PARSER_STRUCT *Parser, ASAP2_KEYWORDS
     int x;
     char *Help;
     int BeginFlag = 0;
-    //int EndFlag = 0;
     int Offset;
     int LineNr;
 

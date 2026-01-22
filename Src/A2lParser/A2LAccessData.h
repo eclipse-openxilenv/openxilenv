@@ -150,6 +150,7 @@ A2L_SINGLE_VALUE* GetLinkSingleValueData(A2L_DATA *par_Data);
 A2L_SINGLE_VALUE* GetLinkArrayValueData(A2L_DATA *par_Data, int par_ArrayNo, int par_ElementNo);
 
 void FreeA2lData(void *par_Data);
-void *DupA2lData(void *par_Data);
+A2L_DATA *DupA2lData(void *par_Data);
+int CompareIfA2lDataAreEqual(A2L_DATA *par_Data1, A2L_DATA *par_Data2);
 
 #endif

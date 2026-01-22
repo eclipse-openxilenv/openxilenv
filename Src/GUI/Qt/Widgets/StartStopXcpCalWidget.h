@@ -52,7 +52,7 @@ private:
     static int Connection;
     int curConnection;
     XCPCFGDLG_SHEET_DATA *xcpconfig_data;
-    void FillListBoxes(const char *Filter);
+    void FillListBoxes(const char *Filter, bool UpdateSelected);
 };
 
 #endif // STARTSTOPXCPCALWIDGET_H

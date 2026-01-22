@@ -38,7 +38,7 @@ StopProcessDialog::StopProcessDialog(QWidget *parent) : Dialog(parent),
     while ((pName = read_next_process_name (Buffer)) != nullptr) {
         QString Name(pName);
         QListWidgetItem *Item = new QListWidgetItem(Name,ui->RunningProcessesListWidget);
-        GetProcessLongName(get_pid_by_name (pName), LongProcessName);
+        GetProcessLongName(get_pid_by_name (pName), LongProcessName, sizeof(LongProcessName));
         Item->setToolTip(QString(LongProcessName));
     }
     close_read_next_process_name(Buffer);

@@ -77,6 +77,10 @@ private slots:
 
     void on_ViewOnlyMeasurementsCheckBox_clicked(bool checked);
 
+    void on_ExportPushButton_clicked();
+
+    void on_ImportPushButton_clicked();
+
 private:
     void Init(void);
 

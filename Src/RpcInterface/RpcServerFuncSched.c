@@ -20,11 +20,10 @@
 #include <inttypes.h>
 #include <ctype.h>
 #include <memory.h>
-//#include <sys/stat.h>
 #include <fcntl.h>
 
 #include "Config.h"
-
+#include "StringMaxChar.h"
 #include "ThrowError.h"
 #include "Files.h"
 #include "EquationParser.h"
@@ -52,7 +51,7 @@ static int RPCFunc_StopScheduler(RPC_CONNECTION *par_Connection, RPC_API_BASE_ME
     UNUSED(par_DataIn);
     //RPC_API_STOP_SCHEDULER_MESSAGE *In = (RPC_API_STOP_SCHEDULER_MESSAGE*)par_DataIn;
     RPC_API_STOP_SCHEDULER_MESSAGE_ACK *Out = (RPC_API_STOP_SCHEDULER_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_STOP_SCHEDULER_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_STOP_SCHEDULER_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_STOP_SCHEDULER_MESSAGE_ACK);
     if (s_main_ini_val.ConnectToRemoteMaster) {
         Out->Header.ReturnValue = 0;  // will be ignored (no error code)
@@ -83,7 +82,7 @@ static int RPCFuncContinueScheduler(RPC_CONNECTION *par_Connection, RPC_API_BASE
     UNUSED(par_DataIn);
     //RPC_API_CONTINUE_SCHEDULER_MESSAGE *In = (RPC_API_CONTINUE_SCHEDULER_MESSAGE*)par_DataIn;
     RPC_API_CONTINUE_SCHEDULER_MESSAGE_ACK *Out = (RPC_API_CONTINUE_SCHEDULER_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_CONTINUE_SCHEDULER_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_CONTINUE_SCHEDULER_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_CONTINUE_SCHEDULER_MESSAGE_ACK);
 
     Out->Header.ReturnValue = 0;
@@ -104,7 +103,7 @@ static int RPCFuncIsSchedulerRunning(RPC_CONNECTION *par_Connection, RPC_API_BAS
     UNUSED(par_DataIn);
     //RPC_API_IS_SCHEDULER_RUNNING_MESSAGE *In = (RPC_API_IS_SCHEDULER_RUNNING_MESSAGE*)par_DataIn;
     RPC_API_IS_SCHEDULER_RUNNING_MESSAGE_ACK *Out = (RPC_API_IS_SCHEDULER_RUNNING_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_IS_SCHEDULER_RUNNING_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_IS_SCHEDULER_RUNNING_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_IS_SCHEDULER_RUNNING_MESSAGE_ACK);
 
     // return 1 if scheduler is not stopped from this connection and 0 if stopped from this connection
@@ -118,7 +117,7 @@ static int RPCFunc_StartProcess(RPC_CONNECTION *par_Connection, RPC_API_BASE_MES
     UNUSED(par_Connection);
     RPC_API_START_PROCESS_MESSAGE *In = (RPC_API_START_PROCESS_MESSAGE*)par_DataIn;
     RPC_API_START_PROCESS_MESSAGE_ACK *Out = (RPC_API_START_PROCESS_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_START_PROCESS_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_START_PROCESS_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_START_PROCESS_MESSAGE_ACK);
 
     Out->Header.ReturnValue = start_process_env_var ((char*)In + In->OffsetProcessName);
@@ -133,7 +132,7 @@ static int RPCFunc_StartProcessAndLoadSvl(RPC_CONNECTION *par_Connection, RPC_AP
     char *SvlName;
     RPC_API_START_PROCESS_AND_LOAD_SVL_MESSAGE *In = (RPC_API_START_PROCESS_AND_LOAD_SVL_MESSAGE*)par_DataIn;
     RPC_API_START_PROCESS_AND_LOAD_SVL_MESSAGE_ACK *Out = (RPC_API_START_PROCESS_AND_LOAD_SVL_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_START_PROCESS_AND_LOAD_SVL_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_START_PROCESS_AND_LOAD_SVL_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_START_PROCESS_AND_LOAD_SVL_MESSAGE_ACK);
 
     ProcessName = (char*)In + In->OffsetProcessName;
@@ -168,7 +167,7 @@ static int RPCFunc_StartProcessEx(RPC_CONNECTION *par_Connection, RPC_API_BASE_M
 
     RPC_API_START_PROCESS_EX_MESSAGE *In = (RPC_API_START_PROCESS_EX_MESSAGE*)par_DataIn;
     RPC_API_START_PROCESS_EX_MESSAGE_ACK *Out = (RPC_API_START_PROCESS_EX_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_START_PROCESS_EX_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_START_PROCESS_EX_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_START_PROCESS_EX_MESSAGE_ACK);
 
     ProcessName = (char*)In + In->OffsetProcessName;
@@ -204,7 +203,7 @@ static int RPCFunc_StopProcess(RPC_CONNECTION *par_Connection, RPC_API_BASE_MESS
     UNUSED(par_Connection);
     RPC_API_STOP_PROCESS_MESSAGE *In = (RPC_API_STOP_PROCESS_MESSAGE*)par_DataIn;
     RPC_API_STOP_PROCESS_MESSAGE_ACK *Out = (RPC_API_STOP_PROCESS_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_STOP_PROCESS_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_STOP_PROCESS_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_STOP_PROCESS_MESSAGE_ACK);
     Out->Header.ReturnValue = terminate_process (get_pid_by_name((char*)In + In->OffsetProcessName));
 
@@ -216,7 +215,7 @@ static int RPCFunc_GetNextProcess(RPC_CONNECTION *par_Connection, RPC_API_BASE_M
 {
     RPC_API_GET_NEXT_PROCESS_MESSAGE *In = (RPC_API_GET_NEXT_PROCESS_MESSAGE*)par_DataIn;
     RPC_API_GET_NEXT_PROCESS_MESSAGE_ACK *Out = (RPC_API_GET_NEXT_PROCESS_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_GET_NEXT_PROCESS_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_GET_NEXT_PROCESS_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_GET_NEXT_PROCESS_MESSAGE_ACK);
     Out->OffsetReturnValue = sizeof(RPC_API_GET_NEXT_PROCESS_MESSAGE_ACK) - 1;
 
@@ -233,9 +232,10 @@ static int RPCFunc_GetNextProcess(RPC_CONNECTION *par_Connection, RPC_API_BASE_M
             if (Count >= par_Connection->GetNextProcessCounter) {
                 par_Connection->GetNextProcessCounter++;
                 if (!Compare2StringsWithWildcards(Name, Filter)) {
+                    int Len = (int)strlen(Name) + 1;
                     Out->Header.ReturnValue = 1;
-                    strcpy ((char*)Out + Out->OffsetReturnValue, Name);
-                    Out->Header.StructSize += (int)strlen(Name);
+                    StringCopyMaxCharTruncate ((char*)Out + Out->OffsetReturnValue, Name, Len);
+                    Out->Header.StructSize += Len;
                     return Out->Header.StructSize;
                 }
             }
@@ -243,7 +243,7 @@ static int RPCFunc_GetNextProcess(RPC_CONNECTION *par_Connection, RPC_API_BASE_M
         }
         close_read_next_process_name(Buffer);
         Out->Header.ReturnValue = 0;
-        strcpy (Out->Data, "");
+        Out->Data[0] = 0;
         return Out->Header.StructSize;
     }
 }
@@ -253,7 +253,7 @@ static int RPCFunc_GetProcessState(RPC_CONNECTION *par_Connection, RPC_API_BASE_
     UNUSED(par_Connection);
     RPC_API_GET_PROCESS_STATE_MESSAGE *In = (RPC_API_GET_PROCESS_STATE_MESSAGE*)par_DataIn;
     RPC_API_GET_PROCESS_STATE_MESSAGE_ACK *Out = (RPC_API_GET_PROCESS_STATE_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_GET_PROCESS_STATE_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_GET_PROCESS_STATE_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_GET_PROCESS_STATE_MESSAGE_ACK);
 
     Out->Header.ReturnValue = get_pid_by_name ((char*)In + In->OffsetProcessName);
@@ -277,7 +277,7 @@ static int RPCFunc_DoNextCycles(RPC_CONNECTION *par_Connection, RPC_API_BASE_MES
     UNUSED(par_Connection);
     RPC_API_DO_NEXT_CYCLES_MESSAGE *In = (RPC_API_DO_NEXT_CYCLES_MESSAGE*)par_DataIn;
     RPC_API_DO_NEXT_CYCLES_MESSAGE_ACK *Out = (RPC_API_DO_NEXT_CYCLES_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_DO_NEXT_CYCLES_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_DO_NEXT_CYCLES_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_DO_NEXT_CYCLES_MESSAGE_ACK);
 
     Out->Header.ReturnValue = 0;
@@ -289,7 +289,14 @@ static int RPCFunc_DoNextCycles(RPC_CONNECTION *par_Connection, RPC_API_BASE_MES
             (par_Connection->SchedulerDisableCounter == 1)) {
             par_Connection->SchedulerDisableCounter--;
             par_Connection->DoNextCycleFlag = 1;
-            make_n_next_cycles (SCHEDULER_CONTROLED_BY_RPC, In->Cycles, __SCDoNextCyclesDisableCallBack, par_Connection);
+            switch(make_n_next_cycles (SCHEDULER_CONTROLED_BY_RPC, In->Cycles, NULL, __SCDoNextCyclesDisableCallBack, par_Connection)) {
+            case 0: // stop scheduler request are added during the scheduler is running.
+            case 1: // stop scheduler request are added but the scheduler was already stopped.
+                break;
+            default: // all others
+                __SCDoNextCyclesDisableCallBack(par_Connection);
+                break;
+            }
         } else {
             Out->Header.ReturnValue = -1;
         }
@@ -314,10 +321,10 @@ static void __SCDoNextCyclesAndWaitSchedDisableCallBack (void *Parameter)
 
 static int RPCFunc_DoNextCyclesAndWait(RPC_CONNECTION *par_Connection, RPC_API_BASE_MESSAGE *par_DataIn, RPC_API_BASE_MESSAGE_ACK *par_DataOut)
 {
-    RPC_API_DO_NEXT_CYCLES_MESSAGE *In = (RPC_API_DO_NEXT_CYCLES_MESSAGE*)par_DataIn;
-    RPC_API_DO_NEXT_CYCLES_MESSAGE_ACK *Out = (RPC_API_DO_NEXT_CYCLES_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_DO_NEXT_CYCLES_MESSAGE_ACK));
-    Out->Header.StructSize = sizeof(RPC_API_DO_NEXT_CYCLES_MESSAGE_ACK);
+    RPC_API_DO_NEXT_CYCLES_AND_WAIT_MESSAGE *In = (RPC_API_DO_NEXT_CYCLES_AND_WAIT_MESSAGE*)par_DataIn;
+    RPC_API_DO_NEXT_CYCLES_AND_WAIT_MESSAGE_ACK *Out = (RPC_API_DO_NEXT_CYCLES_AND_WAIT_MESSAGE_ACK*)par_DataOut;
+    MEMSET (Out, 0, sizeof (RPC_API_DO_NEXT_CYCLES_AND_WAIT_MESSAGE_ACK));
+    Out->Header.StructSize = sizeof(RPC_API_DO_NEXT_CYCLES_AND_WAIT_MESSAGE_ACK);
 
     if (s_main_ini_val.ConnectToRemoteMaster) {
         ;  // will be ignored
@@ -327,8 +334,52 @@ static int RPCFunc_DoNextCyclesAndWait(RPC_CONNECTION *par_Connection, RPC_API_B
             par_Connection->SchedulerDisableCounter--;
             par_Connection->DoNextCycleFlag = 1;
             RemoteProcedureMarkedForWaitForConnection(par_Connection);
-            make_n_next_cycles(SCHEDULER_CONTROLED_BY_RPC, In->Cycles, __SCDoNextCyclesAndWaitSchedDisableCallBack, par_Connection);
-            RemoteProcedureWaitForConnection(par_Connection);
+            switch(make_n_next_cycles(SCHEDULER_CONTROLED_BY_RPC, In->Cycles, NULL, __SCDoNextCyclesAndWaitSchedDisableCallBack, par_Connection)) {
+            case 0: // stop scheduler request are added during the scheduler is running.
+            case 1: // stop scheduler request are added but the scheduler was already stopped.
+                RemoteProcedureWaitForConnection(par_Connection);
+                break;
+            default: // all others
+                __SCDoNextCyclesAndWaitSchedDisableCallBack(par_Connection);
+                break;
+            }
+        } else {
+            Out->Header.ReturnValue = -1;
+        }
+    }
+    Out->Header.ReturnValue = 0;
+
+    return Out->Header.StructSize;
+}
+
+static int RPCFunc_DoNextConditionsCyclesAndWait(RPC_CONNECTION *par_Connection, RPC_API_BASE_MESSAGE *par_DataIn, RPC_API_BASE_MESSAGE_ACK *par_DataOut)
+{
+    RPC_API_DO_NEXT_CONDITIONS_CYCLES_AND_WAIT_MESSAGE *In = (RPC_API_DO_NEXT_CONDITIONS_CYCLES_AND_WAIT_MESSAGE*)par_DataIn;
+    RPC_API_DO_NEXT_CONDITIONS_CYCLES_AND_WAIT_MESSAGE_ACK *Out = (RPC_API_DO_NEXT_CONDITIONS_CYCLES_AND_WAIT_MESSAGE_ACK*)par_DataOut;
+    MEMSET (Out, 0, sizeof (RPC_API_DO_NEXT_CONDITIONS_CYCLES_AND_WAIT_MESSAGE_ACK));
+    Out->Header.StructSize = sizeof(RPC_API_DO_NEXT_CONDITIONS_CYCLES_AND_WAIT_MESSAGE_ACK);
+
+    if (s_main_ini_val.ConnectToRemoteMaster) {
+        ;  // will be ignored
+    } else {
+        if ((In->Cycles > 0) &&
+            (par_Connection->SchedulerDisableCounter == 1)) {
+            char *Equation = NULL;
+            if (In->OffsetConditions >= 0) {
+                Equation = (char*)In + In->OffsetConditions;
+            }
+            par_Connection->SchedulerDisableCounter--;
+            par_Connection->DoNextCycleFlag = 1;
+            RemoteProcedureMarkedForWaitForConnection(par_Connection);
+            switch(make_n_next_cycles(SCHEDULER_CONTROLED_BY_RPC, In->Cycles, Equation, __SCDoNextCyclesAndWaitSchedDisableCallBack, par_Connection)) {
+            case 0: // stop scheduler request are added during the scheduler is running.
+            case 1: // stop scheduler request are added but the scheduler was already stopped.
+                RemoteProcedureWaitForConnection(par_Connection);
+                break;
+            default: // all others
+                __SCDoNextCyclesAndWaitSchedDisableCallBack(par_Connection);
+                break;
+            }
         } else {
             Out->Header.ReturnValue = -1;
         }
@@ -347,7 +398,7 @@ static int RPCFunc_AddBeforeProcessEquationFromFile(RPC_CONNECTION *par_Connecti
 
     RPC_API_ADD_BEFORE_PROCESS_EQUATION_FROM_FILE_MESSAGE *In = (RPC_API_ADD_BEFORE_PROCESS_EQUATION_FROM_FILE_MESSAGE*)par_DataIn;
     RPC_API_ADD_BEFORE_PROCESS_EQUATION_FROM_FILE_MESSAGE_ACK *Out = (RPC_API_ADD_BEFORE_PROCESS_EQUATION_FROM_FILE_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_ADD_BEFORE_PROCESS_EQUATION_FROM_FILE_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_ADD_BEFORE_PROCESS_EQUATION_FROM_FILE_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_ADD_BEFORE_PROCESS_EQUATION_FROM_FILE_MESSAGE_ACK);
 
     ProcName = (char*)In + In->OffsetProcessName;
@@ -383,7 +434,7 @@ static int RPCFunc_AddBehindProcessEquationFromFile(RPC_CONNECTION *par_Connecti
 
     RPC_API_ADD_BEHIND_PROCESS_EQUATION_FROM_FILE_MESSAGE *In = (RPC_API_ADD_BEHIND_PROCESS_EQUATION_FROM_FILE_MESSAGE*)par_DataIn;
     RPC_API_ADD_BEHIND_PROCESS_EQUATION_FROM_FILE_MESSAGE_ACK *Out = (RPC_API_ADD_BEHIND_PROCESS_EQUATION_FROM_FILE_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_ADD_BEHIND_PROCESS_EQUATION_FROM_FILE_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_ADD_BEHIND_PROCESS_EQUATION_FROM_FILE_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_ADD_BEHIND_PROCESS_EQUATION_FROM_FILE_MESSAGE_ACK);
 
     ProcName = (char*)In + In->OffsetProcessName;
@@ -417,7 +468,7 @@ static int RPCFunc_DelBeforeProcessEquations(RPC_CONNECTION *par_Connection, RPC
 
     RPC_API_DEL_BEFORE_PROCESS_EQUATIONS_MESSAGE *In = (RPC_API_DEL_BEFORE_PROCESS_EQUATIONS_MESSAGE*)par_DataIn;
     RPC_API_DEL_BEFORE_PROCESS_EQUATIONS_MESSAGE_ACK *Out = (RPC_API_DEL_BEFORE_PROCESS_EQUATIONS_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_DEL_BEFORE_PROCESS_EQUATIONS_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_DEL_BEFORE_PROCESS_EQUATIONS_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_DEL_BEFORE_PROCESS_EQUATIONS_MESSAGE_ACK);
 
     ProcName = (char*)In + In->OffsetProcessName;
@@ -434,7 +485,7 @@ static int RPCFunc_DelBehindProcessEquations(RPC_CONNECTION *par_Connection, RPC
 
     RPC_API_DEL_BEHIND_PROCESS_EQUATIONS_MESSAGE *In = (RPC_API_DEL_BEHIND_PROCESS_EQUATIONS_MESSAGE*)par_DataIn;
     RPC_API_DEL_BEHIND_PROCESS_EQUATIONS_MESSAGE_ACK *Out = (RPC_API_DEL_BEHIND_PROCESS_EQUATIONS_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_DEL_BEHIND_PROCESS_EQUATIONS_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_DEL_BEHIND_PROCESS_EQUATIONS_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_DEL_BEHIND_PROCESS_EQUATIONS_MESSAGE_ACK);
 
     ProcName = (char*)In + In->OffsetProcessName;
@@ -458,7 +509,7 @@ static int RPCFunc_WaitUntil(RPC_CONNECTION *par_Connection, RPC_API_BASE_MESSAG
 
     RPC_API_WAIT_UNTIL_MESSAGE *In = (RPC_API_WAIT_UNTIL_MESSAGE*)par_DataIn;
     RPC_API_WAIT_UNTIL_MESSAGE_ACK *Out = (RPC_API_WAIT_UNTIL_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_WAIT_UNTIL_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_WAIT_UNTIL_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_WAIT_UNTIL_MESSAGE_ACK);
 
     Equation = (char*)In + In->OffsetEquation;
@@ -485,7 +536,7 @@ static int RPCFunc_StartProcessEx2(RPC_CONNECTION *par_Connection, RPC_API_BASE_
 
     RPC_API_START_PROCESS_EX2_MESSAGE *In = (RPC_API_START_PROCESS_EX2_MESSAGE*)par_DataIn;
     RPC_API_START_PROCESS_EX2_MESSAGE_ACK *Out = (RPC_API_START_PROCESS_EX2_MESSAGE_ACK*)par_DataOut;
-    memset (Out, 0, sizeof (RPC_API_START_PROCESS_EX2_MESSAGE_ACK));
+    MEMSET (Out, 0, sizeof (RPC_API_START_PROCESS_EX2_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_START_PROCESS_EX2_MESSAGE_ACK);
 
     ProcessName = (char*)In + In->OffsetProcessName;
@@ -537,6 +588,7 @@ int AddSchedFunctionToTable(void)
     AddFunctionToRemoteAPIFunctionTable2(RPC_API_DEL_BEHIND_PROCESS_EQUATIONS_CMD, 1, RPCFunc_DelBehindProcessEquations, sizeof(RPC_API_DEL_BEHIND_PROCESS_EQUATIONS_MESSAGE), RPC_API_MAX_MESSAGE_SIZE, STRINGIZE(RPC_API_DEL_BEHIND_PROCESS_EQUATIONS_MESSAGE_MEMBERS), STRINGIZE(RPC_API_DEL_BEHIND_PROCESS_EQUATIONS_MESSAGE_ACK_MEMBERS));
     AddFunctionToRemoteAPIFunctionTable2(RPC_API_WAIT_UNTIL_CMD, 0, RPCFunc_WaitUntil, sizeof(RPC_API_WAIT_UNTIL_MESSAGE), RPC_API_MAX_MESSAGE_SIZE, STRINGIZE(RPC_API_WAIT_UNTIL_MESSAGE_MEMBERS), STRINGIZE(RPC_API_WAIT_UNTIL_MESSAGE_ACK_MEMBERS));
     AddFunctionToRemoteAPIFunctionTable2(RPC_API_START_PROCESS_EX2_CMD, 1, RPCFunc_StartProcessEx2, sizeof(RPC_API_START_PROCESS_EX2_MESSAGE), RPC_API_MAX_MESSAGE_SIZE, STRINGIZE(RPC_API_START_PROCESS_EX2_MESSAGE_MEMBERS), STRINGIZE(RPC_API_START_PROCESS_EX2_MESSAGE_ACK_MEMBERS));
+    AddFunctionToRemoteAPIFunctionTable2(RPC_API_DO_NEXT_CONDITIONS_CYCLES_AND_WAIT_CMD, 0, RPCFunc_DoNextConditionsCyclesAndWait, sizeof(RPC_API_DO_NEXT_CONDITIONS_CYCLES_AND_WAIT_MESSAGE), RPC_API_MAX_MESSAGE_SIZE, STRINGIZE(RPC_API_DO_NEXT_CONDITIONS_CYCLES_AND_WAIT_MESSAGE_MEMBERS), STRINGIZE(RPC_API_DO_NEXT_CONDITIONS_CYCLES_AND_WAIT_MESSAGE_ACK_MEMBERS));
 
     return 0;
 }

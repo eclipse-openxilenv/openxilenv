@@ -27,6 +27,7 @@ typedef struct {
     int FromThreadId;
     int FromUser;
     uint64_t AtCycle;
+    struct EXEC_STACK_ELEM *ExecStack;
     void (*Callback)(void* par_Parameter);
     void *Parameter;
 } SCHEDULER_STOP_TIMED_REQ_ELEM;
@@ -76,7 +77,7 @@ int AddStopRequest(SCHEDULER_STOP_REQ *par_Requests, int par_FromThreadId, int p
                    void (*par_Callback)(void* par_Parameter), void *par_Parameter);
 
 int AddTimedStopRequest(SCHEDULER_STOP_REQ *par_Requests, int par_FromThreadId, int par_FromUser,
-                        uint64_t par_AtCycle,
+                        uint64_t par_AtCycle, const char *par_Equation,
                         void (*par_Callback)(void* par_Parameter), void *par_Parameter,
                         int par_ContinueFlag);
 

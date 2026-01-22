@@ -21,6 +21,8 @@
 
 extern "C" {
 #include "Config.h"
+#include "MainValues.h"
+#include "PrintFormatToString.h"
 }
 
 OscilloscopeTimeAxis::OscilloscopeTimeAxis(OscilloscopeWidget *par_OscilloscopeWidget, OSCILLOSCOPE_DATA *par_Data, QWidget *parent) : QWidget(parent)
@@ -39,14 +41,18 @@ OscilloscopeTimeAxis::~OscilloscopeTimeAxis()
 
 void OscilloscopeTimeAxis::paintEvent(QPaintEvent * /* event */)
 {
+    QPainter painter(this);
+    paint(painter, true);
+}
+
+void OscilloscopeTimeAxis::paint(QPainter &painter, bool border_flag)
+{
     int win_width, win_height;
 
     double value_window, value_min, value_max;
     double pixel_per_unit, pixel_per_line;
     double pixel_first_line, value_first_text;
     int x;
-
-    QPainter painter(this);
 
     if (m_Data->xy_view_flag) {
         if (m_Data->sel_left_right == Left) {
@@ -70,10 +76,20 @@ void OscilloscopeTimeAxis::paintEvent(QPaintEvent * /* event */)
     if ((win_width <= 0) || (win_height <= 0)) return;
 
     QPen PenSave = painter.pen();
-    painter.setPen(Qt::darkGray);
-    painter.drawRect(QRect(0, 0, width() - 1, height() - 1));
-    painter.setPen(PenSave);
-
+    QPen Pen(Qt::darkGray);
+    Pen.setWidth(2);
+    painter.setPen(Pen);
+    painter.drawLine(0, 0, width() - 1, 0);
+    if (border_flag) {
+        painter.drawLine(0, 0, 0, height() - 1);
+        painter.drawLine(width() - 1, 0, width() - 1, height() - 1);
+        painter.drawLine(0, height() - 1, width() - 1, height() - 1);
+    }
+    if (!border_flag || !s_main_ini_val.DarkMode) {
+        painter.setPen (Qt::black);
+    } else {
+        painter.setPen (Qt::white);
+    }
     // Automatic adjust scala
     value_window = value_max - value_min;
     pixel_per_line = pixel_per_unit = static_cast<double>(win_width) / value_window;
@@ -107,7 +123,7 @@ void OscilloscopeTimeAxis::paintEvent(QPaintEvent * /* event */)
             painter.drawLine (static_cast<int>(pixel_first_line), 0, static_cast<int>(pixel_first_line), ((x%5)?6:(x%10)?10:14));
             if (!(x%10)) {
                 char Help[32];
-                sprintf (Help, "%4.2f", value_first_text);
+                PrintFormatToString (Help, sizeof(Help), "%4.2f", value_first_text);
                 QString txt(Help);
                 painter.drawText (static_cast<int>(pixel_first_line), 20, txt);
             }
@@ -116,6 +132,7 @@ void OscilloscopeTimeAxis::paintEvent(QPaintEvent * /* event */)
         pixel_first_line += pixel_per_line;
         x++;
     }
+    painter.setPen(PenSave);
 }
 
 

@@ -23,6 +23,7 @@
 #include <errno.h>
 #include "MyMemory.h"
 #include "StringMaxChar.h"
+#include "PrintFormatToString.h"
 #include "Blackboard.h"
 #include "ThrowError.h"
 #include "TextReplace.h"
@@ -110,17 +111,22 @@ int convert_value2textreplace (int64_t wert, const char *conversion,
         }
 
         /* Check if the ranges overlap */
-        if ((enum_count && (to_old >= from)) || (from > to)) {
+        if ((enum_count && ((from == to) ? (to_old >= from) : (to_old > from))) || (from > to)) {
             goto ERROR_LABEL;
         }
 
         c = remove_whitespace (c);
 
         /* Check if the text replace matches */
-        if ((wert >= from) && (wert <= to)) {
-            thats_it = 1;
+        if (from == to) {
+            if (wert == from) {
+                thats_it = 1;
+            }
+        } else {
+            if ((wert >= from) && (wert < to)) {
+                thats_it = 1;
+            }
         }
-
         /* Text */
         char_count = 0;         /* Rest the character counter */
         if (*c == '\"') {       /* Text replace have to start with an " */
@@ -214,7 +220,7 @@ int convert_textreplace2value (const char *conversion, char *txt, int64_t *pfrom
         }
 
         /* Check if the text replace matches */
-        if ((enum_count && (to_old >= from)) || (from > to))  {
+        if ((enum_count && ((from == to) ? (to_old >= from) : (to_old > from))) || (from > to)) {
             goto ERROR_LABEL;
         }
 
@@ -225,10 +231,10 @@ int convert_textreplace2value (const char *conversion, char *txt, int64_t *pfrom
             c++;
             t = txt;
             // If this will start with an RGB() macro ignore that
-            if ((c[0]  == '(') &&
-                (c[1]  == 'R') &&
-                (c[2]  == 'G') &&
-                (c[3]  == 'B')) {
+            if ((c[0]  == 'R') &&
+                (c[1]  == 'G') &&
+                (c[2]  == 'B') &&
+                (c[3]  == '(')) {
                 c += 4;
                 while (*c != ')') {
                     if (*c == 0) {
@@ -283,8 +289,9 @@ int textreplace2asap (const char *sc_conv, char *a2l_conv)
     char *t;
     int char_count, enum_count = 0;
     char *txt;
+    int size_of_txt = BBVARI_CONVERSION_SIZE*2;
 
-    txt = my_malloc (BBVARI_CONVERSION_SIZE*2);
+    txt = my_malloc (size_of_txt);
     if (txt == NULL) {
         return -1;
     }
@@ -324,7 +331,7 @@ int textreplace2asap (const char *sc_conv, char *a2l_conv)
         }
 
         /* Check if the ranges overlap */
-        if ((enum_count && (to_old >= from)) || (from > to)) {
+        if ((enum_count && ((from == to) ? (to_old >= from) : (to_old > from))) || (from > to)) {
             goto ERROR_LABEL;
         }
 
@@ -336,7 +343,7 @@ int textreplace2asap (const char *sc_conv, char *a2l_conv)
             c++;
             c = GetRGBMacroValue (c, NULL); /* If there are RGB Macro jump over it */
 
-            sprintf (txt, "      %" PRIi64 " \"", to);
+            PrintFormatToString (txt, size_of_txt, "      %" PRIi64 " \"", to);
             t = txt + strlen (txt);
             while (*c != '\"') {
                 if (char_count >= (int)(sizeof (txt)-2)) {
@@ -358,8 +365,8 @@ int textreplace2asap (const char *sc_conv, char *a2l_conv)
 
             *t = '\0';     /* Terminate string  */
 
-            strcat (txt, "\"\r\n");
-            strcat (a2l_conv, txt);
+            StringAppendMaxCharTruncate (txt, "\"\r\n", size_of_txt);
+            StringAppendMaxCharTruncate (a2l_conv, txt, size_of_txt);
             enum_count++;
             c = remove_whitespace (c);
         } else {
@@ -439,7 +446,7 @@ int GetNextEnumFromEnumListErrMsg (int idx, const char *conversion,
         }
 
         /* Check if the ranges overlap */
-        if ((word_count && (to_old >= from)) || (from > to)) {
+        if ((word_count && ((from == to) ? (to_old >= from) : (to_old > from))) || (from > to)) {
             if (ErrMsgBuffer != NULL) {
                 strncpy_x (ErrMsgBuffer, "\"from\" is overlapping \"to\" before", SizeOfErrMsgBuffer);
             }

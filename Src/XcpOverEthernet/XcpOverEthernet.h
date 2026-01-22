@@ -50,7 +50,7 @@ typedef struct {
 
 
 
-int ConnectToProcess (int LinkNr, int *ret_Pid, char *ret_ProcessName);
+int ConnectToProcess (int LinkNr, int *ret_Pid, char *ret_ProcessName, int MaxChars);
 int DisconnectFronProcess (int LinkNr);
 
 int XCPReadMemoryFromExternProcess (int LinkNr, uint64_t address, void *dest, int len);

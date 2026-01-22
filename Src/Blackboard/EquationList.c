@@ -100,7 +100,7 @@ static uint64_t __RegisterEquation (int Pid, const char *Equation, const char *A
     Equations[FoundFreePos].UsedFlag = 1;
     Equations[FoundFreePos].UniqueNumber = Ret = GetUniqueNumber() + (uint64_t)FoundFreePos;
     Equations[FoundFreePos].AttachCounter = 1;
-    memset (&Equations[FoundFreePos].Pids, 0, sizeof (Equations[FoundFreePos].Pids));
+    MEMSET (&Equations[FoundFreePos].Pids, 0, sizeof (Equations[FoundFreePos].Pids));
     if (Pid) {
         Equations[FoundFreePos].Pids[0] = Pid;
         Equations[FoundFreePos].ProcAttachCounters[0] = 1;

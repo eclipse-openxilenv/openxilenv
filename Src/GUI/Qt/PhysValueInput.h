@@ -123,16 +123,17 @@ public:
     void SetDisplayPhysValue(bool par_State);
     void SetDisplayRawValue(bool par_State);
 
-    void SetEnumString(const char *par_EnumString);
-
     void SetBlackboardVariableId(int par_Vid, bool par_ChangeRawPhys = false);
     void SetBlackboardVariableName(char *par_VariableName);
-    void SetFormulaString(const char *par_Formula);
 
-    void SetRawValue (int par_Value, int par_Base = 10);
-    void SetRawValue (unsigned int par_Value, int par_Base = 10);
-    void SetRawValue (uint64_t par_Value, int par_Base = 10);
-    void SetRawValue (int64_t par_Value, int par_Base = 10);
+    void SetConersionTypeAndString(enum BB_CONV_TYPES par_ConvType, const char *par_ConvString);
+    void SetFormulaString(const char *par_Formula);
+    void SetEnumString(const char *par_EnumString);
+
+    void SetRawValue(int par_Value, int par_Base = 10);
+    void SetRawValue(unsigned int par_Value, int par_Base = 10);
+    void SetRawValue(uint64_t par_Value, int par_Base = 10);
+    void SetRawValue(int64_t par_Value, int par_Base = 10);
     void SetRawValue(double par_Value);
     void SetRawValue(union BB_VARI par_Value, enum BB_DATA_TYPES par_Type, int par_Base = 10, bool par_ChangeDataType = true);
 
@@ -174,13 +175,6 @@ public:
 
     void setFocus(Qt::FocusReason reason);
 
-    /*bool event(QEvent *e);
-    void keyPressEvent(QKeyEvent *e);
-    void mousePressEvent(QMouseEvent *e);
-    void mouseReleaseEvent(QMouseEvent *e);
-    void focusInEvent(QFocusEvent *e);
-    void focusOutEvent(QFocusEvent *e);*/
-
     bool hasFocus() const;
 
     void SetWideningSignalEnable(bool par_Enable);
@@ -219,14 +213,11 @@ private:
 
     bool m_ShowRaw;
     bool m_ShowPhys;
-    bool m_PysIsEnum;
-
+    bool m_SwapValueBetweeRaWPhys;
     int m_AssignedVid;
-    char *m_EnumString;
 
     ValueInput *m_RowValue;
     ValueInput *m_PhysValue;
-    //QComboBox *m_EnumValue;
     EnumComboBox *m_EnumValue;
     EnumComboBoxModel *m_Model;
 
@@ -243,11 +234,9 @@ private:
 
     int m_Vid;
     char *m_BlackboardVariableName;
-    char *m_Formula;
 
-    /*bool m_MinMaxCheck;
-    double m_MinRawValue;
-    double m_MaxRawValue;*/
+    enum BB_CONV_TYPES m_ConvType;
+    char *m_ConvString;
 
     bool m_RawOnlyInt;
 
