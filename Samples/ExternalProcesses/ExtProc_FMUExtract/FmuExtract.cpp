@@ -395,9 +395,11 @@ int CheckIfOneDllExists(const char *par_Directory)
     char Pattern[MAX_PATH];
     WIN32_FIND_DATAA FileInfos;
     HANDLE hFile;
+    DWORD Attribute;
     int Ret = 0;
 
-    if (GetFileAttributesA(par_Directory) == FILE_ATTRIBUTE_DIRECTORY) {
+    Attribute = GetFileAttributesA(par_Directory);
+    if ((Attribute & FILE_ATTRIBUTE_DIRECTORY) == FILE_ATTRIBUTE_DIRECTORY) {
         strcpy (Pattern, par_Directory);
         strcat (Pattern, "\\*.DLL");
 
@@ -594,7 +596,10 @@ int main(int argc, char* argv[])
 #else
         realpath(FmuFileName, ProcessName);
 #endif
-        ExtractFmuToUniqueTempDirectory(FmuFileName, ExtractedFmuDirectrory);
+        if (ExtractFmuToUniqueTempDirectory(FmuFileName, ExtractedFmuDirectrory)) {
+            printf ("cannot extract \"%s\" to folder \"%s\"\n", FmuFileName, ExtractedFmuDirectrory);
+            return 1;
+        }
 
         strcpy(XcpExeWriteBackPath, ExtractedFmuDirectrory);
 #ifdef _WIN32
