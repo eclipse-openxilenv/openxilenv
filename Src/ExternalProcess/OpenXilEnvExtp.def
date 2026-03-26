@@ -116,7 +116,7 @@ EXPORTS
     BuildNewProcessAndConnectToEx
     WaitUntilFunctionCallRequest
     AcknowledgmentOfFunctionCallRequest
-    SetHwndMainWindow
+    GetSchedulingInformation
 
     ExternalProcessMain
 

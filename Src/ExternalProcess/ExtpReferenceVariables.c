@@ -19,6 +19,8 @@
 #include <stdio.h>
 #include <string.h>
 #include "Platform.h"
+#include "StringMaxChar.h"
+#include "PrintFormatToString.h"
 #include "ExtpMemoryAllocation.h"
 #include "ExtpBlackboardCopyLists.h"
 #include "ExtpBaseMessages.h"
@@ -69,7 +71,7 @@ static void XilEnvInternal_referece_error(EXTERN_PROCESS_TASK_INFOS_STRUCT *Task
     default: i = 13; break;
     }
     if (!OkToAllFlags[i]) {
-        sprintf(txt, "cannot reference variable %s: because (%li)-> %s\n continue?", name, vid, errstr[i]);
+        PrintFormatToString (txt, sizeof(txt), "cannot reference variable %s: because (%li)-> %s\n continue?", name, vid, errstr[i]);
         // ERROR_OK_OKALL_CANCEL     8
         ret = XilEnvInternal_PipeErrorPopupMessageAndWait(TaskInfo, 8, txt);
         if (ret == 2) {   // Cancle == 2
@@ -102,7 +104,7 @@ static int XilEnvInternal_CheckIfAddressIsValid(EXTERN_PROCESS_TASK_INFOS_STRUCT
 #define NO_NAME_USE_PTR \
     char addrstr[32]; \
     if (name == NULL) { \
-        sprintf (addrstr, "0x%p", ptr); \
+        PrintFormatToString (addrstr, sizeof(addrstr), "0x%p", ptr); \
         name = addrstr; \
     }
 
@@ -161,12 +163,11 @@ static int MallocCopyString (char **DstPtr, char *Src)
     if (Src == NULL) {
         *DstPtr = NULL;
     } else {
-        *DstPtr = (char *)XilEnvInternal_malloc (strlen (Src) + 1); 
+        *DstPtr = StringMalloc (Src);
         if (*DstPtr == NULL) {
             ThrowError (1, "out of memory");
             return -1;
         }
-        strcpy (*DstPtr, Src);
     }
     return 0;
 }
@@ -241,7 +242,7 @@ void XilEnvInternal_DelayReferenceAllCStartupReferences (char *par_ProcessNamePo
     EXTERN_PROCESS_TASK_INFOS_STRUCT *TaskInfo;
     unsigned long long UniqueId;
 
-    memset (&Value, 0, sizeof (Value));
+    MEMSET (&Value, 0, sizeof (Value));
 
     EnterCriticalSection(&ReferenceCriticalSection);
     TaskInfo = XilEnvInternal_GetTaskPtr ();

@@ -20,6 +20,7 @@
 #include <stdlib.h>
 #include <stdarg.h>
 
+#include "StringMaxChar.h"
 #include "IniDataBase.h"
 #include "MyMemory.h"
 
@@ -43,14 +44,14 @@ int ReplaceFunctionWithProgram (char *Function, int *pRet, int ParamCount, ...)
         va_end (marker);              /* Reset variable arguments.      */
 
         if ((CommandLine = my_malloc (Len)) == NULL) return 0;
-        strcpy (CommandLine, ProgramName);
-        strcat (CommandLine, " ");
-        strcat (CommandLine, Function);
-        strcat (CommandLine, " ");
+        StringCopyMaxCharTruncate (CommandLine, ProgramName, Len);
+        StringAppendMaxCharTruncate (CommandLine, " ", Len);
+        StringAppendMaxCharTruncate (CommandLine, Function, Len);
+        StringAppendMaxCharTruncate (CommandLine, " ", Len);
         va_start (marker, ParamCount);     /* Initialize variable arguments. */
         while ((p = va_arg (marker, char*)) != NULL) {
-            strcat (CommandLine, p);
-            strcat (CommandLine, " ");
+            StringAppendMaxCharTruncate (CommandLine, p, Len);
+            StringAppendMaxCharTruncate (CommandLine, " ", Len);
         }
         va_end (marker);              /* Reset variable arguments.      */
         *pRet = system (CommandLine);

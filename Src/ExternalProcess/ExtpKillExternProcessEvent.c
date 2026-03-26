@@ -24,7 +24,8 @@
 #include <sys/stat.h>
 #include <semaphore.h>
 #endif
-
+#include "StringMaxChar.h"
+#include "PrintFormatToString.h"
 #include "XilEnvExtProc.h"
 #include "ExtpBaseMessages.h"
 #include "PipeMessagesShared.h"
@@ -43,7 +44,7 @@ static void* XilEnvInternal_KillExternProcessThreadFunction(void* lpParam)
     sem_t *KillAllExternProcessSemaphore;
 #endif
     char EventName[MAX_PATH];
-    sprintf (EventName, KILL_ALL_EXTERN_PROCESS_EVENT "_%s", (char*)lpParam);   // The name can have a "Global\" or "Local\" prefix to explicitly create the object in the global or session namespace
+    PrintFormatToString (EventName, sizeof(EventName), KILL_ALL_EXTERN_PROCESS_EVENT "_%s", (char*)lpParam);   // The name can have a "Global\" or "Local\" prefix to explicitly create the object in the global or session namespace
 #ifdef _WIN32
     hEvent = CreateEvent (NULL, TRUE, FALSE, EventName);
     if (hEvent == NULL) {        
@@ -78,10 +79,11 @@ static void* XilEnvInternal_KillExternProcessThreadFunction(void* lpParam)
 int XilEnvInternal_StartKillEventThread (char *par_Prefix)
 {
     char *PrefixBuffer;
+    int Len = strlen(par_Prefix) + 1;
 
     // This memory will never give free
-    PrefixBuffer = (char*)malloc(strlen(par_Prefix) + 1);
-    strcpy (PrefixBuffer, par_Prefix);
+    PrefixBuffer = (char*)malloc(Len);
+    StringCopyMaxCharTruncate (PrefixBuffer, par_Prefix, Len);
 
 #ifdef _WIN32
     HANDLE hThread;

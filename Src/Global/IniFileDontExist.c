@@ -27,6 +27,7 @@
 #include <stdlib.h>
 #include "Config.h"
 #include "StringMaxChar.h"
+#include "PrintFormatToString.h"
 #include "ConfigurablePrefix.h"
 #include "ThrowError.h"
 #include "MainValues.h"
@@ -70,11 +71,11 @@ void AddIniFileToHistory (char *par_IniFile)
 
 #ifdef _WIN32
     if (GetFullPathName (par_IniFile, sizeof(FullPath), FullPath, NULL) == 0) {
-        strcpy(FullPath, par_IniFile);
+        STRING_COPY_TO_ARRAY(FullPath, par_IniFile);
     }
 #else
     if(realpath (par_IniFile, FullPath) == NULL) {
-        strcpy(FullPath, par_IniFile);
+        STRING_COPY_TO_ARRAY(FullPath, par_IniFile);
     }
 #endif
 
@@ -85,17 +86,17 @@ void AddIniFileToHistory (char *par_IniFile)
         Result = SHGetFolderPath (NULL, CSIDL_APPDATA, NULL, SHGFP_TYPE_CURRENT, Directory);
         if (Result == S_OK) {
             int Fd;
-            StringAppendMaxCharTruncate(Directory, "\\", sizeof(Directory));
-            StringAppendMaxCharTruncate(Directory, ProgramName, sizeof(Directory));
+            STRING_APPEND_TO_ARRAY(Directory, "\\");
+            STRING_APPEND_TO_ARRAY(Directory, ProgramName);
             // If folder don't exists create it
             CreateDirectory(Directory, NULL);
-            StringAppendMaxCharTruncate(Directory, "\\History.ini", sizeof(Directory));
+            STRING_APPEND_TO_ARRAY(Directory, "\\History.ini");
 #else
-            GetXilEnvHomeDirectory(Directory);
-            StringAppendMaxCharTruncate(Directory, "/.", sizeof(Directory));
-            StringAppendMaxCharTruncate(Directory, ProgramName, sizeof(Directory));
+            GetXilEnvHomeDirectory(Directory, sizeof(Directory));
+            STRING_APPEND_TO_ARRAY(Directory, "/.");
+            STRING_APPEND_TO_ARRAY(Directory, ProgramName);
             CheckIfDirectoryExists(Directory);
-            StringAppendMaxCharTruncate(Directory, "/LastLoadedFiles.ini", sizeof(Directory));
+            STRING_APPEND_TO_ARRAY(Directory, "/LastLoadedFiles.ini");
 #endif
             Fd = IniFileDataBaseOpenNoFilterPossible(Directory);
             if (Fd <= 0) {
@@ -108,7 +109,7 @@ void AddIniFileToHistory (char *par_IniFile)
                     if (stricmp (FullPath, Last)) {   // If it was not the same as last call
                         // first only count
                         for (NumOfEntrys = 0; NumOfEntrys < 20; NumOfEntrys++) {
-                            sprintf (Entry, "X_%i", NumOfEntrys);
+                            PrintFormatToString (Entry, sizeof(Entry), "X_%i", NumOfEntrys);
                             if (IniFileDataBaseReadString (ProgramName, Entry, "", Help, sizeof (Help), Fd) <= 0) {
                                 break;
                             }
@@ -118,9 +119,9 @@ void AddIniFileToHistory (char *par_IniFile)
                         }
                         for (x = NumOfEntrys; x >= 0; x--) {
                             if (x < xx) {
-                                sprintf (Entry, "X_%i", x);
+                                PrintFormatToString (Entry, sizeof(Entry), "X_%i", x);
                                 IniFileDataBaseReadString (ProgramName, Entry, "", Help, sizeof (Help), Fd);
-                                sprintf (Entry, "X_%i", x + 1);
+                                PrintFormatToString (Entry, sizeof(Entry), "X_%i", x + 1);
                                 if (strlen (Help)) IniFileDataBaseWriteString (ProgramName, Entry, Help, Fd);
                                 else IniFileDataBaseWriteString (ProgramName, Entry, NULL, Fd);
                             }

@@ -24,6 +24,8 @@
 #include <string.h>
 #include "Config.h"
 #include "MyMemory.h"
+#include "MemZeroAndCopy.h"
+#include "PrintFormatToString.h"
 #include "ThrowError.h"
 #include "Scheduler.h"
 #include "MainValues.h"
@@ -119,7 +121,7 @@ void *__my_calloc (const char * const file, int line, size_t nitems, size_t size
         LeaveCriticalSection (&MallocCriticalSection);
         return NULL;
     }
-    memset ((void*)cblock, 0, byte_size + sizeof (struct memory_cblock));
+    MEMSET ((void*)cblock, 0, byte_size + sizeof (struct memory_cblock));
     p = (unsigned char*)cblock + sizeof (struct memory_cblock) + byte_size;
     for (x = 0; x < OVERWRITE_END_OF_BLOCK_DETECTION; x++) {
         p[x] = 0xA5;
@@ -315,53 +317,6 @@ static int SearchSortCompareFunction (void const* a, void const* b)
     }
     return Ret;
 }
-
-uint64_t write_memory_infos_to_file (int Idx)
-{
-    struct memory_cblock *cblock, *nextblock;
-    uint64_t total_mem = 0;
-    char file[MAX_PATH];
-    FILE *fh;
-    int x;
-    unsigned char *p;
-
-
-    sprintf (file, "c:\\tmp\\mem_%04i.txt", Idx);
-
-    if ((fh = fopen (file, "wt")) != NULL) {
-        for (cblock = memory_block_list; cblock != NULL; cblock = nextblock) {
-            nextblock = cblock->next;
-            fprintf (fh, "(%i) %p[%u] %s[%i]\n", cblock->pid, cblock->block, cblock->size, cblock->file, cblock->line);
-
-            IncFileLineCounter(cblock->file, cblock->line);
-
-            p = (unsigned char*)cblock + sizeof (struct memory_cblock) + cblock->size;
-            for (x = 0; x < OVERWRITE_END_OF_BLOCK_DETECTION; x++) {
-                if (p[x] != 0xA5) {
-                    ThrowError (1, "memory corruption "
-                              "(%i) %p[%u] %s[%i]", cblock->pid, cblock->block, cblock->size, cblock->file, cblock->line);
-                    break;
-                }
-            }
-
-            total_mem += cblock->size;
-        }
-        fprintf (fh, "total size = %" PRIu64 " bytes\n", total_mem);
-
-        fprintf (fh, "\n\n**********************************************\n\n");
-
-        qsort(FileLineNrCounter, (size_t)SizeOfFileLineNrCounter, sizeof(LINE_FILE_COUNTER), SearchSortCompareFunction);
-        for (x = 0; x < SizeOfFileLineNrCounter; x++) {
-            fprintf (fh, "%i\t%s[%i]\n", FileLineNrCounter[x].Counter, FileLineNrCounter[x].FileName, FileLineNrCounter[x].LineNr);
-        }
-        free(FileLineNrCounter);
-        FileLineNrCounter = NULL;
-        SizeOfFileLineNrCounter = 0;
-        fclose (fh);
-    }
-    return total_mem;
-}
-
 
 void check_memory_corrupted (int LineNr, char *Filename)
 {

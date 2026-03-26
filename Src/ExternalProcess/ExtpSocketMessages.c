@@ -42,6 +42,8 @@
 #define SOCKET int
 #endif
 
+#include "StringMaxChar.h"
+#include "PrintFormatToString.h"
 #include "XilEnvExtProc.h"
 #include "ExtpProcessAndTaskInfos.h"
 
@@ -73,18 +75,18 @@ static HANDLE XilEnvInternal_ConnectToSocket (char *par_InstanceName, char *par_
 #endif
     Socket = INVALID_SOCKET;
 
-    memset(&Tip, 0, sizeof(Tip));
+    MEMSET(&Tip, 0, sizeof(Tip));
     Tip.ai_family = AF_INET;
     Tip.ai_socktype = SOCK_STREAM;
     Tip.ai_protocol = IPPROTO_TCP;
 
-    strcpy (ServerName, par_ServerName);
+    STRING_COPY_TO_ARRAY (ServerName, par_ServerName);
     p = strstr(ServerName, "@");
     if (p != NULL) {
-        sprintf (PortString, "%s", p + 1);  // own port defined
+        PrintFormatToString (PortString, sizeof(PortString), "%s", p + 1);  // own port defined
         *p = 0;
     } else {
-        sprintf (PortString, "%i", 1800);  // use default port
+        PrintFormatToString (PortString, sizeof(PortString), "%i", 1800);  // use default port
     }
 
     AddrInfo = NULL;

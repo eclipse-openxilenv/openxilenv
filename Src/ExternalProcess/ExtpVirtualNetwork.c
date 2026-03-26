@@ -79,7 +79,7 @@ int XilEnvInternal_VirtualNetworkOpen (EXTERN_PROCESS_TASK_INFOS_STRUCT* TaskInf
                 ThrowError(1, "cannot create virtual network fifo (out of memory)");
                 return -5 ; // Out of memory
             }
-            memset(TaskInfo->Fifos + (TaskInfo->FifoCounter - 1), 0, sizeof(TaskInfo->Fifos[0]) * 1);
+            MEMSET(TaskInfo->Fifos + (TaskInfo->FifoCounter - 1), 0, sizeof(TaskInfo->Fifos[0]) * 1);
             for (i = (TaskInfo->FifoCounter - 1); i < TaskInfo->FifoCounter; i++) {
                 TaskInfo->Fifos[i].FiFoHandle = -1;
             }
@@ -100,8 +100,8 @@ int XilEnvInternal_VirtualNetworkOpen (EXTERN_PROCESS_TASK_INFOS_STRUCT* TaskInf
 
     TaskInfo->Fifos[x].RdBufferCount = 0;
     TaskInfo->Fifos[x].WrBufferCount = 0;
-    memset (TaskInfo->Fifos[x].RdPositions, 0, sizeof(TaskInfo->Fifos[x].RdPositions));
-    memset (TaskInfo->Fifos[x].WrPositions, 0, sizeof(TaskInfo->Fifos[x].WrPositions));
+    MEMSET (TaskInfo->Fifos[x].RdPositions, 0, sizeof(TaskInfo->Fifos[x].RdPositions));
+    MEMSET (TaskInfo->Fifos[x].WrPositions, 0, sizeof(TaskInfo->Fifos[x].WrPositions));
 
     if (AlignedSize > 0) {
         TaskInfo->Fifos[x].InData = XilEnvInternal_calloc((size_t)AlignedSize, 1);
@@ -596,7 +596,7 @@ int XilEnvInternal_VirtualNetworkConfigBufferByHandle (EXTERN_PROCESS_TASK_INFOS
                     Buffers[par_Number]->Flags = par_Flags;
                     Buffers[par_Number]->DataLost = 0;
                     Buffers[par_Number]->NewData = 0;
-                    memset(Buffers[par_Number]->Data, 0, par_Size);
+                    MEMSET(Buffers[par_Number]->Data, 0, par_Size);
                     for (x = 0; x < *RetBufferCount; x++) {
                         if ((int)Buffers[Positions[x]]->IdSlot > par_IdSlot) break;
                     }

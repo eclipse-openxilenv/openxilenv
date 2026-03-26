@@ -2,18 +2,25 @@ if(UNIX)
     target_sources(${XilEnvExtProcTargetName}
         PRIVATE Platform.c)
     if(${MY_CMAKE_SIZEOF_VOID_P} GREATER 4)
-        target_sources(LinuxRemoteMasterCore 
-        PRIVATE Compare2DoubleEqual.c Fifos.c VersionInfoSection.c) 
+        target_sources(LinuxRemoteMasterCore PRIVATE
+            Platform.c
+            Compare2DoubleEqual.c
+            Fifos.c
+            VersionInfoSection.c)
 
         target_sources(LinuxRemoteMaster PRIVATE 
             VersionInfoSection.c) 
     
         target_sources(LinuxRemoteMaster.Out PRIVATE 
             VersionInfoSection.c) 
+
+        target_sources(XilEnvRpc PRIVATE
+            Platform.c)
     endif()
 endif()
 
 if(${MY_CMAKE_SIZEOF_VOID_P} GREATER 4)
+
     set(CmmonFileList
         CheckIfAlreadyRunning.c
         RunTimeMeasurement.c

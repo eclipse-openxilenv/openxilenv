@@ -20,6 +20,8 @@
 #include "Files.h"
 #include "Platform.h"
 #include "ConfigurablePrefix.h"
+#include "StringMaxChar.h"
+#include "PrintFormatToString.h"
 
 /* do not include: #include "ThrowError.h"
    instead own declaration */
@@ -31,7 +33,6 @@ int ThrowError (int level, const char *format, ...);
 #include <stdint.h>
 #include <stdlib.h>
 #include <time.h>
-//#include "platform.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -39,6 +40,11 @@ int ThrowError (int level, const char *format, ...);
 #include <dirent.h>
 #include <sys/auxv.h>
 #include <sys/mman.h>
+
+void Sleep(int par_time_ms)
+{
+    usleep(1000 * par_time_ms);
+}
 
 uint64_t GetTickCount64(void)
 {
@@ -159,7 +165,7 @@ int CopyFile(const char *lpExistingFileName, const char *lpNewFileName, int bFai
 }
 
 
-void GetXilEnvHomeDirectory(char *ret_Directory)
+void GetXilEnvHomeDirectory(char *ret_Directory, int par_Maxc)
 {
     char *HomeDir;
     HomeDir = getenv("HOME");
@@ -167,7 +173,7 @@ void GetXilEnvHomeDirectory(char *ret_Directory)
         HomeDir = getpwuid(getuid())->pw_dir;
     }
     if (HomeDir != NULL) {
-        strcpy(ret_Directory, HomeDir);
+        StringCopyMaxCharTruncate(ret_Directory, HomeDir, par_Maxc);
     }
 }
 
@@ -182,20 +188,22 @@ int GetModuleFileName(void *hModule, char *lpFilename, int nSize)
     if (((int)strlen(Path) + 1) >= nSize) {
         strncpy(lpFilename, Path, nSize);
         lpFilename[nSize - 1] = 0;
-    } else strcpy(lpFilename, Path);
+    } else {
+        StringCopyMaxCharTruncate(lpFilename, Path, nSize);
+    }
     return (int)strlen(lpFilename);
 }
 
-int CheckOpenIPCFile(char *Instance, char *Name, char *ret_Path, int DirCraeteOrMustExists, int FileCraeteOrMustExists)
+int CheckOpenIPCFile(char *Instance, char *Name, char *ret_Path, int par_Maxc, int DirCraeteOrMustExists, int FileCraeteOrMustExists)
 {
     int fh;
     DIR *dir;
     char Path[1024];
     const char *ProgramName = "XilEnv"; // GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_PROGRAM_NAME);
 
-    GetXilEnvHomeDirectory(Path);
-    strcat(Path, "/.");
-    strcat(Path, ProgramName);
+    GetXilEnvHomeDirectory(Path, sizeof(Path));
+    StringAppendMaxCharTruncate(Path, "/.", sizeof(Path));
+    StringAppendMaxCharTruncate(Path, ProgramName, sizeof(Path));
 
     dir = opendir(Path);
     if (dir == NULL) {
@@ -209,12 +217,12 @@ int CheckOpenIPCFile(char *Instance, char *Name, char *ret_Path, int DirCraeteOr
     } else {
         closedir(dir);
     }
-    strcat(Path, "/");
+    StringAppendMaxCharTruncate(Path, "/", sizeof(Path));
     if ((Instance != NULL) && (strlen(Instance) > 0)) {
-        strcat(Path, Instance);
+        StringAppendMaxCharTruncate(Path, Instance, sizeof(Path));
     }
     else {
-        strcat(Path, "_");
+        StringAppendMaxCharTruncate(Path, "_", sizeof(Path));
     }
     dir = opendir(Path);
     if (dir == NULL) {
@@ -228,8 +236,8 @@ int CheckOpenIPCFile(char *Instance, char *Name, char *ret_Path, int DirCraeteOr
     } else {
         closedir(dir);
     }
-    strcat(Path, "/");
-    strcat(Path, Name);
+    StringAppendMaxCharTruncate(Path, "/", sizeof(Path));
+    StringAppendMaxCharTruncate(Path, Name, sizeof(Path));
     switch (FileCraeteOrMustExists) {
     default:
     case FILENAME_MUST_EXIST:
@@ -249,7 +257,7 @@ int CheckOpenIPCFile(char *Instance, char *Name, char *ret_Path, int DirCraeteOr
     case FILENAME_IGNORE:
         break;
     }
-    strcpy(ret_Path, Path);
+    StringCopyMaxCharTruncate(ret_Path, Path, par_Maxc);
     return 0;
 }
 
@@ -307,7 +315,7 @@ int GetRealPathForOnlyUpperCasePath (const char *SrcPath, char *DstPath, int Max
         char Command[1024];
         char *p;
 
-        sprintf (Command, "winepath -u \"%s\"", SrcPath);
+        PrintFormatToString (Command, sizeof(Command), "winepath -u \"%s\"", SrcPath);
         fp = popen(Command, "r");
         if (fp == NULL) {
             ThrowError(1, "Failed to run command \"%s\"\n", Command);
@@ -329,7 +337,6 @@ int GetRealPathForOnlyUpperCasePath (const char *SrcPath, char *DstPath, int Max
 
 MY_FILE_HANDLE my_open (const char *Name)
 {
-    LogFileAccess (Name);
 #ifdef _WIN32
     return CreateFile (Name,
                        GENERIC_READ,

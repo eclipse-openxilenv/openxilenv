@@ -28,6 +28,8 @@
 #endif
 
 #include <Psapi.h>   // because GetModuleInformation
+#elif defined(__linux__)
+#include <signal.h>
 #endif
 
 #include "PipeMessagesShared.h"
@@ -142,13 +144,6 @@ int XilEnvInternal_GetNoXcpFlag(void)
 void KillExternProcessHimSelf (void)
 {
     exit(0);
-}
-
-EXPORT_OR_IMPORT void __FUNC_CALL_CONVETION__ SetHwndMainWindow (void *Hwnd)
-{
-#ifdef _WIN32
-    ProcessInfos.HwndMainWindow = (HWND)Hwnd;
-#endif
 }
 
 int get_process_identifier (void)
@@ -420,12 +415,12 @@ static HANDLE XilEnvInternal_ConnectToAndLogin (EXTERN_PROCESS_TASK_INFOS_STRUCT
     }
     TaskInfos->PipeOrSocketHandle = hPipe;
 
-    memset(&LoginMessage, 0, sizeof(LoginMessage));
-    strcpy (LoginMessage.ExecutableName, TaskInfos->ExecutableName);
+    MEMSET(&LoginMessage, 0, sizeof(LoginMessage));
+    STRING_COPY_TO_ARRAY (LoginMessage.ExecutableName, TaskInfos->ExecutableName);
     _strupr (LoginMessage.ExecutableName);
-    strcpy (LoginMessage.ProcessName, TaskInfos->ProcessAtTaskName);
+    STRING_COPY_TO_ARRAY (LoginMessage.ProcessName, TaskInfos->ProcessAtTaskName);
     _strupr (LoginMessage.ProcessName);
-    strcpy (LoginMessage.DllName, TaskInfos->DllName);
+    STRING_COPY_TO_ARRAY (LoginMessage.DllName, TaskInfos->DllName);
     _strupr (LoginMessage.DllName);
     LoginMessage.ProcessNumber = TaskInfos->Number;
     LoginMessage.NumberOfProcesses = TaskInfos->ThreadCount;
@@ -914,10 +909,10 @@ int PipeGetLabelnameByAddress (void *Addr, char *RetName, int Maxc)
 
     if (!Status || (BytesRead < sizeof (PIPE_API_GET_LABEL_BY_ADDRESS_CMD_MESSAGE_ACK))) {
         ThrowError (1, "cannot get label by address %i or %i != %i\n",  Status, BytesRead, sizeof (Ack));
-        strcpy (RetName, "");
+        StringCopyMaxCharTruncate (RetName, "", Maxc);
         Ack->ReturnValue = -1;
     } else {
-        strncpy (RetName, Ack->Label, (size_t)Maxc);
+        StringCopyMaxCharTruncate (RetName, Ack->Label, Maxc);
         RetName[Maxc - 1] = 0;
     }
     Ret = Ack->ReturnValue;
@@ -964,10 +959,10 @@ int PipeGetReferencedLabelnameByVid (int Vid, char *RetName, int Maxc)
 
     if (!Status || (BytesRead < sizeof (PIPE_API_GET_REFERENCED_LABEL_BY_VID_CMD_MESSAGE_ACK))) {
         ThrowError (1, "cannot get label by variable identifier %i or %i != %i\n",  Status, BytesRead, sizeof (Ack));
-        strcpy (RetName, "");
+        StringCopyMaxCharTruncate (RetName, "", Maxc);
         Ack->ReturnValue = -1;
     } else {
-        strncpy (RetName, Ack->Label, (size_t)Maxc);
+        StringCopyMaxCharTruncate (RetName, Ack->Label, Maxc);
         RetName[Maxc - 1] = 0;
     }
     Ret = Ack->ReturnValue;
@@ -2102,19 +2097,18 @@ static EXTERN_PROCESS_TASK_INFOS_STRUCT *BuildAndAddNewTaskInfoStruct (const cha
     }
     NewTaskInfo->ThreadCount = ProcessInfos.ThreadCount;
     NewTaskInfo->Number = ProcessInfos.ThreadPos;
-    strcpy (NewTaskInfo->InstanceName, InstanceName);
-    strcpy (NewTaskInfo->ServerName, ServerName);
+    STRING_COPY_TO_ARRAY (NewTaskInfo->InstanceName, InstanceName);
+    STRING_COPY_TO_ARRAY (NewTaskInfo->ServerName, ServerName);
     if ((ExecutableName != NULL) && (strlen (ExecutableName) > 0)) {
-        strcpy (NewTaskInfo->ExecutableName, ExecutableName);
+        STRING_COPY_TO_ARRAY (NewTaskInfo->ExecutableName, ExecutableName);
     } else {
-        //GetModuleFileName (NULL, NewTaskInfo->ExecutableName, sizeof (NewTaskInfo->ExecutableName));
-        strcpy (NewTaskInfo->ExecutableName, ProcessInfos.ExecutableName);
+        STRING_COPY_TO_ARRAY (NewTaskInfo->ExecutableName, ProcessInfos.ExecutableName);
     }
-    strcpy (NewTaskInfo->ProcessAtTaskName, ProcessName);
-    strcpy (NewTaskInfo->TaskName, TaskName);
+    STRING_COPY_TO_ARRAY (NewTaskInfo->ProcessAtTaskName, ProcessName);
+    STRING_COPY_TO_ARRAY (NewTaskInfo->TaskName, TaskName);
     if (strlen (NewTaskInfo->TaskName)) {
-        strcat (NewTaskInfo->ProcessAtTaskName, "@");
-        strcat (NewTaskInfo->ProcessAtTaskName, TaskName);
+        STRING_APPEND_TO_ARRAY (NewTaskInfo->ProcessAtTaskName, "@");
+        STRING_APPEND_TO_ARRAY (NewTaskInfo->ProcessAtTaskName, TaskName);
     }
 #ifdef _WIN32
     if (hModulDll != NULL) {
@@ -2176,9 +2170,9 @@ static char **BuildParameterArray(const char *par_StartExePath, const char *par_
     char *p;
     
     // Build the command string
-    strcpy(Buffer, par_StartExePath);
-    strcat(Buffer, " ");
-    strcat(Buffer, par_ParameterString);
+    StringCopyMaxCharTruncate(Buffer, par_StartExePath, TotalLen);
+    StringAppendMaxCharTruncate(Buffer, " ", TotalLen);
+    StringAppendMaxCharTruncate(Buffer, par_ParameterString, TotalLen);
     
     // First element is the program name
     Ret = XilEnvInternal_malloc(sizeof(char*) * 2);  // At least prog name + NULL
@@ -2247,7 +2241,7 @@ EXPORT_OR_IMPORT int __FUNC_CALL_CONVETION__ CheckIfConnectedToEx (EXTERN_PROCES
 
 #ifdef DEBUG_COMMANDLINE
         GetModuleFileName (NULL, Name, MAX_PATH);
-        strcat (Name, ".txt");
+        STRING_APPEND_TO_ARRAY (Name, ".txt");
         fh = fopen (Name, "wt");
         if (fh != NULL) {
             fprintf (fh, "Called with command line:\n%s\n", CommandLine);
@@ -2296,7 +2290,7 @@ EXPORT_OR_IMPORT int __FUNC_CALL_CONVETION__ CheckIfConnectedToEx (EXTERN_PROCES
                 char ExecutableName[MAX_PATH];
 
                 if (GetShortExeFilename (ProcessInfos.ExecutableName, ExecutableName, sizeof (ExecutableName)) != 0) {
-                    strcpy (ExecutableName, ProcessInfos.ExecutableName);
+                    STRING_COPY_TO_ARRAY (ExecutableName, ProcessInfos.ExecutableName);
                 }
 #ifdef _WIN32
                 _getcwd (WorkDir, sizeof (WorkDir));
@@ -2330,7 +2324,7 @@ EXPORT_OR_IMPORT int __FUNC_CALL_CONVETION__ CheckIfConnectedToEx (EXTERN_PROCES
                             CallFrom[0] = 0;
                         }
                         else {
-                            strcpy(CallFrom, EnvVar);
+                            STRING_COPY_TO_ARRAY(CallFrom, EnvVar);
                         }
                     } else {
                         CallFrom[0] = 0;
@@ -2342,9 +2336,9 @@ EXPORT_OR_IMPORT int __FUNC_CALL_CONVETION__ CheckIfConnectedToEx (EXTERN_PROCES
                         ThrowError (1, "too many call froms (will be ignored)");
                     } else {
                         if (Ret > 0) {
-                            strcat(CallFrom, ",");
+                            STRING_APPEND_TO_ARRAY(CallFrom, ",");
                         }
-                        strcat (CallFrom, ExecutableName);
+                        STRING_APPEND_TO_ARRAY (CallFrom, ExecutableName);
                         if (!SetEnvironmentVariable(ENVIRONMENT_VARNAME_CALLFROM, CallFrom)) {
                             ThrowError (1, "cannot set call froms (will be ignored)");
                         }
@@ -2370,16 +2364,17 @@ EXPORT_OR_IMPORT int __FUNC_CALL_CONVETION__ CheckIfConnectedToEx (EXTERN_PROCES
                     PROCESS_INFORMATION ProcessInformation;
                     BOOL Status;
                     char *CmdBuffer;
+                    int Size = strlen(StartExePath) + strlen(StartExeCmdLine) + 2;
 
-                    CmdBuffer = malloc (strlen(StartExePath) + strlen(StartExeCmdLine) + 2);
+                    CmdBuffer = malloc (Size);
                     if (CmdBuffer == NULL) {
                         ThrowError (1, "cannot alloc memory for \"%s\" \"%s\"", StartExePath, StartExeCmdLine);
                         return -1;
                     }
-                    strcpy (CmdBuffer, StartExePath);
+                    StringCopyMaxCharTruncate (CmdBuffer, StartExePath, Size);
                     if (strlen(StartExeCmdLine)) {
-                        strcat (CmdBuffer, " ");
-                        strcat (CmdBuffer, StartExeCmdLine);
+                        StringAppendMaxCharTruncate (CmdBuffer, " ", Size);
+                        StringAppendMaxCharTruncate (CmdBuffer, StartExeCmdLine, Size);
                     }
                     ZeroMemory(&StartupInfo, sizeof(StartupInfo));
                     if (!DontBreakOutOfJob) {
@@ -2403,10 +2398,11 @@ EXPORT_OR_IMPORT int __FUNC_CALL_CONVETION__ CheckIfConnectedToEx (EXTERN_PROCES
                     pid = fork();
                     if (pid == 0) {
                         // Child
+                        signal(SIGPIPE, SIG_IGN);
                         if (execvp(StartExePath, BuildParameterArray(StartExePath, StartExeCmdLine)) < 0) {
                             ThrowError(1, "cannot start \"%s\" \"%s\"", StartExePath, StartExeCmdLine);
                             KillExternProcessHimSelf();
-                            exit(-1);
+                            exit(EXIT_FAILURE);
                         }
                     }
                 }
