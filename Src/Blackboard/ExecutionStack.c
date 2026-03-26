@@ -17,7 +17,7 @@
 
 #include <stdint.h>
 #include <stdio.h>
-#include <ctype.h>      /* fuer is.. Funktionen */
+#include <ctype.h>
 #include <string.h>
 #include <math.h>
 #include <malloc.h>
@@ -2584,7 +2584,7 @@ static int get_calc_byte_width_operation (EXECUTION_STACK *pStack, struct EXEC_S
     return 0;
 }
 
-static OPERATION_TABLE_ELEM OperationPointerTable[] = {
+static OPERATION_TABLE_ELEM OperationPointerTable[512] = {
     { EQU_OP_LOGICAL_AND, logical_and_operation },
     { EQU_OP_LOGICAL_OR, logical_or_operation },
     { EQU_OP_EQUAL, equal_operation },
@@ -2690,12 +2690,13 @@ static OPERATION_TABLE_ELEM OperationPointerTable[] = {
     { -1, NULL }
 };
 
-#define OPERATION_POINTER_TABLE_SIZE  (sizeof (OperationPointerTable) / sizeof (OperationPointerTable[0]))
+static int OperationPointerTableSize = USER_DEFINED_BUILDIN_FUNCTION_OFFSET;
+#define OPERATION_POINTER_TABLE_MAX_SIZE  (sizeof (OperationPointerTable) / sizeof (OperationPointerTable[0]))
 
 int FindFunctionByKey (int Key)
 {
     int x;
-    for (x = 0; OperationPointerTable[x].OperationPointer != NULL; x++) {
+    for (x = 0; x < OperationPointerTableSize; x++) {
         if (OperationPointerTable[x].OperationNo == Key) {
             return x;
         }
@@ -2710,6 +2711,7 @@ int add_exec_stack_elem (int command, char *name, union OP_PARAM value,
     OPERATION_TABLE_ELEM *p;
     int x, op_pos = 0;
     struct EXEC_STACK_ELEM *start_exec_stack = *pExecStack;
+    int i;
     int ret = 0;
 
     if (start_exec_stack == NULL) { /* new stack */
@@ -2728,7 +2730,8 @@ int add_exec_stack_elem (int command, char *name, union OP_PARAM value,
     }
     /* search command inside op_fkt_poi_array */
     x = start_exec_stack->op_pos;
-    for (p = OperationPointerTable; p->OperationNo >= 0; p++) {
+    for (i = 0; i < OperationPointerTableSize; i++) {
+        p = OperationPointerTable + i;
         if (p->OperationNo == command) {
             start_exec_stack[x].op_pos = (short)op_pos;
             if (name != NULL) {   /* Variable name */
@@ -3137,7 +3140,7 @@ int direct_execute_one_command (int Cmd, EXECUTION_STACK *Stack, union OP_PARAM 
     exec_stack_elem.op_pos = (short)Cmd;
     exec_stack_elem.param = Value;
     /* seach command inside op_fkt_poi_array */
-    for (x = 0; x < (int)OPERATION_POINTER_TABLE_SIZE; x++) {
+    for (x = 0; x < OperationPointerTableSize; x++) {
         if (OperationPointerTable[x].OperationNo == Cmd) {
             return OperationPointerTable[x].OperationPointer(Stack, &(exec_stack_elem));
         }
@@ -3282,4 +3285,14 @@ int convert_to_stack_entry (union BB_VARI Value, int BBType, struct STACK_ENTRY 
         return -1;
     }
     return 0;
+}
+
+
+int AddUserDefinedBuildinFunctionToExecutor(int par_Number, UserDefinedBuildinFunctionExecuteType par_UserDefinedBuildinFunctionExecute)
+{
+    if (par_Number < OPERATION_POINTER_TABLE_MAX_SIZE) {
+        OperationPointerTable[par_Number].OperationPointer = par_UserDefinedBuildinFunctionExecute;
+        OperationPointerTable[par_Number].OperationNo = par_Number;
+        OperationPointerTableSize++;
+    }
 }

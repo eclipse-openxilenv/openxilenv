@@ -19,6 +19,7 @@
 #include "Platform.h"
 #include <stdio.h>
 #include "Config.h"
+#include "PrintFormatToString.h"
 #include "Blackboard.h"
 #include "DebugInfoDB.h"
 #include "ThrowError.h"
@@ -179,7 +180,7 @@ int ReadStringFromExternProcessViaLabel (PROCESS_APPL_DATA *pappldata, int Pid, 
 
     if (CheckAccess(Pid)) {
         for (x = 0; x < (MaxSize-1); x++) {
-            sprintf (Help, "%s[%i]", Label, x);
+            PrintFormatToString (Help, sizeof(Help), "%s[%i]", Label, x);
             if (!appl_label (pappldata, Pid, Help, &Address, &TypeNr)) { // is it a label?
                 if ((TypeNr == BB_BYTE) || (TypeNr == BB_UBYTE)) {  // String must consist of bytes
                     if (!ReadValueFromExternProcessViaAddress (Address, pappldata, Pid, TypeNr, NULL, NULL,&Value)) {

@@ -109,11 +109,8 @@ int read_bbvari_textreplace(VID vid, char *txt, int maxc, int *pcolor);
 int convert_value_textreplace(VID vid, int32_t value, char *txt, int maxc, int *pcolor);
 int convert_textreplace_value (VID vid, char *txt, int64_t *pfrom, int64_t *pto);
 
-
-int read_bbvari_frame (VID *Vids, double *RetFrameValues, int Size);
-int write_bbvari_frame (VID *Vids, double *FrameValues, int Size);
-int write_bbvari_frame_pid (PID pid, VID *Vids, double *FrameValues, int Size);
-
+int read_bbvari_frame (VID *Vids, int8_t *PhysOrRaw, double *RetFrameValues, int Size);
+int write_bbvari_frame_pid (PID pid, VID *Vids, int8_t *PhysOrRaw, double *FrameValues, int Size);
 
 int get_phys_value_for_raw_value (VID vid, double raw_value, double *ret_phys_value);
 int get_raw_value_for_phys_value (VID vid, double phys_value, double *ret_raw_value, double *ret_phys_value);

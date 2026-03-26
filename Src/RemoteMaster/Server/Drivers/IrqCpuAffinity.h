@@ -19,5 +19,5 @@
 
 int ResetAllIrqToCpu0(void);
 int SetIrqToCpu(char *par_NameOfDevice, int par_CpuNumber);
-int GetEthernetDeviceNameForIpAddress(char *ret_name);
+int GetEthernetDeviceNameForIpAddress(char *ret_name, int maxc);
 

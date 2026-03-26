@@ -22,6 +22,7 @@
 #include "IniDataBase.h"
 #include "MyMemory.h"
 #include "StringMaxChar.h"
+#include "PrintFormatToString.h"
 #include "ThrowError.h"
 #include "Scheduler.h"
 #include "DebugInfos.h"
@@ -225,11 +226,11 @@ int rereference_all_vari_from_ini (int pid, int IgnoreBasicSettings, int StartId
     char *p;
     int Fd = GetMainFileDescriptor();
 
-    get_name_by_pid (pid, pname);
-    if (GetProcessNameWithoutPath (pid, pname_withoutpath)) {
+    get_name_by_pid (pid, pname, sizeof(pname));
+    if (GetProcessNameWithoutPath (pid, pname_withoutpath, sizeof(pname_withoutpath))) {
         return -1;
     }
-    sprintf (section_filter, "referenced variables *%s", pname_withoutpath);
+    PrintFormatToString (section_filter, sizeof(section_filter), "referenced variables *%s", pname_withoutpath);
     if (IniFileDataBaseFindNextSectionNameRegExp(0, section_filter, 0, section, sizeof(section), Fd) < 0) {
         return -1;
     }
@@ -246,7 +247,7 @@ int rereference_all_vari_from_ini (int pid, int IgnoreBasicSettings, int StartId
     if (WaitUntilProcessIsNotActiveAndThanLockIt (pid, 5000, ERROR_BEHAVIOR_ERROR_MESSAGE, "cannot reference variable", __FILE__, __LINE__) == 0) {
         // Iterate through complete variable list from INI file
         for (x = StartIdx;;x++) {
-            sprintf (entry, "Ref%i", x);
+            PrintFormatToString (entry, sizeof(entry), "Ref%i", x);
             if (IniFileDataBaseReadString(section, entry, "", variname, sizeof (variname), Fd) == 0) break;
 
             p = variname + strlen(variname);
@@ -334,18 +335,18 @@ int unreference_all_vari_from_ini (int pid)
     int DispayNameFlag;
     int Fd = GetMainFileDescriptor();
 
-    get_name_by_pid (pid, pname);
-    if (GetProcessNameWithoutPath (pid, pname_withoutpath)) {
+    get_name_by_pid (pid, pname, sizeof(pname));
+    if (GetProcessNameWithoutPath (pid, pname_withoutpath, sizeof(pname_withoutpath))) {
         return -1;
     }
-    sprintf (section_filter, "referenced variables *%s", pname_withoutpath);
+    PrintFormatToString (section_filter, sizeof(section_filter), "referenced variables *%s", pname_withoutpath);
     if (IniFileDataBaseFindNextSectionNameRegExp (0, section_filter, 0, section, sizeof(section), Fd) < 0) {
         return -1;
     }
     if (WaitUntilProcessIsNotActiveAndThanLockIt (pid, 5000, ERROR_BEHAVIOR_ERROR_MESSAGE, "cannot reference variable", __FILE__, __LINE__) == 0) {
         // Iterate through complete variable list from INI file
         for (x = 0;;x++) {
-            sprintf (entry, "Ref%i", x);
+            PrintFormatToString (entry, sizeof(entry),"Ref%i", x);
             if (IniFileDataBaseReadString(section, entry, "", variname, sizeof (variname), Fd) == 0) break;
             if (GetDisplayName (section, x, variname, DisplayName, sizeof (DisplayName)) == 0) {
                 DispayNameFlag = 1;
@@ -383,17 +384,17 @@ int look_if_referenced (int pid, char *lname, char *DisplayName, int Maxc)
     int x;
     int Fd = GetMainFileDescriptor();
 
-    get_name_by_pid (pid, pname);
-    if (GetProcessNameWithoutPath (pid, pname_withoutpath)) {
+    get_name_by_pid (pid, pname, sizeof(pname));
+    if (GetProcessNameWithoutPath (pid, pname_withoutpath, sizeof(pname_withoutpath))) {
         return 0;
     }
-    sprintf (section_filter, "referenced variables *%s", pname_withoutpath);
+    PrintFormatToString (section_filter, sizeof(section_filter), "referenced variables *%s", pname_withoutpath);
     if (IniFileDataBaseFindNextSectionNameRegExp (0, section_filter, 0, section, sizeof(section), Fd) < 0) {
         return 0;
     }
     // Search inside variable list
     for (x = 0;;x++) {
-        sprintf (entry, "Ref%i", x);
+        PrintFormatToString (entry, sizeof(entry),"Ref%i", x);
         if (IniFileDataBaseReadString(section, entry, "", variname, sizeof (variname), Fd) == 0) break;
         if (!CmpVariName (variname, lname)) {
             if (GetDisplayName (section, x, variname, DisplayName, Maxc) == 0) {
@@ -418,31 +419,31 @@ int write_referenced_vari_ini (int pid, const char *lname, const char *dname)
     int x;
     int Fd = GetMainFileDescriptor();
 
-    get_name_by_pid (pid, pname);
-    if (GetProcessNameWithoutPath (pid, pname_withoutpath)) {
+    get_name_by_pid (pid, pname, sizeof(pname));
+    if (GetProcessNameWithoutPath (pid, pname_withoutpath, sizeof(pname_withoutpath))) {
         return -1;
     }
-    sprintf (section_filter, "referenced variables *%s", pname_withoutpath);
+    PrintFormatToString (section_filter, sizeof(section_filter), "referenced variables *%s", pname_withoutpath);
     if (IniFileDataBaseFindNextSectionNameRegExp (0, section_filter, 0, section, sizeof(section), Fd) < 0) {
-        sprintf (section, "referenced variables %s", pname);
+        PrintFormatToString (section, sizeof(section), "referenced variables %s", pname);
     }
     // Search inside variable list
     for (x = 0;;x++) {
-        sprintf (entry, "Ref%i", x);
+        PrintFormatToString (entry, sizeof(entry),"Ref%i", x);
         if (IniFileDataBaseReadString(section, entry, "", variname, sizeof (variname), Fd) == 0) break;
         ConvertLabelAsapCombatible (variname, sizeof(variname), 0);   // replace :: wiht ._.  if necessary
         if (!CmpVariName (variname, lname)) return -1;   // Is already inside the list
     }
     IniFileDataBaseWriteString (section, entry, lname, Fd);
     if (CmpVariName (lname, dname)) {
-        sprintf (entry, "Dsp%i", x);
+        PrintFormatToString (entry, sizeof(entry),"Dsp%i", x);
         StringCopyMaxCharTruncate (ref_dsp_name, lname, sizeof(ref_dsp_name));
-        strcat (ref_dsp_name, " ");
-        strcat (ref_dsp_name, dname);
+        STRING_APPEND_TO_ARRAY (ref_dsp_name, " ");
+        STRING_APPEND_TO_ARRAY (ref_dsp_name, dname);
         IniFileDataBaseWriteString (section, entry, ref_dsp_name, Fd);
     } else {
         // Display name equal source name
-        sprintf (entry, "Dsp%i", x);
+        PrintFormatToString (entry, sizeof(entry),"Dsp%i", x);
         IniFileDataBaseWriteString (section, entry, NULL, Fd);
     }
     return 0;   // OK
@@ -461,33 +462,33 @@ int remove_referenced_vari_ini (int pid, const char *lname)
     int x, found = 0;
     int Fd = GetMainFileDescriptor();
 
-    get_name_by_pid (pid, pname);
-    if (GetProcessNameWithoutPath (pid, pname_withoutpath)) {
+    get_name_by_pid (pid, pname, sizeof(pname));
+    if (GetProcessNameWithoutPath (pid, pname_withoutpath, sizeof(pname_withoutpath))) {
         return -1;
     }
-    sprintf (section_filter, "referenced variables *%s", pname_withoutpath);
+    PrintFormatToString (section_filter, sizeof(section_filter), "referenced variables *%s", pname_withoutpath);
     if (IniFileDataBaseFindNextSectionNameRegExp (0, section_filter, 0, section, sizeof(section), Fd) < 0) {
         return -1;
     }
     // Search inside variable list
     for (x = 0;;x++) {
-        sprintf (entry, "Ref%i", x);
+        PrintFormatToString (entry, sizeof(entry),"Ref%i", x);
         if (IniFileDataBaseReadString(section, entry, "", variname, sizeof (variname), Fd) == 0) break;
         ConvertLabelAsapCombatible (variname, sizeof(variname), 0);   // replace :: wiht ._.  if necessary
         if (!CmpVariName (variname, lname)) {
             IniFileDataBaseWriteString(section, entry, NULL, Fd);
-            sprintf (entry, "Dsp%i", x);
+            PrintFormatToString (entry, sizeof(entry),"Dsp%i", x);
             IniFileDataBaseWriteString(section, entry, NULL, Fd);
             found++;
         } else if (found) {
             IniFileDataBaseWriteString (section, entry, NULL, Fd);
-            sprintf (entry, "Ref%i", x - found);
+            PrintFormatToString (entry, sizeof(entry),"Ref%i", x - found);
             IniFileDataBaseWriteString (section, entry, variname, Fd);
 
-            sprintf (entry, "Dsp%i", x);
+            PrintFormatToString (entry, sizeof(entry),"Dsp%i", x);
             if (IniFileDataBaseReadString (section, entry, "", DisplayName, sizeof (DisplayName), Fd) > 0) {
                 IniFileDataBaseWriteString (section, entry, NULL, Fd);
-                sprintf (entry, "Dsp%i", x - found);
+                PrintFormatToString (entry, sizeof(entry),"Dsp%i", x - found);
                 IniFileDataBaseWriteString (section, entry, DisplayName, Fd);
             }
         }
@@ -505,7 +506,7 @@ static int CopyRefListAndConvertFormatOldToNew (int DstFile, int SrcFile, char *
 
     IniFileDataBaseWriteString(DstSection, NULL, NULL, DstFile);
     for (x = 0;;x++) {
-        sprintf (Entry, "Ref%i", x);
+        PrintFormatToString (Entry, sizeof(Entry),"Ref%i", x);
         if (IniFileDataBaseReadString(SrcSection, Entry, "", Variname, sizeof (Variname), SrcFile) == 0) break;
         if (GetDisplayName (SrcSection, x, Variname, DisplayName, sizeof (DisplayName)) != 0) {
             StringCopyMaxCharTruncate (DisplayName, Variname, sizeof(DisplayName));
@@ -526,13 +527,13 @@ static int AddRefListAndConvertFormatNewToOld (int DstFile, int SrcFile, char *D
 
     if (DstStartIdx == 0) IniFileDataBaseWriteString(DstSection, NULL, NULL, DstFile);
     while ((EntryIdx = IniFileDataBaseGetNextEntryName (EntryIdx, SrcSection, Variname, sizeof(Variname), SrcFile)) >= 0) {
-        sprintf (Entry, "Ref%i", RefIdx);
+        PrintFormatToString (Entry, sizeof(Entry),"Ref%i", RefIdx);
         IniFileDataBaseWriteString (DstSection, Entry, Variname, DstFile);
         IniFileDataBaseReadString (SrcSection, Variname, "", DisplayName, sizeof (DisplayName), SrcFile);
         // If Display name not equal variable name?
         if (strcmp (Variname, DisplayName)) {
-            sprintf (Entry, "Dsp%i", RefIdx);
-            sprintf (Help, "%s %s", Variname, DisplayName);
+            PrintFormatToString (Entry, sizeof(Entry),"Dsp%i", RefIdx);
+            PrintFormatToString (Help, sizeof(Help), "%s %s", Variname, DisplayName);
             IniFileDataBaseWriteString (DstSection, Entry, Help, DstFile);
         }
         RefIdx++;
@@ -560,17 +561,17 @@ int ExportVariableReferenceList (int pid, const char *FileName, int OutputFormat
     int ret;
     int Fd;
 
-    if (get_name_by_pid (pid, pname)) {
+    if (get_name_by_pid (pid, pname, sizeof(pname))) {
         return -1;
     }
-    if (GetProcessNameWithoutPath (pid, pname_withoutpath)) {
+    if (GetProcessNameWithoutPath (pid, pname_withoutpath, sizeof(pname_withoutpath))) {
         return -1;
     }
     Fd = IniFileDataBaseCreateAndOpenNewIniFile(FileName);
     if (Fd <= 0) {
         return -1;
     }
-    sprintf (section_filter, "referenced variables *%s", pname_withoutpath);
+    PrintFormatToString (section_filter, sizeof(section_filter), "referenced variables *%s", pname_withoutpath);
     if (IniFileDataBaseFindNextSectionNameRegExp (0, section_filter, 0, section, sizeof(section), GetMainFileDescriptor()) < 0) {
         // Setup only an empty INI file
         ret = 0;
@@ -599,8 +600,8 @@ int ImportVariableReferenceList (int pid, const char *FileName)
     int idx = 0;
     int Fd;
 
-    get_name_by_pid (pid, pname);
-    if (GetProcessNameWithoutPath (pid, pname_withoutpath)) {
+    get_name_by_pid (pid, pname, sizeof(pname));
+    if (GetProcessNameWithoutPath (pid, pname_withoutpath, sizeof(pname_withoutpath))) {
         return -1;
     }
     Fd = IniFileDataBaseOpen(FileName);
@@ -610,11 +611,11 @@ int ImportVariableReferenceList (int pid, const char *FileName)
     // Dereference all before referenced variables
     unreference_all_vari_from_ini (pid);
     // First delete all reference section with the process name inside
-    sprintf (section_filter, "referenced variables *%s", pname_withoutpath);
+    PrintFormatToString (section_filter, sizeof(section_filter), "referenced variables *%s", pname_withoutpath);
     while ((idx = IniFileDataBaseFindNextSectionNameRegExp (idx, section_filter, 0, section, sizeof(section), GetMainFileDescriptor())) >= 0) {
         IniFileDataBaseWriteString(section, NULL, NULL, GetMainFileDescriptor());
     }
-    sprintf (section, "referenced variables %s", pname);
+    PrintFormatToString (section, sizeof(section), "referenced variables %s", pname);
     if (IniFileDataBaseLookIfSectionExist ("referenced variables for external process", Fd)) {
         ret = CopyRefListAndConvertFormatNewToOld (GetMainFileDescriptor(), Fd, section, "referenced variables for external process");
     } else {
@@ -637,8 +638,8 @@ int AddVariableReferenceList (int pid, char *FileName)
     int x, end;
     int Fd;
 
-    get_name_by_pid (pid, pname);
-    if (GetProcessNameWithoutPath (pid, pname_withoutpath)) {
+    get_name_by_pid (pid, pname, sizeof(pname));
+    if (GetProcessNameWithoutPath (pid, pname_withoutpath, sizeof(pname_withoutpath))) {
         return -1;
     }
     Fd = IniFileDataBaseOpen(FileName);
@@ -646,14 +647,14 @@ int AddVariableReferenceList (int pid, char *FileName)
         return -1;
     }
     // Search the matching reference section
-    sprintf (section_filter, "referenced variables *%s", pname_withoutpath);
+    PrintFormatToString (section_filter, sizeof(section_filter), "referenced variables *%s", pname_withoutpath);
     if (IniFileDataBaseFindNextSectionNameRegExp(0, section_filter, 0, section, sizeof(section), GetMainFileDescriptor()) >= 0) {
     } else {
-        sprintf (section, "referenced variables %s", pname);
+        PrintFormatToString (section, sizeof(section), "referenced variables %s", pname);
     }
     // Go to the end of the reference list
     for (x = 0; ; x++) {
-        sprintf (entry, "Ref%i", x);
+        PrintFormatToString (entry, sizeof(entry),"Ref%i", x);
         if (IniFileDataBaseReadString (section, entry, "", help, sizeof (help), GetMainFileDescriptor()) == 0) break;
     }
     end = x;
@@ -663,14 +664,14 @@ int AddVariableReferenceList (int pid, char *FileName)
         AddRefListAndConvertFormatNewToOld (GetMainFileDescriptor(), Fd, section, "referenced variables for external process", end);
     } else {
         for (x = 0; ; x++) {
-            sprintf (entry, "Ref%i", x);
+            PrintFormatToString (entry, sizeof(entry),"Ref%i", x);
             if (IniFileDataBaseReadString ("referenced variables", entry, "", help, sizeof (help), Fd) == 0) break;
-            sprintf (entry, "Ref%i", x+end);
+            PrintFormatToString (entry, sizeof(entry),"Ref%i", x+end);
             IniFileDataBaseWriteString (section, entry, help, GetMainFileDescriptor());
-            sprintf (entry, "Dsp%i", x);
+            PrintFormatToString (entry, sizeof(entry),"Dsp%i", x);
             // If a display name exist copy it also
             if (IniFileDataBaseReadString ("referenced variables", entry, "", help, sizeof (help), Fd) > 0) {
-                sprintf (entry, "Dsp%i", x+end);
+                PrintFormatToString (entry, sizeof(entry),"Dsp%i", x+end);
                 IniFileDataBaseWriteString (section, entry, help, GetMainFileDescriptor());
             }
         }
@@ -687,7 +688,7 @@ int GetDisplayName (char *Section, int Index, const char *ReferenceName, char *r
     char *p, *pr, *pd;
     int c;
 
-    sprintf (Entry, "Dsp%i", Index);
+    PrintFormatToString (Entry, sizeof(Entry),"Dsp%i", Index);
     if (IniFileDataBaseReadString (Section, Entry, "", IniLine, sizeof (IniLine), GetMainFileDescriptor()) != 0) {
         p = IniLine;
         while ((*p != 0) && isspace (*p)) p++;  // jump over whitespaces
@@ -717,17 +718,17 @@ int GetDisplayNameByLabelName (int pid, const char *lname, char *ret_DisplayName
     char variname[BBVARI_NAME_SIZE];
     int x;
 
-    get_name_by_pid (pid, pname);
-    if (GetProcessNameWithoutPath (pid, pname_withoutpath)) {
+    get_name_by_pid (pid, pname, sizeof(pname));
+    if (GetProcessNameWithoutPath (pid, pname_withoutpath, sizeof(pname_withoutpath))) {
         return -1;
     }
-    sprintf (section_filter, "referenced variables *%s", pname_withoutpath);
+    PrintFormatToString (section_filter, sizeof(section_filter), "referenced variables *%s", pname_withoutpath);
     if (IniFileDataBaseFindNextSectionNameRegExp(0, section_filter, 0, section, sizeof(section), GetMainFileDescriptor()) < 0) {
         return -1;
     }
     // Search inside variabale list
     for (x = 0;;x++) {
-        sprintf (entry, "Ref%i", x);
+        PrintFormatToString (entry, sizeof(entry),"Ref%i", x);
         if (IniFileDataBaseReadString(section, entry, "", variname, sizeof (variname), GetMainFileDescriptor()) == 0) break;
         ConvertLabelAsapCombatible (variname, sizeof(variname), 0);   // replace :: wiht ._.  if necessary
         if (!CmpVariName (variname, lname)) {
@@ -763,8 +764,7 @@ int ReferenceOneSymbol(const char* Symbol, const char *DisplayName, const char* 
                                             0);
     if (pappldata != NULL) {
         if (WaitUntilProcessIsNotActiveAndThanLockIt (Pid, 5000, ERROR_BEHAVIOR_ERROR_MESSAGE, "cannot reference variable", __FILE__, __LINE__) == 0) {
-            memset(Variable, 0, sizeof(Variable));
-            strncpy (Variable, Symbol, sizeof(Variable)-1);
+            StringCopyMaxCharTruncate (Variable, Symbol, sizeof(Variable));
             ConvertLabelAsapCombatible (Variable, sizeof(Variable), 2);   // ._. will always replaced with :: , appl_label cannot handle ._.
             if (appl_label_already_locked (pappldata, Pid, Variable, &Address, &TypeNo, 1, 1)) {
                 if ((Flags & 0x10000) != 0x10000) {
@@ -833,8 +833,7 @@ int DereferenceOneSymbol(const char* Symbol, const char* Process, int Flags)
                                             0);
     if (pappldata != NULL) {
         if (WaitUntilProcessIsNotActiveAndThanLockIt (Pid, 5000, ERROR_BEHAVIOR_ERROR_MESSAGE, "cannot reference variable", __FILE__, __LINE__) == 0) {
-            memset(Variable, 0, sizeof(Variable));
-            strncpy (Variable, Symbol, sizeof(Variable)-1);
+            StringCopyMaxCharTruncate (Variable, Symbol, sizeof(Variable));
             ConvertLabelAsapCombatible (Variable, sizeof(Variable), 2);   // ._. will always replaced with :: , appl_label cannot handle ._.
             if (appl_label_already_locked (pappldata, Pid, Variable, &Address, &TypeNo, 1, 1)) {
                 if ((Flags & 0x10000) != 0x10000) {
@@ -881,8 +880,7 @@ enum BB_DATA_TYPES GetRawValueOfOneSymbol(const char* Symbol, const char* Proces
                                             0);
     if (pappldata != NULL) {
         if (WaitUntilProcessIsNotActiveAndThanLockIt (Pid, 5000, ERROR_BEHAVIOR_NO_ERROR_MESSAGE, "", __FILE__, __LINE__) == 0) {
-            memset(Variable, 0, sizeof(Variable));
-            strncpy (Variable, Symbol, sizeof(Variable)-1);
+            StringCopyMaxCharTruncate (Variable, Symbol, sizeof(Variable));
             ConvertLabelAsapCombatible (Variable, sizeof(Variable), 2);   // ._. will always replaced with :: , appl_label cannot handle ._.
             if (appl_label_already_locked (pappldata, Pid, Variable, &Address, &TypeNo, 1, 1)) {
                 if ((Flags & 0x1000) != 0x1000) {
@@ -942,8 +940,7 @@ int SetRawValueOfOneSymbol(const char* Symbol, const char* Process, int Flags, e
                                             0);
     if (pappldata != NULL) {
         if (WaitUntilProcessIsNotActiveAndThanLockIt (Pid, 5000, ERROR_BEHAVIOR_NO_ERROR_MESSAGE, "", __FILE__, __LINE__) == 0) {
-            memset(Variable, 0, sizeof(Variable));
-            strncpy (Variable, Symbol, sizeof(Variable)-1);
+            StringCopyMaxCharTruncate (Variable, Symbol, sizeof(Variable));
             ConvertLabelAsapCombatible (Variable, sizeof(Variable), 2);   // ._. will always replaced with :: , appl_label cannot handle ._.
             if (appl_label_already_locked (pappldata, Pid, Variable, &Address, &TypeNo, 1, 1)) {
                 if ((Flags & 0x1000) != 0x1000) {

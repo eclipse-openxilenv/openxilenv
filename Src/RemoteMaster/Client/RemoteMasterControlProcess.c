@@ -20,6 +20,7 @@
 #include "tcb.h"
 #include "MyMemory.h"
 #include "StringMaxChar.h"
+#include "PrintFormatToString.h"
 #include "ThrowError.h"
 #include "Fifos.h"
 #include "Message.h"
@@ -160,7 +161,7 @@ static void CyclicRemoteMasterControl (void)
                     ReadFromFiFo(ToHostPCFifoHandle, &Header, (char*)Message, Header.Size);
                     // ther are only RT_INFO_MESSAGE and RT_ERROR possible
                     if (Message->Level != RT_INFO_MESSAGE) Message->Level = RT_ERROR;
-                    ThrowErrorWiithCycle(Message->Level, Message->Cycle, (char*)Message + Message->OffsetText);
+                    ThrowErrorWithCycle(Message->Level, Message->Cycle, (char*)Message + Message->OffsetText);
                 }
                 break;
             case RM_REALTIME_PROCESS_STARTED_CMD:
@@ -211,7 +212,7 @@ static void CyclicRemoteMasterControl (void)
 
                 // new DestFile
                 Counter++;  // that is not thread save!
-                sprintf (DstFilename, "/tmp/copy_from_client_tmp_%i", Counter);
+                PrintFormatToString (DstFilename, sizeof(DstFilename), "/tmp/copy_from_client_tmp_%i", Counter);
                 read_message (&mhead, (char *)&SrcFilename, sizeof (SrcFilename));
                 SrcFilename[sizeof (SrcFilename) - 1] = 0;
                 if (rm_CopyFile(SrcFilename, DstFilename) == 0) {

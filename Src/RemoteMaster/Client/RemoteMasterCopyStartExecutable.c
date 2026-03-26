@@ -37,6 +37,7 @@
 #include "ThrowError.h"
 #include "MyMemory.h"
 #include "StringMaxChar.h"
+#include "PrintFormatToString.h"
 #include "ConfigurablePrefix.h"
 
 #include "RemoteMasterCopyStartExecutable.h"
@@ -164,11 +165,11 @@ static int TransactRemoteMasterStartService (SOCKET Socket, uint32_t par_Command
                 return -1;
             } else {
                 if (par_Counter != Ack->Counter) {
-                    sprintf(ret_ErrString, "Req Counter != Ack Counter (%u != %u)", par_Counter, Ack->Counter);
+                    PrintFormatToString (ret_ErrString, par_MaxErrSize, "Req Counter != Ack Counter (%u != %u)", par_Counter, Ack->Counter);
                     return -1;
                 } else {
                     if (par_Command != Ack->Command) {
-                        sprintf(ret_ErrString, "Req Command != Ack Command (%u != %u)", par_Counter, Ack->Command);
+                        PrintFormatToString (ret_ErrString, par_MaxErrSize, "Req Command != Ack Command (%u != %u)", par_Counter, Ack->Command);
                         return -1;
                     } else {
                         ret_ErrString[0] = 0;
@@ -177,11 +178,11 @@ static int TransactRemoteMasterStartService (SOCKET Socket, uint32_t par_Command
                 }
             }
         } else {
-            sprintf(ret_ErrString, "receive error");
+            PrintFormatToString (ret_ErrString, par_MaxErrSize, "receive error");
             return -1;
         }
     } else {
-        sprintf(ret_ErrString, "transmit error");
+        PrintFormatToString (ret_ErrString, par_MaxErrSize, "transmit error");
         return -1;
     }
 }
@@ -226,12 +227,12 @@ int RemoteMasterCopyAndStartExecutable(const char *par_ExecutableNameClient, con
         goto __ERROR;
     }
 
-    memset(&hints, 0, sizeof(hints));
+    MEMSET(&hints, 0, sizeof(hints));
     hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_protocol = IPPROTO_TCP;
 
-    sprintf (PortString, "%i", par_RemoteMasterPort);
+    PrintFormatToString (PortString, sizeof(PortString), "%i", par_RemoteMasterPort);
     // Resolve the server address and port
     iResult = getaddrinfo(par_RemoteMasterAddr, PortString, &hints, &result);
     if (iResult != 0) {
@@ -316,7 +317,7 @@ int RemoteMasterCopyAndStartExecutable(const char *par_ExecutableNameClient, con
                     goto __ERROR;
                 } else {
                     Counter++;
-                    sprintf (FileBuffer, "chmod gou+x %s", par_ExecutableNameServer);
+                    PrintFormatToString (FileBuffer, FILE_BUFFER_SIZE, "chmod gou+x %s", par_ExecutableNameServer);
                     RetOfCall = TransactRemoteMasterStartService (Socket, COMMAND_EXECUTE_COMMAND, Counter,
                                                       (uint32_t)strlen(FileBuffer) + 1, FileBuffer,
                                                       Req, Ack, ErrorString, sizeof(ErrorString));
@@ -325,7 +326,7 @@ int RemoteMasterCopyAndStartExecutable(const char *par_ExecutableNameClient, con
                         goto __ERROR;
                     } else if (par_ExecFlag) {
                         Counter++;
-                        sprintf (FileBuffer, "export LD_LIBRARY_PATH=%s;%s", par_SharedLibraryDir, par_ExecutableNameServer);
+                        PrintFormatToString (FileBuffer, FILE_BUFFER_SIZE, "export LD_LIBRARY_PATH=%s;%s", par_SharedLibraryDir, par_ExecutableNameServer);
                         RetOfCall = TransactRemoteMasterStartService (Socket, COMMAND_EXECUTE_FILE, Counter,
                                                           (uint32_t)strlen(FileBuffer) + 1, FileBuffer,
                                                           Req, Ack, ErrorString, sizeof(ErrorString));
@@ -376,7 +377,7 @@ int RemoteMasterExecuteCommand(char *par_RemoteMasterAddr, int par_RemoteMasterP
     uint32_t Counter = 0;
     int Ret = -1;
     Socket = INVALID_SOCKET;
-    memset(&hints, 0, sizeof(hints));
+    STRUCT_ZERO_INIT(hints, struct addrinfo);
     hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_protocol = IPPROTO_TCP;
@@ -386,7 +387,7 @@ int RemoteMasterExecuteCommand(char *par_RemoteMasterAddr, int par_RemoteMasterP
 
     if ((Req == NULL) || (Ack == NULL)) goto __ERROR;
 
-    sprintf (PortString, "%i", par_RemoteMasterPort);
+    PrintFormatToString (PortString, sizeof(PortString), "%i", par_RemoteMasterPort);
     // Resolve the server address and port
     iResult = getaddrinfo(par_RemoteMasterAddr, PortString, &hints, &result);
     if (iResult != 0) {
@@ -449,7 +450,7 @@ int RemoteMasterSyncDateTime(char *par_RemoteMasterAddr, int par_RemoteMasterPor
     SYSTEMTIME SystemTime;
     int Ret;
 
-    sprintf (CommandLine, "date --set=");
+    PrintFormatToString (CommandLine, sizeof(CommandLine), "date --set=");
     GetLocalTime(&SystemTime);
     Ret = GetDateFormat (LOCALE_USER_DEFAULT,
                    0,
@@ -457,7 +458,7 @@ int RemoteMasterSyncDateTime(char *par_RemoteMasterAddr, int par_RemoteMasterPor
                    "yyyy-MM-dd",
                    CommandLine + strlen(CommandLine),
                    (int)(sizeof(CommandLine) - strlen(CommandLine)));
-    strcat(CommandLine, "T");
+    STRING_APPEND_TO_ARRAY(CommandLine, "T");
     Ret = GetTimeFormat (LOCALE_USER_DEFAULT,
                    TIME_NOTIMEMARKER | TIME_FORCE24HOURFORMAT,
                    &SystemTime,
@@ -466,7 +467,7 @@ int RemoteMasterSyncDateTime(char *par_RemoteMasterAddr, int par_RemoteMasterPor
                    (int)(sizeof(CommandLine) - strlen(CommandLine)));
 
     Ret =  RemoteMasterExecuteCommand(par_RemoteMasterAddr, par_RemoteMasterPort, CommandLine, 0);
-    sprintf (CommandLine, "hwclock --systohc");
+    PrintFormatToString (CommandLine, sizeof(CommandLine),  "hwclock --systohc");
     Ret =  RemoteMasterExecuteCommand(par_RemoteMasterAddr, par_RemoteMasterPort, CommandLine, 0);
     return Ret;
 #else
@@ -485,7 +486,7 @@ int RemoteMasterKillAll(char *par_RemoteMasterAddr, int par_RemoteMasterPort, co
     while ((p > par_Name) && (*p != '/')) p--;
     if (*p == '/') p++;
 
-    sprintf (CommandLine, "killall -q %.15s", p);
+    PrintFormatToString (CommandLine, sizeof(CommandLine), "killall -q %.15s", p);
 
     Ret =  RemoteMasterExecuteCommand(par_RemoteMasterAddr, par_RemoteMasterPort, CommandLine, 1);
     return Ret;
@@ -497,7 +498,7 @@ int RemoteMasterRemoveVarLogMessages(char *par_RemoteMasterAddr, int par_RemoteM
     char CommandLine[64];
     int Ret;
 
-    sprintf (CommandLine, "rm /var/log/messages");
+    PrintFormatToString (CommandLine, sizeof(CommandLine), "rm /var/log/messages");
 
     Ret =  RemoteMasterExecuteCommand(par_RemoteMasterAddr, par_RemoteMasterPort, CommandLine, 1);
     return Ret;
@@ -517,12 +518,12 @@ int RemoteMasterPing(char *par_RemoteMasterAddr, int par_RemoteMasterPort)
     uint32_t Counter = 0;
     int Ret = -1;
     Socket = INVALID_SOCKET;
-    memset(&hints, 0, sizeof(hints));
+    MEMSET(&hints, 0, sizeof(hints));
     hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_protocol = IPPROTO_TCP;
 
-    sprintf (PortString, "%i", par_RemoteMasterPort);
+    PrintFormatToString (PortString,sizeof(PortString),  "%i", par_RemoteMasterPort);
     // Resolve the server address and port
     iResult = getaddrinfo(par_RemoteMasterAddr, PortString, &hints, &result);
     if (iResult != 0) {
@@ -579,7 +580,7 @@ int RemoteMasterShutdown(char *par_RemoteMasterAddr, int par_RemoteMasterPort)
     char CommandLine[1024];
     int Ret;
 
-    sprintf (CommandLine, "shutdown --poweroff now");
+    PrintFormatToString (CommandLine, sizeof(CommandLine), "shutdown --poweroff now");
 
     Ret =  RemoteMasterExecuteCommand(par_RemoteMasterAddr, par_RemoteMasterPort, CommandLine, 0);
 

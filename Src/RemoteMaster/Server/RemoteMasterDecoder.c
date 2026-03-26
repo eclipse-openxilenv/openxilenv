@@ -135,12 +135,12 @@ static uint32_t Func_StartCopyFile(RM_PACKAGE_HEADER *par_Req, RM_PACKAGE_HEADER
     Ack->FileHandle = open(FileName, O_WRONLY | O_CREAT | O_TRUNC, 0600);
     if (Ack->FileHandle < 0) {
         Ack->Ret = -1;
-        strcpy((char*)(Ack + 1), strerror(errno));
+        StringCopyMaxCharTruncate((char*)(Ack + 1), strerror(errno), 256);
         Ack->OffsetErrorString = sizeof(RM_COPY_FILE_START_ACK);
         SizeOfStruct = sizeof(RM_COPY_FILE_START_ACK) + strlen((char*)(Ack + 1)) + 1;
     } else {
         Ack->Ret = 0;
-        strcpy((char*)(Ack + 1), "");
+        *(char*)(Ack + 1) = 0;
         Ack->OffsetErrorString = sizeof(RM_COPY_FILE_START_ACK);
         SizeOfStruct = sizeof(RM_COPY_FILE_START_ACK) + 1;
 
@@ -156,12 +156,12 @@ static uint32_t Func_NextCopyFile(RM_PACKAGE_HEADER *par_Req, RM_PACKAGE_HEADER 
 
     if (write(Req->FileHandle, (char*)Req + Req->OffsetData, Req->BlockSize) != Req->BlockSize) {
         Ack->Ret = -1;
-        strcpy((char*)(Ack + 1), strerror(errno));
+        StringCopyMaxCharTruncate((char*)(Ack + 1), strerror(errno), 256);
         Ack->OffsetErrorString = sizeof(RM_COPY_FILE_NEXT_ACK);
         SizeOfStruct = sizeof(RM_COPY_FILE_NEXT_ACK) + strlen((char*)(Ack + 1)) + 1;
     } else {
         Ack->Ret = 0;
-        strcpy((char*)(Ack + 1), "");
+        *(char*)(Ack + 1) = 0;
         Ack->OffsetErrorString = sizeof(RM_COPY_FILE_NEXT_ACK);
         SizeOfStruct = sizeof(RM_COPY_FILE_NEXT_ACK) + 1;
 
@@ -177,13 +177,13 @@ static uint32_t Func_EndCopyFile(RM_PACKAGE_HEADER *par_Req, RM_PACKAGE_HEADER *
 
     if (close(Req->FileHandle)) {
         Ack->Ret = -1;
-        strcpy((char*)(Ack + 1), strerror(errno));
+        StringCopyMaxCharTruncate((char*)(Ack + 1), strerror(errno), 256);
         Ack->OffsetErrorString = sizeof(RM_COPY_FILE_END_ACK);
         SizeOfStruct = sizeof(RM_COPY_FILE_END_ACK) + strlen((char*)(Ack + 1)) + 1;
     }
     else {
         Ack->Ret = 0;
-        strcpy((char*)(Ack + 1), "");
+        *(char*)(Ack + 1) = 0;
         Ack->OffsetErrorString = sizeof(RM_COPY_FILE_END_ACK);
         SizeOfStruct = sizeof(RM_COPY_FILE_END_ACK) + 1;
 
@@ -1094,8 +1094,14 @@ static uint32_t Func_read_bbvari_frame(RM_PACKAGE_HEADER *par_Req, RM_PACKAGE_HE
     RM_BLACKBOARD_READ_BBVARI_FRAME_REQ *Req = (RM_BLACKBOARD_READ_BBVARI_FRAME_REQ*)par_Req;
     RM_BLACKBOARD_READ_BBVARI_FRAME_ACK *Ack = (RM_BLACKBOARD_READ_BBVARI_FRAME_ACK*)par_Ack;
     VID *Vids = (VID*)((char*)Req + Req->OffsetVids);
+    int8_t *PhysOrRaw;
+    if (Req->OffsetPhysOrRaw <= 0) {
+        PhysOrRaw = NULL;
+    } else {
+        PhysOrRaw = (int8_t*)((char*)Req + Req->OffsetPhysOrRaw);
+    }
     double *Values = (double*)(Ack + 1);
-    Ack->Ret = (int32_t)read_bbvari_frame (Vids, Values, Req->Size);
+    Ack->Ret = (int32_t)read_bbvari_frame (Vids, PhysOrRaw, Values, Req->Size);
     Ack->OffsetValues = sizeof(RM_BLACKBOARD_READ_BBVARI_FRAME_ACK);
     return sizeof(RM_BLACKBOARD_READ_BBVARI_FRAME_ACK) + Req->Size * sizeof(double);
 }
@@ -1105,8 +1111,15 @@ static uint32_t Func_write_bbvari_frame(RM_PACKAGE_HEADER *par_Req, RM_PACKAGE_H
     RM_BLACKBOARD_WRITE_BBVARI_FRAME_REQ *Req = (RM_BLACKBOARD_WRITE_BBVARI_FRAME_REQ*)par_Req;
     RM_BLACKBOARD_WRITE_BBVARI_FRAME_ACK *Ack = (RM_BLACKBOARD_WRITE_BBVARI_FRAME_ACK*)par_Ack;
     VID *Vids = (VID*)((char*)Req + Req->OffsetVids);
+    int8_t *PhysOrRaw;
+    if (Req->OffsetPhysOrRaw <= 0) {
+        PhysOrRaw = NULL;
+    }
+    else {
+        PhysOrRaw = (int8_t*)((char*)Req + Req->OffsetPhysOrRaw);
+    }
     double *Values = (double*)((char*)Req + Req->OffsetValues);
-    Ack->Ret = (int32_t)write_bbvari_frame_pid(Req->Pid, Vids, Values, Req->Size);
+    Ack->Ret = (int32_t)write_bbvari_frame_pid(Req->Pid, Vids, PhysOrRaw, Values, Req->Size);
     return sizeof(RM_BLACKBOARD_WRITE_BBVARI_FRAME_ACK);
 }
 

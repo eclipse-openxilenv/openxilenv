@@ -20,9 +20,12 @@
 #include <string.h>
 #include <ctype.h>
 #include <malloc.h>
+#include "StringMaxChar.h"
+#include "PrintFormatToString.h"
 #include "MyMemory.h"
 #include "StringMaxChar.h"
 #include "EnvironmentVariables.h"
+#include "SharedDataTypes.h"
 #include "Wildcards.h"
 #include "A2LBuffer.h"
 #include "A2LParser.h"
@@ -31,16 +34,6 @@
 #include "A2LAccess.h"
 
 // Helper functions
-static void StringCopy (char *Dst, char *Src, int MaxSize)
-{
-    int Counter = 1;
-    while ((*Src != 0) && (Counter < MaxSize)) {
-        *Dst++ = *Src++;
-        Counter++;
-    }
-    *Dst = 0;
-}
-
 static int BsearchCompareFunc (const void *arg1, const void *arg2)
 {
     return strcmp (**(char***)arg1, **(char***)arg2);
@@ -87,7 +80,7 @@ int GetNextModuleName (ASAP2_DATABASE *Database, int Index,  char *Filter, char 
     ASAP2_PARSER* Parser = (ASAP2_PARSER*)Database->Asap2Ptr;
     for (x = Index; x < Parser->Data.ModuleCounter; x++) {
         if (Compare2StringsWithWildcardsAlwaysCaseSensitive(Parser->Data.Modules[x]->Ident, Filter) == 0) {   // Filter
-            StringCopy (RetName, Parser->Data.Modules[x]->Ident, MaxSize);
+            StringCopyMaxCharTruncate (RetName, Parser->Data.Modules[x]->Ident, MaxSize);
             return x;
         }
     }
@@ -117,7 +110,7 @@ int GetNextFunction (ASAP2_DATABASE *Database, int Index, const char *Filter, ch
     for (x = Index+1; x < Size; x++) {
         Function = Parser->Data.Modules[Database->SelectedModul]->Functions[x];
         if (Compare2StringsWithWildcardsAlwaysCaseSensitive(Function->Name, Filter) == 0) {   // Filter
-            StringCopy (RetName, Function->Name, MaxSize);
+            StringCopyMaxCharTruncate (RetName, Function->Name, MaxSize);
             return x;
         }
     }
@@ -184,7 +177,7 @@ __DEF_CHARACTERISTIC:
             MemberSize = Function->OptionalParameter.DefCharacteristicSize;
             for (x = MemberIdx & 0xFFFFFFF; x < MemberSize; x++) {
                 if (Compare2StringsWithWildcardsAlwaysCaseSensitive(Function->OptionalParameter.DefCharacteristics[x], Filter) == 0) {   // Filter
-                    StringCopy (RetName, Function->OptionalParameter.DefCharacteristics[x], MaxSize);
+                    StringCopyMaxCharTruncate (RetName, Function->OptionalParameter.DefCharacteristics[x], MaxSize);
                     *RetType = FLAG_DEF_CHARACTERISTIC;
                     return x;
                 }
@@ -197,7 +190,7 @@ __REF_CHARACTERISTIC:
             MemberSize = Function->OptionalParameter.RefCharacteristicSize;
             for (x = MemberIdx & 0xFFFFFFF; x < MemberSize; x++) {
                 if (Compare2StringsWithWildcardsAlwaysCaseSensitive(Function->OptionalParameter.RefCharacteristics[x], Filter) == 0) {   // Filter
-                    StringCopy (RetName, Function->OptionalParameter.RefCharacteristics[x], MaxSize);
+                    StringCopyMaxCharTruncate (RetName, Function->OptionalParameter.RefCharacteristics[x], MaxSize);
                     *RetType = FLAG_REF_CHARACTERISTIC;
                     return x + 0x10000000;
                 }
@@ -210,7 +203,7 @@ __IN_MEASUREMENT:
             MemberSize = Function->OptionalParameter.InMeasurementSize;
             for (x = MemberIdx & 0xFFFFFFF; x < MemberSize; x++) {
                 if (Compare2StringsWithWildcardsAlwaysCaseSensitive(Function->OptionalParameter.InMeasurements[x], Filter) == 0) {   // Filter
-                    StringCopy (RetName, Function->OptionalParameter.InMeasurements[x], MaxSize);
+                    StringCopyMaxCharTruncate (RetName, Function->OptionalParameter.InMeasurements[x], MaxSize);
                     *RetType = FLAG_IN_MEASUREMENT;
                     return x + 0x20000000;
                 }
@@ -224,7 +217,7 @@ __OUT_MEASUREMENT:
             MemberSize = Function->OptionalParameter.OutMeasurementSize;
             for (x = MemberIdx & 0xFFFFFFF; x < MemberSize; x++) {
                 if (Compare2StringsWithWildcardsAlwaysCaseSensitive(Function->OptionalParameter.OutMeasurements[x], Filter) == 0) {   // Filter
-                    StringCopy (RetName, Function->OptionalParameter.OutMeasurements[x], MaxSize);
+                    StringCopyMaxCharTruncate (RetName, Function->OptionalParameter.OutMeasurements[x], MaxSize);
                     *RetType = FLAG_OUT_MEASUREMENT;
                     return x + 0x30000000;
                 }
@@ -237,7 +230,7 @@ __LOC_MEASUREMENT:
             MemberSize = Function->OptionalParameter.LocMeasurementSize;
             for (x = MemberIdx & 0xFFFFFFF; x < MemberSize; x++) {
                 if (Compare2StringsWithWildcardsAlwaysCaseSensitive(Function->OptionalParameter.LocMeasurements[x], Filter) == 0) {   // Filter
-                    StringCopy (RetName, Function->OptionalParameter.LocMeasurements[x], MaxSize);
+                    StringCopyMaxCharTruncate (RetName, Function->OptionalParameter.LocMeasurements[x], MaxSize);
                     *RetType = FLAG_LOC_MEASUREMENT;
                     return x + 0x40000000;
                 }
@@ -250,7 +243,7 @@ __SUB_FUNCTION:
             MemberSize = Function->OptionalParameter.SubFunctionSize;
             for (x = MemberIdx & 0xFFFFFFF; x < MemberSize; x++) {
                 if (Compare2StringsWithWildcardsAlwaysCaseSensitive(Function->OptionalParameter.SubFunctions[x], Filter) == 0) {   // Filter
-                    StringCopy (RetName, Function->OptionalParameter.SubFunctions[x], MaxSize);
+                    StringCopyMaxCharTruncate (RetName, Function->OptionalParameter.SubFunctions[x], MaxSize);
                     *RetType = FLAG_SUB_FUNCTION;
                     return x + 0x50000000;
                 }
@@ -273,12 +266,22 @@ static int GetAndTranslateEnums (ASAP2_MODULE_DATA* Module, char *Name, char *Co
 		CompuTab = *__CompuTab;
 		switch (CompuTab->TabOrVtabFlag) {
         case 0: // COMPU_TAB will be ignored
-		default:
-			return -1;
-			break;
+            for (x = 0; x < CompuTab->NumberValuePairs; x++) {
+                PrintFormatToString (Help, sizeof(Help), (x == 0) ? "%.18g/%.18g" : ":%.18g/%.18g",
+                         CompuTab->ValuePairs[x].InVal_InValMin,
+                         CompuTab->ValuePairs[x].OutVal_InValMax);
+                Size += s = (int)strlen (Help);
+                if (Size < (MaxSizeConv-1)) {
+                    MEMCPY (Conv, Help, s+1);
+                    Conv += s;
+                } else {
+                    break;   // doesn't fit inside the string
+                }
+            }
+            return 0;
 		case 1: // COMPU_VTAB
 			for (x = 0; x < CompuTab->NumberValuePairs; x++) {
-                snprintf (Help, sizeof(Help), "%i %i \"%s\";", (int)CompuTab->ValuePairs[x].InVal_InValMin,
+                PrintFormatToString (Help, sizeof(Help), "%i %i \"%s\";", (int)CompuTab->ValuePairs[x].InVal_InValMin,
                           (int)CompuTab->ValuePairs[x].InVal_InValMin,
                           CompuTab->ValuePairs[x].OutString);
 				Size += s = (int)strlen (Help);
@@ -292,9 +295,9 @@ static int GetAndTranslateEnums (ASAP2_MODULE_DATA* Module, char *Name, char *Co
 			return 0;
 		case 2: // COMPU_VTAB_RANGE
 			for (x = 0; x < CompuTab->NumberValuePairs; x++) {
-				sprintf (Help, "%i %i \"%s\";", (int)CompuTab->ValuePairs[x].InVal_InValMin,
-					                            (int)CompuTab->ValuePairs[x].OutVal_InValMax,
-												CompuTab->ValuePairs[x].OutString);
+                PrintFormatToString (Help, sizeof(Help), "%i %i \"%s\";", (int)CompuTab->ValuePairs[x].InVal_InValMin,
+                           (int)CompuTab->ValuePairs[x].OutVal_InValMax,
+                           CompuTab->ValuePairs[x].OutString);
 				Size += s = (int)strlen (Help);
 				if (Size < (MaxSizeConv-1)) {
                     MEMCPY (Conv, Help, s+1);
@@ -304,7 +307,10 @@ static int GetAndTranslateEnums (ASAP2_MODULE_DATA* Module, char *Name, char *Co
 				}
 			}
 			return 0;
-		}
+        default:
+            return -1;
+            break;
+        }
 	}
 	return -1;
 }
@@ -345,8 +351,6 @@ static int GetAndTranslateConversion (ASAP2_MODULE_DATA* Module, char *Name,
             // "IDENTICAL 0 LINEAR 1 RAT_FUNC 2 FORM 3 TAB_INTP 4 TAB_NOINTP 5 TAB_VERB 6 ? -1
             switch (CompuMethod->ConversionType) {
             case 0:  // IDENTICAL
-            case 4:  // TAB_INTP
-            case 5:  // TAB_NOINTP
             default:
                 // This compute methods will be ignored
                 *pConvType = 0;
@@ -355,10 +359,19 @@ static int GetAndTranslateConversion (ASAP2_MODULE_DATA* Module, char *Name,
                 *pFormatLength = 8;
                 *pFormatLayout = 8;
                 break;
+            case 4:  // TAB_INTP
+            case 5:  // TAB_NOINTP
+                if (CheckIfFlagSetPos(CompuMethod->OptionalParameter.Flags, OPTPARAM_COMPU_METHOD_COMPU_TAB_REF)) {
+                    if (!GetAndTranslateEnums (Module, CompuMethod->OptionalParameter.ConversionTable, Conv, MaxSizeConv)) {
+                        if (CompuMethod->ConversionType == 4) *pConvType = BB_CONV_TAB_INTP;
+                        else *pConvType = BB_CONV_TAB_NOINTP;
+                    }
+                }
+                break;
             case 6:  // TAB_VERB  -> ENUM (text replace)
                 if (CheckIfFlagSetPos(CompuMethod->OptionalParameter.Flags, OPTPARAM_COMPU_METHOD_COMPU_TAB_REF)) {
                     if (!GetAndTranslateEnums (Module, CompuMethod->OptionalParameter.ConversionTable, Conv, MaxSizeConv)) {
-                        *pConvType = 2;
+                        *pConvType = BB_CONV_TEXTREP;
                     }
                 }
                 break;
@@ -366,18 +379,24 @@ static int GetAndTranslateConversion (ASAP2_MODULE_DATA* Module, char *Name,
                 if (CheckIfFlagSetPos(CompuMethod->OptionalParameter.Flags, OPTPARAM_COMPU_METHOD_COEFFS)) {
                     // INT = f(PHYS);
                     // f(x) = (axx + bx + c) / (dxx + ex + f)
-                    if ((CompuMethod->OptionalParameter.Coeffs.a == 0.0) &&
-                        (CompuMethod->OptionalParameter.Coeffs.d == 0.0)) { // none linear will be not supported!
-                        if (CompuMethod->OptionalParameter.Coeffs.b != CompuMethod->OptionalParameter.Coeffs.e) { // avaid div by 0
-                            snprintf (Conv, MaxSizeConv, "(%.*g-%.*g*#)/(%.*g*#-%.*g)",
-                                     20, CompuMethod->OptionalParameter.Coeffs.c,
-                                     20, CompuMethod->OptionalParameter.Coeffs.f,
-                                     20, CompuMethod->OptionalParameter.Coeffs.e,
-                                     20, CompuMethod->OptionalParameter.Coeffs.b);
-                            *pConvType = 1;
-                            }
+                    if ((CompuMethod->OptionalParameter.Coeffs.a == 0.0) &&  // a == 0
+                        (CompuMethod->OptionalParameter.Coeffs.b != 0.0) &&  // b != 0
+                        (CompuMethod->OptionalParameter.Coeffs.d == 0.0) &&  // d == 0
+                        (CompuMethod->OptionalParameter.Coeffs.e == 0.0)) {  // e == 0
+                        // it is a linear conversion
+                        PrintFormatToString (Conv, MaxSizeConv, "%.18g:%.18g",
+                                CompuMethod->OptionalParameter.Coeffs.f / CompuMethod->OptionalParameter.Coeffs.b,
+                                CompuMethod->OptionalParameter.Coeffs.c / CompuMethod->OptionalParameter.Coeffs.b); // f/b, c/b
+                        *pConvType = BB_CONV_FACTOFF;
                     } else {
-                        *pConvType = 0;
+                        PrintFormatToString (Conv, MaxSizeConv, "%.18g:%.18g:%.18g:%.18g:%.18g:%.18g",
+                                  CompuMethod->OptionalParameter.Coeffs.a,
+                                  CompuMethod->OptionalParameter.Coeffs.b,
+                                  CompuMethod->OptionalParameter.Coeffs.c,
+                                  CompuMethod->OptionalParameter.Coeffs.d,
+                                  CompuMethod->OptionalParameter.Coeffs.e,
+                                  CompuMethod->OptionalParameter.Coeffs.f);
+                        *pConvType = BB_CONV_RAT_FUNC;
                     }
                 } else {
                     *pConvType = 0;
@@ -385,10 +404,10 @@ static int GetAndTranslateConversion (ASAP2_MODULE_DATA* Module, char *Name,
                 break;
             case 1:  // LINEAR slope and offset
                 if (CheckIfFlagSetPos(CompuMethod->OptionalParameter.Flags, OPTPARAM_COMPU_METHOD_COEFFS_LINEAR)) {
-                    sprintf (Conv, "%.*g*#+%.*g",
-                             20, CompuMethod->OptionalParameter.Coeffs.a,
-                             20, CompuMethod->OptionalParameter.Coeffs.b);
-                    *pConvType = 1;
+                    PrintFormatToString (Conv, MaxSizeConv, "%.18g:%.18g",
+                             CompuMethod->OptionalParameter.Coeffs.a,
+                             CompuMethod->OptionalParameter.Coeffs.b);
+                    *pConvType = BB_CONV_FACTOFF;
                 }
                 break;
             case 3:  // FORM -> Formula example "x/1000" oder "X1*0.1234"
@@ -404,15 +423,16 @@ static int GetAndTranslateConversion (ASAP2_MODULE_DATA* Module, char *Name,
                         if (((*Src == 'x') || (*Src == 'X')) && !(isalpha (LastChar) || isalpha(*(Src+1)))) {
                             *Dst = '#';
                             Src++;
+                            Dst++;
                             if (*Src == '1') Src++;   // x1 bzw X1 will be also accepted
                         } else *Dst++ = *Src++;
                     }
                     *Dst = 0;
-                    *pConvType = 1;
+                    *pConvType = BB_CONV_FORMULA;
                 }
                 break;
             }
-            StringCopy (Unit, CompuMethod->Unit, MaxSizeUnit);
+            StringCopyMaxCharTruncate (Unit, CompuMethod->Unit, MaxSizeUnit);
             TranslateFormat (CompuMethod->Format, pFormatLength, pFormatLayout);
             return 0;
         } else {
@@ -436,7 +456,7 @@ int GetNextMeasurement (ASAP2_DATABASE *Database, int Index, const char *Filter,
                 if (((Flags & (A2L_LABEL_TYPE_NOT_REFERENCED_MEASUREMENT | A2L_LABEL_TYPE_REFERENCED_MEASUREMENT)) == 0) ||
                     (((Flags & A2L_LABEL_TYPE_NOT_REFERENCED_MEASUREMENT) == A2L_LABEL_TYPE_NOT_REFERENCED_MEASUREMENT) && (Module->Measurements[x]->ReferenceCounter == 0)) ||
                     (((Flags & A2L_LABEL_TYPE_REFERENCED_MEASUREMENT) == A2L_LABEL_TYPE_REFERENCED_MEASUREMENT) && (Module->Measurements[x]->ReferenceCounter > 0))) {
-                    StringCopy (RetName, Module->Measurements[x]->Ident, MaxSize);
+                    StringCopyMaxCharTruncate (RetName, Module->Measurements[x]->Ident, MaxSize);
                     return x;
                 }
             }
@@ -476,7 +496,7 @@ int GetMeasurementInfos (ASAP2_DATABASE *Database, int Index,
         Measurement = Module->Measurements[Index];
         // optional address, should be exist
         if (!CheckIfFlagSetPos(Measurement->OptionalParameter.Flags, OPTPARAM_MEASUREMENT_ADDRESS)) return -1;
-        StringCopy (Name, Measurement->Ident, MaxSizeName);
+        StringCopyMaxCharTruncate (Name, Measurement->Ident, MaxSizeName);
         *pType = Measurement->DataType;
         *pAddress = Measurement->OptionalParameter.Address;
         *pMin = Measurement->LowerLimit;
@@ -520,8 +540,12 @@ int GetNextCharacteristic (ASAP2_DATABASE *Database, int Index, const char *Filt
         for (x = Index + 1; x < Module->CharacteristicCounter; x++) {
             if (((0x100 << (Module->Characteristics[x]->Type - 1)) & Flags) != 0) {
                 if (Compare2StringsWithWildcardsAlwaysCaseSensitive(Module->Characteristics[x]->Name, Filter) == 0) {   // Filter
-                    StringCopy (RetName, Module->Characteristics[x]->Name, MaxSize);
-                    return x;
+                    if (((Flags & (A2L_LABEL_TYPE_NOT_REFERENCED_MEASUREMENT | A2L_LABEL_TYPE_REFERENCED_MEASUREMENT)) == 0) ||
+                        (((Flags & A2L_LABEL_TYPE_NOT_REFERENCED_MEASUREMENT) == A2L_LABEL_TYPE_NOT_REFERENCED_MEASUREMENT) && (Module->Characteristics[x]->ReferenceCounter == 0)) ||
+                        (((Flags & A2L_LABEL_TYPE_REFERENCED_MEASUREMENT) == A2L_LABEL_TYPE_REFERENCED_MEASUREMENT) && (Module->Characteristics[x]->ReferenceCounter > 0))) {
+                        StringCopyMaxCharTruncate (RetName, Module->Characteristics[x]->Name, MaxSize);
+                        return x;
+                    }
                 }
             }
         }
@@ -536,8 +560,12 @@ int GetNextCharacteristicAxis (ASAP2_DATABASE *Database, int Index, const char *
     if (Module != NULL) {
         for (x = Index + 1; x < Module->AxisPtsCounter; x++) {
             if (Compare2StringsWithWildcardsAlwaysCaseSensitive(Module->AxisPtss[x]->Name, Filter) == 0) {   // Filter
-                StringCopy (RetName, Module->AxisPtss[x]->Name, MaxSize);
-                return x;
+                if (((Flags & (A2L_LABEL_TYPE_NOT_REFERENCED_MEASUREMENT | A2L_LABEL_TYPE_REFERENCED_MEASUREMENT)) == 0) ||
+                    (((Flags & A2L_LABEL_TYPE_NOT_REFERENCED_MEASUREMENT) == A2L_LABEL_TYPE_NOT_REFERENCED_MEASUREMENT) && (Module->AxisPtss[x]->ReferenceCounter == 0)) ||
+                    (((Flags & A2L_LABEL_TYPE_REFERENCED_MEASUREMENT) == A2L_LABEL_TYPE_REFERENCED_MEASUREMENT) && (Module->AxisPtss[x]->ReferenceCounter > 0))) {
+                    StringCopyMaxCharTruncate (RetName, Module->AxisPtss[x]->Name, MaxSize);
+                    return x;
+                }
             }
         }
     }
@@ -631,7 +659,7 @@ int GetValueCharacteristicInfos (ASAP2_DATABASE *Database, int Index,
         Characteristic = Module->Characteristics[Index];
 
         if (Characteristic->Type != 1/*A2L_ITEM_TYPE_VALUE*/) return -1;    // It is not a single parameter
-        StringCopy (Name, Characteristic->Name, MaxSizeName);
+        StringCopyMaxCharTruncate (Name, Characteristic->Name, MaxSizeName);
         // Read data type from record layout
         RecLayIdx = GetRecordLayoutIndex (Database, Characteristic->Deposit);
         if (RecLayIdx < 0) return -1;
@@ -836,7 +864,7 @@ int GetCharacteristicAxisInfos(ASAP2_DATABASE *Database, int Index, int AxisNo,
                     if (!strcmp(Characteristic->OptionalParameter.AxisDescr[0]->InputQuantity, "NO_INPUT_QUANTITY")) {
                         *ret_Input = 0;
                     } else {
-                        StringCopy(ret_Input, Characteristic->OptionalParameter.AxisDescr[0]->InputQuantity, InputMaxLen);
+                        StringCopyMaxCharTruncate(ret_Input, Characteristic->OptionalParameter.AxisDescr[0]->InputQuantity, InputMaxLen);
                     }
                 }
                 if (GetAndTranslateConversion (Module, Characteristic->OptionalParameter.AxisDescr[0]->Conversion,
@@ -855,7 +883,7 @@ int GetCharacteristicAxisInfos(ASAP2_DATABASE *Database, int Index, int AxisNo,
                     if (!strcmp(Characteristic->OptionalParameter.AxisDescr[1]->InputQuantity, "NO_INPUT_QUANTITY")) {
                         *ret_Input = 0;
                     } else {
-                        StringCopy(ret_Input, Characteristic->OptionalParameter.AxisDescr[1]->InputQuantity, InputMaxLen);
+                        StringCopyMaxCharTruncate(ret_Input, Characteristic->OptionalParameter.AxisDescr[1]->InputQuantity, InputMaxLen);
                     }
                 }
                 if (GetAndTranslateConversion (Module, Characteristic->OptionalParameter.AxisDescr[1]->Conversion,

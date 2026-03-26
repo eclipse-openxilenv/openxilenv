@@ -25,6 +25,7 @@
 #include "ThrowError.h"
 #include "MyMemory.h"
 #include "StringMaxChar.h"
+#include "PrintFormatToString.h"
 #include "Blackboard.h"
 #include "BlackboardAccess.h"
 #include "IniDataBase.h"
@@ -112,20 +113,20 @@ int GetAssociatedSchedulerName (char *Processname, char *ret_SchedulerName, int 
     char SchedulerName2[MAX_PATH];
     int Fd = GetMainFileDescriptor();
 
-    TruncatePathFromProcessName (ShortProcessName, Processname);
-    sprintf (Entry, "SchedulerForProcess %s", ShortProcessName);
+    TruncatePathFromProcessName (ShortProcessName, Processname, sizeof(ShortProcessName));
+    PrintFormatToString (Entry, sizeof(Entry), "SchedulerForProcess %s", ShortProcessName);
     if (IniFileDataBaseReadString (SCHED_INI_SECTION, Entry, "", SchedulerName, sizeof (SchedulerName), Fd) <= 0) {
         return -1;  // There are no infos inside the INI-DB for this process
     }
     // Check if the requested scheduler exists
     for (s = 0; ; s++) {
-        sprintf (Entry, "Scheduler_%i", s);
+        PrintFormatToString (Entry, sizeof(Entry), "Scheduler_%i", s);
         if (IniFileDataBaseReadString (SCHED_INI_SECTION, Entry, "", SchedulerName2, sizeof (SchedulerName2), Fd) <= 0) {
             break;
         }
         if (!strcmp (SchedulerName2, SchedulerName)) {
             if ((int)strlen (SchedulerName) < MaxLen) {
-                strcpy (ret_SchedulerName, SchedulerName);
+                StringCopyMaxCharTruncate (ret_SchedulerName, SchedulerName, MaxLen);
                 return 0;
             } else {
                 return -1;
@@ -150,7 +151,7 @@ int InitExternProcessMessages (char *par_Prefix, int par_LogingFlag, unsigned in
 #endif
     if (par_SocketPort > 0) {
         char Help[64];
-        sprintf (Help, "%u", par_SocketPort);
+        PrintFormatToString (Help, sizeof(Help), "%u", par_SocketPort);
         if (Socket_InitMessages (Help, par_LogingFlag) != 0) Ret = 1;
     }
     return Ret;
@@ -197,7 +198,7 @@ int PipeAddBbvariCmdMessage (TASK_CONTROL_BLOCK *pTcb,
             goto __OUT;
         } else {
             if (!AddrNotName) {
-                strcpy (Label, Name);
+                STRING_COPY_TO_ARRAY (Label, Name);
             }
 
         }
@@ -206,7 +207,7 @@ int PipeAddBbvariCmdMessage (TASK_CONTROL_BLOCK *pTcb,
         }
     } else {
         if (ConvertLabelAsapCombatibleInOut (Name, Label, sizeof (Label), 0)) {   // replace :: by ._. if necessary
-            strcpy (Label, Name);
+            STRING_COPY_TO_ARRAY (Label, Name);
         }
     }
 
@@ -358,10 +359,10 @@ int PipeWriteToMessageFileCmdMessage (TASK_CONTROL_BLOCK *pTcb,
     char ProcessName[MAX_PATH];
     char Help[MAX_PATH + 100];
 
-    if (!GetProcessNameWithoutPath (pWriteToMessageFileCmdMessage->Pid, ProcessName)) {
-        sprintf (Help, "Message from prozess %s:", ProcessName);
+    if (!GetProcessNameWithoutPath (pWriteToMessageFileCmdMessage->Pid, ProcessName, sizeof(ProcessName))) {
+        PrintFormatToString (Help, sizeof(Help), "Message from prozess %s:", ProcessName);
     } else {
-        sprintf (Help, "Message from unknown prozess");
+        PrintFormatToString (Help, sizeof(Help), "Message from unknown prozess");
     }
     AddScriptMessage (Help);
     AddScriptMessage (pWriteToMessageFileCmdMessage->Text);
@@ -971,6 +972,7 @@ int scm_ref_vari_lock_flag(uint64_t address, PID pid, const char *name, int type
     TASK_CONTROL_BLOCK *pTcb;
     PIPE_API_REFERENCE_VARIABLE_CMD_MESSAGE *ReferenceVariableCmdMessage;
     PIPE_API_BASE_CMD_MESSAGE *Buffer;
+    int Len;
     int Ret = -1;
 
     // Check if it is a base data type(only this can be added into the blackboard
@@ -995,7 +997,8 @@ int scm_ref_vari_lock_flag(uint64_t address, PID pid, const char *name, int type
                 ThrowError (1, "cannot reference the variable \"%s\" because process \"%s\" is running", pTcb->name);
                 return -1;
             }
-            ReferenceVariableCmdMessage = (PIPE_API_REFERENCE_VARIABLE_CMD_MESSAGE*)_alloca (sizeof (PIPE_API_REFERENCE_VARIABLE_CMD_MESSAGE) + strlen (name));
+            Len = strlen (name) + 1;
+            ReferenceVariableCmdMessage = (PIPE_API_REFERENCE_VARIABLE_CMD_MESSAGE*)_alloca (sizeof (PIPE_API_REFERENCE_VARIABLE_CMD_MESSAGE) + Len);
 
             ReferenceVariableCmdMessage->Command = PIPE_API_REFERENCE_VARIABLE_CMD;
             ReferenceVariableCmdMessage->StructSize = (int)(sizeof (PIPE_API_REFERENCE_VARIABLE_CMD_MESSAGE) + strlen (name));
@@ -1003,7 +1006,7 @@ int scm_ref_vari_lock_flag(uint64_t address, PID pid, const char *name, int type
             ReferenceVariableCmdMessage->Type = type;
             ReferenceVariableCmdMessage->Dir = dir |
                                                PIPE_API_REFERENCE_VARIABLE_DIR_IGNORE_REF_FILTER;  // do not filter manual referenced signals
-            strcpy (ReferenceVariableCmdMessage->Name, name);
+            StringCopyMaxCharTruncate (ReferenceVariableCmdMessage->Name, name, Len);
             if (pTcb->ConnectionLoggingFile) MessageLoggingToFile (pTcb->ConnectionLoggingFile, __LINE__, 1, pTcb->pid, ReferenceVariableCmdMessage);
             Success = pTcb->WriteToConnection (pTcb->hPipe,
                                                  (void*)ReferenceVariableCmdMessage,
@@ -1067,6 +1070,7 @@ int scm_unref_vari_lock_flag(uint64_t address, PID pid, char *name, int type, in
     TASK_CONTROL_BLOCK *pTcb;
     PIPE_API_DEREFERENCE_VARIABLE_CMD_MESSAGE *DeReferenceVariableCmdMessage;
     PIPE_API_BASE_CMD_MESSAGE *Buffer;
+    int Len;
     int Ret = -1;
 
     // If it is a process from the remote master
@@ -1088,7 +1092,8 @@ int scm_unref_vari_lock_flag(uint64_t address, PID pid, char *name, int type, in
                 ThrowError (1, "cannot unrefeference variable \"%s\" to process because process \"%s\" is running", name, pTcb->name);
                 return -1;
             }
-            DeReferenceVariableCmdMessage = (PIPE_API_DEREFERENCE_VARIABLE_CMD_MESSAGE*)_alloca (sizeof (PIPE_API_DEREFERENCE_VARIABLE_CMD_MESSAGE) + strlen (name));
+            Len =  strlen (name) + 1;
+            DeReferenceVariableCmdMessage = (PIPE_API_DEREFERENCE_VARIABLE_CMD_MESSAGE*)_alloca (sizeof (PIPE_API_DEREFERENCE_VARIABLE_CMD_MESSAGE) + Len);
             DeReferenceVariableCmdMessage->Command = PIPE_API_DEREFERENCE_VARIABLE_CMD;
             DeReferenceVariableCmdMessage->StructSize = (int)(sizeof (PIPE_API_DEREFERENCE_VARIABLE_CMD_MESSAGE) + strlen (name));
             DeReferenceVariableCmdMessage->Address = address;
@@ -1102,7 +1107,7 @@ int scm_unref_vari_lock_flag(uint64_t address, PID pid, char *name, int type, in
             MEMCPY (NameWithPrefix + LenPrefix, name, (size_t)LenName);
             NameWithPrefix[LenPrefix + LenName] = 0;
             DeReferenceVariableCmdMessage->Vid = get_bbvarivid_by_name (NameWithPrefix);
-            strcpy (DeReferenceVariableCmdMessage->Name, name);
+            StringCopyMaxCharTruncate (DeReferenceVariableCmdMessage->Name, name, Len);
             if (pTcb->ConnectionLoggingFile) MessageLoggingToFile (pTcb->ConnectionLoggingFile, __LINE__, 1, pTcb->pid, DeReferenceVariableCmdMessage);
             Success = pTcb->WriteToConnection (pTcb->hPipe,
                                                (void*)DeReferenceVariableCmdMessage,         // message
@@ -1165,7 +1170,7 @@ int scm_write_section_to_exe (PID pid, char *Section)
     TASK_CONTROL_BLOCK *pTcb;
     PIPE_API_WRITE_SECTION_BACK_TO_EXE_CMD_MESSAGE *WriteSectionBackToExeCmdMessage;
     PIPE_API_BASE_CMD_MESSAGE *Buffer;
-    int Size;
+    int Len, Size;
     int Ret = -1;
 
     if (WaitUntilProcessIsNotActiveAndThanLockIt (pid, 5000, ERROR_BEHAVIOR_ERROR_MESSAGE, "read from external process memory", __FILE__, __LINE__) == 0) {
@@ -1179,12 +1184,13 @@ int scm_write_section_to_exe (PID pid, char *Section)
                 ThrowError (1, "cannot write section \"%s\" to process because process \"%s\" is running", Section, pTcb->name);
                 return -1;
             }
-            Size = (int)(sizeof (PIPE_API_WRITE_SECTION_BACK_TO_EXE_CMD_MESSAGE) + strlen (Section));
+            Len = strlen (Section) + 1;
+            Size = (int)(sizeof (PIPE_API_WRITE_SECTION_BACK_TO_EXE_CMD_MESSAGE) + Len);
             WriteSectionBackToExeCmdMessage = (PIPE_API_WRITE_SECTION_BACK_TO_EXE_CMD_MESSAGE*)_alloca ((size_t)Size);
 
             WriteSectionBackToExeCmdMessage->Command = PIPE_API_WRITE_SECTION_BACK_TO_EXE_CMD;
             WriteSectionBackToExeCmdMessage->StructSize = Size;
-            strcpy (WriteSectionBackToExeCmdMessage->SectionName, Section);
+            StringCopyMaxCharTruncate (WriteSectionBackToExeCmdMessage->SectionName, Section, Len);
             if (pTcb->ConnectionLoggingFile) MessageLoggingToFile (pTcb->ConnectionLoggingFile, __LINE__, 1, pTcb->pid, WriteSectionBackToExeCmdMessage);
             Success = pTcb->WriteToConnection (pTcb->hPipe,
                                                  (void*)WriteSectionBackToExeCmdMessage,

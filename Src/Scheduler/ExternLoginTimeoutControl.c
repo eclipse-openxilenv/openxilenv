@@ -18,6 +18,7 @@
 #include "Platform.h"
 #include "string.h"
 #include "MyMemory.h"
+#include "StringMaxChar.h"
 #include "ThrowError.h"
 #include "Scheduler.h"
 #include "ExternLoginTimeoutControl.h"
@@ -70,13 +71,12 @@ int AddExecutableToTimeoutControl (const char *par_ExecutableName, int par_Timeo
             ExternProcessTimeouts[x].Active = 1;
             ExternProcessTimeouts[x].ProcessCount = 0;
             ExternProcessTimeouts[x].ExpectedProcessCount = 0;
-            ExternProcessTimeouts[x].ExecutableName = my_malloc (strlen (par_ExecutableName) + 1);
+            ExternProcessTimeouts[x].ExecutableName = StringMalloc (par_ExecutableName);
             if (ExternProcessTimeouts[x].ExecutableName  == NULL) {
                 LeaveCriticalSection (&ExternProcessTimeoutCriticalSection);
                 ThrowError (1, "Out of memory add executable \"%s\" to timeout control", par_ExecutableName);
                 return -1;
             }
-            strcpy (ExternProcessTimeouts[x].ExecutableName, par_ExecutableName);
             ExternProcessTimeouts[x].TimeoutTime = GetTickCount64() + (uint64_t)par_Timeout * 1000;
 #ifdef DEBUG_EXTERN_LOGIN_TIMEOUT_CONTROL
             fprintf (ExternProcessTimeoutDebugFile, "AddExecutableToTimeoutControl %i \"%s\"\n", x, ExternProcessTimeouts[x].ExecutableName);
@@ -188,12 +188,11 @@ int LoginProcess (char *par_ExecutableName, int par_Number, int par_Count)
             ExternProcessTimeouts[Empty].Active = 1;
             ExternProcessTimeouts[Empty].ProcessCount = 1;
             ExternProcessTimeouts[Empty].ExpectedProcessCount = par_Count;
-            ExternProcessTimeouts[Empty].ExecutableName = my_malloc (strlen (par_ExecutableName) + 1);
+            ExternProcessTimeouts[Empty].ExecutableName = StringMalloc (par_ExecutableName);
             if (ExternProcessTimeouts[Empty].ExecutableName  == NULL) {
                 ThrowError (1, "Out of memory add executable \"%s\" to timeout control", par_ExecutableName);
                 goto __OUT;
             }
-            strcpy (ExternProcessTimeouts[Empty].ExecutableName, par_ExecutableName);
 #ifdef DEBUG_EXTERN_LOGIN_TIMEOUT_CONTROL
             fprintf (ExternProcessTimeoutDebugFile, "  Add %i \"%s\" %i / %i\n", x, ExternProcessTimeouts[Empty].ExecutableName,
                      ExternProcessTimeouts[Empty].ProcessCount,ExternProcessTimeouts[Empty].ExpectedProcessCount);

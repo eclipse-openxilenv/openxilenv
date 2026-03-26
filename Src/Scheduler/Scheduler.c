@@ -21,11 +21,12 @@
 #else
 #include <ctype.h>
 #include <string.h>
-//#include <sys/syscall.h>
+#include <sys/time.h>
 #endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <malloc.h>
+#include <time.h>
 #include "RunTimeMeasurement.h"
 
 #include "Config.h"
@@ -41,6 +42,7 @@
 #include "MainValues.h"
 #include "Wildcards.h"
 #include "StringMaxChar.h"
+#include "PrintFormatToString.h"
 #include "ConfigurablePrefix.h"
 #include "tcb.h"
 #define SCHEDULER_C
@@ -384,7 +386,7 @@ static TASK_CONTROL_BLOCK *AllocAndInitTaskControlBlock (const char *ProcessName
         }
         if (Pid > 0) {
             RetTcb->pid = Pid;
-            strcpy (RetTcb->name, ProcessName);
+            STRING_COPY_TO_ARRAY (RetTcb->name, ProcessName);
             RetTcb->Type = EXTERN_ASYNC;
             RetTcb->state = EX_PROCSS_LOGIN;
             RetTcb->hPipe = hPipe;
@@ -433,19 +435,19 @@ PID start_process_timeout (const char *par_ProcessName, int par_Timeout, char **
                                         &time_steps,
                                         &delay,
                                         &timeout,
+                                        NULL, 0,
+                                        NULL, 0,
                                         NULL,
-                                        NULL,
-                                        NULL,
-                                        BBPrefix,
-                                        Scheduler,
-                                        BarriersBeforeOnlySignal,
-                                        BarriersBeforeSignalAndWait,
-                                        BarriersBehindOnlySignal,
-                                        BarriersBehindSignalAndWait,
-                                        BarriersLoopOutBeforeOnlySignal,
-                                        BarriersLoopOutBeforeSignalAndWait,
-                                        BarriersLoopOutBehindOnlySignal,
-                                        BarriersLoopOutBehindSignalAndWait);
+                                        BBPrefix, sizeof(BBPrefix),
+                                        Scheduler, sizeof(Scheduler),
+                                        BarriersBeforeOnlySignal, sizeof(BarriersBeforeOnlySignal),
+                                        BarriersBeforeSignalAndWait, sizeof(BarriersBeforeSignalAndWait),
+                                        BarriersBehindOnlySignal, sizeof(BarriersBehindOnlySignal),
+                                        BarriersBehindSignalAndWait, sizeof(BarriersBehindSignalAndWait),
+                                        BarriersLoopOutBeforeOnlySignal, sizeof(BarriersLoopOutBeforeOnlySignal),
+                                        BarriersLoopOutBeforeSignalAndWait, sizeof(BarriersLoopOutBeforeSignalAndWait),
+                                        BarriersLoopOutBehindOnlySignal, sizeof(BarriersLoopOutBehindOnlySignal),
+                                        BarriersLoopOutBehindSignalAndWait, sizeof(BarriersLoopOutBehindSignalAndWait));
 
             Pid = GetOrFreeUniquePid(GENERATE_UNIQUE_RT_PID_COMMAND, 0, par_ProcessName);
             if (Pid < 0) {
@@ -488,24 +490,24 @@ PID start_process_timeout (const char *par_ProcessName, int par_Timeout, char **
 
     // Read process informations from INI file
     if (read_extprocinfos_from_ini (GetMainFileDescriptor(),
-                                    par_ProcessName,
-                                    &prio,
-                                    &time_steps,
-                                    &delay,
-                                    &timeout,
-                                    NULL,
-                                    NULL,
-                                    NULL,  
-                                    BBPrefix,
-                                    Scheduler,
-                                    BarriersBeforeOnlySignal,
-                                    BarriersBeforeSignalAndWait,
-                                    BarriersBehindOnlySignal,
-                                    BarriersBehindSignalAndWait,
-                                    BarriersLoopOutBeforeOnlySignal,
-                                    BarriersLoopOutBeforeSignalAndWait,
-                                    BarriersLoopOutBehindOnlySignal,
-                                    BarriersLoopOutBehindSignalAndWait) == 0) {
+                                par_ProcessName,
+                                &prio,
+                                &time_steps,
+                                &delay,
+                                &timeout,
+                                NULL, 0,
+                                NULL, 0,
+                                NULL,
+                                BBPrefix, sizeof(BBPrefix),
+                                Scheduler, sizeof(Scheduler),
+                                BarriersBeforeOnlySignal, sizeof(BarriersBeforeOnlySignal),
+                                BarriersBeforeSignalAndWait, sizeof(BarriersBeforeSignalAndWait),
+                                BarriersBehindOnlySignal, sizeof(BarriersBehindOnlySignal),
+                                BarriersBehindSignalAndWait, sizeof(BarriersBehindSignalAndWait),
+                                BarriersLoopOutBeforeOnlySignal, sizeof(BarriersLoopOutBeforeOnlySignal),
+                                BarriersLoopOutBeforeSignalAndWait, sizeof(BarriersLoopOutBeforeSignalAndWait),
+                                BarriersLoopOutBehindOnlySignal, sizeof(BarriersLoopOutBehindOnlySignal),
+                                BarriersLoopOutBehindSignalAndWait, sizeof(BarriersLoopOutBehindSignalAndWait)) == 0) {
         pTcb->prio = prio;
         pTcb->time_steps = time_steps;
         pTcb->delay = delay;
@@ -603,7 +605,7 @@ PID start_process_ex (const char *name, int Prio, int Cycle, int Delay, int Time
     // This will used as entrys inside the scheduler section
     // To avoid problems with diferent uppercase or lowercase leters all externam process names should e uppercase
     // This is only necessary on Windows
-    strcpy (name_up, name);
+    STRING_COPY_TO_ARRAY (name_up, name);
 #ifdef _WIN32
     if (!IsInternalProcess (name_up)) {
         strupr (name_up);
@@ -615,19 +617,19 @@ PID start_process_ex (const char *name, int Prio, int Cycle, int Delay, int Time
                                 &Cycle_tmp,
                                 &Delay_tmp,
                                 &Timeout_tmp,
-                                RangeErrorCounter_tmp,
-                                RangeControl_tmp,
+                                RangeErrorCounter_tmp, sizeof(RangeErrorCounter_tmp),
+                                RangeControl_tmp, sizeof(RangeControl_tmp),
                                 &RangeControlFlags,
-                                BBPrefix_tmp,
-                                NULL, // char *Scheduler,
-                                NULL, // char *BarriersBeforeOnlySignal,
-                                NULL, // char *BarriersBeforeSignalAndWait,
-                                NULL, // char *BarriersBehindOnlySignal,
-                                NULL,  // char *BarriersBehindSignalAndWait
-                                NULL, // char *BarriersLoopOutBeforeOnlySignal,
-                                NULL, // char *BarriersLoopOutBeforeSignalAndWait,
-                                NULL, // char *BarriersLoopOutBehindOnlySignal,
-                                NULL  // char *BarriersLoopOutBehindSignalAndWait
+                                BBPrefix_tmp, sizeof(BBPrefix_tmp),
+                                NULL, 0, // Scheduler,
+                                NULL, 0, // BarriersBeforeOnlySignal,
+                                NULL, 0, // BarriersBeforeSignalAndWait,
+                                NULL, 0, // BarriersBehindOnlySignal,
+                                NULL, 0, // BarriersBehindSignalAndWait
+                                NULL, 0, // BarriersLoopOutBeforeOnlySignal,
+                                NULL, 0, // BarriersLoopOutBeforeSignalAndWait,
+                                NULL, 0, // BarriersLoopOutBehindOnlySignal,
+                                NULL, 0  // BarriersLoopOutBehindSignalAndWait
                                 );
 
     if (Prio < 0) Prio = Prio_tmp;
@@ -861,6 +863,7 @@ void CalculateRealtimeFactor (SCHEDULER_DATA *pSchedulerData)
     Time = GetTimeOfSystemIsRunning ();
     pSchedulerData->SchedPeriodNotFiltered = Time - pSchedulerData->LastSchedCallTime;
 
+    write_bbvari_double(pSchedulerData->CycleDiffTimeVid, pSchedulerData->SchedPeriodNotFiltered);
     pSchedulerData->LastSchedCallTime = Time;
 
     pSchedulerData->SchedPeriodFiltered = pSchedulerData->SchedPeriodFiltered * (1.0 - T) + pSchedulerData->SchedPeriodNotFiltered * T;
@@ -1009,9 +1012,9 @@ SCHEDULER_DATA *RegisterScheduler  (char *SchedulerName)
 {
     SCHEDULER_DATA *Ret;
     if (SchedulerCount < MAX_SCHEDULERS) {
-        memset (&(SchedulerData[SchedulerCount]), 0, sizeof (SchedulerData[SchedulerCount]));
+        MEMSET (&(SchedulerData[SchedulerCount]), 0, sizeof (SchedulerData[SchedulerCount]));
         SchedulerData[SchedulerCount].Number = SchedulerCount;
-        strcpy (SchedulerData[SchedulerCount].SchedulerName, SchedulerName);
+        STRING_COPY_TO_ARRAY (SchedulerData[SchedulerCount].SchedulerName, SchedulerName);
         SchedulerData[SchedulerCount].SchedulerNr = SchedulerCount;
         SchedulerData[SchedulerCount].BarrierMask = 1UL << SchedulerCount;
         SchedulerData[SchedulerCount].State = SCHED_RUNNING_STATE;
@@ -1066,7 +1069,7 @@ int get_pid_by_name (const char *ProcessName)
 }
 
 
-int lives_process_inside_dll (const char *ProcessName, char *ret_DllName)
+int lives_process_inside_dll (const char *ProcessName, char *ret_DllName, int Maxc)
 {
     int x;
 
@@ -1079,7 +1082,7 @@ int lives_process_inside_dll (const char *ProcessName, char *ret_DllName)
                 int Ret = 0;
                 if (pTcb->DllName != NULL) {
                     if (strlen(pTcb->DllName) > 0) {
-                        if (ret_DllName != NULL) strcpy (ret_DllName, pTcb->DllName);
+                        if (ret_DllName != NULL) StringCopyMaxCharTruncate (ret_DllName, pTcb->DllName, Maxc);
                         Ret = 1;
                     }
                 }
@@ -1336,19 +1339,19 @@ int AddExternPorcessToScheduler (char *ProcessName, char *ExecutableName, int Pr
                                         &(Tcb->time_steps),
                                         &(Tcb->delay),
                                         &(Tcb->timeout),
-                                        RangeControlCounterVariable,
-                                        RangeControlControlVariable,
+                                        RangeControlCounterVariable, sizeof(RangeControlCounterVariable),
+                                        RangeControlControlVariable, sizeof(RangeControlControlVariable),
                                         &(Tcb->RangeControlFlags),
-                                        BBPrefix,
-                                        Scheduler,
-                                        BarriersBeforeOnlySignal,
-                                        BarriersBeforeSignalAndWait,
-                                        BarriersBehindOnlySignal,
-                                        BarriersBehindSignalAndWait,
-                                        BarriersLoopOutBeforeOnlySignal,
-                                        BarriersLoopOutBeforeSignalAndWait,
-                                        BarriersLoopOutBehindOnlySignal,
-                                        BarriersLoopOutBehindSignalAndWait) != 0) {
+                                        BBPrefix, sizeof(BBPrefix),
+                                        Scheduler, sizeof(Scheduler),
+                                        BarriersBeforeOnlySignal, sizeof(BarriersBeforeOnlySignal),
+                                        BarriersBeforeSignalAndWait, sizeof(BarriersBeforeSignalAndWait),
+                                        BarriersBehindOnlySignal, sizeof(BarriersBehindOnlySignal),
+                                        BarriersBehindSignalAndWait, sizeof(BarriersBehindSignalAndWait),
+                                        BarriersLoopOutBeforeOnlySignal, sizeof(BarriersLoopOutBeforeOnlySignal),
+                                        BarriersLoopOutBeforeSignalAndWait, sizeof(BarriersLoopOutBeforeSignalAndWait),
+                                        BarriersLoopOutBehindOnlySignal, sizeof(BarriersLoopOutBehindOnlySignal),
+                                        BarriersLoopOutBehindSignalAndWait,  sizeof(BarriersLoopOutBehindSignalAndWait)) != 0) {
             Tcb->prio = 150;
             Tcb->time_steps = 1;
             Tcb->delay = 0;
@@ -1481,24 +1484,23 @@ static void CallExternProcessReferenceFunction(SCHEDULER_DATA *pSchedulerData,
         int SnapShotSize;
         int VirtualNetworkSnapShotSize;
         PIPE_API_CALL_FUNC_CMD_MESSAGE* pReq = (PIPE_API_CALL_FUNC_CMD_MESSAGE*)pSchedulerData->pTransmitMessageBuffer;
-        // Externer Prozess Appl.-Fenster updaten
+        // update external prozess calibration windows
         application_update_start_process (CurrentTcb->pid, CurrentTcb->name, CurrentTcb->DllName);
 
-        // ist ein SVL-File angegeben welches vor dem Prozess-Start geladen werden soll
+        // Are there a SVL and/or A2L file definded to load
         {
             char FileName[MAX_PATH];
             int UpdateFlag;
-            if (GetSVLFileLoadedBeforeInitProcessFileName (CurrentTcb->name, FileName) > 0) {
+            if (GetSVLFileLoadedBeforeInitProcessFileName (CurrentTcb->name, FileName, sizeof(FileName)) > 0) {
                 SearchAndReplaceEnvironmentStrings (FileName, FileName, sizeof(FileName));
                 WriteSVLToProcess(FileName, CurrentTcb->name);
             }
-            if (GetA2LFileAssociatedProcessFileName (CurrentTcb->name, FileName, &UpdateFlag) > 0) {
+            if (GetA2LFileAssociatedProcessFileName (CurrentTcb->name, FileName, sizeof(FileName), &UpdateFlag) > 0) {
                 SearchAndReplaceEnvironmentStrings (FileName, FileName, sizeof(FileName));
-                //CurrentTcb->A2LLinkNr = A2LLinkToExternProcess("C:\\UserData\\f23576\\A2L\\Samples\\Jan\\tesa_eva_tc38x.A2L", CurrentTcb->pid, UpdateFlag);
                 CurrentTcb->A2LLinkNr = A2LLinkToExternProcess(FileName, CurrentTcb->pid, UpdateFlag);
             }
         }
-        // der externe Prozessmuss auch Zugriff auf die RabgeConrol Variable haben
+        // the external process must have access to the range control variable
         if (CurrentTcb->RangeCounterVid > 0) {
             attach_bbvari(CurrentTcb->RangeCounterVid);
             write_bbvari_uqword(CurrentTcb->RangeCounterVid, 0);
@@ -1778,6 +1780,7 @@ static void *SchedulerThreadProc(void* lpParam)
     SCHEDULER_DATA *pSchedulerData;
     TASK_CONTROL_BLOCK *CurrentTcb;
     TASK_CONTROL_BLOCK *NextTcb;
+    char Help[MAX_SCHEDULER_NAME_LENGTH + 64];
 
     pSchedulerData = (SCHEDULER_DATA*)lpParam;
     pSchedulerData->SchedulerThreadId = GetCurrentThreadId ();
@@ -1804,19 +1807,28 @@ static void *SchedulerThreadProc(void* lpParam)
 #endif
 
     pSchedulerData->CurrentTcb = &GuiTcb;
-    {
-        char Help[MAX_SCHEDULER_NAME_LENGTH + 64];
-        if (pSchedulerData->SchedulerNr == 0) {
-            sprintf (Help, "%sCycleCounter", GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_LONG2_BLACKBOARD));
-        } else {
-            sprintf (Help, "%sCycleCounter_%s", GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_LONG2_BLACKBOARD), pSchedulerData->SchedulerName);
-        }
-        pSchedulerData->CycleCounterVid = add_bbvari (Help, BB_UDWORD, "");
+    if (pSchedulerData->SchedulerNr == 0) {
+        PrintFormatToString (Help, sizeof(Help), "%sCycleCounter", GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_LONG2_BLACKBOARD));
+    } else {
+        PrintFormatToString (Help, sizeof(Help), "%sCycleCounter_%s", GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_LONG2_BLACKBOARD), pSchedulerData->SchedulerName);
     }
+    pSchedulerData->CycleCounterVid = add_bbvari (Help, BB_UDWORD, "");
     if (pSchedulerData->CycleCounterVid < 0) {
         ThrowError (1, "cannot add blackboard variable %sCycleCounter %i", GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_LONG2_BLACKBOARD), pSchedulerData->CycleCounterVid);
     }
     write_bbvari_udword (pSchedulerData->CycleCounterVid, 0);
+
+    if (pSchedulerData->SchedulerNr == 0) {
+        PrintFormatToString (Help, sizeof(Help), "%sCycleDiffTime", GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_LONG2_BLACKBOARD));
+    } else {
+        PrintFormatToString (Help, sizeof(Help), "%sCycleDiffTime%s", GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_LONG2_BLACKBOARD), pSchedulerData->SchedulerName);
+    }
+    pSchedulerData->CycleDiffTimeVid = add_bbvari (Help, BB_DOUBLE, "s");
+    if (pSchedulerData->CycleDiffTimeVid < 0) {
+        ThrowError (1, "cannot add blackboard variable %sCycleDiffTime %i", GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_LONG2_BLACKBOARD), pSchedulerData->CycleCounterVid);
+    }
+    write_bbvari_udword (pSchedulerData->CycleDiffTimeVid, 0);
+
     pSchedulerData->CurrentTcb = NULL;
     if (pSchedulerData->SchedulerNr == 0) {
         CycleCounterVid = pSchedulerData->CycleCounterVid; // The control panel will use this blackboard variable
@@ -2198,8 +2210,7 @@ static char *CallFromProcess;
 
 void SetCallFromProcess (char *par_CallFromProcess)
 {
-    CallFromProcess = my_malloc (strlen (par_CallFromProcess)+ 1);
-    strcpy (CallFromProcess, par_CallFromProcess);
+    CallFromProcess = StringMalloc(par_CallFromProcess);
 }
 
 static int ToHostPCFifoHandle;
@@ -2253,7 +2264,7 @@ int InitPipeSchedulers (char *par_Prefix)
             for (rp = 0; RenameProcessesFrom[rp] != NULL; rp++) {
                 for (r = 0; all_known_tasks[r] != NULL; r++) {
                     if (!strcmp (all_known_tasks[r]->name, RenameProcessesFrom[rp])) {
-                        strcpy (all_known_tasks[r]->name, RenameProcessesTo[rp]);
+                        STRING_COPY_TO_ARRAY (all_known_tasks[r]->name, RenameProcessesTo[rp]);
                         break;
                     }
                 }
@@ -2317,7 +2328,7 @@ int InitPipeSchedulers (char *par_Prefix)
     AddPipeSchedulers ("Scheduler", 1);
 
     for (s = 1; ; s++) {
-        sprintf (Entry, "Scheduler_%i", s);
+        PrintFormatToString (Entry, sizeof(Entry), "Scheduler_%i", s);
         if (IniFileDataBaseReadString (SCHED_INI_SECTION, Entry, "", SchedulerName, sizeof (SchedulerName), GetMainFileDescriptor()) <= 0) {
             break;
         }
@@ -2376,8 +2387,7 @@ int InitPipeSchedulers (char *par_Prefix)
         char *p, *e;
         int End = 0;
 
-        WaitForProcessesBuffer = my_malloc (strlen(CallFromProcess)+1);
-        strcpy (WaitForProcessesBuffer, CallFromProcess);
+        WaitForProcessesBuffer = StringMalloc(CallFromProcess);
         // This can be a liste of ',' separated process namens
         for (WaitForProcessesCount = 0, p = WaitForProcessesBuffer; !End && (WaitForProcessesCount < 64); WaitForProcessesCount++) {
             WaitForProcesses[WaitForProcessesCount] = p;
@@ -2393,13 +2403,12 @@ int InitPipeSchedulers (char *par_Prefix)
     }
     // Activate all startup processes
     for (p = 0; p < MAX_EXTERN_PROCESSES; p++) {
-        sprintf (Entry, "P%i", p);
+        PrintFormatToString (Entry, sizeof(Entry), "P%i", p);
         IniFileDataBaseReadString ("InitStartProcesses", Entry, "",
                                    ProcessName,
                                    MAX_PATH, GetMainFileDescriptor());
         SearchAndReplaceEnvironmentStrings (ProcessName, ProcessName, sizeof (ProcessName));
-        StartedProcesses[p] = (char*)my_malloc (strlen (ProcessName) + 1);
-        strcpy (StartedProcesses[p], ProcessName);
+        StartedProcesses[p] = StringMalloc (ProcessName);
         if (strlen (ProcessName)) {
             Ignore = 0;
             for (p2 = 0; p2 < p; p2++) {
@@ -2469,7 +2478,6 @@ int AddPipeSchedulers (char *par_SchedulerName, int par_IsMainScheduler)
     char BarriersBeforeSignalAndWait[INI_MAX_LINE_LENGTH];
     char BarriersBehindOnlySignal[INI_MAX_LINE_LENGTH];
     char BarriersBehindSignalAndWait[INI_MAX_LINE_LENGTH];
-    uint64_t SystemTypeIn100NanoSecond;
     int Fd = GetMainFileDescriptor();
 
     pScheduler = RegisterScheduler  (par_SchedulerName);
@@ -2478,18 +2486,18 @@ int AddPipeSchedulers (char *par_SchedulerName, int par_IsMainScheduler)
 
     pScheduler->IsMainScheduler = par_IsMainScheduler;
 
-    sprintf (Entry, "PriorityForScheduler %s", par_SchedulerName);
+    PrintFormatToString (Entry, sizeof(Entry), "PriorityForScheduler %s", par_SchedulerName);
     pScheduler->Prio = IniFileDataBaseReadInt (SCHED_INI_SECTION, Entry, THREAD_PRIORITY_IDLE,  Fd);
     if (pScheduler->Prio < THREAD_PRIORITY_IDLE) pScheduler->Prio = THREAD_PRIORITY_IDLE;
     if (pScheduler->Prio > THREAD_PRIORITY_TIME_CRITICAL) pScheduler->Prio = THREAD_PRIORITY_TIME_CRITICAL;
 
-    sprintf (Entry, "BarriersBeforeOnlySignalForScheduler %s", par_SchedulerName);
+    PrintFormatToString (Entry, sizeof(Entry), "BarriersBeforeOnlySignalForScheduler %s", par_SchedulerName);
     IniFileDataBaseReadString(SCHED_INI_SECTION, Entry, "", BarriersBeforeOnlySignal, INI_MAX_LINE_LENGTH, Fd);
-    sprintf (Entry, "BarriersBeforeSignalAndWaitForScheduler %s", par_SchedulerName);
+    PrintFormatToString (Entry, sizeof(Entry), "BarriersBeforeSignalAndWaitForScheduler %s", par_SchedulerName);
     IniFileDataBaseReadString(SCHED_INI_SECTION, Entry, "", BarriersBeforeSignalAndWait, INI_MAX_LINE_LENGTH, Fd);
-    sprintf (Entry, "BarriersBehindOnlySignalForScheduler %s", par_SchedulerName);
+    PrintFormatToString (Entry, sizeof(Entry), "BarriersBehindOnlySignalForScheduler %s", par_SchedulerName);
     IniFileDataBaseReadString(SCHED_INI_SECTION, Entry, "", BarriersBehindOnlySignal, INI_MAX_LINE_LENGTH, Fd);
-    sprintf (Entry, "BarriersBehindSignalAndWaitForScheduler %s", par_SchedulerName);
+    PrintFormatToString (Entry, sizeof(Entry), "BarriersBehindSignalAndWaitForScheduler %s", par_SchedulerName);
     IniFileDataBaseReadString(SCHED_INI_SECTION, Entry, "",  BarriersBehindSignalAndWait, INI_MAX_LINE_LENGTH, Fd);
     ConnectSchedulerToAllAssociatedBarriers (pScheduler,
                                              BarriersBeforeOnlySignal,
@@ -2509,16 +2517,28 @@ int AddPipeSchedulers (char *par_SchedulerName, int par_IsMainScheduler)
     pScheduler->pReceiveMessageBuffer = (PIPE_API_BASE_CMD_MESSAGE_ACK*)my_calloc (PIPE_MESSAGE_BUFSIZE, 1);
 
     // Init. time variable
-#ifdef _WIN32
-    GetLocalTime (&LocalTime);
-    SystemTimeToFileTime (&LocalTime, (LPFILETIME)&SystemTypeIn100NanoSecond);
+    {
+#ifdef WIN32
+        FILETIME Time;
+        TIME_ZONE_INFORMATION TimeZoneInformation;
+        GetSystemTimeAsFileTime(&Time);
+        GetTimeZoneInformation(&TimeZoneInformation);
+        pScheduler->SimulatedStartTimeInNanoSecond = (((uint64_t)Time.dwHighDateTime << 32) +
+                                                             (uint64_t)Time.dwLowDateTime) * 100;
 
-    pScheduler->SimulatedStartTimeInNanoSecond = SystemTypeIn100NanoSecond * 100;
+        pScheduler->SimulatedStartTimeInNanoSecond -= (uint64_t)TimeZoneInformation.Bias *  // in minutes
+                                                             60 * 1000000000;
 #else
-    pScheduler->SimulatedStartTimeInNanoSecond = GetTimeOfSystemIsRunning64();
-#endif
+        struct timeval tv;
+        int64_t t;
+        struct tm lt = {0};
+        gettimeofday(&tv, NULL);
+        t = time(&t);
+        localtime_r(&t, &lt);
 
-    SystemTypeIn100NanoSecond = 0;
+        pScheduler->SimulatedStartTimeInNanoSecond = (((uint64_t)tv.tv_sec + (uint64_t)lt.tm_gmtoff) * 1000000 + (uint64_t)tv.tv_usec) * 1000;  // ns
+#endif
+    }
 
     pScheduler->SimulatedTimeInNanoSecond = 0;
 
@@ -2597,7 +2617,7 @@ static char *GetProcessNamesAllScheduler (int RunOrSleep)
                 Len = (int)strlen (p) + 1;
                 Ret = my_realloc (Ret, Pos + Len + 2);
                 if (Ret != NULL) {
-                    memcpy (Ret + Pos, p, (size_t)Len);
+                    MEMCPY (Ret + Pos, p, (size_t)Len);
                     Pos += Len;
                 }
 
@@ -2797,7 +2817,7 @@ int get_process_timeout (PID par_Pid)
     return UNKNOWN_PROCESS;
 }
 
-int GetProcessLongName (PID par_Pid, char *ret_Name)
+int GetProcessLongName (PID par_Pid, char *ret_Name, int par_Maxc)
 {
     int x;
 
@@ -2815,7 +2835,7 @@ int GetProcessLongName (PID par_Pid, char *ret_Name)
             uint64_t CyclesTime;
             uint64_t CyclesTimeMax;
             uint64_t CyclesTimeMin;
-            return rm_get_process_info_ex (par_Pid, ret_Name, 512,
+            return rm_get_process_info_ex (par_Pid, ret_Name, par_Maxc,
                                            &Type, &Prio, &Cycles, &Delay, &MessageSize,
                                            AssignedScheduler, sizeof(AssignedScheduler), &bb_access_mask,
                                            &State, &CyclesCounter, &CyclesTime, &CyclesTimeMax, &CyclesTimeMin);
@@ -2827,7 +2847,7 @@ int GetProcessLongName (PID par_Pid, char *ret_Name)
         // Walk through all processes of this scheduler
         for (pTcb = SchedulerData[x].FirstTcb; pTcb != NULL; pTcb = pTcb->next) {
             if (pTcb->pid == par_Pid) {
-                strcpy (ret_Name, pTcb->name);
+                StringCopyMaxCharTruncate (ret_Name, pTcb->name, par_Maxc);
                 LeaveCriticalSection (&PipeSchedCriticalSection);
                 return 0;
             }
@@ -2837,12 +2857,12 @@ int GetProcessLongName (PID par_Pid, char *ret_Name)
     return UNKNOWN_PROCESS;     
 }
 
-int get_name_by_pid ( PID pid, char *name)
+int get_name_by_pid ( PID pid, char *name, int maxc)
 {
-    return GetProcessLongName (pid, name);
+    return GetProcessLongName (pid, name, maxc);
 }
 
-int GetProcessShortName (PID par_Pid, char *ret_Name)
+int GetProcessShortName (PID par_Pid, char *ret_Name, int Maxc)
 {
     int x;
 
@@ -2860,7 +2880,7 @@ int GetProcessShortName (PID par_Pid, char *ret_Name)
             uint64_t CyclesTime;
             uint64_t CyclesTimeMax;
             uint64_t CyclesTimeMin;
-            return rm_get_process_info_ex (par_Pid, ret_Name, 512,
+            return rm_get_process_info_ex (par_Pid, ret_Name, Maxc,
                                            &Type, &Prio, &Cycles, &Delay, &MessageSize,
                                            AssignedScheduler, sizeof(AssignedScheduler), &bb_access_mask,
                                            &State, &CyclesCounter, &CyclesTime, &CyclesTimeMax, &CyclesTimeMin);
@@ -2878,7 +2898,7 @@ int GetProcessShortName (PID par_Pid, char *ret_Name)
                     if ((*p == '\\') || (*p == '/')) pbs = p + 1;
                     p++;
                 }
-                strcpy (ret_Name, pbs);
+                StringCopyMaxCharTruncate (ret_Name, pbs, Maxc);
                 LeaveCriticalSection (&PipeSchedCriticalSection);
                 return 0;
             }
@@ -2888,7 +2908,7 @@ int GetProcessShortName (PID par_Pid, char *ret_Name)
     return UNKNOWN_PROCESS;
 }
 
-int GetProcessExecutableName (PID par_Pid, char *ret_Name)
+int GetProcessExecutableName (PID par_Pid, char *ret_Name, int Maxc)
 {
     int x;
 
@@ -2913,7 +2933,7 @@ int GetProcessExecutableName (PID par_Pid, char *ret_Name)
                         MEMCPY (ret_Name, pTcb->name, (size_t)(p - pTcb->name));
                         ret_Name[p - pTcb->name] = 0;
                     } else {
-                        strcpy (ret_Name, pTcb->DllName);
+                        StringCopyMaxCharTruncate (ret_Name, pTcb->DllName, Maxc);
                     }
                     LeaveCriticalSection (&PipeSchedCriticalSection);
                     return 0;
@@ -2926,7 +2946,7 @@ int GetProcessExecutableName (PID par_Pid, char *ret_Name)
     return UNKNOWN_PROCESS;
 }
 
-int GetProcessInsideExecutableName (PID par_Pid, char *ret_Name)
+int GetProcessInsideExecutableName (PID par_Pid, char *ret_Name, int Maxc)
 {
     int x;
 
@@ -2937,7 +2957,7 @@ int GetProcessInsideExecutableName (PID par_Pid, char *ret_Name)
         for (pTcb = SchedulerData[x].FirstTcb; pTcb != NULL; pTcb = pTcb->next) {
             if (pTcb->pid == par_Pid) {
                 if (pTcb->Type == EXTERN_ASYNC) {
-                    strcpy (ret_Name, pTcb->InsideExecutableName);
+                    StringCopyMaxCharTruncate (ret_Name, pTcb->InsideExecutableName, Maxc);
                     LeaveCriticalSection (&PipeSchedCriticalSection);
                     return 0;
                 }
@@ -2950,7 +2970,8 @@ int GetProcessInsideExecutableName (PID par_Pid, char *ret_Name)
 }
 
 
-int GetProcessPidAndExecutableAndDllName (char *par_Name, char *ret_ExecutableName, char *ret_DllName, int *ret_ProcessInsideExecutableNumber)
+int GetProcessPidAndExecutableAndDllName (char *par_Name, char *ret_ExecutableName, int par_ExecutableName_Maxc,
+                                          char *ret_DllName, int par_DllName_Maxc, int *ret_ProcessInsideExecutableNumber)
 {
     int x;
 
@@ -2963,13 +2984,13 @@ int GetProcessPidAndExecutableAndDllName (char *par_Name, char *ret_ExecutableNa
                 if (pTcb->Type == EXTERN_ASYNC) {
                     int Ret;
                     if (ret_ExecutableName != NULL) {
-                        strcpy (ret_ExecutableName, pTcb->InsideExecutableName);
+                        StringCopyMaxCharTruncate (ret_ExecutableName, pTcb->InsideExecutableName, par_ExecutableName_Maxc);
                     }
                     if (ret_DllName != NULL) {
                         if ((pTcb->DllName == NULL) || (strlen (pTcb->DllName) == 0)) {
-                            strcpy (ret_DllName, "");
+                            StringCopyMaxCharTruncate (ret_DllName, "", par_DllName_Maxc);
                         } else {
-                            strcpy (ret_DllName, pTcb->DllName);
+                            StringCopyMaxCharTruncate (ret_DllName, pTcb->DllName, par_DllName_Maxc);
                         }
                     }
                     if (ret_ProcessInsideExecutableNumber != NULL) {
@@ -3128,11 +3149,11 @@ int Compare2ExecutableNames (const char *par_Name1, const char *par_Name2)
 }
 
 
-int GetProcessNameWithoutPath (int pid, char *pname)
+int GetProcessNameWithoutPath (int pid, char *pname, int maxc)
 {
     char *p, *ka, name[MAX_PATH];
 
-    if (!get_name_by_pid (pid, name)) {
+    if (!get_name_by_pid (pid, name, sizeof(name))) {
         p = name;
         ka = NULL;
         while (*p != 0) {
@@ -3149,9 +3170,9 @@ int GetProcessNameWithoutPath (int pid, char *pname)
                                  ((*(p-2) == 'M') || (*(p-2) == 'm')) &&
                                  ((*(p-1) == 'U') || (*(p-1) == 'u'))))) {
             while (((*p != '\\') && (*p != '/')) && (p > name)) p--;
-            strcpy (pname, p+1);
+            StringCopyMaxCharTruncate (pname, p+1, maxc);
         } else {
-            strcpy (pname, name);
+            StringCopyMaxCharTruncate (pname, name, maxc);
         }
         return 0;
     }
@@ -3159,7 +3180,7 @@ int GetProcessNameWithoutPath (int pid, char *pname)
 }
 
 
-int TruncatePathFromProcessName (char *DestProcessName, const char *SourceProcessName)
+int TruncatePathFromProcessName (char *DestProcessName, const char *SourceProcessName, int Maxc)
 {
     const char *p, *px;
 
@@ -3170,9 +3191,9 @@ int TruncatePathFromProcessName (char *DestProcessName, const char *SourceProces
         p++;
     }
     if (px == NULL) {
-        strcpy (DestProcessName, SourceProcessName);
+        StringCopyMaxCharTruncate (DestProcessName, SourceProcessName, Maxc);
     } else {
-        strcpy (DestProcessName, px + 1);
+        StringCopyMaxCharTruncate (DestProcessName, px + 1, Maxc);
     }
     return 0;
 }
@@ -3298,23 +3319,6 @@ TASK_CONTROL_BLOCK *get_process_info (PID pid)
 }
 
 
-static void strcpy_maxc (char *dst, const char *src, int max_c)
-{
-    if (src == NULL) {
-        dst[0] = 0;
-    } else {
-        if (max_c > 0) {
-            int len = (int)strlen (src) + 1;
-            if (len <= max_c) {
-                MEMCPY (dst, src, (size_t)len);
-            } else {
-                MEMCPY (dst, src, (size_t)max_c - 1);
-                dst[max_c - 1] = 0;
-            }
-        }
-    }
-}
-
 int get_process_info_ex (PID pid, char *ret_Name, int maxc_Name, int *ret_Type, int *ret_Prio, int *ret_Cycles, int *ret_Delay, int *ret_MessageSize,
                          char *ret_AssignedScheduler, int maxc_AssignedScheduler, uint64_t *ret_bb_access_mask,
                          int *ret_State, uint64_t *ret_CyclesCounter, uint64_t *ret_CyclesTime, uint64_t *ret_CyclesTimeMax, uint64_t *ret_CyclesTimeMin)
@@ -3335,7 +3339,7 @@ int get_process_info_ex (PID pid, char *ret_Name, int maxc_Name, int *ret_Type, 
         for (pTcb = SchedulerData[x].FirstTcb; pTcb != NULL; pTcb = pTcb->next) {
             if (pTcb->pid == pid) {
                 if ((ret_Name != NULL) && (maxc_Name > 0)) {
-                    strcpy_maxc (ret_Name, pTcb->name, maxc_Name);
+                    StringCopyMaxCharTruncate (ret_Name, pTcb->name, maxc_Name);
                 }
                 if (ret_Type != NULL) *ret_Type = pTcb->Type;
                 if (ret_Prio != NULL) *ret_Prio = pTcb->prio;
@@ -3343,7 +3347,7 @@ int get_process_info_ex (PID pid, char *ret_Name, int maxc_Name, int *ret_Type, 
                 if (ret_Delay != NULL) *ret_Delay = pTcb->delay;
                 if (ret_MessageSize != NULL) *ret_MessageSize = pTcb->message_size;
                 if ((ret_AssignedScheduler != NULL) && (maxc_AssignedScheduler > 0)) {
-                    strcpy_maxc (ret_AssignedScheduler, SchedulerData[x].SchedulerName, maxc_AssignedScheduler);
+                    StringCopyMaxCharTruncate (ret_AssignedScheduler, SchedulerData[x].SchedulerName, maxc_AssignedScheduler);
                 }
                 if (ret_bb_access_mask != NULL) *ret_bb_access_mask = pTcb->bb_access_mask;
                 if (ret_State != NULL) *ret_State = pTcb->state;
@@ -3363,7 +3367,7 @@ int get_process_info_ex (PID pid, char *ret_Name, int maxc_Name, int *ret_Type, 
         while ((pTcb = AddProcessesToSchedPtrs[SchedulerData[x].SchedulerNr][RdPos]) != NULL) {
             if (pTcb->pid == pid) {
                 if ((ret_Name != NULL) && (maxc_Name > 0)) {
-                    strcpy_maxc (ret_Name, pTcb->name, maxc_Name);
+                    StringCopyMaxCharTruncate (ret_Name, pTcb->name, maxc_Name);
                 }
                 if (ret_Type != NULL) *ret_Type = pTcb->Type;
                 if (ret_Prio != NULL) *ret_Prio = pTcb->prio;
@@ -3371,7 +3375,7 @@ int get_process_info_ex (PID pid, char *ret_Name, int maxc_Name, int *ret_Type, 
                 if (ret_Delay != NULL) *ret_Delay = pTcb->delay;
                 if (ret_MessageSize != NULL) *ret_MessageSize = pTcb->message_size;
                 if ((ret_AssignedScheduler != NULL) && (maxc_AssignedScheduler > 0)) {
-                    strcpy_maxc (ret_AssignedScheduler, SchedulerData[x].SchedulerName, maxc_AssignedScheduler);
+                    StringCopyMaxCharTruncate (ret_AssignedScheduler, SchedulerData[x].SchedulerName, maxc_AssignedScheduler);
                 }
                 if (ret_bb_access_mask != NULL) *ret_bb_access_mask = pTcb->bb_access_mask;
                 if (ret_State != NULL) *ret_State = pTcb->state;
@@ -3455,16 +3459,16 @@ int get_process_info_internal_debug(PID pid,
                 if (ret_WaitForEndOfCycleFlag != NULL) *ret_WaitForEndOfCycleFlag = pTcb->WaitForEndOfCycleFlag;
                 if (ret_LockedByThreadId != NULL) *ret_LockedByThreadId = pTcb->LockedByThreadId;
                 if ((ret_SrcFileName != NULL) && (maxc_SrcFileName > 0)) {
-                    strcpy_maxc (ret_SrcFileName, pTcb->SrcFileName, maxc_SrcFileName);
+                    StringCopyMaxCharTruncate (ret_SrcFileName, pTcb->SrcFileName, maxc_SrcFileName);
                 }
                 if (ret_SrcLineNr != NULL) *ret_SrcLineNr = pTcb->SrcLineNr;
                 if (ret_LockedFlag != NULL) *ret_LockedFlag = pTcb->LockedFlag;
                 if (ret_LockedFlag != NULL) *ret_LockedFlag = pTcb->LockedFlag;
                 if ((ret_DllName != NULL) && (maxc_DllName > 0)) {
-                    strcpy_maxc (ret_DllName, pTcb->DllName, maxc_DllName);
+                    StringCopyMaxCharTruncate (ret_DllName, pTcb->DllName, maxc_DllName);
                 }
                 if ((ret_InsideExecutableName != NULL) && (maxc_InsideExecutableName > 0)) {
-                    strcpy_maxc (ret_InsideExecutableName, pTcb->InsideExecutableName, maxc_InsideExecutableName);
+                    StringCopyMaxCharTruncate (ret_InsideExecutableName, pTcb->InsideExecutableName, maxc_InsideExecutableName);
                 }
                 if (ret_NumberInsideExecutable != NULL) *ret_NumberInsideExecutable = pTcb->NumberInsideExecutable;
                 if (ret_ExecutableBaseAddress != NULL) *ret_ExecutableBaseAddress = pTcb->ExecutableBaseAddress;
@@ -3639,15 +3643,19 @@ int disable_scheduler_at_end_of_cycle (int FromUser, void (*Callback)(void*), vo
     return Err;
 }
 
-int make_n_next_cycles (int FromUser, uint64_t NextCycleCount,
+int make_n_next_cycles (int FromUser, uint64_t NextCycleCount, const char *Equation,
                         void (*Callback)(void*), void *CallbackParameter)
 {
     int ThreadId = (int)GetCurrentThreadId();
 
-    AddTimedStopRequest(&(SchedulerData[0].StopReq), ThreadId, FromUser,
-                        SchedulerData[0].Cycle + NextCycleCount,
-                        Callback, CallbackParameter,
-                        1);
+    if (NextCycleCount > 0) {
+        return AddTimedStopRequest(&(SchedulerData[0].StopReq), ThreadId, FromUser,
+                                   SchedulerData[0].Cycle + NextCycleCount, Equation,
+                                   Callback, CallbackParameter,
+                                   1);
+    } else {
+       return 2;  // condition is already true
+    }
     return 0;
 }
 
@@ -3815,7 +3823,7 @@ int write_extprocinfos_to_ini (int par_Fd,
 
     s = GetProcessNameFromPath (ext_proc_name);
 
-    sprintf (Entry, "BBPrefixForProcess %s", s);
+    PrintFormatToString (Entry, sizeof(Entry), "BBPrefixForProcess %s", s);
     if (BBPrefix != NULL) {
         if (strlen (BBPrefix) == 0) {
             BBPrefix = NULL;
@@ -3823,7 +3831,7 @@ int write_extprocinfos_to_ini (int par_Fd,
         IniFileDataBaseWriteString (SCHED_INI_SECTION, Entry, BBPrefix, par_Fd);
     }
 
-    sprintf (Entry, "SchedulerForProcess %s", s);
+    PrintFormatToString (Entry, sizeof(Entry), "SchedulerForProcess %s", s);
     if (Scheduler != NULL) {
         if (strlen (Scheduler) == 0) {
             Scheduler = NULL;
@@ -3831,7 +3839,7 @@ int write_extprocinfos_to_ini (int par_Fd,
         IniFileDataBaseWriteString (SCHED_INI_SECTION, Entry, Scheduler, par_Fd);
     }
 
-    sprintf (Entry, "BarriersBeforeOnlySignalForProcess %s", s);
+    PrintFormatToString (Entry, sizeof(Entry), "BarriersBeforeOnlySignalForProcess %s", s);
     if (BarriersBeforeOnlySignal != NULL) {
         if (strlen (BarriersBeforeOnlySignal) == 0) {
             BarriersBeforeOnlySignal = NULL;
@@ -3839,7 +3847,7 @@ int write_extprocinfos_to_ini (int par_Fd,
         IniFileDataBaseWriteString (SCHED_INI_SECTION, Entry, BarriersBeforeOnlySignal, par_Fd);
     }
 
-    sprintf (Entry, "BarriersBeforeSignalAndWaitForProcess %s", s);
+    PrintFormatToString (Entry, sizeof(Entry), "BarriersBeforeSignalAndWaitForProcess %s", s);
     if (BarriersBeforeSignalAndWait != NULL) {
         if (strlen (BarriersBeforeSignalAndWait) == 0) {
             BarriersBeforeSignalAndWait = NULL;
@@ -3847,7 +3855,7 @@ int write_extprocinfos_to_ini (int par_Fd,
         IniFileDataBaseWriteString (SCHED_INI_SECTION, Entry, BarriersBeforeSignalAndWait, par_Fd);
     }
 
-    sprintf (Entry, "BarriersBehindOnlySignalForProcess %s", s);
+    PrintFormatToString (Entry, sizeof(Entry), "BarriersBehindOnlySignalForProcess %s", s);
     if (BarriersBehindOnlySignal != NULL) {
         if (strlen (BarriersBehindOnlySignal) == 0) {
             BarriersBehindOnlySignal = NULL;
@@ -3855,7 +3863,7 @@ int write_extprocinfos_to_ini (int par_Fd,
         IniFileDataBaseWriteString (SCHED_INI_SECTION, Entry, BarriersBehindOnlySignal, par_Fd);
     }
 
-    sprintf (Entry, "BarriersBehindSignalAndWaitForProcess %s", s);
+    PrintFormatToString (Entry, sizeof(Entry), "BarriersBehindSignalAndWaitForProcess %s", s);
     if (BarriersBehindSignalAndWait != NULL) {
         if (strlen (BarriersBehindSignalAndWait) == 0) {
             BarriersBehindSignalAndWait = NULL;
@@ -3864,7 +3872,7 @@ int write_extprocinfos_to_ini (int par_Fd,
     }
 
     // Loop out
-    sprintf (Entry, "BarriersLoopOutBeforeOnlySignalForProcess %s", s);
+    PrintFormatToString (Entry, sizeof(Entry), "BarriersLoopOutBeforeOnlySignalForProcess %s", s);
     if (BarriersLoopOutBeforeOnlySignal != NULL) {
         if (strlen (BarriersLoopOutBeforeOnlySignal) == 0) {
             BarriersLoopOutBeforeOnlySignal = NULL;
@@ -3872,7 +3880,7 @@ int write_extprocinfos_to_ini (int par_Fd,
         IniFileDataBaseWriteString (SCHED_INI_SECTION, Entry, BarriersLoopOutBeforeOnlySignal, par_Fd);
     }
 
-    sprintf (Entry, "BarriersLoopOutBeforeSignalAndWaitForProcess %s", s);
+    PrintFormatToString (Entry, sizeof(Entry), "BarriersLoopOutBeforeSignalAndWaitForProcess %s", s);
     if (BarriersLoopOutBeforeSignalAndWait != NULL) {
         if (strlen (BarriersLoopOutBeforeSignalAndWait) == 0) {
             BarriersLoopOutBeforeSignalAndWait = NULL;
@@ -3880,7 +3888,7 @@ int write_extprocinfos_to_ini (int par_Fd,
         IniFileDataBaseWriteString (SCHED_INI_SECTION, Entry, BarriersLoopOutBeforeSignalAndWait, par_Fd);
     }
 
-    sprintf (Entry, "BarriersLoopOutBehindOnlySignalForProcess %s", s);
+    PrintFormatToString (Entry, sizeof(Entry), "BarriersLoopOutBehindOnlySignalForProcess %s", s);
     if (BarriersLoopOutBehindOnlySignal != NULL) {
         if (strlen (BarriersLoopOutBehindOnlySignal) == 0) {
             BarriersLoopOutBehindOnlySignal = NULL;
@@ -3888,7 +3896,7 @@ int write_extprocinfos_to_ini (int par_Fd,
         IniFileDataBaseWriteString (SCHED_INI_SECTION, Entry, BarriersLoopOutBehindOnlySignal, par_Fd);
     }
 
-    sprintf (Entry, "BarriersLoopOutBehindSignalAndWaitForProcess %s", s);
+    PrintFormatToString (Entry, sizeof(Entry), "BarriersLoopOutBehindSignalAndWaitForProcess %s", s);
     if (BarriersLoopOutBehindSignalAndWait != NULL) {
         if (strlen (BarriersLoopOutBehindSignalAndWait) == 0) {
             BarriersLoopOutBehindSignalAndWait = NULL;
@@ -3898,7 +3906,7 @@ int write_extprocinfos_to_ini (int par_Fd,
 
 
     // Write the INI Entry
-    sprintf(tmp_str, "%d,%d#%d,%d,%d,%d,%d,%d,%d,%s,%d,%s,%d,%d", 
+    PrintFormatToString (tmp_str, sizeof(tmp_str), "%d,%d#%d,%d,%d,%d,%d,%d,%d,%s,%d,%s,%d,%d",
             priority, 
             time_steps,
             (int)delay,
@@ -3925,19 +3933,19 @@ int read_extprocinfos_from_ini (int par_Fd,
                                 int *time_steps,
                                 int *delay,
                                 int *timeout,
-                                char *RangeErrorCounter,
-                                char *RangeControl,
+                                char *RangeErrorCounter, int RangeErrorCounter_Maxc,
+                                char *RangeControl, int RangeControl_Maxc,
                                 unsigned int *RangeControlFlags,
-                                char *BBPrefix,
-                                char *Scheduler,
-                                char *BarriersBeforeOnlySignal,
-                                char *BarriersBeforeSignalAndWait,
-                                char *BarriersBehindOnlySignal,
-                                char *BarriersBehindSignalAndWait,
-                                char *BarriersLoopOutBeforeOnlySignal,
-                                char *BarriersLoopOutBeforeSignalAndWait,
-                                char *BarriersLoopOutBehindOnlySignal,
-                                char *BarriersLoopOutBehindSignalAndWait)
+                                char *BBPrefix, int BBPrefix_Maxc,
+                                char *Scheduler, int Scheduler_Maxc,
+                                char *BarriersBeforeOnlySignal, int BarriersBeforeOnlySignal_Maxc,
+                                char *BarriersBeforeSignalAndWait, int BarriersBeforeSignalAndWait_Maxc,
+                                char *BarriersBehindOnlySignal, int BarriersBehindOnlySignal_Maxc,
+                                char *BarriersBehindSignalAndWait, int BarriersBehindSignalAndWait_Maxc,
+                                char *BarriersLoopOutBeforeOnlySignal, int BarriersLoopOutBeforeOnlySignal_Maxc,
+                                char *BarriersLoopOutBeforeSignalAndWait, int BarriersLoopOutBeforeSignalAndWait_Maxc,
+                                char *BarriersLoopOutBehindOnlySignal, int BarriersLoopOutBehindOnlySignal_Maxc,
+                                char *BarriersLoopOutBehindSignalAndWait, int BarriersLoopOutBehindSignalAndWait_Maxc)
 {
     char  tmp_str[INI_MAX_LINE_LENGTH];
     const char *s;
@@ -3948,43 +3956,43 @@ int read_extprocinfos_from_ini (int par_Fd,
     s = GetProcessNameFromPath (ext_proc_name);
 
     if (BBPrefix != NULL) {
-        sprintf (Entry, "BBPrefixForProcess %s", s);
+        PrintFormatToString (Entry, sizeof(Entry), "BBPrefixForProcess %s", s);
         IniFileDataBaseReadString(SCHED_INI_SECTION, Entry, "", BBPrefix, 31, par_Fd);
     }
     if (Scheduler != NULL) {
-        sprintf (Entry, "SchedulerForProcess %s", s);
+        PrintFormatToString (Entry, sizeof(Entry), "SchedulerForProcess %s", s);
         IniFileDataBaseReadString(SCHED_INI_SECTION, Entry, "Scheduler", Scheduler, MAX_SCHEDULER_NAME_LENGTH, par_Fd);
     }
     if (BarriersBeforeOnlySignal != NULL) {
-        sprintf (Entry, "BarriersBeforeOnlySignalForProcess %s", s);
+        PrintFormatToString (Entry, sizeof(Entry), "BarriersBeforeOnlySignalForProcess %s", s);
         IniFileDataBaseReadString(SCHED_INI_SECTION, Entry, "", BarriersBeforeOnlySignal, INI_MAX_LINE_LENGTH, par_Fd);
     }
     if (BarriersBeforeSignalAndWait != NULL) {
-        sprintf (Entry, "BarriersBeforeSignalAndWaitForProcess %s", s);
+        PrintFormatToString (Entry, sizeof(Entry), "BarriersBeforeSignalAndWaitForProcess %s", s);
         IniFileDataBaseReadString(SCHED_INI_SECTION, Entry, "", BarriersBeforeSignalAndWait, INI_MAX_LINE_LENGTH, par_Fd);
     }
     if (BarriersBehindOnlySignal != NULL) {
-        sprintf (Entry, "BarriersBehindOnlySignalForProcess %s", s);
+        PrintFormatToString (Entry, sizeof(Entry), "BarriersBehindOnlySignalForProcess %s", s);
         IniFileDataBaseReadString(SCHED_INI_SECTION, Entry, "", BarriersBehindOnlySignal, INI_MAX_LINE_LENGTH, par_Fd);
     }
     if (BarriersBehindSignalAndWait != NULL) {
-        sprintf (Entry, "BarriersBehindSignalAndWaitForProcess %s", s);
+        PrintFormatToString (Entry, sizeof(Entry), "BarriersBehindSignalAndWaitForProcess %s", s);
         IniFileDataBaseReadString(SCHED_INI_SECTION, Entry, "", BarriersBehindSignalAndWait, INI_MAX_LINE_LENGTH, par_Fd);
     }
     if (BarriersLoopOutBeforeOnlySignal != NULL) {
-        sprintf (Entry, "BarriersLoopOutBeforeOnlySignalForProcess %s", s);
+        PrintFormatToString (Entry, sizeof(Entry), "BarriersLoopOutBeforeOnlySignalForProcess %s", s);
         IniFileDataBaseReadString(SCHED_INI_SECTION, Entry, "", BarriersLoopOutBeforeOnlySignal, INI_MAX_LINE_LENGTH, par_Fd);
     }
     if (BarriersLoopOutBeforeSignalAndWait != NULL) {
-        sprintf (Entry, "BarriersLoopOutBeforeSignalAndWaitForProcess %s", s);
+        PrintFormatToString (Entry, sizeof(Entry), "BarriersLoopOutBeforeSignalAndWaitForProcess %s", s);
         IniFileDataBaseReadString(SCHED_INI_SECTION, Entry, "", BarriersLoopOutBeforeSignalAndWait, INI_MAX_LINE_LENGTH, par_Fd);
     }
     if (BarriersLoopOutBehindOnlySignal != NULL) {
-        sprintf (Entry, "BarriersLoopOutBehindOnlySignalForProcess %s", s);
+        PrintFormatToString (Entry, sizeof(Entry), "BarriersLoopOutBehindOnlySignalForProcess %s", s);
         IniFileDataBaseReadString(SCHED_INI_SECTION, Entry, "", BarriersLoopOutBehindOnlySignal, INI_MAX_LINE_LENGTH, par_Fd);
     }
     if (BarriersLoopOutBehindSignalAndWait != NULL) {
-        sprintf (Entry, "BarriersLoopOutBehindSignalAndWaitForProcess %s", s);
+        PrintFormatToString (Entry, sizeof(Entry), "BarriersLoopOutBehindSignalAndWaitForProcess %s", s);
         IniFileDataBaseReadString(SCHED_INI_SECTION, Entry, "", BarriersLoopOutBehindSignalAndWait, INI_MAX_LINE_LENGTH, par_Fd);
     }
 
@@ -4024,8 +4032,8 @@ int read_extprocinfos_from_ini (int par_Fd,
             if ((p[11] != NULL) && (strtol (p[11], NULL, 0))) *RangeControlFlags |= RANGE_CONTROL_PHYSICAL_FLAG;   // Range Control physikalisch
             if ((p[12] != NULL) && (strtol (p[12], NULL, 0))) *RangeControlFlags |= RANGE_CONTROL_LIMIT_VALUES_FLAG;   // limit to min max range
         }
-        if ((p[8] != NULL) && (RangeErrorCounter != NULL)) strcpy (RangeErrorCounter, p[8]); 
-        if ((p[10] != NULL) && (RangeControl != NULL)) strcpy (RangeControl, p[10]); 
+        if ((p[8] != NULL) && (RangeErrorCounter != NULL)) StringCopyMaxCharTruncate (RangeErrorCounter, p[8], RangeErrorCounter_Maxc);
+        if ((p[10] != NULL) && (RangeControl != NULL)) StringCopyMaxCharTruncate (RangeControl, p[10], RangeControl_Maxc);
         return 0;
     } else return UNKNOWN_PROCESS;
 }
@@ -4144,13 +4152,13 @@ static LOAD_SVL_AFTER_START_PROCESS_ELEMENT *LoadSvlAfterStartPorcess;
 static int LoadSvlAfterStartPorcessSize;
 static int LoadSvlAfterStartPorcessPos;
 
-static int GetAndRemoveEntryByName(const char *ProcessName, char *SvlFileName)
+static int GetAndRemoveEntryByName(const char *ProcessName, char *SvlFileName, int Maxc)
 {
     int x;
     EnterCriticalSection (&PipeSchedCriticalSection);
     for (x = 0; x < LoadSvlAfterStartPorcessPos; x++) {
         if (!Compare2ProcessNames(ProcessName, LoadSvlAfterStartPorcess[x].ProcessName)) {
-            if (SvlFileName != NULL) strcpy(SvlFileName, LoadSvlAfterStartPorcess[x].SVLFileName);
+            if (SvlFileName != NULL) StringCopyMaxCharTruncate(SvlFileName, LoadSvlAfterStartPorcess[x].SVLFileName, Maxc);
             my_free(LoadSvlAfterStartPorcess[x].ProcessName);
             my_free(LoadSvlAfterStartPorcess[x].SVLFileName);
             for (;  x < (LoadSvlAfterStartPorcessPos-1); x++) {
@@ -4186,7 +4194,7 @@ void SetSVLFileLoadedBeforeInitProcessFileName (const char *ProcessName,
     char Entry[INI_MAX_ENTRYNAME_LENGTH];
 
     if (INIFlag) {
-        sprintf (Entry, "SVL before init %s", GetProcessNameFromPath (ProcessName));
+        PrintFormatToString (Entry, sizeof(Entry), "SVL before init %s", GetProcessNameFromPath (ProcessName));
         IniFileDataBaseWriteString(SCHED_INI_SECTION, Entry, SVLFileName, GetMainFileDescriptor());
     } else {
         int Pos;
@@ -4200,24 +4208,22 @@ void SetSVLFileLoadedBeforeInitProcessFileName (const char *ProcessName,
             LoadSvlAfterStartPorcessSize = LoadSvlAfterStartPorcessPos;
             LoadSvlAfterStartPorcess = (LOAD_SVL_AFTER_START_PROCESS_ELEMENT*)my_realloc(LoadSvlAfterStartPorcess, sizeof(LOAD_SVL_AFTER_START_PROCESS_ELEMENT) * (size_t)LoadSvlAfterStartPorcessSize);
         }
-        LoadSvlAfterStartPorcess[Pos].ProcessName = my_malloc (strlen(ProcessName)+1);
-        strcpy(LoadSvlAfterStartPorcess[Pos].ProcessName, ProcessName);
-        LoadSvlAfterStartPorcess[Pos].SVLFileName = my_malloc (strlen(SVLFileName)+1);
-        strcpy(LoadSvlAfterStartPorcess[Pos].SVLFileName, SVLFileName);
+        LoadSvlAfterStartPorcess[Pos].ProcessName = StringMalloc (ProcessName);
+        LoadSvlAfterStartPorcess[Pos].SVLFileName = StringMalloc (SVLFileName);
         LoadSvlAfterStartPorcess[Pos].TimeStamp = get_timestamp_counter();
         LeaveCriticalSection (&PipeSchedCriticalSection);
     }
 }
 
 int GetSVLFileLoadedBeforeInitProcessFileName (const char *ProcessName,
-                                               char *SVLFileName)
+                                               char *SVLFileName, int Maxc)
 {
     char Entry[INI_MAX_ENTRYNAME_LENGTH];
 
-    if (GetAndRemoveEntryByName (ProcessName, SVLFileName)) {
+    if (GetAndRemoveEntryByName (ProcessName, SVLFileName, Maxc)) {
         return (int)strlen (SVLFileName);
     } else {
-        sprintf (Entry, "SVL before init %s", GetProcessNameFromPath (ProcessName));
+        PrintFormatToString (Entry, sizeof(Entry), "SVL before init %s", GetProcessNameFromPath (ProcessName));
         return (int)IniFileDataBaseReadString(SCHED_INI_SECTION, Entry,
                                               "", SVLFileName, MAX_PATH, GetMainFileDescriptor());
     }
@@ -4237,13 +4243,13 @@ static ASSOCIATED_A2L_TO_START_PROCESS_ELEMENT *AssociatedA2LStartPorcess;
 static int AssociatedA2LStartPorcessSize;
 static int AssociatedA2LStartPorcessPos;
 
-static int AssociatedA2LGetAndRemoveEntryByName(const char *ProcessName, char *A2LFileName, int *ret_UpdateFlags)
+static int AssociatedA2LGetAndRemoveEntryByName(const char *ProcessName, char *A2LFileName, int Maxc, int *ret_UpdateFlags)
 {
     int x;
     EnterCriticalSection (&PipeSchedCriticalSection);
     for (x = 0; x < AssociatedA2LStartPorcessPos; x++) {
         if (!Compare2ProcessNames(ProcessName, AssociatedA2LStartPorcess[x].ProcessName)) {
-            if (A2LFileName != NULL) strcpy(A2LFileName, AssociatedA2LStartPorcess[x].A2LFileName);
+            if (A2LFileName != NULL) StringCopyMaxCharTruncate(A2LFileName, AssociatedA2LStartPorcess[x].A2LFileName, Maxc);
             if (ret_UpdateFlags != NULL) *ret_UpdateFlags = AssociatedA2LStartPorcess[x].UpdateAddrFlag;
             my_free(AssociatedA2LStartPorcess[x].ProcessName);
             my_free(AssociatedA2LStartPorcess[x].A2LFileName);
@@ -4281,8 +4287,8 @@ void SetA2LFileAssociatedToProcessFileName (const char *ProcessName,
     if (INIFlag) {
         char Entry[INI_MAX_ENTRYNAME_LENGTH];
         char Line[512+64];
-        sprintf (Entry, "A2L associated to %s", GetProcessNameFromPath (ProcessName));
-        sprintf (Line, "%s, 0x%X", A2LFileName, UpdateAddrFlag);
+        PrintFormatToString (Entry, sizeof(Entry), "A2L associated to %s", GetProcessNameFromPath (ProcessName));
+        PrintFormatToString (Line, sizeof(Line), "%s, 0x%X", A2LFileName, UpdateAddrFlag);
         IniFileDataBaseWriteString(SCHED_INI_SECTION, Entry, Line, GetMainFileDescriptor());
     } else {
         int Pos;
@@ -4296,10 +4302,8 @@ void SetA2LFileAssociatedToProcessFileName (const char *ProcessName,
             AssociatedA2LStartPorcessSize = AssociatedA2LStartPorcessPos;
             AssociatedA2LStartPorcess = (ASSOCIATED_A2L_TO_START_PROCESS_ELEMENT*)my_realloc(AssociatedA2LStartPorcess, sizeof(ASSOCIATED_A2L_TO_START_PROCESS_ELEMENT) * (size_t)AssociatedA2LStartPorcessSize);
         }
-        AssociatedA2LStartPorcess[Pos].ProcessName = my_malloc (strlen(ProcessName)+1);
-        strcpy(AssociatedA2LStartPorcess[Pos].ProcessName, ProcessName);
-        AssociatedA2LStartPorcess[Pos].A2LFileName = my_malloc (strlen(A2LFileName)+1);
-        strcpy(AssociatedA2LStartPorcess[Pos].A2LFileName, A2LFileName);
+        AssociatedA2LStartPorcess[Pos].ProcessName = StringMalloc (ProcessName);
+        AssociatedA2LStartPorcess[Pos].A2LFileName = StringMalloc (A2LFileName);
         AssociatedA2LStartPorcess[Pos].UpdateAddrFlag = UpdateAddrFlag;
         AssociatedA2LStartPorcess[Pos].TimeStamp = get_timestamp_counter();
         LeaveCriticalSection (&PipeSchedCriticalSection);
@@ -4308,28 +4312,29 @@ void SetA2LFileAssociatedToProcessFileName (const char *ProcessName,
 
 int GetA2LFileAssociatedProcessFileName (const char *ProcessName,
                                          char *A2LFileName,
+                                         int Maxc,
                                          int *UpdateAddrFlag)
 {
     char Entry[INI_MAX_ENTRYNAME_LENGTH];
     char Line[512+64];
 
-    if (AssociatedA2LGetAndRemoveEntryByName (ProcessName, A2LFileName, UpdateAddrFlag)) {
+    if (AssociatedA2LGetAndRemoveEntryByName (ProcessName, A2LFileName, Maxc, UpdateAddrFlag)) {
         return (int)strlen (A2LFileName);
     } else {
         int Ret;
         char *a, *u;
-        sprintf (Entry, "A2L associated to %s", GetProcessNameFromPath (ProcessName));
+        PrintFormatToString (Entry, sizeof(Entry), "A2L associated to %s", GetProcessNameFromPath (ProcessName));
         Ret = (int)IniFileDataBaseReadString(SCHED_INI_SECTION, Entry,
                                               "", Line, sizeof(Line), GetMainFileDescriptor());
-        strcpy(A2LFileName, "");
+        StringCopyMaxCharTruncate(A2LFileName, "", Maxc);
         *UpdateAddrFlag = 0;
         switch (StringCommaSeparate(Line, &a, &u, NULL)) {
         case 2:
             *UpdateAddrFlag = strtoul(u, NULL, 0);
-            strcpy(A2LFileName, a);
+            StringCopyMaxCharTruncate(A2LFileName, a, Maxc);
             break;
         case 1:
-            strcpy(A2LFileName, a);
+            StringCopyMaxCharTruncate(A2LFileName, a, Maxc);
             break;
         default:
             break;
@@ -4344,7 +4349,7 @@ void SetBeforeProcessEquationFileName (const char *ProcessName,
 {
     char Entry[INI_MAX_ENTRYNAME_LENGTH];
 
-    sprintf (Entry, "Equation before %s", GetProcessNameFromPath (ProcessName));
+    PrintFormatToString (Entry, sizeof(Entry), "Equation before %s", GetProcessNameFromPath (ProcessName));
     IniFileDataBaseWriteString(SCHED_INI_SECTION, Entry, EquFileName, GetMainFileDescriptor());
 }
 
@@ -4353,7 +4358,7 @@ void SetBehindProcessEquationFileName (const char *ProcessName,
 {
     char Entry[INI_MAX_ENTRYNAME_LENGTH];
 
-    sprintf (Entry, "Equation behind %s", GetProcessNameFromPath (ProcessName));
+    PrintFormatToString (Entry, sizeof(Entry), "Equation behind %s", GetProcessNameFromPath (ProcessName));
     IniFileDataBaseWriteString(SCHED_INI_SECTION, Entry, EquFileName, GetMainFileDescriptor());
 }
 
@@ -4362,7 +4367,7 @@ int GetBeforeProcessEquationFileName (const char *ProcessName,
 {
     char Entry[INI_MAX_ENTRYNAME_LENGTH];
 
-    sprintf (Entry, "Equation before %s", GetProcessNameFromPath (ProcessName));
+    PrintFormatToString (Entry, sizeof(Entry), "Equation before %s", GetProcessNameFromPath (ProcessName));
     return (int)IniFileDataBaseReadString(SCHED_INI_SECTION, Entry,
                                           "", EquFileName, MAX_PATH, GetMainFileDescriptor());
 }
@@ -4372,7 +4377,7 @@ int GetBehindProcessEquationFileName (const char *ProcessName,
 {
     char Entry[INI_MAX_ENTRYNAME_LENGTH];
 
-    sprintf (Entry, "Equation behind %s", GetProcessNameFromPath (ProcessName));
+    PrintFormatToString (Entry, sizeof(Entry), "Equation behind %s", GetProcessNameFromPath (ProcessName));
     return (int)IniFileDataBaseReadString(SCHED_INI_SECTION, Entry,
                                           "", EquFileName, MAX_PATH, GetMainFileDescriptor());
 }
@@ -4381,7 +4386,7 @@ void DelBeforeProcessEquationFile (const char *ProcessName)
 {
     char Entry[INI_MAX_ENTRYNAME_LENGTH];
 
-    sprintf (Entry, "Equation before %s", GetProcessNameFromPath (ProcessName));
+    PrintFormatToString (Entry, sizeof(Entry), "Equation before %s", GetProcessNameFromPath (ProcessName));
     IniFileDataBaseWriteString(SCHED_INI_SECTION, Entry, NULL, GetMainFileDescriptor());
 }
 
@@ -4389,7 +4394,7 @@ void DelBehindProcessEquationFile (const char *ProcessName)
 {
     char Entry[INI_MAX_ENTRYNAME_LENGTH];
 
-    sprintf (Entry, "Equation behind %s", GetProcessNameFromPath (ProcessName));
+    PrintFormatToString (Entry, sizeof(Entry), "Equation behind %s", GetProcessNameFromPath (ProcessName));
     IniFileDataBaseWriteString(SCHED_INI_SECTION, Entry, NULL, GetMainFileDescriptor());
 }
 
@@ -4416,7 +4421,7 @@ static void CheckEnvironmentVariale(void)
     if (strlen(s_main_ini_val.InstanceName)) SetEnvironmentVariable(ENVIRONMENT_VARNAME_INSTANCE, s_main_ini_val.InstanceName);
     if (s_main_ini_val.ExternProcessLoginSocketPort > 0) {
         char Help[64];
-        sprintf (Help, "%i", s_main_ini_val.ExternProcessLoginSocketPort);
+        PrintFormatToString (Help, sizeof(Help), "%i", s_main_ini_val.ExternProcessLoginSocketPort);
         SetEnvironmentVariable(ENVIRONMENT_VARNAME_PORT, Help);
     }
 }
@@ -4495,29 +4500,32 @@ int activate_extern_process (const char *name, int timeout, char **ret_NoErrMsg)
     CheckEnvironmentVariale();
 
     if (IsFmuFile(name)) {
-        CmdLine = my_malloc (MAX_PATH + strlen (name) + strlen (s_main_ini_val.InstanceName) + 32);
+        int CmdLineSize = MAX_PATH + strlen (name) + strlen (s_main_ini_val.InstanceName) + 32;
+        CmdLine = my_malloc (CmdLineSize);
         SearchAndReplaceEnvironmentStrings("%XILENV_EXE_DIR%", CmdLine, MAX_PATH);
-        strcat (CmdLine, "\\ExtProc_FMUExtract.exe -fmu ");
+        StringAppendMaxCharTruncate (CmdLine, "\\ExtProc_FMUExtract.exe -fmu ", CmdLineSize);
         if (strlen (s_main_ini_val.InstanceName) > 0) {
-            sprintf (CmdLine + strlen(CmdLine), "\"%s\" -i %s", name, s_main_ini_val.InstanceName);
+            PrintFormatToString (CmdLine + strlen(CmdLine), CmdLineSize - strlen(CmdLine), "\"%s\" -i %s", name, s_main_ini_val.InstanceName);
         } else {
-            sprintf (CmdLine + strlen(CmdLine), "\"%s\"", name);
+            PrintFormatToString (CmdLine + strlen(CmdLine), CmdLineSize - strlen(CmdLine), "\"%s\"", name);
         }
     } else if (IsScqFile(name)) {
-        CmdLine = my_malloc (MAX_PATH + strlen (name) + strlen (s_main_ini_val.InstanceName) + 32);
+        int CmdLineSize = MAX_PATH + strlen (name) + strlen (s_main_ini_val.InstanceName) + 32;
+        CmdLine = my_malloc (CmdLineSize);
         SearchAndReplaceEnvironmentStrings("%XILENV_EXE_DIR%", CmdLine, MAX_PATH);
-        strcat (CmdLine, "\\ExtProc_Qemu.exe -scq ");
+        StringAppendMaxCharTruncate (CmdLine, "\\ExtProc_Qemu.exe -scq ", CmdLineSize);
         if (strlen (s_main_ini_val.InstanceName) > 0) {
-            sprintf (CmdLine + strlen(CmdLine), "\"%s\" -i %s", name, s_main_ini_val.InstanceName);
+            PrintFormatToString (CmdLine + strlen(CmdLine), CmdLineSize - strlen(CmdLine), "\"%s\" -i %s", name, s_main_ini_val.InstanceName);
         } else {
-            sprintf (CmdLine + strlen(CmdLine), "\"%s\"", name);
+            PrintFormatToString (CmdLine + strlen(CmdLine), CmdLineSize - strlen(CmdLine), "\"%s\"", name);
         }
     } else {
-        CmdLine = my_malloc (strlen (name) + strlen (s_main_ini_val.InstanceName) + 32);
+        int CmdLineSize = strlen (name) + strlen (s_main_ini_val.InstanceName) + 32;
+        CmdLine = my_malloc (CmdLineSize);
         if (strlen (s_main_ini_val.InstanceName) > 0) {
-            sprintf (CmdLine, "\"%s\" -i %s", name, s_main_ini_val.InstanceName);
+            PrintFormatToString (CmdLine, CmdLineSize, "\"%s\" -i %s", name, s_main_ini_val.InstanceName);
         } else {
-            sprintf (CmdLine, "\"%s\"", name);
+            PrintFormatToString (CmdLine, CmdLineSize, "\"%s\"", name);
         }
     }
 
@@ -4542,8 +4550,7 @@ int activate_extern_process (const char *name, int timeout, char **ret_NoErrMsg)
                        0, NULL );
         RemoveExecutableFromTimeoutControl (name);
         if (ret_NoErrMsg != NULL) {
-            *ret_NoErrMsg = my_malloc(strlen(lpMsgBuf)+1);
-            if (*ret_NoErrMsg != NULL) strcpy(*ret_NoErrMsg, lpMsgBuf);
+            *ret_NoErrMsg = StringMalloc(lpMsgBuf);
         } else {
             ThrowError (1, "error cannot start process \"%s\" \"%s\" \"%s\"", name, CmdLine, lpMsgBuf);
         }
@@ -4559,23 +4566,25 @@ int activate_extern_process (const char *name, int timeout, char **ret_NoErrMsg)
 #else
     UNUSED(ret_NoErrMsg);
     char *CmdLine;
+    int Len;
     const char *Args[10];
     int ArgPos = 0;
-    memset(Args, 0, sizeof(Args));
+    MEMSET(Args, 0, sizeof(Args));
 
     CheckEnvironmentVariale();
 
     if (IsFmuFile(name)) {
         CmdLine = my_malloc (MAX_PATH);
         SearchAndReplaceEnvironmentStrings("%XILENV_EXE_DIR%", CmdLine, MAX_PATH);
-        strcat (CmdLine, "/ExtProc_FMUExtract.EXE");
+        StringAppendMaxCharTruncate (CmdLine, "/ExtProc_FMUExtract.EXE", MAX_PATH);
         Args[ArgPos++] = CmdLine;
         Args[ArgPos++] = "-fmu";
         Args[ArgPos++] = name;
     } else if (IsScqFile(name)) {
-        CmdLine = my_malloc (MAX_PATH + strlen (name) + strlen (s_main_ini_val.InstanceName) + 32);
+        int Size = MAX_PATH + strlen (name) + strlen (s_main_ini_val.InstanceName) + 32;
+        CmdLine = my_malloc (Size);
         SearchAndReplaceEnvironmentStrings("%XILENV_EXE_DIR%", CmdLine, MAX_PATH);
-        strcat (CmdLine, "/ExtProc_Qemu.EXE");
+        StringAppendMaxCharTruncate (CmdLine, "/ExtProc_Qemu.EXE", Size);
         Args[ArgPos++] = CmdLine;
         Args[ArgPos++] = "-scq";
         Args[ArgPos++] = name;
@@ -4614,8 +4623,9 @@ int activate_extern_process (const char *name, int timeout, char **ret_NoErrMsg)
         }
         break;
     case -1:
-        *ret_NoErrMsg = my_malloc (strlen (strerror(errno)) + 1);
-        strcpy(*ret_NoErrMsg, strerror(errno));
+        Len = strlen (strerror(errno)) + 1;
+        *ret_NoErrMsg = my_malloc (Len);
+        StringCopyMaxCharTruncate(*ret_NoErrMsg, strerror(errno), Len);
         return -1;
     }
 #endif
@@ -4647,20 +4657,20 @@ uint64_t GetCycleCounter64 (void)
 }
 
 
-int get_real_running_process_name (char *pname)
+int get_real_running_process_name (char *pname, int maxc)
 {
 
     TASK_CONTROL_BLOCK *pTcb = GetPointerToTaskControlBlock (GetCurrentPid ());
     if (pTcb == NULL) {
-        strcpy (pname, GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_PROGRAM_NAME));
+        StringCopyMaxCharTruncate (pname, GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_PROGRAM_NAME), maxc);
         return 0;  // it is not inside a process
     } else {
         if (pTcb->Type == EXTERN_ASYNC) {
             if (GetProsessShortExeFilename(pTcb->name, pname, MAX_PATH) != 0) {
-                strcpy (pname, pTcb->name);
+                StringCopyMaxCharTruncate (pname, pTcb->name, maxc);
             }
         } else {
-            strcpy (pname, pTcb->name);
+            StringCopyMaxCharTruncate (pname, pTcb->name, maxc);
         }
         return 1;
     }
@@ -4850,7 +4860,7 @@ __retry:
                 !strcmp(pTcb->InsideExecutableName, par_ExecutableName)) {
                 if (pTcb->LockedByThreadId == GetCurrentThreadId()) {
                     char ShortProcessName[MAX_PATH];
-                    TruncatePathFromProcessName (ShortProcessName, pTcb->name);
+                    TruncatePathFromProcessName (ShortProcessName, pTcb->name, sizeof(ShortProcessName));
                     ThrowError (ERROR_CRITICAL, "Thread %i has already locked the process (%s)!",
                            pTcb->LockedByThreadId, ShortProcessName);
                     return -1;
@@ -4878,7 +4888,7 @@ __retry:
                     if (RetryCounter > MAX_REDRYS) {
                         if (par_ErrorBehavior == ERROR_BEHAVIOR_ERROR_MESSAGE) {
                             char ShortProcessName[MAX_PATH];
-                            TruncatePathFromProcessName (ShortProcessName, pTcb->name);
+                            TruncatePathFromProcessName (ShortProcessName, pTcb->name, sizeof(ShortProcessName));
                             if (par_OperationDescription == NULL) {
                                 par_OperationDescription = "";
                             }
@@ -4960,7 +4970,7 @@ __retry:
                     if (RetryCounter > MAX_REDRYS) {
                         if (par_ErrorBehavior == ERROR_BEHAVIOR_ERROR_MESSAGE) {
                             char ShortProcessName[MAX_PATH];
-                            TruncatePathFromProcessName(ShortProcessName, pTcb->name);
+                            TruncatePathFromProcessName(ShortProcessName, pTcb->name, sizeof(ShortProcessName));
                             if (par_OperationDescription == NULL) {
                                 par_OperationDescription = "";
                             }
@@ -5042,7 +5052,7 @@ int WaitUntilProcessIsNotActiveAndThanLockItEx (int par_Pid, int par_MaxWaitTime
 
                 if (pTcb->LockedByThreadId == GetCurrentThreadId()) {
                     char ShortProcessName[MAX_PATH];
-                    TruncatePathFromProcessName (ShortProcessName, pTcb->name);
+                    TruncatePathFromProcessName (ShortProcessName, pTcb->name, sizeof(ShortProcessName));
                     ThrowError (ERROR_CRITICAL, "Thread %i has already locked the process (%s)!",
                            pTcb->LockedByThreadId, ShortProcessName);
                     return -1;
@@ -5067,7 +5077,7 @@ int WaitUntilProcessIsNotActiveAndThanLockItEx (int par_Pid, int par_MaxWaitTime
                     case WAIT_TIMEOUT:
                         if (par_ErrorBehavior == ERROR_BEHAVIOR_ERROR_MESSAGE) {
                             char ShortProcessName[MAX_PATH];
-                            TruncatePathFromProcessName (ShortProcessName, pTcb->name);
+                            TruncatePathFromProcessName (ShortProcessName, pTcb->name, sizeof(ShortProcessName));
                             if (par_OperationDescription == NULL) {
                                 par_OperationDescription = "";
                             }
@@ -5128,7 +5138,7 @@ int WaitUntilProcessIsNotActiveAndThanLockItEx (int par_Pid, int par_MaxWaitTime
                         } else {
                             if (par_ErrorBehavior == ERROR_BEHAVIOR_ERROR_MESSAGE) {
                                 char ShortProcessName[MAX_PATH];
-                                TruncatePathFromProcessName (ShortProcessName, pTcb->name);
+                                TruncatePathFromProcessName (ShortProcessName, pTcb->name, sizeof(ShortProcessName));
                                 if (par_OperationDescription == NULL) {
                                     par_OperationDescription = "";
                                 }
@@ -5395,9 +5405,9 @@ char *GetNameOfAllSchedulers (void)
     if (Ret != NULL) {
         Ret[0] = 0;
         for (x = 0; x < SchedulerCount; x++) {
-            strcat (Ret, SchedulerData[x].SchedulerName);
+            StringAppendMaxCharTruncate (Ret, SchedulerData[x].SchedulerName, LenOfRet);
             if (x < (SchedulerCount - 1)) {
-                strcat (Ret, ";");
+                StringAppendMaxCharTruncate (Ret, ";", LenOfRet);
             }
         }
     }
@@ -5438,7 +5448,7 @@ int GetSchedulingInformation (int32_t *ret_SeparateCyclesForRefAndInitFunction,
 
 int SchedulerLoopOut (char *par_BarrierBefore, char *par_BarrierBehind, char *SnapShotDataIn, int SnapShotSizeIn, char *SnapShotDataOut)
 {
-    int SnapShotSize;
+    int SnapShotSize = 0;
     SCHEDULER_DATA *pSchedulerData = GetCurrentScheduler ();
     if (pSchedulerData != NULL) {
         WalkThroughBarrierBeforeLoopOut (pSchedulerData->CurrentTcb, par_BarrierBefore, 0, 0);

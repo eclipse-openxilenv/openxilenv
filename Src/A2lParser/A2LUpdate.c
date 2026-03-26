@@ -22,6 +22,8 @@
 #include <ctype.h>
 #include "ThrowError.h"
 #include "MyMemory.h"
+#include "PrintFormatToString.h"
+#include "StringMaxChar.h"
 #include "Files.h"
 #include "Blackboard.h"
 #include "Scheduler.h"
@@ -125,7 +127,7 @@ static uint64_t GetAddressByA2LLabelFromExtProc(DEBUG_INFOS_ASSOCIATED_CONNECTIO
                                 // replace "._X_." with "[X]"
                                 s = End+1;
                                 d--;  // '.'
-                                sprintf(d, "[%i]", Idx);
+                                PrintFormatToString(d, sizeof(Label) - (d - Label), "[%i]", Idx);
                                 d += strlen(d);
                                 continue;
                             }
@@ -217,7 +219,7 @@ static int ReplaceAddress(FILE_CACHE *par_Cache, unsigned int par_Offset, uint64
     char *EndPtr = NULL;
     unsigned int i, x;
 
-    sprintf (NewAddressString, "0x%" PRIX64 "", par_Address);
+    PrintFormatToString (NewAddressString, sizeof(NewAddressString), "0x%" PRIX64 "", par_Address);
     NeededSpace = (unsigned int)strlen(NewAddressString);
     OldAddress = strtoull((char*)par_Cache->Buffer + par_Offset, &EndPtr, 0);
     if (EndPtr <= (char*)par_Cache->Buffer) return -1;
@@ -398,10 +400,10 @@ int A2LUpdate(ASAP2_DATABASE *Database, const char *par_OutA2LFile, const char *
 
     AddrList.Elements = NULL;
 
-    memset (&NotUpdatedLabelFile, 0, sizeof(NotUpdatedLabelFile));
+    STRUCT_ZERO_INIT (NotUpdatedLabelFile, NOT_UPDATED_LABEL_FILE);
     if (par_NotUpdatedLabelFile != NULL) {
         NotUpdatedLabelFile.NotUpdateFileValid = 1;
-        strncpy(NotUpdatedLabelFile.FileName, par_NotUpdatedLabelFile, sizeof(NotUpdatedLabelFile.FileName)-1);
+        StringCopyMaxCharTruncate(NotUpdatedLabelFile.FileName, par_NotUpdatedLabelFile, sizeof(NotUpdatedLabelFile.FileName)-1);
     }
     NotUpdatedLabelFile.MinusOffset = par_MinusOffset;
     NotUpdatedLabelFile.PlusOffset = par_PlusOffset;

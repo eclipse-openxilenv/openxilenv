@@ -21,6 +21,7 @@
 #include <stdint.h>
 
 typedef struct INDEX_DATA_BLOCK_ELEM_S {
+    int LinkNo;
     int Index;
     int Flags;  // Phys, ...
     void *Data;

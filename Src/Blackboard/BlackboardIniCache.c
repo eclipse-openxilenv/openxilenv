@@ -112,7 +112,7 @@ static int AddNewElem(int pos, const char *par_VariableName)
         ThrowError(1, "realtime out of memmory");
         return -1;
     }
-    memset(IniVariableSectionCache[pos].Entry, 0, sizeof(BBVARI_INI_CACHE_ENTRY));
+    STRUCT_ZERO_INIT(*(IniVariableSectionCache[pos].Entry), BBVARI_INI_CACHE_ENTRY);
     return 0;
 }
 
@@ -180,7 +180,7 @@ int BlackboardIniCache_AddEntry(const char *par_VariableName, const char *par_Un
                 // ueberschreiben
                 if (IniVariableSectionCache[pos].Entry->Unit != NULL) my_free(IniVariableSectionCache[pos].Entry->Unit);
                 if (IniVariableSectionCache[pos].Entry->Conversion != NULL) my_free(IniVariableSectionCache[pos].Entry->Conversion);
-                memset(IniVariableSectionCache[pos].Entry, 0, sizeof(BBVARI_INI_CACHE_ENTRY));
+                STRUCT_ZERO_INIT(*(IniVariableSectionCache[pos].Entry), BBVARI_INI_CACHE_ENTRY);
             }
         }
         // neues Element befuellen

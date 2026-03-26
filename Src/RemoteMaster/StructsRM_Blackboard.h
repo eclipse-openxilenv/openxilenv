@@ -1087,6 +1087,7 @@ typedef struct {
 typedef struct {
     RM_PACKAGE_HEADER PackageHeader;
     uint32_t OffsetVids;
+    int32_t OffsetPhysOrRaw;
     int32_t Size;
     // ... danach kommten die Vids
 } RM_BLACKBOARD_READ_BBVARI_FRAME_REQ;
@@ -1102,6 +1103,7 @@ typedef struct {
 typedef struct {
     RM_PACKAGE_HEADER PackageHeader;
     uint32_t OffsetVids;
+    int32_t OffsetPhysOrRaw;
     uint32_t OffsetValues;
     int32_t Pid;
     int32_t Size;

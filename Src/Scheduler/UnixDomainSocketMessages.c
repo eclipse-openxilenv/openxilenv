@@ -33,6 +33,8 @@
 #include "Config.h"
 #include "ThrowError.h"
 #include "MyMemory.h"
+#include "MemZeroAndCopy.h"
+#include "StringMaxChar.h"
 #include "Blackboard.h"
 #include "BlackboardAccess.h"
 #include "tcb.h"
@@ -55,9 +57,9 @@ static SOCKET CreateSoftcarLoginUnixDomainSocket (char *par_Prefix)
     char Name[MAX_PATH + 100];
     SOCKET sock_descriptor;
 
-    struct sockaddr_un serv_addr;
+    struct sockaddr_un serv_addr = {0};
 
-    if (CheckOpenIPCFile(par_Prefix, "unix_domain", Name, DIR_CREATE_EXIST, FILENAME_IGNORE) != 0) {
+    if (CheckOpenIPCFile(par_Prefix, "unix_domain", Name, sizeof(Name), DIR_CREATE_EXIST, FILENAME_IGNORE) != 0) {
         ThrowError (1, "cannot create unix domain socket file");
         return -1;
     }
@@ -76,11 +78,9 @@ static SOCKET CreateSoftcarLoginUnixDomainSocket (char *par_Prefix)
         return -1;
     }
 
-    memset((char *)&serv_addr, 0, sizeof(serv_addr));
-
     serv_addr.sun_family = AF_UNIX;
 
-    strcpy (serv_addr.sun_path, Name);
+    STRING_COPY_TO_ARRAY (serv_addr.sun_path, Name);
 
     if (bind(sock_descriptor, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
         ThrowError (1, "Failed to bind");
@@ -116,6 +116,8 @@ static void UnixDomainSocket_CloseConnectionToExternProcess (HANDLE Socket)
     close((SOCKET)Socket);
 }
 
+static int ThreadWillCallFirstAcceptState;
+
 static void* UnixDomainSocket_SoftcarLoginThreadProc (void* lpParam)
 {
     SOCKET Socket;
@@ -132,6 +134,7 @@ static void* UnixDomainSocket_SoftcarLoginThreadProc (void* lpParam)
         socklen_t size = sizeof(client_addr);
         SOCKET conn_desc;
 
+        ThreadWillCallFirstAcceptState = 1;
         // this blocks on this call until a client tries to establish connection.
         conn_desc = accept(Socket, (struct sockaddr *)&client_addr, &size);
         if (conn_desc <= 0) {
@@ -214,7 +217,7 @@ static int UnixDomainSocket_CreateSoftcarLoginThread (char *par_Prefix)
     static char StaticInstanceName[MAX_PATH];
 
     // This have to be copy to a static location because afterwards the scheduler thread will access this
-    strcpy (StaticInstanceName, par_Prefix);
+    STRING_COPY_TO_ARRAY (StaticInstanceName, par_Prefix);
 
     pthread_attr_init(&Attr);
     if (pthread_create(&Thread, &Attr, UnixDomainSocket_SoftcarLoginThreadProc, (void*)StaticInstanceName) != 0) {
@@ -222,6 +225,12 @@ static int UnixDomainSocket_CreateSoftcarLoginThread (char *par_Prefix)
         return -1;
     }
     pthread_attr_destroy(&Attr);
+
+    // wait until the login thread has called accept()
+    for(int x = 0; (x < 10) && !ThreadWillCallFirstAcceptState; x++) {
+        usleep(10*1000);
+    }
+    usleep(10*1000);
 
     return 0;
 }

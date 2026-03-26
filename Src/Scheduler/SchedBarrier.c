@@ -25,6 +25,7 @@
 #include "Files.h"
 #include "MyMemory.h"
 #include "StringMaxChar.h"
+#include "PrintFormatToString.h"
 #include "ThrowError.h"
 #include "Wildcards.h"
 #include "Scheduler.h"
@@ -167,9 +168,11 @@ AddBarrierLogging ((par_Lock), (par_BarrierNumber), (par_Action), (par_ProcessOr
 #endif
 }
 
-int GetNextBarrierLoggingEntry (int par_Index, char *ret_BarrierName,
+int GetNextBarrierLoggingEntry (int par_Index,
+                                char *ret_BarrierName, int par_BarrierName_Maxc,
                                 BARRIER_LOGGING_ACTION *ret_Action,
-                                BARRIER_LOGGING_TYPE *ret_ProcessOrSched, char *ret_ProcOrSchedName,
+                                BARRIER_LOGGING_TYPE *ret_ProcessOrSched,
+                                char *ret_ProcOrSchedName, int par_ProcOrSchedName_Maxc,
                                 int *ret_LineNr,
 
                                 // Snapshot
@@ -212,22 +215,22 @@ int GetNextBarrierLoggingEntry (int par_Index, char *ret_BarrierName,
             return -1;  // End of the list
         }
     }
-    strcpy (ret_BarrierName, Barriers[BarriersLogging[Index].BarrierNumber].Name);
+    StringCopyMaxCharTruncate (ret_BarrierName, Barriers[BarriersLogging[Index].BarrierNumber].Name, par_BarrierName_Maxc);
 
     *ret_Action = BarriersLogging[Index].Action;
     *ret_ProcessOrSched = BarriersLogging[Index].ProcessOrSched;
     switch (BarriersLogging[Index].ProcessOrSched) {
     //default:
     case BARRIER_LOGGING_UNDEF_TYPE:
-        strcpy (ret_ProcOrSchedName, "undef");
+        StringCopyMaxCharTruncate (ret_ProcOrSchedName, "undef", par_ProcOrSchedName_Maxc);
         break;
     case BARRIER_LOGGING_PROCESS_TYPE:
-        if (GetProcessShortName(BarriersLogging[Index].PidOrSchedNumber, ret_ProcOrSchedName)) {
-            sprintf (ret_ProcOrSchedName, "unknown pid = %i", BarriersLogging[Index].PidOrSchedNumber);
+        if (GetProcessShortName(BarriersLogging[Index].PidOrSchedNumber, ret_ProcOrSchedName, par_ProcOrSchedName_Maxc)) {
+            PrintFormatToString (ret_ProcOrSchedName, par_ProcOrSchedName_Maxc, "unknown pid = %i", BarriersLogging[Index].PidOrSchedNumber);
         }
         break;
     case BARRIER_LOGGING_SCHEDULER_TYPE:
-        strcpy (ret_ProcOrSchedName,  GetSchedulerName (BarriersLogging[Index].PidOrSchedNumber));
+        StringCopyMaxCharTruncate (ret_ProcOrSchedName, GetSchedulerName (BarriersLogging[Index].PidOrSchedNumber), par_ProcOrSchedName_Maxc);
         break;
     }
     *ret_LineNr = BarriersLogging[Index].LineNr;
@@ -274,8 +277,7 @@ int ConnectProcessToBarrier (struct TCB *pTcb, char *par_BarrierName, int par_Wa
                     return -1;
                 }
                 // Only for information store the name
-                Barriers[x].AssociatedSchedulerOrProcesses[Barriers[x].ProcesseOrSchedulerCount] = my_malloc (strlen (pTcb->name) + 1);
-                strcpy (Barriers[x].AssociatedSchedulerOrProcesses[Barriers[x].ProcesseOrSchedulerCount], pTcb->name);
+                Barriers[x].AssociatedSchedulerOrProcesses[Barriers[x].ProcesseOrSchedulerCount] = StringMalloc (pTcb->name);
                 Barriers[x].Types[Barriers[x].ProcesseOrSchedulerCount] = BARRIER_FOR_PROCESS;
                 Barriers[x].WaitFlags[Barriers[x].ProcesseOrSchedulerCount] = par_WaitFlags;
                 Barriers[x].Ref[Barriers[x].ProcesseOrSchedulerCount].Tcb = pTcb;
@@ -439,8 +441,7 @@ int ConnectSchedulerToBarrier (SCHEDULER_DATA *Scheduler, char *par_BarrierName,
                     return -1;
                 }
                 // Only for information store the name
-                Barriers[x].AssociatedSchedulerOrProcesses[Barriers[x].ProcesseOrSchedulerCount] = my_malloc (strlen (Scheduler->SchedulerName) + 1);
-                strcpy (Barriers[x].AssociatedSchedulerOrProcesses[Barriers[x].ProcesseOrSchedulerCount], Scheduler->SchedulerName);
+                Barriers[x].AssociatedSchedulerOrProcesses[Barriers[x].ProcesseOrSchedulerCount] = StringMalloc (Scheduler->SchedulerName);
                 Barriers[x].Types[Barriers[x].ProcesseOrSchedulerCount] = BARRIER_FOR_SCHEDULER;
                 Barriers[x].WaitFlags[Barriers[x].ProcesseOrSchedulerCount] = par_WaitFlags;
                 Barriers[x].Ref[Barriers[x].ProcesseOrSchedulerCount].Schedulers = Scheduler;
@@ -556,7 +557,7 @@ void DisconnectSchedulerFromAllBarriers (SCHEDULER_DATA *Scheduler)
 static void InitBarrier (SCHED_BARRIER *pBarrier, char *Name, int WaitIfAlone)
 {
     int x;
-    memset (pBarrier, 0, sizeof (SCHED_BARRIER));
+    MEMSET (pBarrier, 0, sizeof (SCHED_BARRIER));
     InitializeCriticalSection (&(pBarrier->CriticalSection));
     for (x = 0; x < 2; x++) {
         InitializeCriticalSection (&(pBarrier->Ib[x].CriticalSection));
@@ -583,7 +584,7 @@ static void DestroyBarrier (SCHED_BARRIER *pBarrier)
     for (x = 0; x < 2; x++) {
         DeleteCriticalSection (&(pBarrier->Ib[x].CriticalSection));
     }
-    memset (pBarrier, 0, sizeof (SCHED_BARRIER));
+    MEMSET (pBarrier, 0, sizeof (SCHED_BARRIER));
 }
 
 
@@ -608,7 +609,7 @@ int AddBarrier (char *par_BarrierName ,int par_WaitIfAlone)
     for (x = 0; x < MAX_BARRIERS; x++) {
         if (Barriers[x].State == BARRIER_STATE_EMPTY) {
             InitBarrier (&Barriers[x], par_BarrierName, par_WaitIfAlone);
-            strcpy (Barriers[x].Name, par_BarrierName);
+            STRING_COPY_TO_ARRAY (Barriers[x].Name, par_BarrierName);
             LeaveCriticalSection (&GlobalBarrierCriticalSection);
             return x;
         }
@@ -654,7 +655,7 @@ static int InitAndReadBarrierConfigFromIni (SCHED_BARRIER *pBarrier, int Index)
     int WaitIfAloneFlag;
     int Fd = GetMainFileDescriptor();
 
-    sprintf (Entry, "Barrier_%i", Index);
+    PrintFormatToString (Entry, sizeof(Entry), "Barrier_%i", Index);
     if (IniFileDataBaseReadString ("SchedulerBarriersConfiguration", Entry, "", Line, sizeof (Line), Fd) <= 0) {
         return -1;
     }
@@ -694,7 +695,7 @@ int AddNewBarrierToIni (const char *par_BarrierName)
     int Fd = GetMainFileDescriptor();
 
     for (b = 0; ; b++) {
-        sprintf (Entry, "Barrier_%i", b);
+        PrintFormatToString (Entry, sizeof(Entry), "Barrier_%i", b);
         if (IniFileDataBaseReadString ("SchedulerBarriersConfiguration", Entry, "", BarrierName, sizeof (BarrierName), Fd) <= 0) {
             break;
         }
@@ -711,7 +712,7 @@ int DeleteBarrierFromIni (const char *par_BarrierName)
     int Fd = GetMainFileDescriptor();
 
     for (b = 0; ; b++) {
-        sprintf (Entry, "Barrier_%i", b);
+        PrintFormatToString (Entry, sizeof(Entry), "Barrier_%i", b);
         if (IniFileDataBaseReadString ("SchedulerBarriersConfiguration", Entry, "", BarrierName, sizeof (BarrierName), Fd) <= 0) {
             break;
         }
@@ -719,13 +720,13 @@ int DeleteBarrierFromIni (const char *par_BarrierName)
             IniFileDataBaseWriteString ("SchedulerBarriersConfiguration", Entry, NULL, Fd);
             // Now move all 1 up
             for (b++; ; b++) {
-                sprintf (Entry, "Barrier_%i", b);
+                PrintFormatToString (Entry, sizeof(Entry), "Barrier_%i", b);
                 if (IniFileDataBaseReadString ("SchedulerBarriersConfiguration", Entry, "", BarrierName, sizeof (BarrierName), Fd) <= 0) {
                     break;
                 }
                 // remove old entry
                 IniFileDataBaseWriteString ("SchedulerBarriersConfiguration", Entry, NULL, Fd);
-                sprintf (Entry, "Barrier_%i", b - 1);
+                PrintFormatToString (Entry, sizeof(Entry), "Barrier_%i", b - 1);
                 // add new entry
                 IniFileDataBaseWriteString ("SchedulerBarriersConfiguration", Entry, BarrierName, Fd);
             }
@@ -1545,7 +1546,7 @@ int AddProcessOrSchdulerToBarrierIniConfig (char *par_Name, int par_ProcessOrSch
     int Fd = GetMainFileDescriptor();
 
     for (b = 0; ; b++) {
-        sprintf (Entry, "Barrier_%i", b);
+        PrintFormatToString (Entry, sizeof(Entry), "Barrier_%i", b);
         if (IniFileDataBaseReadString ("SchedulerBarriersConfiguration", Entry, "", BarrierName, sizeof (BarrierName), Fd) <= 0) {
             break;
         }
@@ -1565,7 +1566,7 @@ int AddProcessOrSchdulerToBarrierIniConfig (char *par_Name, int par_ProcessOrSch
             } else {
                 Wait = "OnlySignal";
             }
-            sprintf (Entry, "Barriers%s%sFor%s %s", BeforeBehind, Wait, Type, par_Name);
+            PrintFormatToString (Entry, sizeof(Entry), "Barriers%s%sFor%s %s", BeforeBehind, Wait, Type, par_Name);
             IniFileDataBaseReadString (SCHED_INI_SECTION, Entry, "", Line, INI_MAX_LINE_LENGTH, Fd);
 
             BarrierCount = 0;
@@ -1598,8 +1599,8 @@ int AddProcessOrSchdulerToBarrierIniConfig (char *par_Name, int par_ProcessOrSch
                 } else {
                     // Read the line again because it was destroyed
                     IniFileDataBaseReadString (SCHED_INI_SECTION, Entry, "", Line, INI_MAX_LINE_LENGTH, Fd);
-                    strcat (Line, ";");
-                    strcat (Line, par_Name);
+                    STRING_APPEND_TO_ARRAY (Line, ";");
+                    STRING_APPEND_TO_ARRAY (Line, par_Name);
                     IniFileDataBaseWriteString (SCHED_INI_SECTION, Entry, Line, Fd);
                     return 0;
                 }
@@ -1627,7 +1628,7 @@ int RemoveProcessOrSchedulerFromBarrierIniConfig (char *par_Name, int par_Proces
 
     NewLine[0] = 0;
     for (b = 0; ; b++) {
-        sprintf (Entry, "Barrier_%i", b);
+        PrintFormatToString (Entry, sizeof(Entry), "Barrier_%i", b);
         if (IniFileDataBaseReadString ("SchedulerBarriersConfiguration", Entry, "", BarrierName, sizeof (BarrierName), Fd) <= 0) {
             break;
         }
@@ -1647,7 +1648,7 @@ int RemoveProcessOrSchedulerFromBarrierIniConfig (char *par_Name, int par_Proces
             } else {
                 Wait = "OnlySignal";
             }
-            sprintf (Entry, "Barriers%s%sFor%s %s", BeforeBehind, Wait, Type, par_Name);
+            PrintFormatToString (Entry, sizeof(Entry), "Barriers%s%sFor%s %s", BeforeBehind, Wait, Type, par_Name);
             IniFileDataBaseReadString (SCHED_INI_SECTION, Entry, "", Line, INI_MAX_LINE_LENGTH, Fd);
 
             BarrierCount = 0;
@@ -1663,8 +1664,10 @@ int RemoveProcessOrSchedulerFromBarrierIniConfig (char *par_Name, int par_Proces
                         if (strlen (pp)) {
                             if (strcmp (pp, par_Barrier)) {  // cutout the barrier
                             } else {
-                                if (BarrierCount) strcat (NewLine, ";");
-                                strcat (NewLine, pp);
+                                if (BarrierCount) {
+                                    STRING_APPEND_TO_ARRAY (NewLine, ";");
+                                }
+                                STRING_APPEND_TO_ARRAY (NewLine, pp);
                                 BarrierCount++;
                             }
                         }
@@ -1695,13 +1698,13 @@ void RemoveProcessOrSchedulerFromAllBarrierIniConfig (const char *par_Name, int 
     } else {
         Type = "Scheduler";
     }
-    sprintf (Entry, "BarriersBeforeOnlySignalFor%s %s", Type, par_Name);
+    PrintFormatToString (Entry, sizeof(Entry), "BarriersBeforeOnlySignalFor%s %s", Type, par_Name);
     IniFileDataBaseWriteString (SCHED_INI_SECTION, Entry, NULL, Fd);
-    sprintf (Entry, "BarriersBeforeSignalAndWaitFor%s %s", Type, par_Name);
+    PrintFormatToString (Entry, sizeof(Entry), "BarriersBeforeSignalAndWaitFor%s %s", Type, par_Name);
     IniFileDataBaseWriteString (SCHED_INI_SECTION, Entry, NULL, Fd);
-    sprintf (Entry, "BarriersBehindOnlySignalFor%s %s", Type, par_Name);
+    PrintFormatToString (Entry, sizeof(Entry), "BarriersBehindOnlySignalFor%s %s", Type, par_Name);
     IniFileDataBaseWriteString (SCHED_INI_SECTION, Entry, NULL, Fd);
-    sprintf (Entry, "BarriersBehindSignalAndWaitFor%s %s", Type, par_Name);
+    PrintFormatToString (Entry, sizeof(Entry), "BarriersBehindSignalAndWaitFor%s %s", Type, par_Name);
     IniFileDataBaseWriteString (SCHED_INI_SECTION, Entry, NULL, Fd);
 }
 
@@ -1865,7 +1868,8 @@ void WriteBarrierLoggingToFile (void)
                  "Count\n");
     Index = -1;
     while ((Index = GetNextBarrierLoggingEntry (Index, BarrierName, &BeforeOrBehind,
-                                                &ProcOrSched, ProcOrSchedName, &LineNr, &SleepFlag, &State, &FirstOrSecond, &Mask, &Flags, &Switch, &BarriersLoggingCounter,
+                                                &ProcOrSched, ProcOrSchedName, sizeof(ProcOrSchedName),
+                                                &LineNr, &SleepFlag, &State, &FirstOrSecond, &Mask, &Flags, &Switch, &BarriersLoggingCounter,
                                                 &AddNewProcessMasksBefore,
                                                 &AddNewProcessMasksBehind,
                                                 &AddNewSchedulerMasks,

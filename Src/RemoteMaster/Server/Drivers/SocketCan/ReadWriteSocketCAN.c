@@ -28,6 +28,7 @@
 #include <linux/can.h>
 #include <linux/can/raw.h>
 #include "StringMaxChar.h"
+#include "PrintFormatToString.h"
 #include "ReadCanCfg.h"
 #include "RealtimeScheduler.h"
 #include "ReadWriteSocketCAN.h"
@@ -46,21 +47,21 @@ int SocketCAN_open_can(NEW_CAN_SERVER_CONFIG *csc, int channel)
 
     ChannelOnCardNr = csc->channels[channel].CardTypeNrChannel & 0xFF;
 
-    sprintf(CmdLine, "ip link set down can%i", ChannelOnCardNr);
+    PrintFormatToString (CmdLine, sizeof(CmdLine), "ip link set down can%i", ChannelOnCardNr);
     Status = system(CmdLine);
 
     // ip link set can0 txqueuelen 1000
     if (csc->channels[channel].can_fd_enabled) {
-        sprintf(CmdLine, "ip link set can%i type can bitrate %i sample-point %f dbitrate %i dsample-point %f fd on", 
+        PrintFormatToString (CmdLine, sizeof(CmdLine), "ip link set can%i type can bitrate %i sample-point %f dbitrate %i dsample-point %f fd on",
                 ChannelOnCardNr, csc->channels[channel].bus_frq * 1000, csc->channels[channel].sample_point, csc->channels[channel].data_baud_rate * 1000, csc->channels[channel].data_sample_point);
     } else {
-        sprintf(CmdLine, "ip link set can%i type can bitrate %i sample-point %f", 
+        PrintFormatToString (CmdLine, sizeof(CmdLine), "ip link set can%i type can bitrate %i sample-point %f",
                 ChannelOnCardNr, csc->channels[channel].bus_frq * 1000, csc->channels[channel].sample_point);
     }
     Status = system(CmdLine);
     if (Status != 0) return -1;
 
-    sprintf(CmdLine, "ip link set up can%i", ChannelOnCardNr);
+    PrintFormatToString (CmdLine, sizeof(CmdLine), "ip link set up can%i", ChannelOnCardNr);
     Status = system(CmdLine);
     if (Status != 0) return -1;
 
@@ -68,8 +69,8 @@ int SocketCAN_open_can(NEW_CAN_SERVER_CONFIG *csc, int channel)
 
     /* Locate the interface you wish to use */
     struct ifreq ifr;
-    sprintf(DeviceName, "can%i", ChannelOnCardNr);
-    strcpy(ifr.ifr_name, DeviceName);
+    PrintFormatToString (DeviceName, sizeof(DeviceName), "can%i", ChannelOnCardNr);
+    STRING_COPY_TO_ARRAY(ifr.ifr_name, DeviceName);
     Status = ioctl(Socket, SIOCGIFINDEX, &ifr); /* ifr.ifr_ifindex gets filled
                                                  * with that device's index */
     if (Status != 0) {
@@ -110,7 +111,7 @@ int SocketCAN_close_can(NEW_CAN_SERVER_CONFIG *csc, int channel)
 
     close(csc->channels[channel].Socket);
 
-    sprintf(CmdLine, "ip link set down can%i", ChannelOnCardNr);
+    PrintFormatToString (CmdLine, sizeof(CmdLine), "ip link set down can%i", ChannelOnCardNr);
     Status = system(CmdLine);
     if (Status != 0) return -1;
     return 0;
@@ -163,7 +164,7 @@ __IGNORE_FD:
                         (((Frame.flags & CANFD_FDF) == CANFD_FDF) << 2) |
                         (((Frame.flags & CANFD_BRS) == CANFD_BRS) << 1);
                 *psize = Frame.len;
-                memcpy(data, Frame.data, Frame.len);
+                MEMCPY(data, Frame.data, Frame.len);
                 return 1;
             }
         } else {
@@ -187,7 +188,7 @@ __IGNORE_FD:
                 *pid = (uint32_t)(Frame.can_id & 0x1FFFFFFF);
                 *pext = (unsigned char)(Frame.can_id >> 31);
                 *psize = Frame.can_dlc;
-                memcpy(data, Frame.data, 8);
+                MEMCPY(data, Frame.data, 8);
                 return 1;
             }
         } else {
@@ -282,7 +283,7 @@ int SocketCAN_info_can(struct NEW_CAN_SERVER_CONFIG_STRUCT *csc, int channel, in
         } else return -2;
     case CAN_CHANNEL_INFO_CAN_CARD_STRING:
         if (MaxReturnSize >= 15) {
-            strcpy((char*)Return, "Socket CAN");
+            StringCopyMaxCharTruncate((char*)Return, "Socket CAN", MaxReturnSize);
             return (int)strlen((char*)Return) + 1;
         } else return -2;
     }
