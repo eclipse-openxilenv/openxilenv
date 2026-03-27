@@ -1,3 +1,19 @@
+/*
+ * Copyright 2024 ZF Friedrichshafen AG
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 #ifndef MDF4_STRUCTS_H
 #define MDF4_STRUCTS_H
 
@@ -20,24 +36,6 @@ typedef struct {
     char Reserved3[30];
 } MDF4_IDBLOCK;
 
-#if 0
-typedef struct {
-    char BlockTypeIdentifier[4];   //  always "##TX"
-    uint16_t BlockSize;              // Block size of this block in bytes (entire TXBLOCK)
-} MDF4_TXBLOCK;
-
-typedef struct {
-    double LowerRange;
-    double UpperRange;
-    int32_t PointerToTx;
-}  MDF4_COMPU_VTAB_RANGE;
-
-typedef struct {
-    double Value;
-    char AssignedText[32];
-} MDF4_COMPU_VTAB;
-#endif
-
 typedef struct {
     char BlockTypeIdentifier[4];   //  always "##xx"
     uint32_t Reserved;
@@ -46,7 +44,7 @@ typedef struct {
 } MDF4_BLOCK_HEADER;
 
 typedef struct {
-    uint64_t Time;           // Time in nanoseconds since 1970 also
+    uint64_t Time;           // Time in nanoseconds since 1970
     int16_t TimeZoneOffset;  // Time zone offsets in minutes. Best practice is to always use UTC.
     int16_t DstOffset;       // DST offset in minutes. Best practice is to always use UTC.
     uint8_t flags;
@@ -63,11 +61,12 @@ typedef struct {
 
 typedef struct {
     MDF4_TIME_STAMP TimeStamp;
+    uint8_t Reserved[3];
 } MDF4_FHBLOCK;
 
 typedef struct {
     uint8_t RecIdSize;
-    uint8_t Reserved;
+    uint8_t Reserved[7];
 } MDF4_DGBLOCK;
 
 typedef struct {

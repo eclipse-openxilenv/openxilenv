@@ -25,6 +25,8 @@
 #include "QtIniFile.h"
 
 extern "C" {
+    #include "MemZeroAndCopy.h"
+    #include "PrintFormatToString.h"
     #include "Scheduler.h"
     #include "MyMemory.h"
     #include "ThrowError.h"
@@ -80,7 +82,7 @@ void ConfigureSchedulersDialog::ReadAllSchedulerInfos2Struct()
     for (int x = 1; ; x++) {
         char Entry[64];
         char Line[INI_MAX_LINE_LENGTH];
-        sprintf (Entry, "Scheduler_%i", x);
+        PrintFormatToString (Entry, sizeof(Entry), "Scheduler_%i", x);
         if (IniFileDataBaseReadString ("Scheduler", Entry, "", Line, sizeof (Line), Fd) <= 0) {
             break;
         }
@@ -95,7 +97,7 @@ void ConfigureSchedulersDialog::InsertAllBarriers()
     char Entry[64];
     char Line[INI_MAX_LINE_LENGTH];
     for (int b = 0; ; b++) {
-        sprintf (Entry, "Barrier_%i", b);
+        PrintFormatToString (Entry, sizeof(Entry), "Barrier_%i", b);
         if (IniFileDataBaseReadString ("SchedulerBarriersConfiguration", Entry, "", Line, sizeof (Line), GetMainFileDescriptor()) <= 0) {
             break;
         }
@@ -266,7 +268,7 @@ void ConfigureSchedulersDialog::on_AddSchedulerPushButton_clicked()
         if (!NewScheduler.isEmpty()) {
             if (!StructContainsSchedulerName (NewScheduler)) {
                 struct DialogData New;
-                memset (&New, 0, sizeof (New));
+                STRUCT_ZERO_INIT (New, struct DialogData);
                 New.m_Changed = 1;  // Mark new scheduler immediately  as changed otherwise it will not stored
                 New.m_SchedulerPrio = THREAD_PRIORITY_IDLE;  // default is always lowest prio
                 m_SchedulerInfos.insert (NewScheduler, New);
@@ -341,18 +343,18 @@ void ConfigureSchedulersDialog::DeleteSchedulerInfosFromIni (QString par_Schedul
     for (int x = 1; ; x++) {
         char Entry[64];
         char Line[INI_MAX_LINE_LENGTH];
-        sprintf (Entry, "Scheduler_%i", x);
+        PrintFormatToString (Entry, sizeof(Entry), "Scheduler_%i", x);
         if (IniFileDataBaseReadString ("Scheduler", Entry, "", Line, sizeof (Line), Fd) <= 0) break;
         if (!strcmp (QStringToConstChar(par_Scheduler), Line)) {
             ScQt_IniFileDataBaseWriteString ("Scheduler", Entry, nullptr, Fd);
             for (x++; ; x++) {
-                sprintf (Entry, "Scheduler_%i", x);
+                PrintFormatToString (Entry, sizeof(Entry), "Scheduler_%i", x);
                 if (IniFileDataBaseReadString ("Scheduler", Entry, "", Line, sizeof (Line), Fd) <= 0) break;
                 ScQt_IniFileDataBaseWriteString ("Scheduler", Entry, nullptr, Fd);
-                sprintf (Entry, "Scheduler_%i", x - 1);
+                PrintFormatToString (Entry, sizeof(Entry), "Scheduler_%i", x - 1);
                 ScQt_IniFileDataBaseWriteString ("Scheduler", Entry, Line, Fd);
             }
-            sprintf (Entry, "PriorityForScheduler %s", QStringToConstChar(par_Scheduler));
+            PrintFormatToString (Entry, sizeof(Entry), "PriorityForScheduler %s", QStringToConstChar(par_Scheduler));
             ScQt_IniFileDataBaseWriteString ("Scheduler", Entry, nullptr, Fd);
 
             RemoveProcessOrSchedulerFromAllBarrierIniConfig (QStringToConstChar(par_Scheduler), 0);

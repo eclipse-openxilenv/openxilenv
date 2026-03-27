@@ -20,9 +20,9 @@
 #include "QVariantConvert.h"
 #include <QBrush>
 
-A2LCalMapModel::A2LCalMapModel() //A2LCalMapData *par_Data)
+A2LCalMapModel::A2LCalMapModel()
 {
-    m_Data = new A2LCalMapData; //par_Data;
+    m_Data = new A2LCalMapData;
 }
 
 A2LCalMapModel::~A2LCalMapModel()
@@ -93,11 +93,13 @@ void A2LCalMapModel::Update()
     //endResetModel();
 }
 
-void A2LCalMapModel::UpdateAck(void *par_Data)
+void A2LCalMapModel::UpdateAck(int par_LinkNo, int par_Index, void *par_Data)
 {
-    beginResetModel();
-    m_Data->UpdateAck(par_Data);
-    endResetModel();
+    if ((par_LinkNo == m_Data->GetLinkNo()) && (par_Index == m_Data->GetIndex())) {
+        beginResetModel();
+        m_Data->UpdateAck(par_Data);
+        endResetModel();
+    }
 }
 
 void A2LCalMapModel::Reset()
@@ -130,6 +132,11 @@ int A2LCalMapModel::GetMapDataType()
     return m_Data->GetDataType(A2LCalMapData::ENUM_AXIS_TYPE_MAP, 0);  // 2 -> map, 0 -> all have the same data type
 }
 
+int A2LCalMapModel::GetMapConversionType()
+{
+    return m_Data->GetMapConversionType();
+}
+
 const char *A2LCalMapModel::GetMapConversion()
 {
     return m_Data->GetMapConversion();
@@ -145,7 +152,7 @@ int A2LCalMapModel::ChangeSelectedMapValues(double NewValue, int op)
         for (int y = 0; y < YDim; y++) {
             if (m_Data->IsPicked(x, y)) {
                 Ret = Ret || (m_Data->ChangeValueOP (op, NewValue, A2LCalMapData::ENUM_AXIS_TYPE_MAP, x, y) != 0);  // 2 -> Map
-                ChangeData(2, x, y);   // Wert in Tabellen Ansicht updaten
+                ChangeData(2, x, y);   // update view of value inside table
             }
         }
     }
@@ -164,7 +171,7 @@ int A2LCalMapModel::ChangeSelectedMapValues(union FloatOrInt64 par_Value, int pa
             if (m_Data->IsPicked(x, y)) {
                 QVariant Variant = ConvertFloatOrInt64ToQVariant(par_Value, par_Type);
                 Ret = Ret || (m_Data->ChangeValueOP (op, Variant, A2LCalMapData::ENUM_AXIS_TYPE_MAP, x, y) != 0);  // 2 -> Map
-                ChangeData(2, x, y);   // Wert in Tabellen Ansicht updaten
+                ChangeData(2, x, y);   // update view of value inside table
             }
         }
     }
@@ -196,10 +203,10 @@ int A2LCalMapModel::ChangeSelectedValuesWithDialog(QWidget *parent, int op)
 
     switch (op) {
     case '+':
-        Dlg = new ChangeValueTextDialog(parent, "add to value", GetMapDataType(), IsPhysical(), GetMapConversion());
+        Dlg = new ChangeValueTextDialog(parent, "add to value", GetMapDataType(), IsPhysical(), GetMapConversionType(), GetMapConversion());
         break;
     case '-':
-        Dlg = new ChangeValueTextDialog(parent, "subtract from value", GetMapDataType(), IsPhysical(), GetMapConversion());
+        Dlg = new ChangeValueTextDialog(parent, "subtract from value", GetMapDataType(), IsPhysical(), GetMapConversionType(), GetMapConversion());
         break;
     case '*':
         Dlg = new ChangeValueTextDialog(parent, "multiplay with value");
@@ -209,7 +216,7 @@ int A2LCalMapModel::ChangeSelectedValuesWithDialog(QWidget *parent, int op)
         break;
     case 'i':
     case 'I':
-        Dlg = new ChangeValueTextDialog(parent, "set value", GetMapDataType(), IsPhysical(), GetMapConversion());
+        Dlg = new ChangeValueTextDialog(parent, "set value", GetMapDataType(), IsPhysical(),  GetMapConversionType(), GetMapConversion());
         {
             int XLastPick, YLastPick;
             m_Data->GetLastPick(&XLastPick, &YLastPick);
@@ -258,33 +265,21 @@ QVariant A2LCalMapModel::data(const QModelIndex &index, int role) const
                     return Raw;
                 }
             } else {
-                // X-Achse
+                // X axis
                 if (Column <= m_Data->GetXDim()) {
                     return m_Data->GetValueString(0, Column-1, 0);
-                    /*A2L_SINGLE_VALUE *Value = m_Data->GetValue(0, Column-1, 0);
-                    if (Value == nullptr) return QString("error");
-                    QString ValueStr = m_Data->ConvertValueToString(Value);
-                    return ValueStr;*/
                 }
             }
         } else {
             if (Column == 0) {
-                // Y-Achse
+                // Y axis
                 if (Row <= m_Data->GetYDim()) {
                     return m_Data->GetValueString(1, Row-1, 0);
-                    /*A2L_SINGLE_VALUE *Value = m_Data->GetValue(1, Row-1, 0);
-                    if (Value == nullptr) return QString("error");
-                    QString ValueStr = m_Data->ConvertValueToString(Value);
-                    return ValueStr;*/
                 }
             } else {
                 // Map
                 if ((Row <= m_Data->GetYDim()) && (Column <= m_Data->GetXDim())) {
                     return m_Data->GetValueString(2, Column-1, Row-1);
-                    /* A2L_SINGLE_VALUE *Value = m_Data->GetValue(2, Row-1, Column-1);
-                    if (Value == nullptr) return QString("error");
-                    QString ValueStr = m_Data->ConvertValueToString(Value);
-                    return ValueStr;*/
                 }
             }
         }
@@ -300,16 +295,13 @@ QVariant A2LCalMapModel::data(const QModelIndex &index, int role) const
             return (int)Qt::AlignRight | (int)Qt::AlignVCenter;
         }
         break;
-    /*case Qt::EditRole:
-        break;
-    */
-    case Qt::UserRole + 1:  // Double Value
+    case Qt::UserRole + 1:  // Double value
         if (Row == 0) {
             if (Column == 0) {
                 QVariant Value(0.0);
                 return Value;
             } else {
-                // X-Achse
+                // X axis
                 if (Column <= m_Data->GetXDim()) {
                     A2L_SINGLE_VALUE *Value = m_Data->GetValue(0, Column-1, 0);
                     if (Value == nullptr) return QVariant();
@@ -319,7 +311,7 @@ QVariant A2LCalMapModel::data(const QModelIndex &index, int role) const
             }
         } else {
             if (Column == 0) {
-                // Y-Achse
+                // Y axis
                 if (Row <= m_Data->GetYDim()) {
                     A2L_SINGLE_VALUE *Value = m_Data->GetValue(1, Row-1, 0);
                     if (Value == nullptr) return QVariant();
@@ -371,7 +363,7 @@ bool A2LCalMapModel::setData(const QModelIndex &par_index, const QVariant &par_v
                     }
                 }
             } else {
-                // X-Achse
+                // X axis
                 if (Column <= m_Data->GetXDim()) {
                     bool Ok;
                     double help = par_value.toDouble(&Ok);
@@ -385,7 +377,7 @@ bool A2LCalMapModel::setData(const QModelIndex &par_index, const QVariant &par_v
             }
         } else {
             if (Column == 0) {
-                // Y-Achse
+                // Y axis
                 if (Row <= m_Data->GetYDim()) {
                     bool Ok;
                     double help = par_value.toDouble(&Ok);
@@ -431,7 +423,7 @@ Qt::ItemFlags A2LCalMapModel::flags(const QModelIndex &index) const
                 return Qt::ItemIsEnabled;
             }
         } else {
-            return  Qt::ItemIsEditable | Qt::ItemIsEnabled;  // (0,0) Element ist Raw/Phys-Anzeige
+            return  Qt::ItemIsEditable | Qt::ItemIsEnabled;  // (0,0) Element is the Raw/Phys switch
         }
     } else {
         if (Column == 0) {
@@ -458,11 +450,11 @@ void A2LCalMapModel::ChangeData(int axis, int x, int y)
 {
     int Row, Column;
     switch (axis) {
-    case 0: // X-Achse
+    case 0: // X axis
         Row = 0;
         Column = x;
         break;
-    case 1: // Y-Achse
+    case 1: // Y axis
         Row = y;
         Column = 0;
         break;

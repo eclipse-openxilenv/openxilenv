@@ -21,14 +21,17 @@ extern "C" {
 #include "ThrowError.h"
 }
 
-ChangeValueTextDialog::ChangeValueTextDialog(QWidget *parent, QString par_Header, int par_DataType, bool par_PhysicalFlag, const char *par_Converion) : Dialog(parent),
+ChangeValueTextDialog::ChangeValueTextDialog(QWidget *parent, QString par_Header, int par_DataType, bool par_PhysicalFlag,
+                                             int par_ConvType, const char *par_Converion) :
+    Dialog(parent),
     ui(new Ui::ChangeValueTextDialog)
 {
     ui->setupUi(this);
     if (par_Header.size()) ui->label->setText(par_Header);
     ui->ValueEdit->setFocus();
     ui->ValueEdit->SetDisplayRawValue(true);
-    if ((par_DataType >= BB_BYTE) && (par_DataType <= BB_UDWORD)) {
+    if (((par_DataType >= BB_BYTE) && (par_DataType <= BB_UDWORD)) ||
+        ((par_DataType >= BB_QWORD) && (par_DataType <= BB_UQWORD))) {
         ui->ValueEdit->SetRawOnlyInt(true);
     }
     ui->ValueEdit->SetHeaderState(true);
@@ -39,7 +42,7 @@ ChangeValueTextDialog::ChangeValueTextDialog(QWidget *parent, QString par_Header
     ui->ValueEdit->SetStepLinear(true);
     ui->ValueEdit->SetPlusMinusIncrement(1.0);
     if (par_Converion != nullptr) {
-        ui->ValueEdit->SetFormulaString(par_Converion);
+        ui->ValueEdit->SetConersionTypeAndString((enum BB_CONV_TYPES)par_ConvType, par_Converion);
     }
 }
 

@@ -79,17 +79,13 @@ void A2LCalMapWidgetSyncObject::NotifiyGetDataFromLinkAckToWidgetThreadSlot(void
 {
     // now we are inside the context of the thread where the A2LCalWidgets live.
     foreach (A2LCalMapWidget* Widget, m_ListOfAllA2LCalMapWidget) {
-        if (Widget == par_Param) {
-            Widget->NotifiyGetDataFromLinkAck (par_IndexData, par_FetchDataChannelNo);
-            return;
-        }
+        Widget->NotifiyGetDataFromLinkAck (par_IndexData, par_FetchDataChannelNo);
     }
     foreach (A2LCalSingleWidget* Widget, m_ListOfAllA2LCalSingleWidget) {
-        if (Widget == par_Param) {
-            Widget->NotifiyGetDataFromLinkAck (par_IndexData, par_FetchDataChannelNo);
-            return;
-        }
+        Widget->NotifiyGetDataFromLinkAck (par_IndexData, par_FetchDataChannelNo);
     }
+    INDEX_DATA_BLOCK *IndexData = (INDEX_DATA_BLOCK*)par_IndexData;
+    FreeIndexDataBlock(IndexData);
 }
 
 static A2LCalMapWidgetSyncObject *SyncObject;

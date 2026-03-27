@@ -43,7 +43,7 @@ int StopScript(void);
 void ScriptIdentifyPath (char *par_Filename);
 int copy_file(const char *quelldateiname, const char *zieldateiname);
 
-extern char script_filename[];
+extern char script_filename[MAX_PATH];
 
 extern unsigned char  script_status_flag;
 

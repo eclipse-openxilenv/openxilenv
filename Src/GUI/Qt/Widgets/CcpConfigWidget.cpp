@@ -302,7 +302,7 @@ void CCPConfigWidget::on_pushButtonExport_clicked()
         break;
     }
     for (int x = 0; x < ListWidget->count(); x++) {
-        strcpy(Text, QStringToConstChar(ListWidget->item(x)->text()));
+        STRING_COPY_TO_ARRAY(Text, QStringToConstChar(ListWidget->item(x)->text()));
         fprintf (fh, "%s\n", Text);
     }
     close_file (fh);

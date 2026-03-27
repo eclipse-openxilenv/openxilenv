@@ -22,6 +22,9 @@
 
 #include "PhysValueInput.h"
 #include "A2LCalSingleModel.h"
+extern "C" {
+#include "BlackboardConversion.h"
+}
 
 A2LCalSingleDelegateEditor::A2LCalSingleDelegateEditor(QObject *parent) :
     QItemDelegate(parent)
@@ -59,23 +62,11 @@ QWidget *A2LCalSingleDelegateEditor::createEditor(QWidget *parent,
         }
     case 1:  // Value
         {
-            PhysValueInput *editor = new PhysValueInput(parent);
-            if (Item->GetDisplayType() == 3) {  // physical
-                switch(Item->GetInfos()->m_ConvType) {
-                case 1:
-                    editor->SetFormulaString(Item->GetInfos()->m_Conversion);
-                    break;
-                case 2:
-                    editor->SetEnumString(Item->GetInfos()->m_Conversion);
-                    break;
-                default:
-                    break;
-                }
-                editor->SetDisplayPhysValue(true);
-                editor->SetDisplayRawValue(false);
-            } else {
-                editor->SetDisplayRawValue(true);
-                editor->SetDisplayPhysValue(false);
+            bool Physical = Item->GetDisplayType() == 3;
+            PhysValueInput *editor = new PhysValueInput(parent, -1, !Physical, Physical);
+            if (Physical) {  // physical
+                editor->SetConersionTypeAndString((enum BB_CONV_TYPES)Item->GetInfos()->m_ConvType,
+                                                  Item->GetInfos()->m_Conversion);
             }
             double Min, Max;
 

@@ -26,12 +26,11 @@ extern "C" {
 #include "ThrowError.h"
 #include "MyMemory.h"
 #include "EnvironmentVariables.h"
+#include "EquationParser.h"
 }
 
 UserControlButton::UserControlButton(int par_Pos, QString &par_ParameterString, UserControlElement *par_Parent) : UserControlElement(par_Parent)
 {
-    //if (par_Parent == nullptr) m_PushButton = new QPushButton();
-    //else m_PushButton = new QPushButton(par_Parent->GetWidget());
     m_PushButton = new QPushButton();
     connect (m_PushButton, SIGNAL(clicked()), this, SLOT(ButtonPressed()));
     InitParameter(par_Pos, par_ParameterString);
@@ -48,27 +47,33 @@ void UserControlButton::ResetToDefault()
     m_Text.clear();
     m_Properties.Add(QString("text"), QString());
     m_Script.clear();
-    m_Properties.Add(QString("script"), QString("text"));
+    m_Properties.Add(QString("script"), QString(""));
+    m_Equation.clear();
+    m_Properties.Add(QString("equation"), QString(""));
 }
 
 void UserControlButton::SetDefaultParameterString()
 {
-    m_ParameterLine = QString("(x=0,y=0,width=1,height=1,text=text)");
+    m_ParameterLine = QString("(x=0,y=0,width=1,height=1,text=button)");
 }
 
 bool UserControlButton::ParseOneParameter(QString &par_Value)
 {
-    QStringList List = par_Value.split('=');
-    if (List.size() == 2) {
-        QString Key = List.at(0).trimmed();
-        QString ValueString = List.at(1).trimmed();
+    int SeparatorPos = par_Value.indexOf('=', 0);
+    if (SeparatorPos > 0) {
+        // do not use split() because the right side can include = characters
+        QString Key = par_Value.left(SeparatorPos).trimmed();
+        QString ValueString = par_Value.right(par_Value.size() - (SeparatorPos + 1)).trimmed();
         if (!Key.compare("text", Qt::CaseInsensitive)) {
             m_Text = ValueString;
             m_PushButton->setText(m_Text);
             m_Properties.Add(QString("text"), ValueString);
         } else if (!Key.compare("script", Qt::CaseInsensitive)) {
-            m_Script= ValueString;
+            m_Script = ValueString;
             m_Properties.Add(QString("script"), ValueString);
+        } else if (!Key.compare("equation", Qt::CaseInsensitive)) {
+            m_Equation = ValueString;
+            m_Properties.Add(QString("equation"), ValueString);
         } else {
             return ParseOneBaseParameter(Key, ValueString);
         }
@@ -112,6 +117,9 @@ void UserControlButton::ButtonPressed()
         if (StartScript(QStringToConstChar(m_Script))) {
             ThrowError(1, "cannot start script \"%s\". an other script is running", QStringToConstChar(m_Script));
         }
+    }
+    if (!m_Equation.isEmpty()) {
+        direct_solve_equation(QStringToConstChar(m_Equation));
     }
 }
 

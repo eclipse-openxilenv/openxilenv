@@ -18,6 +18,7 @@
 #include "EquationParser.h"
 #include "Files.h"
 #include "MyMemory.h"
+#include "PrintFormatToString.h"
 #include "StringMaxChar.h"
 #include "ThrowError.h"
 #include "CanFifo.h"
@@ -109,7 +110,7 @@ static void BuildAbsoluteTimeString (struct CAN_RECORDER *par_Rec, double Ts, ch
     Minute = (uint32_t)(T / 60000.0);  // 1 minute has 60s
     T -= (double)(Minute) * 60000.0;
     T *= 0.001;
-    sprintf (Txt, "%02i:%02i:%09.6f", Hour, Minute, T);
+    PrintFormatToString (Txt, sizeof(Txt), "%02i:%02i:%09.6f", Hour, Minute, T);
 }
 
 static void FlushMessageQueue (struct CAN_RECORDER *par_Rec)

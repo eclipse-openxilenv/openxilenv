@@ -22,6 +22,7 @@ set(CommonFileList
     ScriptList.c
     ScriptMessageFile.c
     ScriptStartExe.c
+    ToParseFileStack.cpp
 )
 
 target_sources(XilEnv  PRIVATE ${CommonFileList})

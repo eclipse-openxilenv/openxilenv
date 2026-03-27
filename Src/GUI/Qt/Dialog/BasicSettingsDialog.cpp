@@ -34,6 +34,7 @@ extern "C"
     #include "MainValues.h"
     #include "ThrowError.h"
     #include "StringMaxChar.h"
+    #include "PrintFormatToString.h"
     #include "ConfigurablePrefix.h"
     #include "EnvironmentVariables.h"
     #include "IniDataBase.h"
@@ -239,28 +240,28 @@ void BasicSettingsDialog::accept()
         ThrowError(MESSAGE_ONLY, "Script stopped, because of possible changes in the BASIC settings");
     }
 
-    strcpy(s_main_ini_val.ProjectName, QStringToConstChar(ui->ProjectNameLineEdit->text()));
+    STRING_COPY_TO_ARRAY(s_main_ini_val.ProjectName, QStringToConstChar(ui->ProjectNameLineEdit->text()));
 
-    strcpy(szTmpString, QStringToConstChar(ui->WorkDirectoryLineEdit->text()));
+    STRING_COPY_TO_ARRAY(szTmpString, QStringToConstChar(ui->WorkDirectoryLineEdit->text()));
     if (szTmpString[0] != '\0') {
         char TempString[MAX_PATH];
-        strcpy (s_main_ini_val.WorkDir, szTmpString);
+        STRING_COPY_TO_ARRAY (s_main_ini_val.WorkDir, szTmpString);
         SearchAndReplaceEnvironmentStrings (s_main_ini_val.WorkDir,
                                             TempString,
                                             sizeof(s_main_ini_val.WorkDir));
         // set the path
         if (!SetCurrentDirectory (TempString)) {
-            strcpy (txt, "work directory \"%s\" not exist, use ");
+            STRING_COPY_TO_ARRAY (txt, "work directory \"%s\" not exist, use ");
             GetCurrentDirectory (static_cast<DWORD>(sizeof (txt) - strlen (txt)), txt + strlen (txt));
             ThrowError(ERROR_NO_CRITICAL_STOP, txt, TempString);
         }
         GetCurrentDirectory (sizeof (s_main_ini_val.StartDirectory), s_main_ini_val.StartDirectory);
     } else {
-        strcpy (s_main_ini_val.WorkDir, ".");
+        STRING_COPY_TO_ARRAY (s_main_ini_val.WorkDir, ".");
     }
 
     // resolution are 1ns
-    sprintf (txt, "%.9f", sched_periode);
+    PrintFormatToString (txt, sizeof(txt), "%.9f", sched_periode);
     sched_periode = atof(txt);
 
     s_main_ini_val.SchedulerPeriode = sched_periode;
@@ -271,11 +272,11 @@ void BasicSettingsDialog::accept()
     s_main_ini_val.BlackboardSize = blackboard_size;
 
 #ifdef _WIN32
-    strcpy (s_main_ini_val.Editor, QStringToConstChar(ui->EditorLineEdit->text()));
+    STRING_COPY_TO_ARRAY (s_main_ini_val.Editor, QStringToConstChar(ui->EditorLineEdit->text()));
 #else
-    strcpy (s_main_ini_val.EditorX, QStringToConstChar(ui->EditorLineEdit->text()));
+    STRING_COPY_TO_ARRAY (s_main_ini_val.EditorX, QStringToConstChar(ui->EditorLineEdit->text()));
 #endif
-    strcpy (s_main_ini_val.Priority, QStringToConstChar(ui->PriorityComboBox->currentText()));
+    STRING_COPY_TO_ARRAY (s_main_ini_val.Priority, QStringToConstChar(ui->PriorityComboBox->currentText()));
 
     s_main_ini_val.DontCallSleep = SetPriority (s_main_ini_val.Priority);
 
@@ -288,7 +289,7 @@ void BasicSettingsDialog::accept()
     SetSuppressDisplayNonExistValuesState (s_main_ini_val.SuppressDisplayNonExistValues);
     ui->ShowUnitsCheckBox->isChecked() ? DisplayUnitForNonePhysicalValues = 1 : DisplayUnitForNonePhysicalValues = 0;
     ui->ShowStatusCarCheckBox->isChecked() ? s_main_ini_val.StatusbarCar = 1 : s_main_ini_val.StatusbarCar = 0;
-    strcpy (s_main_ini_val.SpeedStatusbarCar, QStringToConstChar(ui->SpeedLineEdit->text()));
+    STRING_COPY_TO_ARRAY (s_main_ini_val.SpeedStatusbarCar, QStringToConstChar(ui->SpeedLineEdit->text()));
     ui->NoCaseSensFilCheckBox->isChecked() ? s_main_ini_val.NoCaseSensitiveFilters = 1 : s_main_ini_val.NoCaseSensitiveFilters = 0;
     ui->ReplaceLabelnameCheckBox->isChecked() ? s_main_ini_val.AsapCombatibleLabelnames = 1 : s_main_ini_val.AsapCombatibleLabelnames = 0;
 
@@ -310,7 +311,7 @@ void BasicSettingsDialog::accept()
     ui->MakeBackupCheckBox->isChecked() ? s_main_ini_val.MakeBackupBeforeSaveINIFiles = 1 : s_main_ini_val.MakeBackupBeforeSaveINIFiles = 0;
     ui->NoScriptDebugFileCheckBox->isChecked() ? s_main_ini_val.DontMakeScriptDebugFile = 1 : s_main_ini_val.DontMakeScriptDebugFile = 0;
 
-    strcpy (s_main_ini_val.TerminateScript, QStringToConstChar(ui->TerminateScriptLineEdit->text()));
+    STRING_COPY_TO_ARRAY (s_main_ini_val.TerminateScript, QStringToConstChar(ui->TerminateScriptLineEdit->text()));
     RemoveWhitespacesOnlyAtBeginingAndEnd (s_main_ini_val.TerminateScript);
     s_main_ini_val.TerminateScriptFlag = strlen (s_main_ini_val.TerminateScript) > 0;
 
@@ -339,7 +340,7 @@ void BasicSettingsDialog::accept()
         QString StyleName = ui->SelectStartupAppStyleComboBox->currentText();
         QString OldStyleName = QString(s_main_ini_val.SelectStartupAppStyle);
         if (StyleName.compare(OldStyleName)) {
-            memset (s_main_ini_val.SelectStartupAppStyle, 0, sizeof(s_main_ini_val.SelectStartupAppStyle));
+            MEMSET (s_main_ini_val.SelectStartupAppStyle, 0, sizeof(s_main_ini_val.SelectStartupAppStyle));
             strncpy (s_main_ini_val.SelectStartupAppStyle, QStringToConstChar(StyleName), sizeof(s_main_ini_val.SelectStartupAppStyle)-1);
             qApp->setStyle(StyleName);
         }
@@ -348,7 +349,7 @@ void BasicSettingsDialog::accept()
     // Text-Fenster:
     s_main_ini_val.TextDefaultShowUnitColumn = ui->DefaultsTextShowUnitColumnCheckBox->isChecked();
     s_main_ini_val.TextDefaultShowDispayTypeColumn = ui->DefaultsTextShowDisplayTypeColumnCheckBox->isChecked();
-    memset (s_main_ini_val.TextDefaultFont, 0, sizeof (s_main_ini_val.TextDefaultFont));
+    MEMSET (s_main_ini_val.TextDefaultFont, 0, sizeof (s_main_ini_val.TextDefaultFont));
     s_main_ini_val.TextDefaultFontSize = 0;
     if (ui->DefaultsTextDisplayFontCheckBox->isChecked()) {
         StringCopyMaxCharTruncate (s_main_ini_val.TextDefaultFont, QStringToConstChar(ui->DefaultsTextFontLineEdit->text()), sizeof (s_main_ini_val.TextDefaultFont));
@@ -356,7 +357,7 @@ void BasicSettingsDialog::accept()
     }
     // Ozi-Fenster:
     s_main_ini_val.OscilloscopeDefaultBufferDepth = ui->OscilloscopeDefaultBufferDepthLineEdit->text().toUInt();
-    memset (s_main_ini_val.OscilloscopeDefaultFont, 0, sizeof (s_main_ini_val.OscilloscopeDefaultFont));
+    MEMSET (s_main_ini_val.OscilloscopeDefaultFont, 0, sizeof (s_main_ini_val.OscilloscopeDefaultFont));
     s_main_ini_val.OscilloscopeDefaultFontSize = 0;
     if (ui->DefaultsOscilloscopeFontCheckBox->isChecked()) {
         StringCopyMaxCharTruncate (s_main_ini_val.OscilloscopeDefaultFont,
@@ -393,7 +394,7 @@ void BasicSettingsDialog::accept()
 
     QString RemoteMasterName = ui->RemoteMasterNameLineEdit->text().trimmed();
     RemoteMasterName.truncate(sizeof(s_main_ini_val.RemoteMasterName)-1);
-    strcpy (s_main_ini_val.RemoteMasterName,
+    STRING_COPY_TO_ARRAY (s_main_ini_val.RemoteMasterName,
             QStringToConstChar(RemoteMasterName));
 
     QString RemoteMasterPort = ui->RemoteMasterPortLineEdit->text();
@@ -403,12 +404,12 @@ void BasicSettingsDialog::accept()
 
     QString RemoteMasterExecutable = ui->RemoteMasterExecutableLineEdit->text().trimmed();
     RemoteMasterExecutable.truncate(sizeof(s_main_ini_val.RemoteMasterExecutable)-1);
-    strcpy (s_main_ini_val.RemoteMasterExecutable,
+    STRING_COPY_TO_ARRAY (s_main_ini_val.RemoteMasterExecutable,
             QStringToConstChar(RemoteMasterExecutable));
 
     QString RemoteMasterCopyTo = ui->RemoteMasterCopyToLineEdit->text().trimmed();
     RemoteMasterCopyTo.truncate(sizeof(s_main_ini_val.RemoteMasterCopyTo)-1);
-    strcpy (s_main_ini_val.RemoteMasterCopyTo,
+    STRING_COPY_TO_ARRAY (s_main_ini_val.RemoteMasterCopyTo,
             QStringToConstChar(RemoteMasterCopyTo));
 
     s_main_ini_val.DontWriteBlackbardVariableInfosToIni = ui->DontWriteBlackbardVariableInfosToIniCheckBox->isChecked();

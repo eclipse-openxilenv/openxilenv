@@ -31,6 +31,7 @@
 #include <math.h>
 
 extern "C" {
+    #include "PrintFormatToString.h"
     #include "Blackboard.h"
     #include "BlackboardAccess.h"
     #include "MainValues.h"
@@ -70,13 +71,13 @@ bool UserDrawWidget::WriteImagesToIni(QString &par_WindowName)
     int Fd = ScQt_GetMainFileDescriptor();
 
     foreach(UserDrawImageItem *Item, m_Images) {
-        sprintf(Help, "Image_%i_Name", i);
+        PrintFormatToString (Help, sizeof(Help),"Image_%i_Name", i);
         Entry = QString(Help);
         QString Line = QString().number(Item->m_Number);
         Line.append(",");
         Line.append(Item->m_Name);
         ScQt_IniFileDataBaseWriteString(par_WindowName, Entry, Line, Fd);
-        sprintf(Help, "Image_%i_Buffer", i);
+        PrintFormatToString (Help, sizeof(Help),"Image_%i_Buffer", i);
         Entry = QString(Help);
         ScQt_IniFileDataBaseWriteByteImage(par_WindowName, Entry, 1000, (void*)Item->m_BinaryImage.Get(),
                                            Item->m_BinaryImage.GetSize(), Fd);
@@ -84,12 +85,12 @@ bool UserDrawWidget::WriteImagesToIni(QString &par_WindowName)
     }
     // delete additionl entrys if available
     for (int x = i; x < 1000; x++) {
-        sprintf(Help, "Image_%i_Name", x);
+        PrintFormatToString (Help, sizeof(Help),"Image_%i_Name", x);
         Entry = QString(Help);
         QString Name = ScQt_IniFileDataBaseReadString(par_WindowName, Entry, "", Fd);
         if (Name.isEmpty()) break;
         ScQt_IniFileDataBaseDeleteEntry(par_WindowName, Entry, Fd);
-        sprintf(Help, "Image_%i_Buffer", i);
+        PrintFormatToString (Help, sizeof(Help),"Image_%i_Buffer", i);
         Entry = QString(Help);
         ScQt_IniFileDataBaseWriteByteImage(par_WindowName, Entry, 1000, nullptr, 0, Fd);
     }
@@ -103,7 +104,7 @@ bool UserDrawWidget::ReadImagesToIni(QString &par_WindowName)
     int Fd = ScQt_GetMainFileDescriptor();
     for (int x = 0; x < 1000; x++) {
         UserDrawImageItem *Item = new UserDrawImageItem();
-        sprintf(Help, "Image_%i_Name", x);
+        PrintFormatToString (Help, sizeof(Help),"Image_%i_Name", x);
         Entry = QString(Help);
         QString Line = ScQt_IniFileDataBaseReadString(par_WindowName, Entry, "", Fd);
         if (Line.isEmpty()) break;
@@ -111,7 +112,7 @@ bool UserDrawWidget::ReadImagesToIni(QString &par_WindowName)
         if (List.count() == 2) {
             int Type;
             unsigned char *Buffer;
-            sprintf(Help, "Image_%i_Buffer", x);
+            PrintFormatToString (Help, sizeof(Help),"Image_%i_Buffer", x);
             Entry = QString(Help);
             int Len = ScQt_IniFileDataBaseReadByteImage(par_WindowName, Entry, &Type, &Buffer, 0, Fd);
             if (Len <= 0) return false;
@@ -140,7 +141,7 @@ bool UserDrawWidget::writeToIni() {
         for (int x = 0; x < m_Root->GetChildCount(); x++) {
             UserDrawElement *Child = m_Root->GetChild(x);
             QString ChildEntry("x");
-            sprintf(Help, "_%i", x);
+            PrintFormatToString (Help, sizeof(Help),"_%i", x);
             ChildEntry.append(QString(Help));
 
             Child->WriteToINI(SectionPath, ChildEntry, Fd);
@@ -250,10 +251,11 @@ void UserDrawWidget::ConfigureSlot()
             m_FixedRatio = m_Root->m_FixedRatio;
             writeToIni();
         } else {
-            // if cancle reload from INI file
+            // if cancel reload from INI file
             delete m_Root;
             UserDrawParser Parser;
-            m_Root = Parser.Parse(WindowName);
+            QString WindowSection = GetIniSectionPath();
+            m_Root = Parser.Parse(WindowSection);
             m_Root->m_FixedRatio = m_FixedRatio;
             m_Root->m_Antialiasing = m_Antialiasing;
         }

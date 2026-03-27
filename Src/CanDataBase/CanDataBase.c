@@ -23,6 +23,7 @@
 #include "Platform.h"
 #include <malloc.h>
 #include "Config.h"
+#include "PrintFormatToString.h"
 #include "WindowIniHelper.h"
 #include "IniDataBase.h"
 #include "ReadCanCfg.h"
@@ -99,8 +100,8 @@ int CopyVariante (int vnr, int new_vnr, int DstFile, int SrcFile)
     int x, can_object_count;
 
     DeleteVariante (new_vnr);
-    sprintf (SrcSection, "CAN/Variante_%i", vnr);
-    sprintf (DstSection, "CAN/Variante_%i", new_vnr);
+    PrintFormatToString (SrcSection, sizeof(SrcSection), "CAN/Variante_%i", vnr);
+    PrintFormatToString (DstSection, sizeof(DstSection), "CAN/Variante_%i", new_vnr);
     IniFileDataBaseCopySection(DstFile, SrcFile, DstSection, SrcSection);
     can_object_count = IniFileDataBaseReadInt(SrcSection, "can_object_count", 0, SrcFile);
     for (x = 0; x < can_object_count; x++) {
@@ -114,8 +115,8 @@ int AppendVariante (int base_vnr, int append_vnr, int DstFile, int SrcFile)
     char base_section[INI_MAX_SECTION_LENGTH], append_section[INI_MAX_SECTION_LENGTH];
     int x, base_can_object_count, append_can_object_count;
 
-    sprintf (base_section, "CAN/Variante_%i", base_vnr);
-    sprintf (append_section, "CAN/Variante_%i", append_vnr);
+    PrintFormatToString (base_section, sizeof(base_section), "CAN/Variante_%i", base_vnr);
+    PrintFormatToString (append_section, sizeof(append_section), "CAN/Variante_%i", append_vnr);
     base_can_object_count = IniFileDataBaseReadInt (base_section, "can_object_count", 0, DstFile);
     append_can_object_count = IniFileDataBaseReadInt (append_section, "can_object_count", 0, SrcFile);
     for (x = 0; x < append_can_object_count; x++) {
@@ -125,24 +126,34 @@ int AppendVariante (int base_vnr, int append_vnr, int DstFile, int SrcFile)
     return (base_can_object_count + append_can_object_count);
 }
 
-int AddNewVarianteIni (char *name, char *desc, int brate)
+int AddNewVarianteIni (int Fd, int index, char *name, char *desc, int BaudRate, double SamplePoint,
+                       int J1939, int CanFd, int DataBaudRate, double DataSamplePoint)
 {
     char section[INI_MAX_SECTION_LENGTH];
     int can_varianten_count;
     char txt[32];
 
-    sprintf (section, "CAN/Global");
-    can_varianten_count = IniFileDataBaseReadInt (section, "can_varianten_count", 0, GetMainFileDescriptor());
-    sprintf (section, "CAN/Variante_%i", can_varianten_count);
-    IniFileDataBaseWriteString (section, "name", name, GetMainFileDescriptor());
-    IniFileDataBaseWriteString (section, "desc", desc, GetMainFileDescriptor());
-    sprintf (txt, "%i", brate);
-    IniFileDataBaseWriteString (section, "baud rate", txt, GetMainFileDescriptor());
-    IniFileDataBaseWriteString (section, "can_object_count", "0", GetMainFileDescriptor());
-    sprintf (txt, "%i", can_varianten_count+1);
-    sprintf (section, "CAN/Global");
-    IniFileDataBaseWriteString (section, "can_varianten_count", txt, GetMainFileDescriptor());
-    
+    PrintFormatToString (section, sizeof(section), "CAN/Global");
+    if (index != 9999) {
+        can_varianten_count = IniFileDataBaseReadInt (section, "can_varianten_count", 0, Fd);
+    } else {
+        can_varianten_count = index;
+    }
+    PrintFormatToString (section, sizeof(section), "CAN/Variante_%i", can_varianten_count);
+    IniFileDataBaseWriteString (section, "name", name, Fd);
+    IniFileDataBaseWriteString (section, "desc", desc, Fd);
+    IniFileDataBaseWriteUInt(section, "baud rate", BaudRate, Fd);
+    IniFileDataBaseWriteFloat(section, "sample point", SamplePoint, Fd);
+    IniFileDataBaseWriteYesNo(section, "j1939", J1939, Fd);
+    IniFileDataBaseWriteYesNo(section, "can fd", CanFd, Fd);
+    IniFileDataBaseWriteUInt(section, "data baud rate", DataBaudRate, Fd);
+    IniFileDataBaseWriteFloat(section, "data sample point", DataSamplePoint, Fd);
+    IniFileDataBaseWriteUInt (section, "can_object_count", 0, Fd);
+    if (index != 9999) {
+        PrintFormatToString (txt,sizeof(txt),  "%i", can_varianten_count+1);
+        PrintFormatToString (section, sizeof(section), "CAN/Global");
+        IniFileDataBaseWriteString (section, "can_varianten_count", txt, Fd);
+    }
     return can_varianten_count;
 }
 
@@ -152,7 +163,7 @@ static int DeleteVariante (int vnr)
     char section[INI_MAX_SECTION_LENGTH];
     int x, can_object_count;
 
-    sprintf (section, "CAN/Variante_%i", vnr);
+    PrintFormatToString (section, sizeof(section), "CAN/Variante_%i", vnr);
     //ThrowError (1, "Delete Variante %s", section);
     can_object_count = IniFileDataBaseReadInt (section, "can_object_count", 0, GetMainFileDescriptor());
     for (x = 0; x < can_object_count; x++) {
@@ -170,7 +181,7 @@ int SearchVarianteByName (char *name, int NotIdx)
     x = IniFileDataBaseReadInt ("CAN/Global", "can_varianten_count", 0, GetMainFileDescriptor());
     for (i = 0; i < x; i++) {
         if (i == NotIdx) continue;
-        sprintf (section, "CAN/Variante_%i", i);
+        PrintFormatToString (section, sizeof(section), "CAN/Variante_%i", i);
         IniFileDataBaseReadString (section, "name", "", txt, sizeof (txt), GetMainFileDescriptor());
         if (!strcmp (txt, name)) return i;    
     }
@@ -183,8 +194,8 @@ static int CopyObject (int vnr, int new_vnr, int onr, int new_onr, int DstFile, 
     int x, signal_count;
 
     DeleteCanObject (new_vnr, new_onr);
-    sprintf (SrcSection, "CAN/Variante_%i/Object_%i", vnr, onr);
-    sprintf (DstSection, "CAN/Variante_%i/Object_%i", new_vnr, new_onr);
+    PrintFormatToString (SrcSection, sizeof(SrcSection), "CAN/Variante_%i/Object_%i", vnr, onr);
+    PrintFormatToString (DstSection, sizeof(DstSection), "CAN/Variante_%i/Object_%i", new_vnr, new_onr);
     IniFileDataBaseCopySection(DstFile, SrcFile, DstSection, SrcSection);
     signal_count = IniFileDataBaseReadInt(SrcSection, "signal_count", 0, SrcFile);
     for (x = 0; x < signal_count; x++) {
@@ -193,7 +204,7 @@ static int CopyObject (int vnr, int new_vnr, int onr, int new_onr, int DstFile, 
     return 0;
 }
 
-int AddNewObjectIni (int vnr, char *name, char *desc,uint32_t id,
+int AddNewObjectIni (int Fd, int vnr, char *name, char *desc,uint32_t id,
                      int size, char *dir, char *type, int mux_startbit,
                      int mux_bitsize, int mux_value, char *azg_type, int ext)
 {
@@ -201,31 +212,39 @@ int AddNewObjectIni (int vnr, char *name, char *desc,uint32_t id,
     char section[INI_MAX_SECTION_LENGTH];
     int object_count;
     char txt[32];
-    int Fd = GetMainFileDescriptor();
 
-    sprintf (section, "CAN/Variante_%i", vnr);
+    PrintFormatToString (section, sizeof(section), "CAN/Variante_%i", vnr);
     object_count = IniFileDataBaseReadInt (section, "can_object_count", 0, Fd);
-    sprintf (section, "CAN/Variante_%i/Object_%i", vnr, object_count);
+    PrintFormatToString (section, sizeof(section), "CAN/Variante_%i/Object_%i", vnr, object_count);
     IniFileDataBaseWriteString (section, "name", name, Fd);
     IniFileDataBaseWriteString (section, "desc", desc, Fd);
-    sprintf (txt, "0x%X", id);
+    PrintFormatToString (txt, sizeof(txt), "0x%X", id);
     IniFileDataBaseWriteString (section, "id", txt, Fd);
-    sprintf (txt, "%i", size);
+    PrintFormatToString (txt, sizeof(txt),"%i", size);
     IniFileDataBaseWriteString (section, "size", txt, Fd);
     IniFileDataBaseWriteString (section, "direction", dir, Fd);
     IniFileDataBaseWriteString (section, "type", type, Fd);
-    sprintf (txt, "%i", mux_startbit);
+    PrintFormatToString (txt, sizeof(txt),"%i", mux_startbit);
     IniFileDataBaseWriteString (section, "mux_startbit", txt, Fd);
-    sprintf (txt, "%i", mux_bitsize);
+    PrintFormatToString (txt, sizeof(txt),"%i", mux_bitsize);
     IniFileDataBaseWriteString (section, "mux_bitsize", txt, Fd);
-    sprintf (txt, "%i", mux_value);
+    PrintFormatToString (txt, sizeof(txt),"%i", mux_value);
     IniFileDataBaseWriteString (section, "mux_value", txt, Fd);
     if (ext) IniFileDataBaseWriteString (section, "extended", "yes", Fd);
     else IniFileDataBaseWriteString (section, "extended", "no", Fd);
     IniFileDataBaseWriteString (section, "signal_count", "0", Fd);
 
-    sprintf (txt, "%i", object_count+1);
-    sprintf (section, "CAN/Variante_%i", vnr);
+    // this things should be written as default values
+    IniFileDataBaseWriteYesNo(section, "bit_rate_switch", 0, Fd);
+    IniFileDataBaseWriteString (section, "byteorder", "intel", Fd);
+    IniFileDataBaseWriteUInt(section, "fixed_dst_addr", 255, Fd);
+    IniFileDataBaseWriteString (section, "CyclicOrEvent", "Cyclic", Fd);
+    IniFileDataBaseWriteUInt(section, "cycles", 1, Fd);
+    IniFileDataBaseWriteUInt(section, "delay", 0, Fd);
+    IniFileDataBaseWriteUIntHex(section, "InitData", 255, Fd);
+
+    PrintFormatToString (txt, sizeof(txt),"%i", object_count+1);
+    PrintFormatToString (section, sizeof(section), "CAN/Variante_%i", vnr);
     IniFileDataBaseWriteString (section, "can_object_count", txt, Fd);
     
     return object_count;
@@ -238,7 +257,7 @@ static int DeleteCanObject (int vnr, int onr)
     char section[INI_MAX_SECTION_LENGTH];
     int x, signal_count;
 
-    sprintf (section, "CAN/Variante_%i/Object_%i", vnr, onr);
+    PrintFormatToString (section, sizeof(section), "CAN/Variante_%i/Object_%i", vnr, onr);
     signal_count = IniFileDataBaseReadInt (section, "signal_count", 0, GetMainFileDescriptor());
     for (x = 0; x < signal_count; x++) {
         DeleteSignal (vnr, onr, x);
@@ -247,7 +266,69 @@ static int DeleteCanObject (int vnr, int onr)
     return 0;
 }
 
-int SetCanObjectCycleById (int Vnr, unsigned int Id, int ExtFlag, unsigned int Cycle)
+int SetCanObjectPropertyById (int Fd, int Vnr, unsigned int Id, int ExtFlag, unsigned int ProperyType, unsigned int Value)
+{
+    char section[INI_MAX_SECTION_LENGTH];
+    char txt[32];
+    int x, can_object_count;
+    unsigned int IdRef;
+    int ExtFlagRef;
+
+    PrintFormatToString (section, sizeof(section), "CAN/Variante_%i", Vnr);
+    can_object_count = IniFileDataBaseReadInt (section, "can_object_count", 0, Fd);
+    for (x = 0; x < can_object_count; x++) {
+        PrintFormatToString (section, sizeof(section), "CAN/Variante_%i/Object_%i", Vnr, x);
+        if (IniFileDataBaseReadString (section, "id", "", txt, sizeof (txt), Fd)) {
+            IdRef = strtoul (txt, NULL, 0);
+            IniFileDataBaseReadString (section, "extended", "", txt, sizeof (txt), Fd);
+            if (!strcmpi ("yes", txt) ) ExtFlagRef = 1;
+            else ExtFlagRef = 0;
+            if ((Id == IdRef) && (ExtFlag == ExtFlagRef)) {
+                switch (ProperyType) {
+                case SET_CAN_OBJECT_PROPERY_CYCLE:  // cycle
+                    if (Value < 1) Value = 1;
+                    IniFileDataBaseWriteUInt (section, "cycles", Value, Fd);
+                    break;
+                case SET_CAN_OBJECT_PROPERY_DELAY:  // delay
+                    IniFileDataBaseWriteUInt (section, "delay", Value, Fd);
+                    break;
+                case SET_CAN_OBJECT_PROPERY_FRAMEFORMAT:  // type
+                    switch (Value) {
+                    case 0:  // "StandardCAN"
+                        IniFileDataBaseWriteString (section, "type", "normal", Fd);
+                        break;
+                    case 1:  // "ExtendedCAN"
+                        IniFileDataBaseWriteString (section, "type", "normal", Fd);
+                        IniFileDataBaseWriteString (section, "extended", "yes", Fd);
+                        break;
+                    case 3:  // "J1939PG"
+                        IniFileDataBaseWriteString (section, "type", "j1939", Fd);
+                        IniFileDataBaseWriteString (section, "extended", "yes", Fd);
+                        break;
+                    case 14:  // "StandardCAN_FD"
+                        IniFileDataBaseWriteString (section, "type", "normal", Fd);
+                        IniFileDataBaseWriteString (section, "bit_rate_switch", "normal", Fd);
+                        IniFileDataBaseWriteString (section, "fd_frame_format_switch", "normal", Fd);
+                        break;
+                    case 15:  // "ExtendedCAN_FD"
+                        IniFileDataBaseWriteString (section, "type", "normal", Fd);
+                        IniFileDataBaseWriteString (section, "extended", "yes", Fd);
+                        IniFileDataBaseWriteString (section, "bit_rate_switch", "yes", Fd);
+                        IniFileDataBaseWriteString (section, "fd_frame_format_switch", "yes", Fd);
+                        break;
+                    }
+                    break;
+                default:
+                    break;
+                }
+                return 1;
+            }
+        }
+    }
+    return 0;
+}
+
+int SetCanObjectDelayById (int Vnr, unsigned int Id, int ExtFlag, unsigned int Delay)
 {
     char section[INI_MAX_SECTION_LENGTH];
     char txt[32];
@@ -256,19 +337,64 @@ int SetCanObjectCycleById (int Vnr, unsigned int Id, int ExtFlag, unsigned int C
     int ExtFlagRef;
     int Fd = GetMainFileDescriptor();
 
-    sprintf (section, "CAN/Variante_%i", Vnr);
+    PrintFormatToString (section, sizeof(section), "CAN/Variante_%i", Vnr);
     can_object_count = IniFileDataBaseReadInt (section, "can_object_count", 0, Fd);
     for (x = 0; x < can_object_count; x++) {
-        sprintf (section, "CAN/Variante_%i/Object_%i", Vnr, x);
+        PrintFormatToString (section, sizeof(section), "CAN/Variante_%i/Object_%i", Vnr, x);
         if (IniFileDataBaseReadString (section, "id", "", txt, sizeof (txt), Fd)) {
             IdRef = strtoul (txt, NULL, 0);
             IniFileDataBaseReadString (section, "extended", "", txt, sizeof (txt), Fd);
             if (!strcmpi ("yes", txt) ) ExtFlagRef = 1;
             else ExtFlagRef = 0;
             if ((Id == IdRef) && (ExtFlag == ExtFlagRef)) {
-                if (Cycle < 1) Cycle = 1;
-                sprintf (txt, "%i", Cycle);
-                IniFileDataBaseWriteString (section, "cycles", txt, Fd);
+                PrintFormatToString (txt, sizeof(txt),"%u", Delay);
+                IniFileDataBaseWriteString (section, "delay", txt, Fd);
+                return 1;
+            }
+        }
+    }
+    return 0;
+}
+
+int SetCanObjectTypeById (int Vnr, unsigned int Id, int ExtFlag, unsigned int type)
+{
+    char section[INI_MAX_SECTION_LENGTH];
+    char txt[32];
+    int x, can_object_count;
+    unsigned int IdRef;
+    int ExtFlagRef;
+    int Fd = GetMainFileDescriptor();
+
+    PrintFormatToString (section, sizeof(section), "CAN/Variante_%i", Vnr);
+    can_object_count = IniFileDataBaseReadInt (section, "can_object_count", 0, Fd);
+    for (x = 0; x < can_object_count; x++) {
+        PrintFormatToString (section, sizeof(section), "CAN/Variante_%i/Object_%i", Vnr, x);
+        if (IniFileDataBaseReadString (section, "id", "", txt, sizeof (txt), Fd)) {
+            IdRef = strtoul (txt, NULL, 0);
+            IniFileDataBaseReadString (section, "extended", "", txt, sizeof (txt), Fd);
+            if (!strcmpi ("yes", txt) ) ExtFlagRef = 1;
+            else ExtFlagRef = 0;
+            if ((Id == IdRef) && (ExtFlag == ExtFlagRef)) {
+                switch (type) {
+                case MUX_OBJECT:
+                    IniFileDataBaseWriteString (section, "type", "mux", Fd);
+                    break;
+                case J1939_OBJECT:
+                    if (IniFileDataBaseReadInt(section, "size", 0, Fd) > 8) {
+                        IniFileDataBaseWriteString (section, "type", "j1939", Fd);
+                    }
+                    break;
+                case J1939_22_MULTI_C_PG:
+                    IniFileDataBaseWriteString (section, "type", "j1939_multi_c_pg", Fd);
+                    break;
+                case J1939_22_C_PG:
+                    IniFileDataBaseWriteString (section, "type", "j1939_c_pg", Fd);
+                    break;
+                case NORMAL_OBJECT:
+                default:
+                    IniFileDataBaseWriteString (section, "type", "normal", Fd);
+                    break;
+                }
                 return 1;
             }
         }
@@ -281,14 +407,14 @@ int CopySignal (int vnr, int new_vnr, int onr, int new_onr, int snr, int new_snr
     char SrcSection[INI_MAX_SECTION_LENGTH], DstSection[INI_MAX_SECTION_LENGTH];
 
     DeleteSignal (new_vnr, new_onr, new_snr);
-    sprintf (SrcSection, "CAN/Variante_%i/Object_%i/Signal_%i", vnr, onr, snr);
-    sprintf (DstSection, "CAN/Variante_%i/Object_%i/Signal_%i", new_vnr, new_onr, new_snr);
+    PrintFormatToString (SrcSection, sizeof(SrcSection), "CAN/Variante_%i/Object_%i/Signal_%i", vnr, onr, snr);
+    PrintFormatToString (DstSection, sizeof(DstSection), "CAN/Variante_%i/Object_%i/Signal_%i", new_vnr, new_onr, new_snr);
     IniFileDataBaseCopySection(DstFile, SrcFile, DstSection, SrcSection);
     return 0;
 }
 
 
-int AddNewSignalIni (int vnr, int onr, char *name, char *desc, char *unit,
+int AddNewSignalIni (int Fd, int vnr, int onr, char *name, char *desc, char *unit,
                      double convert, double offset, int startbit, int bitsize,
                      char *byteorder, double startvalue, int mux_startbit,
                      int mux_bitsize, int mux_value, char *type, char *bbtype, char *sign)
@@ -296,37 +422,39 @@ int AddNewSignalIni (int vnr, int onr, char *name, char *desc, char *unit,
     char section[INI_MAX_SECTION_LENGTH];
     int signal_count;
     char txt[32];
-    int Fd = GetMainFileDescriptor();
 
-    sprintf (section, "CAN/Variante_%i/Object_%i", vnr, onr);
+    PrintFormatToString (section, sizeof(section), "CAN/Variante_%i/Object_%i", vnr, onr);
     signal_count = IniFileDataBaseReadInt (section, "signal_count", 0, Fd);
-    sprintf (section, "CAN/Variante_%i/Object_%i/Signal_%i", vnr, onr, signal_count);
+    PrintFormatToString (section, sizeof(section), "CAN/Variante_%i/Object_%i/Signal_%i", vnr, onr, signal_count);
     IniFileDataBaseWriteString (section, "name", name, Fd);
     IniFileDataBaseWriteString (section, "desc", desc, Fd);
     IniFileDataBaseWriteString (section, "unit", unit, Fd);
-    sprintf (txt, "%f", convert);
+    IniFileDataBaseWriteString (section, "convtype", "mx+b", Fd);
+    PrintFormatToString (txt, sizeof(txt),"%f", convert);
     IniFileDataBaseWriteString (section, "convert", txt, Fd);
-    sprintf (txt, "%f", offset);
+    PrintFormatToString (txt, sizeof(txt),"%f", offset);
     IniFileDataBaseWriteString (section, "offset", txt, Fd);
-    sprintf (txt, "%i", startbit);
+    IniFileDataBaseWriteString (section, "convstring", "", Fd);
+    PrintFormatToString (txt, sizeof(txt),"%i", startbit);
     IniFileDataBaseWriteString (section, "startbit", txt, Fd);
-    sprintf (txt, "%i", bitsize);
+    PrintFormatToString (txt, sizeof(txt),"%i", bitsize);
     IniFileDataBaseWriteString (section, "bitsize", txt, Fd);
     IniFileDataBaseWriteString (section, "byteorder", byteorder, Fd);
-    sprintf (txt, "%f", startvalue);
+    IniFileDataBaseWriteYesNo (section, "startvalue active", 1, Fd);
+    PrintFormatToString (txt, sizeof(txt),"%f", startvalue);
     IniFileDataBaseWriteString (section, "startvalue", txt, Fd);
-    sprintf (txt, "%i", mux_startbit);
+    PrintFormatToString (txt, sizeof(txt),"%i", mux_startbit);
     IniFileDataBaseWriteString (section, "mux_startbit", txt, Fd);
-    sprintf (txt, "%i", mux_bitsize);
+    PrintFormatToString (txt, sizeof(txt),"%i", mux_bitsize);
     IniFileDataBaseWriteString (section, "mux_bitsize", txt, Fd);
-    sprintf (txt, "%i", mux_value);
+    PrintFormatToString (txt, sizeof(txt),"%i", mux_value);
     IniFileDataBaseWriteString (section, "mux_value", txt, Fd);
     IniFileDataBaseWriteString (section, "type", type, Fd);
     IniFileDataBaseWriteString (section, "bbtype", bbtype, Fd);
     IniFileDataBaseWriteString (section, "sign", sign, Fd);
 
-    sprintf (txt, "%i", signal_count+1);
-    sprintf (section, "CAN/Variante_%i/Object_%i", vnr, onr);
+    PrintFormatToString (txt, sizeof(txt),"%i", signal_count+1);
+    PrintFormatToString (section, sizeof(section), "CAN/Variante_%i/Object_%i", vnr, onr);
     IniFileDataBaseWriteString (section, "signal_count", txt, Fd);
     
     return signal_count;
@@ -336,7 +464,7 @@ int AddNewSignalIni (int vnr, int onr, char *name, char *desc, char *unit,
 static int DeleteSignal (int vnr, int onr, int snr)
 {
     char section[INI_MAX_SECTION_LENGTH];
-    sprintf (section, "CAN/Variante_%i/Object_%i/Signal_%i", vnr, onr, snr);
+    PrintFormatToString (section, sizeof(section), "CAN/Variante_%i/Object_%i/Signal_%i", vnr, onr, snr);
     IniFileDataBaseWriteString (section, NULL, NULL, GetMainFileDescriptor());
 
     return 0;
@@ -354,7 +482,7 @@ static void MoveSelectedCANVarianteIndex (int vnr, int offset)
     channel_count = GetCanControllerCountFromIni ("CAN/Global", GetMainFileDescriptor());
 
     for (c = 0; c < channel_count; c++) {
-        sprintf (entry, "can_controller%i_variante", c+1);
+        PrintFormatToString (entry, sizeof(entry), "can_controller%i_variante", c+1);
         IniFileDataBaseReadString ("CAN/Global", entry, "", txt2, sizeof (txt2), GetMainFileDescriptor());
         p = txt2;
         x = 0;
@@ -367,8 +495,10 @@ static void MoveSelectedCANVarianteIndex (int vnr, int offset)
             } else if (can_var_nr > vnr) {
                 can_var_nr -= offset;
             }
-            if (x) strcat (txt, ",");
-            sprintf (txt + strlen (txt), "%i", can_var_nr);
+            if (x) {
+                STRING_APPEND_TO_ARRAY (txt, ",");
+            }
+            PrintFormatToString (txt + strlen (txt), sizeof(txt) - strlen(txt), "%i", can_var_nr);
             x++;
         }
         if (strlen (txt) == 0) StringCopyMaxCharTruncate (txt, "-1", sizeof(txt));
@@ -385,8 +515,8 @@ static int SetSelectedCANVariante (int vnr, int channel)
 
     channel_count = GetCanControllerCountFromIni ("CAN/Global", GetMainFileDescriptor());
     if (channel <= channel_count) {
-        sprintf (entry, "can_controller%i_variante", channel);
-        sprintf (txt, "%i", vnr); 
+        PrintFormatToString (entry, sizeof(entry), "can_controller%i_variante", channel);
+        PrintFormatToString (txt, sizeof(txt),"%i", vnr);
         IniFileDataBaseWriteString ("CAN/Global", entry, txt, GetMainFileDescriptor());
         return 0;
     }
@@ -402,14 +532,16 @@ static int AddSelectedCANVariante (int vnr, int channel)
 
     channel_count = GetCanControllerCountFromIni ("CAN/Global", GetMainFileDescriptor());
     if (channel <= channel_count) {
-        sprintf (entry, "can_controller%i_variante", channel);
-        sprintf (txt, "%i", vnr); 
+        PrintFormatToString (entry, sizeof(entry), "can_controller%i_variante", channel);
+        PrintFormatToString (txt, sizeof(txt),"%i", vnr);
         IniFileDataBaseReadString ("CAN/Global", entry, "", txt, sizeof (txt), GetMainFileDescriptor());
         if (strtol (txt, NULL, 0) == -1) {
-            sprintf (txt, "%i", vnr);
+            PrintFormatToString (txt, sizeof(txt),"%i", vnr);
         } else {
-            if (strlen (txt)) strcat (txt, ",");
-            sprintf (txt + strlen (txt), "%i", vnr);
+            if (strlen (txt)) {
+                STRING_APPEND_TO_ARRAY (txt, ",");
+            }
+            PrintFormatToString (txt + strlen (txt), sizeof(txt) - strlen(txt), "%i", vnr);
         }
         IniFileDataBaseWriteString ("CAN/Global", entry, txt, GetMainFileDescriptor());
         return 0;
@@ -425,7 +557,7 @@ static int GetFirstSelectedCANVariante (int channel)
 
     channel_count = GetCanControllerCountFromIni ("CAN/Global", GetMainFileDescriptor());
     if (channel <= channel_count) {
-        sprintf (entry, "can_controller%i_variante", channel);
+        PrintFormatToString (entry, sizeof(entry), "can_controller%i_variante", channel);
         return IniFileDataBaseReadInt ("CAN/Global", entry, -1, GetMainFileDescriptor());
     }
     return -1;
@@ -449,7 +581,7 @@ static int LoadCANVarianteScriptCommandThreadFunction (void *par)
         if (IniFileDataBaseReadInt ("CAN/Global", "copy_buffer_type", 0, Fd) == 2) {
             x = IniFileDataBaseReadInt ("CAN/Global", "can_varianten_count", 0, GetMainFileDescriptor());
             CopyVariante (9999, x, GetMainFileDescriptor(), Fd);
-            sprintf (txt, "%i", x+1);
+            PrintFormatToString (txt, sizeof(txt),"%i", x+1);
             IniFileDataBaseWriteString ("CAN/Global", "can_varianten_count", txt, GetMainFileDescriptor());
             ret = SetSelectedCANVariante (x, channel);
         } else {
@@ -527,7 +659,7 @@ static int LoadAndSelectCANNodeScriptCommandThreadFunction (void *par)
         if (IniFileDataBaseReadInt ("CAN/Global", "copy_buffer_type", 0, Fd) == 2) {
             x = IniFileDataBaseReadInt ("CAN/Global", "can_varianten_count", 0, GetMainFileDescriptor());
             CopyVariante (9999, x, GetMainFileDescriptor(), Fd);
-            sprintf (txt, "%i", x+1);
+            PrintFormatToString (txt, sizeof(txt),"%i", x+1);
             IniFileDataBaseWriteString ("CAN/Global", "can_varianten_count", txt, GetMainFileDescriptor());
             ret = AddSelectedCANVariante (x, channel);
         } else {
@@ -634,7 +766,7 @@ int DeleteAllCANVariantesScriptCommand (void)
         DeleteVariante (x);
     }
     for (x = 0; x < 4; x++) {
-        sprintf (entry, "can_controller%i_variante", x+1);
+        PrintFormatToString (entry, sizeof(entry), "can_controller%i_variante", x+1);
         IniFileDataBaseWriteString ("CAN/Global", entry, NULL, Fd);
     }
     IniFileDataBaseWriteString ("CAN/Global", "can_varianten_count", "0", Fd);
@@ -656,7 +788,7 @@ static int GetVnrs (int Channel, int *Vnrs, int MaxVnrs)
     char entry[64];
     char txt[INI_MAX_LINE_LENGTH];
 
-    sprintf (entry, "can_controller%i_variante", Channel);
+    PrintFormatToString (entry, sizeof(entry), "can_controller%i_variante", Channel);
     IniFileDataBaseReadString ("CAN/Global", entry, "", txt, sizeof (txt), GetMainFileDescriptor());
     p = txt;
     while (isdigit (*p)) { 
@@ -709,7 +841,7 @@ void DelCANVarianteByNameScriptCommand (char *Name)
     can_varianten_count = IniFileDataBaseReadInt ("CAN/Global", "can_varianten_count", 0, Fd);
     x = 0;
     for (i = 0; i < can_varianten_count; i++) {
-        sprintf (section, "CAN/Variante_%i", i);
+        PrintFormatToString (section, sizeof(section), "CAN/Variante_%i", i);
         IniFileDataBaseReadString (section, "name", "", txt, sizeof (txt), Fd);
         if (!Compare2StringsWithWildcardsCaseSensitive (txt, Name, 1)) {  // Case sensitive
             DeleteVariante (i); 
@@ -836,7 +968,7 @@ int ScriptSetCanErrSignalName (int Channel, int Id, char *Signalname, uint32_t C
     }
 
     for (c = c_start; c < c_end; c++) {
-        sprintf (entry, "can_controller%i_variante", c+1);
+        PrintFormatToString (entry, sizeof(entry), "can_controller%i_variante", c+1);
         IniFileDataBaseReadString ("CAN/Global", entry, "", txt2, sizeof (txt2), Fd);
         p = txt2;
         while (isdigit (*p)) { 
@@ -844,10 +976,10 @@ int ScriptSetCanErrSignalName (int Channel, int Id, char *Signalname, uint32_t C
             if (*p == ',') p++;
             if (i < 0) return -1;  // Channel not in use
             
-            sprintf (section, "CAN/Variante_%i", i);
+            PrintFormatToString (section, sizeof(section), "CAN/Variante_%i", i);
             vc2 = IniFileDataBaseReadInt (section, "can_object_count", 0, Fd);
             for (i2 = 0; i2 < vc2; i2++) {
-                sprintf (section, "CAN/Variante_%i/Object_%i", i, i2);
+                PrintFormatToString (section, sizeof(section), "CAN/Variante_%i/Object_%i", i, i2);
                 // Do not insert read objects into the list
                 IniFileDataBaseReadString (section, "direction", "", txt, sizeof (txt), Fd);
                 if (!strcmpi ("read", txt)) continue;
@@ -856,7 +988,7 @@ int ScriptSetCanErrSignalName (int Channel, int Id, char *Signalname, uint32_t C
                 if ((Id < 0) || (Id == id_x)) {
                     vc3 = IniFileDataBaseReadInt (section, "signal_count", 0, Fd);
                     for (i3 = 0; i3 < vc3; i3++) {
-                        sprintf (section, "CAN/Variante_%i/Object_%i/Signal_%i", i, i2, i3);
+                        PrintFormatToString (section, sizeof(section), "CAN/Variante_%i/Object_%i/Signal_%i", i, i2, i3);
                         if (!IniFileDataBaseReadString(section, "name", "", txt, sizeof (txt), Fd)) continue;
                         if (!strcmp (Signalname, txt)) {
                             IniFileDataBaseReadString (section, "startbit", "0", txt, sizeof (txt), Fd);
@@ -907,7 +1039,7 @@ int ScriptGetCANTransmitCycleRateOrId  (int Channel, char *ObjectName, int What)
     }
 
     for (c = c_start; c < c_end; c++) {
-        sprintf (entry, "can_controller%i_variante", c+1);
+        PrintFormatToString (entry, sizeof(entry), "can_controller%i_variante", c+1);
         IniFileDataBaseReadString ("CAN/Global", entry, "", txt2, sizeof (txt2), Fd);
         p = txt2;
         while (isdigit (*p)) { 
@@ -915,10 +1047,10 @@ int ScriptGetCANTransmitCycleRateOrId  (int Channel, char *ObjectName, int What)
             if (*p == ',') p++;
             if (i < 0) return -1;  // Channel not in use
             
-            sprintf (section, "CAN/Variante_%i", i);
+            PrintFormatToString (section, sizeof(section), "CAN/Variante_%i", i);
             vc2 = IniFileDataBaseReadInt (section, "can_object_count", 0, Fd);
             for (i2 = 0; i2 < vc2; i2++) {
-                sprintf (section, "CAN/Variante_%i/Object_%i", i, i2);
+                PrintFormatToString (section, sizeof(section), "CAN/Variante_%i/Object_%i", i, i2);
                 // Do not insert read objects into the list
                 IniFileDataBaseReadString (section, "direction", "", txt, sizeof (txt), Fd);
                 // Cycle rate only with transmit objects
@@ -962,7 +1094,7 @@ int ScriptSetCANChannelStartupState (int Channel, int StartupState)
     char Entry[64];
     int Fd = GetMainFileDescriptor();
     if (GetCanControllerCountFromIni ("CAN/Global", Fd) < Channel) {
-        sprintf (Entry, "can_controller%i_startup_state", Channel);
+        PrintFormatToString (Entry, sizeof(Entry), "can_controller%i_startup_state", Channel);
         IniFileDataBaseWriteInt ("CAN/Global", Entry, StartupState, Fd);
         return 0;
     }

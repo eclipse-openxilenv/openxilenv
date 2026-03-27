@@ -22,9 +22,12 @@
 #include <QModelIndex>
 #include <QModelIndexList>
 #include <QList>
+#include "FileDialog.h"
+#include "FileExtensions.h"
 extern "C" {
 #include "Platform.h"
 #include "MyMemory.h"
+#include "PrintFormatToString.h"
 #include "ThrowError.h"
 #include "Scheduler.h"
 #include "Blackboard.h"
@@ -125,7 +128,7 @@ QStringList A2LSelectWidget::GetSelected()
 QString A2LSelectWidget::GetProcess()
 {
     QList<QListWidgetItem*> Items = ui->ProcessListView->selectedItems();
-    if (Items.at(0) != nullptr) {
+    if ((Items.size() > 0) && (Items.at(0) != nullptr)) {
         return Items.at(0)->text();
     } else {
        return QString();
@@ -263,7 +266,7 @@ void A2LSelectWidget::ReferenceOrUnreference(bool par_ReferenceFlag)
                         int i;
                         char *p = Name + strlen(Name);
                         for (i = 0; i < XDim; i++) {
-                            sprintf(p, "[%i]", i);
+                            PrintFormatToString(p, sizeof(Name) - (p - Name), "[%i]", i);
                             ReferenceVariable(LinkNr, Idx,
                                               Name, Unit, ConvType, Conv,
                                               FormatLength, FormatLayout,
@@ -275,7 +278,7 @@ void A2LSelectWidget::ReferenceOrUnreference(bool par_ReferenceFlag)
                         char *p = Name + strlen(Name);
                         for (j = 0; j < YDim; j++) {
                             for (i = 0; i < XDim; i++) {
-                                sprintf(p, "[%i][%i]", j, i);
+                                PrintFormatToString(p, sizeof(Name) - (p - Name), "[%i][%i]", j, i);
                                 ReferenceVariable(LinkNr, Idx,
                                                   Name, Unit, ConvType, Conv,
                                                   FormatLength, FormatLayout,
@@ -416,4 +419,37 @@ void A2LSelectWidget::on_ViewOnlyMeasurementsCheckBox_clicked(bool checked)
     }
     ChangeGroupBoxHeader();
     InitModels(1, 0);
+}
+
+void A2LSelectWidget::on_ExportPushButton_clicked()
+{
+    QString ProcessName = GetProcess();
+    if (!ProcessName.isEmpty()) {
+        int Pid = get_pid_by_name(ProcessName.toLatin1().data());
+        if (Pid > 0) {
+            QString FileName = FileDialog::getSaveFileName(this, QString ("Export A2L Measurements list file"), QString(), QString (INI_EXT));
+            if(!FileName.isEmpty()) {
+                ExportMeasurementReferencesListForProcess(Pid, FileName.toLatin1().data());
+            }
+            return;
+        }
+    }
+    ThrowError(1, "You have to select a process");
+}
+
+void A2LSelectWidget::on_ImportPushButton_clicked()
+{
+    QString ProcessName = GetProcess();
+    if (!ProcessName.isEmpty()) {
+        int Pid = get_pid_by_name(ProcessName.toLatin1().data());
+        if (Pid > 0) {
+            QString FileName = FileDialog::getOpenFileName(this, QString ("Import A2L Measurements list file"), QString(), QString (INI_EXT));
+            if(!FileName.isEmpty()) {
+                ImportMeasurementReferencesListForProcess(Pid, FileName.toLatin1().data());
+                ui->LabelListView->reset();
+            }
+            return;
+        }
+    }
+    ThrowError(1, "You have to select a process");
 }

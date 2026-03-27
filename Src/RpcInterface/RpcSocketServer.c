@@ -23,6 +23,9 @@
 #include <WinSock2.h>
 #include <WS2tcpip.h>
 
+#include "StringMaxChar.h"
+#include "PrintFormatToString.h"
+
 #pragma comment(lib,"ws2_32.lib") //Winsock Library
 
 #else
@@ -32,6 +35,7 @@
 #include <signal.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/un.h>
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <unistd.h>
@@ -44,6 +48,7 @@
 #include "ThrowError.h"
 #include "Files.h"
 #include "StringMaxChar.h"
+#include "PrintFormatToString.h"
 #include "ConfigurablePrefix.h"
 #include "Scheduler.h"
 #include "MainValues.h"
@@ -480,7 +485,7 @@ static void SetupConnection(int par_ConnectionNr, uint64_t par_Socket, uint8_t p
 {
     char OptionString[3];
 
-    memset(&(Connections[par_ConnectionNr]), 0, sizeof(Connections[0]));
+    MEMSET(&(Connections[par_ConnectionNr]), 0, sizeof(Connections[0]));
     Connections[par_ConnectionNr].UsedFlag = 1;
     Connections[par_ConnectionNr].ConnectionType = par_ConnectionType;
     Connections[par_ConnectionNr].WaitToReceiveAlivePingAck = 0;
@@ -499,23 +504,23 @@ static void SetupConnection(int par_ConnectionNr, uint64_t par_Socket, uint8_t p
 #ifdef _WIN32
         GetTempPath(sizeof(TempPath), TempPath);
 #else
-        strcpy(TempPath, "/tmp/");
+        STRING_COPY_TO_ARRAY(TempPath, "/tmp/");
 #endif
         if ((Connections[par_ConnectionNr].DebugFlags & DEBUG_PRINT_COMMAND_ATTACH) == DEBUG_PRINT_COMMAND_ATTACH) {
-            strcpy(OptionString, "at");
+            StringCopyMaxCharTruncate(OptionString, "at", sizeof(OptionString));
         } else {
-            strcpy(OptionString, "wt");
+            StringCopyMaxCharTruncate(OptionString, "wt", sizeof(OptionString));
         }
         if ((Connections[par_ConnectionNr].DebugFlags & DEBUG_PRINT_COMMAND_ONE_FILE) == DEBUG_PRINT_COMMAND_ONE_FILE) {
             StringCopyMaxCharTruncate(DebugFileName, TempPath, sizeof(DebugFileName));
-            StringAppendMaxCharTruncate(DebugFileName, "RPC_Log.log", sizeof(DebugFileName));
+            STRING_APPEND_TO_ARRAY(DebugFileName, "RPC_Log.log");
         } else {
             char Txt[16];
-            sprintf (Txt, "%i", par_ConnectionNr);
+            PrintFormatToString (Txt, sizeof(Txt), "%i", par_ConnectionNr);
             StringCopyMaxCharTruncate(DebugFileName, TempPath, sizeof(DebugFileName));
-            StringAppendMaxCharTruncate(DebugFileName, "RPC_Log_", sizeof(DebugFileName));
-            StringAppendMaxCharTruncate(DebugFileName, Txt, sizeof(DebugFileName));
-            StringAppendMaxCharTruncate(DebugFileName, ".log", sizeof(DebugFileName));
+            STRING_APPEND_TO_ARRAY(DebugFileName, "RPC_Log_");
+            STRING_APPEND_TO_ARRAY(DebugFileName, Txt);
+            STRING_APPEND_TO_ARRAY(DebugFileName, ".log");
         }
         if (((Connections[par_ConnectionNr].DebugFlags & DEBUG_PRINT_COMMAND_ONE_FILE) == DEBUG_PRINT_COMMAND_ONE_FILE) && (LogFileHandle != NULL)) {
             Connections[par_ConnectionNr].DebugFile = LogFileHandle;  // Nimm das File von Connection 0
@@ -564,7 +569,7 @@ static void FreeConnection(RPC_CONNECTION *par_Connection)
 
     DeleteCriticalSection(&(par_Connection->CriticalSection));
     // das gibt es nicht: DeleteConditionVariable (&(Connection->ConditionVariable));
-    memset (par_Connection, 0, sizeof(*par_Connection));
+    MEMSET (par_Connection, 0, sizeof(*par_Connection));
     LeaveCriticalSection(&CriticalSection);
 }
 
@@ -593,7 +598,7 @@ static int ReceiveFromRemoteProcedureCallDynBuf (RPC_CONNECTION *par_Connection,
 #ifdef _WIN32
             ThrowError (1, "recv failed with error: %d\n", WSAGetLastError());
 #else
-            ThrowError (1, "recv failed with error: %d\n", errno);
+            ThrowError (1, "recv failed with error: %d \"%s\"\n", errno, strerror(errno));
 #endif
             return 0;
         }
@@ -616,7 +621,7 @@ static int ReceiveFromRemoteProcedureCallDynBuf (RPC_CONNECTION *par_Connection,
 #ifdef _WIN32
             ThrowError(1, "recv failed with error: %d\n", WSAGetLastError());
 #else
-            ThrowError(1, "recv failed with error: %d\n", errno);
+            ThrowError(1, "recv failed with error: %d \"%s\"\n", errno, strerror(errno));
 #endif
             return 0;
         }
@@ -726,7 +731,7 @@ static SOCKET CreateRemoteProcedureSocket (int par_Port)
     }
 
     // Initialize the server address struct to zero
-    memset((char *)&serv_addr, 0, sizeof(serv_addr));
+    MEMSET((char *)&serv_addr, 0, sizeof(serv_addr));
 
     // Fill server's address family
     serv_addr.sin_family = AF_INET;
@@ -875,7 +880,7 @@ static HANDLE CreateRemoteProcedureNamedPipe (char *par_Prefix)
     HANDLE hPipe;
     char Pipename[MAX_PATH];
 
-    sprintf (Pipename, XILENV_RPC_PIPE_NAME "_%s", par_Prefix);
+    PrintFormatToString (Pipename, sizeof(Pipename), XILENV_RPC_PIPE_NAME "_%s", par_Prefix);
 
     hPipe = CreateNamedPipe (Pipename, PIPE_ACCESS_DUPLEX, PIPE_WAIT, PIPE_UNLIMITED_INSTANCES, PIPE_MESSAGE_BUFSIZE, PIPE_MESSAGE_BUFSIZE, 0, NULL);
 
@@ -939,7 +944,7 @@ void* RemoteProcedureServerLoginThread (void* lpParam)
 #endif
     }
     p++;  // jump over ':'
-    strcpy (Instance, p);
+    STRING_COPY_TO_ARRAY (Instance, p);
     p = strstr(Instance, "@");
     if (p != NULL) {
         Port = atoi (p + 1);  // a port was defined
@@ -1087,7 +1092,89 @@ void* RemoteProcedureServerLoginThread (void* lpParam)
             }
         }
 #else
-        //ThrowError (1, "named pipes are only supported with windows");
+        char Name[MAX_PATH + 100];
+        SOCKET sock_descriptor;
+
+        struct sockaddr_un serv_addr = {0};
+
+        if (CheckOpenIPCFile(Instance, "unix_domain_rpc", Name, sizeof(Name), DIR_CREATE_EXIST, FILENAME_IGNORE) != 0) {
+            ThrowError (1, "cannot create unix domain socket file");
+            return NULL;
+        }
+
+        if ((strlen(Name) + 1) > sizeof(serv_addr.sun_path)) {
+            ThrowError (1, "the unix domain socket file name \"%s\" are %i chars long there are only %i chars allowed",
+                   Name, (int)strlen(Name), (int)sizeof(serv_addr.sun_path));
+            return NULL;
+        }
+
+        unlink(Name);
+
+        sock_descriptor = socket(PF_UNIX, SOCK_STREAM, 0);
+        if (sock_descriptor < 0) {
+            ThrowError (1, "Failed creating socket: %d \"%s\"\n", errno, strerror(errno));
+            return NULL;
+        }
+
+        serv_addr.sun_family = AF_UNIX;
+
+        STRING_COPY_TO_ARRAY (serv_addr.sun_path, Name);
+
+        if (bind(sock_descriptor, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
+            ThrowError (1, "Failed to bind: %d \"%s\"\n", errno, strerror(errno));
+            return NULL;
+        }
+
+        listen(sock_descriptor, 5);
+
+        for (;;) {  // Endless loop
+            struct sockaddr_in client_addr;
+    #ifdef _WIN32
+            int size;
+    #else
+            socklen_t size;
+    #endif
+            size = sizeof(client_addr);
+            SOCKET conn_desc;
+
+            conn_desc = accept(sock_descriptor, (struct sockaddr *)&client_addr, &size);
+
+            if (conn_desc < 0) {
+                EnterCriticalSection (&CriticalSection);
+                if (!NewConnectionsAllowed) {
+                    close(conn_desc);
+                    NewConnectionsAllowed = 2;
+                    LeaveCriticalSection(&CriticalSection);
+                    WakeAllConditionVariable(&ConditionVariable);
+                    return NULL;
+                }
+                LeaveCriticalSection(&CriticalSection);
+                if (NewConnectionsAllowed != 2) ThrowError (1, "Failed accepting connection\n");
+            } else {
+                int x;
+                EnterCriticalSection(&CriticalSection);
+                for (x = 0; x < RPC_MAX_CONNECTIONS; x++) {
+                    if (Connections[x].UsedFlag == 0) {
+                        pthread_t Thread;
+                        pthread_attr_t Attr;
+
+                        SetupConnection(x, (uint64_t)conn_desc, 1);
+                        pthread_attr_init(&Attr);
+                        if (pthread_create(&Thread, &Attr, RemoteProcedureCallSocketServerThreadFunction, (void*)&(Connections[x])) != 0) {
+                            ThrowError (1, "cannot create remote procedure call thread\n");
+                            return NULL;
+                        }
+                        Connections[x].ThreadId = Thread;
+                        pthread_attr_destroy(&Attr);
+                        break;
+                    }
+                }
+                LeaveCriticalSection(&CriticalSection);
+                if (x == RPC_MAX_CONNECTIONS) {
+                    ThrowError (1, "Too many remote connection max. %i allowed\n", (int)RPC_MAX_CONNECTIONS);
+                }
+            }
+        }
 #endif
     }
     return 0;
@@ -1126,7 +1213,7 @@ int StartRemoteProcedureCallThread (int par_SocketOrNamedPipe, char *par_Prefix,
     static char StaticInstanceName[MAX_PATH];
 
     // This have to be copied to a static variable because it will be accessed later fron the created thread
-    sprintf (StaticInstanceName, "%i:%s@%i", par_SocketOrNamedPipe, par_Prefix, par_Port);
+    PrintFormatToString (StaticInstanceName, sizeof(StaticInstanceName), "%i:%s@%i", par_SocketOrNamedPipe, par_Prefix, par_Port);
 
 #ifdef _WIN32
     NewConnectionThread =
@@ -1199,7 +1286,7 @@ void RemoteProcedureWaitForConnection(RPC_CONNECTION *par_Connection)
             } else {
                 // send a alive ping
                 RPC_API_PING_TO_CLINT_MESSAGE Req;
-                memset(&Req, 0, sizeof(Req));
+                MEMSET(&Req, 0, sizeof(Req));
                 Req.Header.Command = RPC_API_PING_TO_CLINT_CMD;
                 Req.Header.StructSize = sizeof(Req);
                 if (par_Connection->ConnectionType) {

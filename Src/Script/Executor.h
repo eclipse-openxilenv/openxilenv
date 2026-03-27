@@ -296,9 +296,9 @@ public:
         return BreakPoints.GetNext (par_StartIdx, par_FileNr, ret_Ip, ret_LineNr, ret_ActiveValid);
     }
 
-    int GetBreakpointString (int par_Index, char *par_String)
+    int GetBreakpointString (int par_Index, char *ret_String, int par_Maxc)
     {
-        return BreakPoints.GetBreakpointString (par_Index, par_String);
+        return BreakPoints.GetBreakpointString (par_Index, ret_String, par_Maxc);
     }
 
     int GetBreakpointChangedCounter()

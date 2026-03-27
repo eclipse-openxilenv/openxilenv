@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-
 #include <stdio.h>
 #include <limits.h>
 #include <float.h>
@@ -23,6 +22,7 @@
 #include "ThrowError.h"
 #include "MyMemory.h"
 #include "StringMaxChar.h"
+#include "PrintFormatToString.h"
 #include "Message.h"
 #include "tcb.h"
 #include "Scheduler.h"
@@ -87,7 +87,7 @@ static int SocketCAN_CardInfos(int Pos, CAN_CARD_INFOS *CanCardInfos)
     // Dann die Flexcards
     for (y = 0, x = Pos; (x < MAX_CAN_CHANNELS) && (y < GetNumberOfFoundCanChannelsSocketCAN()); y++, x++) {
         CanCardInfos->Cards[x].CardType = CAN_CARD_TYPE_SOCKETCAN;
-        strcpy(CanCardInfos->Cards[x].CANCardString, "SocketCAN");
+        StringCopyMaxCharTruncate(CanCardInfos->Cards[x].CANCardString, "SocketCAN", sizeof(CanCardInfos->Cards[x].CANCardString));
         CanCardInfos->Cards[x].State = 1;
         CanCardInfos->Cards[x].NumOfChannels = 1;
     }
@@ -100,7 +100,7 @@ static int SendCANCardInfosToProcess (int SendToPid)
     CAN_CARD_INFOS CanCardInfos;
     int x, y, Ret;
 
-    memset (&CanCardInfos, 0, sizeof (CanCardInfos));
+    MEMSET (&CanCardInfos, 0, sizeof (CanCardInfos));
     remove_message ();
     CanCardInfos.NumOfChannels = GetNumberOfFoundCanChannelsSocketCAN();
     x = 0;
@@ -886,7 +886,7 @@ static int add_additional_bbvaris (NEW_CAN_SERVER_CONFIG *csc)
     char Name[BBVARI_NAME_SIZE];
 
     for (c = 0; c < csc->channel_count; c++) {
-        sprintf (CanObjectName, "%s.CAN%i", GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_CAN_NAMES), c);
+        PrintFormatToString (CanObjectName, sizeof(CanObjectName), "%s.CAN%i", GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_CAN_NAMES), c);
         switch(csc->channels[c].StartupState) {
         case 0:
             csc->channels[c].global_tx_enable_vid = add_bbvari (CanObjectName, BB_UDWORD, "[]");
@@ -907,9 +907,13 @@ static int add_additional_bbvaris (NEW_CAN_SERVER_CONFIG *csc)
         }
         for (o = 0; o < csc->channels[c].object_count; o++) {
             o_pos = csc->channels[c].objects[o];
-            if (csc->objects[o_pos].dir == WRITE_VARIABLE_ID_OBJECT) write_bbvari_udword (csc->objects[o_pos].vid, csc->objects[o_pos].id);
-            else if (csc->objects[o_pos].dir == READ_OBJECT) write_bbvari_udword (csc->objects[o_pos].vid, 0);
-            else write_bbvari_udword (csc->objects[o_pos].vid, 1);
+            if (csc->objects[o_pos].dir == WRITE_VARIABLE_ID_OBJECT) {
+                write_bbvari_udword (csc->objects[o_pos].vid, csc->objects[o_pos].id);
+            } else if (csc->objects[o_pos].dir == READ_OBJECT) {
+                write_bbvari_udword (csc->objects[o_pos].vid, 0);
+            } else {
+                write_bbvari_udword (csc->objects[o_pos].vid, 1);
+            }
         }
     }
     return 0;

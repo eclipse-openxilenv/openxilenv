@@ -21,6 +21,7 @@
 
 extern "C"
 {
+    #include "StringMaxChar.h"
     #include "MainValues.h"
     #include "EquationParser.h"
     #include "EnvironmentVariables.h"
@@ -51,14 +52,14 @@ void cSCHotkey::activateHotkeys()
             if (formula == nullptr) {
                 QString Filename = GetScriptFilenameFromControlPannel();
                 if (Filename.size() > 0){
-                    strcpy(script_filename, QStringToConstChar(Filename));
+                    STRING_COPY_TO_ARRAY(script_filename, QStringToConstChar(Filename));
                     SearchAndReplaceEnvironmentStrings (script_filename, script_filename, MAX_PATH);
                     script_status_flag = START;
                 }
             } else {
                 // Dateiname in globale Variable uebernehmen und Flag setzen
                 if (script_status_flag != RUNNING) {
-                    strcpy(script_filename, QStringToConstChar(formula));
+                    STRING_COPY_TO_ARRAY(script_filename, QStringToConstChar(formula));
                     SearchAndReplaceEnvironmentStrings (script_filename, script_filename, MAX_PATH);
                     script_status_flag = START;
                 }

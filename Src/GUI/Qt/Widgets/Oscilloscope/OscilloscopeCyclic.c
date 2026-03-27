@@ -449,7 +449,7 @@ int add_connection (int32_t vid, char dec_phys_flag, int left_right, int pos,
                 return ret;
           }
      }
-     /* VID doesn't exist therfor add a new entry */
+     /* VID doesn't exist therefore add a new entry */
      for (x = 0; x < (int)vid_owc_size; x++) {
           if (vids[x] == 0) {     /* found an empty element */
                 vids[x] = vid;

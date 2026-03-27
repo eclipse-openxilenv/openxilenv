@@ -30,6 +30,7 @@ extern "C"
     #include "FileExtensions.h"
     #include "ThrowError.h"
     #include "StringMaxChar.h"
+    #include "PrintFormatToString.h"
     #include "WindowIniHelper.h"
 }
 
@@ -299,7 +300,7 @@ void AddWindowToCorrespondAllList(const char *WidgetName, const char *SectionNam
         char *AllListSection;
         if (GetSection_AllWindowsOfType(Line, &AllListSection) == 0) {
             for (int x = 0; x < 10000; x++) {
-                sprintf (Entry, "W%i", x);
+                PrintFormatToString (Entry, sizeof(Entry), "W%i", x);
                 if (IniFileDataBaseReadString (AllListSection, Entry, "", Line, sizeof(Line), DstFile) == 0) {
                     // we are at the end of the list now, than add the new one
                     ScQt_IniFileDataBaseWriteString (AllListSection, Entry, WidgetName, DstFile);

@@ -18,6 +18,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "Platform.h"
+#include "PrintFormatToString.h"
 #include "ConfigurablePrefix.h"
 #include "ScriptErrorFile.h"
 
@@ -35,7 +36,7 @@ static char ErrorFileName [MAX_PATH] = "script.err";
 
 void init_ErrorFilename (char *prefix)
 {
-    sprintf (ErrorFileName, "%sscript.err", prefix);
+    PrintFormatToString (ErrorFileName, sizeof(ErrorFileName), "%sscript.err", prefix);
 }
 
 static uint32_t nr_of_errors   = 0;

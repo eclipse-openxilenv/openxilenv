@@ -43,7 +43,7 @@ int cReportCmd::Execute (cParser *par_Parser, cExecutor *par_Executor)
     char string_before[MAX_ZEILENLAENGE];
     char string_behind[MAX_ZEILENLAENGE];
 
-    also_to_msg_file_flag = get_html_strings (string_before, string_behind, par_Parser->GetParameter (0));
+    also_to_msg_file_flag = get_html_strings (string_before, sizeof(string_before), string_behind, sizeof(string_behind), par_Parser->GetParameter (0));
     // Build message string
     char *ReportBuffer = par_Parser->FormatMessageOutputString (1);
     if (ReportBuffer == nullptr) return -1;

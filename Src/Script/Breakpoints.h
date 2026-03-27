@@ -71,7 +71,7 @@ public:
     int CheckIfBreakPointIsValid (const char *par_Filename, int par_LineNr, cCmdTable *par_CmdTable,
                                   int *ret_FileNr, int *ret_Ip, FILETIME *par_LastWriteTime);
     int CheckAllBreakPoints (cCmdTable *par_CmdTable);
-    int GetBreakpointString (int par_Index, char *par_String);
+    int GetBreakpointString (int par_Index, char *ret_String, int par_Maxc);
     int GetBreakpointChangedCounter (void);
     int GetNext (int par_StartIdx, int par_FileNr, int *ret_Ip, int *ret_LineNr, int *ret_ActiveValid);
 };

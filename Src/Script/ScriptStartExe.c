@@ -28,7 +28,7 @@
 #include <sys/wait.h>
 #endif
 
-
+#include "MemZeroAndCopy.h"
 #include "InterfaceToScript.h"
 #include "Message.h"
 #include "Blackboard.h"
@@ -49,7 +49,7 @@ HANDLE start_exe (char *par_CommandString, char **ret_ErrMsg)
     STARTUPINFO         StartInfo;
     SECURITY_ATTRIBUTES sa;
 
-    memset (&StartInfo, 0, sizeof (StartInfo));
+    MEMSET (&StartInfo, 0, sizeof (StartInfo));
     StartInfo.cb = sizeof(STARTUPINFO);
     StartInfo.dwFlags = STARTF_USESHOWWINDOW;
     if (s_main_ini_val.ScriptStartExeAsIcon) {
@@ -62,7 +62,7 @@ HANDLE start_exe (char *par_CommandString, char **ret_ErrMsg)
     StartInfo.lpTitle       = NULL;
     StartInfo.cbReserved2   = 0;
     StartInfo.lpReserved2   = NULL;
-    memset (&sa, 0, sizeof (sa));
+    MEMSET (&sa, 0, sizeof (sa));
     sa.nLength              = sizeof(SECURITY_ATTRIBUTES);
     sa.lpSecurityDescriptor = NULL;
     sa.bInheritHandle       = FALSE;

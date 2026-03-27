@@ -24,6 +24,7 @@
 #include <QString>
 #include <QColor>
 #include <QFontMetrics>
+#include <QTextStream>
 
 extern "C" {
 #include "Blackboard.h"
@@ -100,7 +101,9 @@ public:
     void makeBackup();
     void restoreBackup();
 
-    void blackboardVariableConfigChanged(int arg_vid, unsigned int arg_observationFlag) ;
+    void blackboardVariableConfigChanged(int arg_vid, unsigned int arg_observationFlag);
+    enum FileTypeEnum {SCRIPT_FILE_TYPE, EQU_FILE_TYPE};
+    void WriteContentToFile(bool par_IndentLine, enum FileTypeEnum par_FileType, QTextStream &Stream);
 
 signals:
     void columnWidthChanged(int arg_columnFlags, int arg_nameWidth, int arg_valueWidth, int arg_unitWidth);
@@ -125,7 +128,7 @@ private:
     int m_valueMaxWidthIdx;
     int m_unitMaxWidthIdx;
 
-    int m_ColumnAlignments[4];      // Qt::AlignRight
+    int m_ColumnAlignments[4];
 
     // This necessary to synchronous read of all values
     void SyncCopyBuffer(void);

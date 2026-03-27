@@ -6,19 +6,19 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>330</width>
+    <width>350</width>
     <height>844</height>
    </rect>
   </property>
   <property name="minimumSize">
    <size>
-    <width>330</width>
+    <width>350</width>
     <height>0</height>
    </size>
   </property>
   <property name="maximumSize">
    <size>
-    <width>330</width>
+    <width>350</width>
     <height>16777215</height>
    </size>
   </property>
@@ -26,10 +26,10 @@
    <string>Frame</string>
   </property>
   <property name="frameShape">
-   <enum>QFrame::StyledPanel</enum>
+   <enum>QFrame::Shape::StyledPanel</enum>
   </property>
   <property name="frameShadow">
-   <enum>QFrame::Raised</enum>
+   <enum>QFrame::Shadow::Raised</enum>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout_6">
    <item>
@@ -54,7 +54,7 @@
      <item>
       <spacer name="horizontalSpacer">
        <property name="orientation">
-        <enum>Qt::Horizontal</enum>
+        <enum>Qt::Orientation::Horizontal</enum>
        </property>
        <property name="sizeHint" stdset="0">
         <size>
@@ -74,7 +74,7 @@
     </layout>
    </item>
    <item>
-    <layout class="QHBoxLayout" name="horizontalLayout_11">
+    <layout class="QHBoxLayout" name="horizontalLayout_11" stretch="0,1,0,1,0">
      <item>
       <widget class="QLabel" name="minValueLabel">
        <property name="minimumSize">
@@ -124,7 +124,7 @@
      <item>
       <spacer name="horizontalSpacer_3">
        <property name="orientation">
-        <enum>Qt::Horizontal</enum>
+        <enum>Qt::Orientation::Horizontal</enum>
        </property>
        <property name="sizeHint" stdset="0">
         <size>
@@ -168,13 +168,13 @@
       <widget class="QGroupBox" name="ScaleGroupBox">
        <property name="minimumSize">
         <size>
-         <width>150</width>
+         <width>160</width>
          <height>0</height>
         </size>
        </property>
        <property name="maximumSize">
         <size>
-         <width>150</width>
+         <width>156</width>
          <height>16777215</height>
         </size>
        </property>
@@ -212,7 +212,7 @@
              </size>
             </property>
             <property name="alignment">
-             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+             <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
             </property>
             <property name="suffix">
              <string>°</string>
@@ -251,7 +251,7 @@
              </size>
             </property>
             <property name="alignment">
-             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+             <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
             </property>
             <property name="prefix">
              <string/>
@@ -287,7 +287,7 @@
              </size>
             </property>
             <property name="alignment">
-             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+             <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
             </property>
             <property name="suffix">
              <string>°</string>
@@ -314,7 +314,7 @@
              </size>
             </property>
             <property name="alignment">
-             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+             <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
             </property>
            </widget>
           </item>
@@ -338,7 +338,7 @@
              </size>
             </property>
             <property name="alignment">
-             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+             <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
             </property>
            </widget>
           </item>
@@ -362,7 +362,10 @@
              </size>
             </property>
             <property name="alignment">
-             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+             <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+            </property>
+            <property name="maximum">
+             <double>150.000000000000000</double>
             </property>
            </widget>
           </item>
@@ -393,13 +396,13 @@
       <widget class="QGroupBox" name="knobGroupBox">
        <property name="minimumSize">
         <size>
-         <width>150</width>
+         <width>160</width>
          <height>0</height>
         </size>
        </property>
        <property name="maximumSize">
         <size>
-         <width>150</width>
+         <width>160</width>
          <height>16777215</height>
         </size>
        </property>
@@ -409,127 +412,147 @@
        <property name="checkable">
         <bool>true</bool>
        </property>
-       <layout class="QVBoxLayout" name="verticalLayout">
+       <layout class="QVBoxLayout" name="verticalLayout_7">
         <item>
-         <layout class="QFormLayout" name="formLayout">
-          <item row="0" column="0">
-           <widget class="QLabel" name="needlePosXLabel">
-            <property name="minimumSize">
-             <size>
-              <width>50</width>
-              <height>0</height>
-             </size>
-            </property>
-            <property name="text">
-             <string>pos x</string>
-            </property>
-           </widget>
+         <layout class="QVBoxLayout" name="verticalLayout">
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_24">
+            <item>
+             <widget class="QLabel" name="needlePosXLabel">
+              <property name="minimumSize">
+               <size>
+                <width>50</width>
+                <height>0</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>pos x</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QDoubleSpinBox" name="needlePosXDoubleSpinBox">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>0</height>
+               </size>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+              </property>
+             </widget>
+            </item>
+           </layout>
           </item>
-          <item row="1" column="0">
-           <widget class="QLabel" name="needlePosYLabel">
-            <property name="minimumSize">
-             <size>
-              <width>50</width>
-              <height>0</height>
-             </size>
-            </property>
-            <property name="text">
-             <string>pos y</string>
-            </property>
-           </widget>
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_25">
+            <item>
+             <widget class="QLabel" name="needlePosYLabel">
+              <property name="minimumSize">
+               <size>
+                <width>50</width>
+                <height>0</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>pos y</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QDoubleSpinBox" name="needlePosYDoubleSpinBox">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>0</height>
+               </size>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+              </property>
+             </widget>
+            </item>
+           </layout>
           </item>
-          <item row="2" column="0">
-           <widget class="QCheckBox" name="needleSizeCheckBox">
-            <property name="text">
-             <string>size</string>
-            </property>
-           </widget>
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_26">
+            <item>
+             <widget class="QCheckBox" name="needleSizeCheckBox">
+              <property name="text">
+               <string>size</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QDoubleSpinBox" name="needleSizeDoubleSpinBox">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>0</height>
+               </size>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+              </property>
+             </widget>
+            </item>
+           </layout>
           </item>
-          <item row="3" column="0">
-           <widget class="QCheckBox" name="needleLineColorCheckBox">
-            <property name="text">
-             <string>line</string>
-            </property>
-           </widget>
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_27">
+            <item>
+             <widget class="QCheckBox" name="needleLineColorCheckBox">
+              <property name="text">
+               <string>line</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="needleLineColorPushButton">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>0</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>Color</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
           </item>
-          <item row="3" column="1">
-           <widget class="QPushButton" name="needleLineColorPushButton">
-            <property name="minimumSize">
-             <size>
-              <width>0</width>
-              <height>0</height>
-             </size>
-            </property>
-            <property name="text">
-             <string>Color</string>
-            </property>
-           </widget>
-          </item>
-          <item row="4" column="0">
-           <widget class="QCheckBox" name="needleFillColorCheckBox">
-            <property name="text">
-             <string>fill</string>
-            </property>
-           </widget>
-          </item>
-          <item row="4" column="1">
-           <widget class="QPushButton" name="needleFillColorPushButton">
-            <property name="minimumSize">
-             <size>
-              <width>0</width>
-              <height>0</height>
-             </size>
-            </property>
-            <property name="text">
-             <string>Color</string>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="1">
-           <widget class="QDoubleSpinBox" name="needleSizeDoubleSpinBox">
-            <property name="minimumSize">
-             <size>
-              <width>0</width>
-              <height>0</height>
-             </size>
-            </property>
-            <property name="alignment">
-             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="1">
-           <widget class="QDoubleSpinBox" name="needlePosXDoubleSpinBox">
-            <property name="minimumSize">
-             <size>
-              <width>0</width>
-              <height>0</height>
-             </size>
-            </property>
-            <property name="alignment">
-             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="1">
-           <widget class="QDoubleSpinBox" name="needlePosYDoubleSpinBox">
-            <property name="minimumSize">
-             <size>
-              <width>0</width>
-              <height>0</height>
-             </size>
-            </property>
-            <property name="alignment">
-             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-            </property>
-           </widget>
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_28">
+            <item>
+             <widget class="QCheckBox" name="needleFillColorCheckBox">
+              <property name="text">
+               <string>fill</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="needleFillColorPushButton">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>0</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>Color</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
           </item>
          </layout>
         </item>
         <item>
          <spacer name="verticalSpacer_2">
           <property name="orientation">
-           <enum>Qt::Vertical</enum>
+           <enum>Qt::Orientation::Vertical</enum>
           </property>
           <property name="sizeHint" stdset="0">
            <size>
@@ -545,7 +568,7 @@
      <item>
       <spacer name="horizontalSpacer_4">
        <property name="orientation">
-        <enum>Qt::Horizontal</enum>
+        <enum>Qt::Orientation::Horizontal</enum>
        </property>
        <property name="sizeHint" stdset="0">
         <size>
@@ -563,13 +586,13 @@
       <widget class="QGroupBox" name="textGroupBox">
        <property name="minimumSize">
         <size>
-         <width>150</width>
+         <width>160</width>
          <height>0</height>
         </size>
        </property>
        <property name="maximumSize">
         <size>
-         <width>150</width>
+         <width>160</width>
          <height>16777215</height>
         </size>
        </property>
@@ -612,6 +635,79 @@
           </item>
          </layout>
         </item>
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayout_13">
+          <item>
+           <widget class="QLabel" name="textPosXLabel">
+            <property name="minimumSize">
+             <size>
+              <width>50</width>
+              <height>0</height>
+             </size>
+            </property>
+            <property name="text">
+             <string>pos x</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QDoubleSpinBox" name="textPosXDoubleSpinBox">
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>0</height>
+             </size>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayout_14">
+          <item>
+           <widget class="QLabel" name="textPosYLabel">
+            <property name="minimumSize">
+             <size>
+              <width>50</width>
+              <height>0</height>
+             </size>
+            </property>
+            <property name="text">
+             <string>pos y</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QDoubleSpinBox" name="textPosYDoubleSpinBox">
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>0</height>
+             </size>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <spacer name="verticalSpacer_4">
+          <property name="orientation">
+           <enum>Qt::Orientation::Vertical</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>20</width>
+            <height>39</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
        </layout>
       </widget>
      </item>
@@ -619,13 +715,13 @@
       <widget class="QGroupBox" name="nameGroupBox">
        <property name="minimumSize">
         <size>
-         <width>150</width>
+         <width>160</width>
          <height>0</height>
         </size>
        </property>
        <property name="maximumSize">
         <size>
-         <width>150</width>
+         <width>160</width>
          <height>16777215</height>
         </size>
        </property>
@@ -668,13 +764,86 @@
           </item>
          </layout>
         </item>
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayout_3">
+          <item>
+           <widget class="QLabel" name="namePosXLabel">
+            <property name="minimumSize">
+             <size>
+              <width>50</width>
+              <height>0</height>
+             </size>
+            </property>
+            <property name="text">
+             <string>pos x</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QDoubleSpinBox" name="namePosXDoubleSpinBox">
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>0</height>
+             </size>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayout_6">
+          <item>
+           <widget class="QLabel" name="namePosYLabel">
+            <property name="minimumSize">
+             <size>
+              <width>50</width>
+              <height>0</height>
+             </size>
+            </property>
+            <property name="text">
+             <string>pos y</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QDoubleSpinBox" name="namePosYDoubleSpinBox">
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>0</height>
+             </size>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <spacer name="verticalSpacer_3">
+          <property name="orientation">
+           <enum>Qt::Orientation::Vertical</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>20</width>
+            <height>39</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
        </layout>
       </widget>
      </item>
      <item>
       <spacer name="horizontalSpacer_2">
        <property name="orientation">
-        <enum>Qt::Horizontal</enum>
+        <enum>Qt::Orientation::Horizontal</enum>
        </property>
        <property name="sizeHint" stdset="0">
         <size>
@@ -790,7 +959,7 @@
    <item>
     <spacer name="verticalSpacer">
      <property name="orientation">
-      <enum>Qt::Vertical</enum>
+      <enum>Qt::Orientation::Vertical</enum>
      </property>
      <property name="sizeHint" stdset="0">
       <size>

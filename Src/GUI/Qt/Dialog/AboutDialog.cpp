@@ -20,7 +20,8 @@
 
 extern"C"
 {
-    #include "Config.h"
+#include "Config.h"
+#include "PrintFormatToString.h"
 }
 
 AboutDialog::AboutDialog(QWidget *parent) : Dialog(parent),
@@ -41,20 +42,20 @@ AboutDialog::AboutDialog(QWidget *parent) : Dialog(parent),
 #endif
 
 #if (XILENV_MINOR_VERSION == 0)
-    sprintf (Help, "Version %.3lf.final %s%i (build %s)\n", XILENV_VERSION/1000.0,
+   PrintFormatToString (Help, sizeof(Help), "Version %.3lf.final %s%i (build %s)\n", XILENV_VERSION/1000.0,
              SystemName, ExeAddrSize, __DATE__);
 #elif (XILENV_MINOR_VERSION < 0)
-    sprintf (Help, "Version %.3lf.pre-%d %s%i (build %s)\n", XILENV_VERSION/1000.0, -
+   PrintFormatToString (Help, sizeof(Help), "Version %.3lf.pre-%d %s%i (build %s)\n", XILENV_VERSION/1000.0, -
              XILENV_MINOR_VERSION, SystemName, ExeAddrSize, __DATE__);
 #else
-    sprintf (Help, "Version %d.%d.%d %s%i (build %s)\n", XILENV_VERSION, XILENV_MINOR_VERSION, XILENV_PATCH_VERSION,
+   PrintFormatToString (Help, sizeof(Help), "Version %d.%d.%d %s%i (build %s)\n", XILENV_VERSION, XILENV_MINOR_VERSION, XILENV_PATCH_VERSION,
              SystemName, ExeAddrSize, __DATE__);
 #endif
     ui->textBrowser->insertPlainText(Help);
     Year = __DATE__; // set pointer to the begin of the string
     Year += strlen(__DATE__); // set pointer to the end of the string
     Year -= 4;  //set pointer to the begin of the year
-    sprintf (Help, "Copyright  1997-%s ZF Friedrichshafen AG\n\n", Year);
+   PrintFormatToString (Help, sizeof(Help), "Copyright  1997-%s ZF Friedrichshafen AG\n\n", Year);
     ui->textBrowser->insertPlainText(Help);
     ui->textBrowser->insertPlainText("Licensed under the Apache License, Version 2.0 (the \"License\");\n"
                                      "you may not use this file except in compliance with the License.\n"
@@ -68,13 +69,13 @@ AboutDialog::AboutDialog(QWidget *parent) : Dialog(parent),
                                      "See the License for the specific language governing permissions and\n"
                                      "limitations under the License.\n");
 #ifdef _MSC_FULL_VER
-    sprintf (Help, "\nCompiled with Visual C compiler version %i\n", _MSC_FULL_VER);
+   PrintFormatToString (Help, sizeof(Help), "\nCompiled with Visual C compiler version %i\n", _MSC_FULL_VER);
 #else
-    sprintf (Help, "\nCompiled with GCC compiler version %i.%i.%i\n",__GNUC__,__GNUC_MINOR__,__GNUC_PATCHLEVEL__);
+   PrintFormatToString (Help, sizeof(Help), "\nCompiled with GCC compiler version %i.%i.%i\n",__GNUC__,__GNUC_MINOR__,__GNUC_PATCHLEVEL__);
 #endif
     ui->textBrowser->insertPlainText(Help);
 
-    sprintf (Help, "dynamic linkend agains Qt Library %s\n"
+   PrintFormatToString (Help, sizeof(Help), "dynamic linkend agains Qt Library %s\n"
                    "The Qt Toolkit is Copyright (C) %s The Qt Company Ltd. and other contributors\n"
                    "LGPL version 3 (http://doc.qt.io/qt-%i/lgpl.html)\n\n", QT_VERSION_STR, Year, QT_VERSION_MAJOR);
     ui->textBrowser->insertPlainText(Help);

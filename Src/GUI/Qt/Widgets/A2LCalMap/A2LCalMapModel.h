@@ -42,7 +42,7 @@ public:
     void ProcessTerminated();
     void ProcessStarted();
     void Update();
-    void UpdateAck(void *par_Data);
+    void UpdateAck(int par_LinkNo, int par_Index, void *par_Data);
     void Reset();
     double GetMaxMinusMin (int axis);
     void CalcRawMinMaxValues();
@@ -51,6 +51,7 @@ public:
     bool GetNoRecursiveSetPickMapFlag();
 
     int GetMapDataType();
+    int GetMapConversionType();
     const char *GetMapConversion();
     int ChangeSelectedValuesWithDialog(QWidget *parent, int op);
     int ChangeSelectedMapValues(double NewValue, int op);

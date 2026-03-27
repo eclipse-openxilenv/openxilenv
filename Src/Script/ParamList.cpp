@@ -68,10 +68,10 @@ void cParamList::ScriptPrintAllParamLists (char *Txt, int Maxc)
 
     Txt[0] = 0;
     for (x = 0; x < ScriptParamListCount; x++) {
-        strcat (Txt, "\"");
-        strcat (Txt, ScriptParamList[x].Name);
-        strcat (Txt, "\"");
-        if (x < (ScriptParamListCount-1)) strcat (Txt, ",");
+        StringAppendMaxCharTruncate (Txt, "\"", Maxc);
+        StringAppendMaxCharTruncate (Txt, ScriptParamList[x].Name, Maxc);
+        StringAppendMaxCharTruncate (Txt, "\"", Maxc);
+        if (x < (ScriptParamListCount-1)) StringAppendMaxCharTruncate (Txt, ",", Maxc);
     }
 }
 
@@ -160,12 +160,12 @@ int cParamList::AddParamsToParamList (cParser *par_Parser)
         if (First) {
             Help[0] = 0;
         } else {
-            strcpy (Help, ScriptParamList[Idx].Params);
-            strcat (Help, ",");
+            StringCopyMaxCharTruncate (Help, ScriptParamList[Idx].Params, Len);
+            StringAppendMaxCharTruncate (Help, ",", Len);
         }
         for (x = 1; x < par_Parser->GetParameterCounter (); x++) {
-            strcat (Help, par_Parser->GetParameter (x));
-            if (x < (par_Parser->GetParameterCounter ()-1)) strcat (Help, ",");
+            StringAppendMaxCharTruncate (Help, par_Parser->GetParameter (x), Len);
+            if (x < (par_Parser->GetParameterCounter ()-1)) StringAppendMaxCharTruncate (Help, ",", Len);
         }
         Help2 = ScriptParamList[Idx].Params;
         ScriptParamList[Idx].Params = Help;
@@ -241,8 +241,7 @@ int cParamList::AddNewParamList (cParser *par_Parser)
             return -1;
         }
     }
-    ScriptParamList[ScriptParamListCount].Name = static_cast<char*>(my_malloc (strlen (par_Parser->GetParameter (0)) + 1));
-    strcpy (ScriptParamList[ScriptParamListCount].Name, par_Parser->GetParameter (0));
+    ScriptParamList[ScriptParamListCount].Name = StringMalloc (par_Parser->GetParameter (0));
 
     Len = 0;
     for (x = 1; x < par_Parser->GetParameterCounter (); x++) {
@@ -251,8 +250,8 @@ int cParamList::AddNewParamList (cParser *par_Parser)
     ScriptParamList[ScriptParamListCount].Params = static_cast<char*>(my_malloc (static_cast<size_t>(Len)));
     ScriptParamList[ScriptParamListCount].Params[0] = 0;
     for (x = 1; x < par_Parser->GetParameterCounter (); x++) {
-        strcat (ScriptParamList[ScriptParamListCount].Params, par_Parser->GetParameter (x)); 
-        if (x < (par_Parser->GetParameterCounter ()-1)) strcat (ScriptParamList[ScriptParamListCount].Params, ",");
+        StringAppendMaxCharTruncate (ScriptParamList[ScriptParamListCount].Params, par_Parser->GetParameter (x), ScriptParamList[ScriptParamListCount].ParamsLen);
+        if (x < (par_Parser->GetParameterCounter ()-1)) StringAppendMaxCharTruncate (ScriptParamList[ScriptParamListCount].Params, ",", ScriptParamList[ScriptParamListCount].ParamsLen);
     }
     ScriptParamList[ScriptParamListCount].NameLen = static_cast<int>(strlen (ScriptParamList[ScriptParamListCount].Name) + 1);
     ScriptParamList[ScriptParamListCount].ParamsLen = static_cast<int>(strlen (ScriptParamList[ScriptParamListCount].Params) + 1);

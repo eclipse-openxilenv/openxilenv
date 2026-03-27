@@ -22,7 +22,9 @@
 #include "MyMemory.h"
 #include "Files.h"
 #include "StringMaxChar.h"
+#include "PrintFormatToString.h"
 #include "ConfigurablePrefix.h"
+#include "BlackboardConversion.h"
 #include "TraceRecorder.h"
 #include "ThrowError.h"
 #include "TextReplace.h"
@@ -35,27 +37,27 @@ static int WriteLinkToHere (FILE *fh, int32_t FilePos)
     int Help;
     Help = ftell (fh);
     fseek (fh, FilePos, SEEK_SET);
-    fwrite (&Help, sizeof (MDF_LINK), 1, fh);
+    fwrite (&Help, sizeof (uint32_t), 1, fh);
     fseek (fh, Help, SEEK_SET);
     return 0;
 }
 
-static int WriteUINT16ToPos (FILE *fh, MDF_UINT16 Value, int32_t FilePos)
+static int WriteUINT16ToPos (FILE *fh, uint16_t Value, int32_t FilePos)
 {
     int Help;
     Help = ftell (fh);
     fseek (fh, FilePos, SEEK_SET);
-    fwrite (&Value, sizeof (MDF_UINT16), 1, fh);
+    fwrite (&Value, sizeof (uint16_t), 1, fh);
     fseek (fh, Help, SEEK_SET);
     return 0;
 }
 
-static int WriteUINT32ToPos (FILE *fh, MDF_UINT32 Value, int32_t FilePos)
+static int WriteUINT32ToPos (FILE *fh, uint32_t Value, int32_t FilePos)
 {
     int Help;
     Help = ftell (fh);
     fseek (fh, FilePos, SEEK_SET);
-    fwrite (&Value, sizeof (MDF_UINT32), 1, fh);
+    fwrite (&Value, sizeof (uint32_t), 1, fh);
     fseek (fh, Help, SEEK_SET);
     return 0;
 }
@@ -216,7 +218,8 @@ int OpenWriteMdfHead (START_MESSAGE_DATA hdrec_data,
                       int32_t *vids, char *dec_phys_flags, FILE **pfile)
 {
     int *vids_point;
-    int ChannelCount, Channel, ConvType, x;
+    int ChannelCount, Channel, x;
+    enum BB_CONV_TYPES ConvType;
     MDF_IDBLOCK MdfIdBlock;
     MDF_HDBLOCK MdfHdBlock;
     MDF_DGBLOCK MdfDgBlock;
@@ -229,7 +232,7 @@ int OpenWriteMdfHead (START_MESSAGE_DATA hdrec_data,
     char SignalName[BBVARI_NAME_SIZE];
     char *Conversion;
     char *Conversion2;
-    double Fac, Off;
+    BB_VARIABLE_CONVERSION Conv;
     int BitOffsetInRecord;
 
     int32_t FPos_DataBlock;
@@ -267,8 +270,8 @@ int OpenWriteMdfHead (START_MESSAGE_DATA hdrec_data,
     }
 
     MEMCPY (MdfIdBlock.FileIdentifier, "MDF     ", 8);
-    strcpy (MdfIdBlock.FormatTdentifier, "3.10 ");
-    strcpy (MdfIdBlock.ProgramIdentifier, GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_PROGRAM_NAME));
+    StringCopyMaxCharTruncate (MdfIdBlock.FormatTdentifier, "3.10 ", sizeof(MdfIdBlock.FormatTdentifier));
+    StringCopyMaxCharTruncate (MdfIdBlock.ProgramIdentifier, GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_PROGRAM_NAME), sizeof(MdfIdBlock.ProgramIdentifier));
     MdfIdBlock.DefaultByteOrder = 0;    // 0 = Little Endian
     MdfIdBlock.DefaultFloatFormat = 0;  // 0 = Floating-point format IEEE 754
     MdfIdBlock.VersionNumber = 310;     // 310 for this version
@@ -313,16 +316,16 @@ int OpenWriteMdfHead (START_MESSAGE_DATA hdrec_data,
     struct tm LocalTime, *pLocalTime;
     Time = time(NULL);
     pLocalTime = localtime_r(&Time, &LocalTime);
-    sprintf (TimeString, "%02u:%02u:%02u", (unsigned int)LocalTime.tm_hour, (unsigned int)LocalTime.tm_min, (unsigned int)LocalTime.tm_sec);
-    sprintf (DateString, "%02u.%02u.%04u", (unsigned int)LocalTime.tm_mday, (unsigned int)LocalTime.tm_mon, (unsigned int)LocalTime.tm_year + 1900);
+    PrintFormatToString (TimeString, sizeof(TimeString), "%02u:%02u:%02u", (unsigned int)LocalTime.tm_hour, (unsigned int)LocalTime.tm_min, (unsigned int)LocalTime.tm_sec);
+    PrintFormatToString (DateString, sizeof(DateString), "%02u.%02u.%04u", (unsigned int)LocalTime.tm_mday, (unsigned int)LocalTime.tm_mon, (unsigned int)LocalTime.tm_year + 1900);
 #endif
 
     MEMCPY (MdfHdBlock.DateOfRecording, DateString, 10);   // Date at which the recording was started in "DD:MM:YYYY" format
     MEMCPY (MdfHdBlock.TimeOfRecording, TimeString, 8);   //Time at which the recording was started in "HH:MM:SS" format
-    strcpy (MdfHdBlock.AuthorName, "unknown author");
-    strcpy (MdfHdBlock.OrganizationName, "unknown organization");
-    strcpy (MdfHdBlock.ProjectName, "unknown project");
-    strcpy (MdfHdBlock.MeasurementObject, "unknown measurement object");
+    STRING_COPY_TO_ARRAY (MdfHdBlock.AuthorName, "unknown author");
+    STRING_COPY_TO_ARRAY (MdfHdBlock.OrganizationName, "unknown organization");
+    STRING_COPY_TO_ARRAY (MdfHdBlock.ProjectName, "unknown project");
+    STRING_COPY_TO_ARRAY (MdfHdBlock.MeasurementObject, "unknown measurement object");
 
     if (fwrite (&MdfHdBlock, sizeof (MdfHdBlock), 1, *pfile) != 1) {
         CLOSE_FILE_FREE_BUFFERS
@@ -361,7 +364,7 @@ int OpenWriteMdfHead (START_MESSAGE_DATA hdrec_data,
     MEMCPY (MdfCgBlock.BlockTypeIdentifier, "CG", 2);
     MdfCgBlock.BlockSize = sizeof (MdfCgBlock); 
     MdfCgBlock.NextChannelGroupBlock = 0;
-    MdfCgBlock.FirstChannelBlock = (MDF_LINK)(ftell (*pfile) + (int32_t)sizeof (MdfCgBlock));
+    MdfCgBlock.FirstChannelBlock = (uint32_t)(ftell (*pfile) + (int32_t)sizeof (MdfCgBlock));
     MdfCgBlock.ChannelGroupComment = 0;
     MdfCgBlock.RecordID = 0;             // Record ID, i.e. value of the identifier for a record if the DGBLOCK defines a number of record IDs > 0
     MdfCgBlock.NumberOfChannels = (unsigned short)(ChannelCount + 1);    // Number of channels (redundant information)
@@ -379,11 +382,11 @@ int OpenWriteMdfHead (START_MESSAGE_DATA hdrec_data,
     BitOffsetInRecord = 0;
 
     // Time-Channel
-    memset (&MdfCnBlock, 0, sizeof (MdfCnBlock));
+    MEMSET (&MdfCnBlock, 0, sizeof (MdfCnBlock));
     MEMCPY (MdfCnBlock.BlockTypeIdentifier, "CN", 2);
     MdfCnBlock.BlockSize = sizeof (MdfCnBlock); 
 
-    MdfCnBlock.NextChannelBlock = (MDF_LINK)(ftell (*pfile) + (int32_t)sizeof (MdfCnBlock));
+    MdfCnBlock.NextChannelBlock = (uint32_t)(ftell (*pfile) + (int32_t)sizeof (MdfCnBlock));
 
     MdfCnBlock.ConversionFormula = 0;
     MdfCnBlock.SourceDependingExtensions = 0; 
@@ -392,9 +395,9 @@ int OpenWriteMdfHead (START_MESSAGE_DATA hdrec_data,
     MdfCnBlock.ChannelType = 1;     //    1 = time channel
     StringCopyMaxCharTruncate (MdfCnBlock.ShortSignalName, "t", 31);
     MdfCnBlock.ShortSignalName[31] = 0;
-    strcpy (MdfCnBlock.SignalDescription, "");
+    STRING_COPY_TO_ARRAY (MdfCnBlock.SignalDescription, "");
     //  Start offset in bits to determine the first bit of the signal in the data record.
-    MdfCnBlock.StartBitOffset = (MDF_UINT16)(BitOffsetInRecord);
+    MdfCnBlock.StartBitOffset = (uint16_t)(BitOffsetInRecord);
     //  Number of bits used to encode the value of this signal in a data record
     MdfCnBlock.NumberOfBits = 64;
     MdfCnBlock.SignalDataType = 3;  // IEEE 754 floating-point format DOUBLE (8 / 10 bytes)
@@ -404,7 +407,7 @@ int OpenWriteMdfHead (START_MESSAGE_DATA hdrec_data,
     MdfCnBlock.MinimumSignalValue = 0.0;
     MdfCnBlock.MaximumSignalValue = 0.0;
     //  Sampling rate for a virtual time channel
-    MdfCnBlock.SamplingRate = hdrec_data.SamplePeriod;
+    MdfCnBlock.SamplingRate = 0.0; //hdrec_data.SamplePeriod;
 
     MdfCnBlock.LongSignalName = 0;
     MdfCnBlock.SignalDisplayName = 0;
@@ -418,7 +421,7 @@ int OpenWriteMdfHead (START_MESSAGE_DATA hdrec_data,
 
     // measurement signals
     for (Channel = 0; Channel < ChannelCount; Channel++) {
-        memset (&MdfCnBlock, 0, sizeof (MdfCnBlock));
+        MEMSET (&MdfCnBlock, 0, sizeof (MdfCnBlock));
         MEMCPY (MdfCnBlock.BlockTypeIdentifier, "CN", 2);
         MdfCnBlock.BlockSize = sizeof (MdfCnBlock); 
 
@@ -437,9 +440,9 @@ int OpenWriteMdfHead (START_MESSAGE_DATA hdrec_data,
         GetBlackboardVariableName (vids[Channel], SignalName, sizeof(SignalName));
         StringCopyMaxCharTruncate (MdfCnBlock.ShortSignalName, SignalName, 31);
         MdfCnBlock.ShortSignalName[31] = 0;
-        strcpy (MdfCnBlock.SignalDescription, "");
+        STRING_COPY_TO_ARRAY (MdfCnBlock.SignalDescription, "");
         //  Start offset in bits to determine the first bit of the signal in the data record.
-        MdfCnBlock.StartBitOffset = (MDF_UINT16)(BitOffsetInRecord);
+        MdfCnBlock.StartBitOffset = (uint16_t)(BitOffsetInRecord);
         //  Number of bits used to encode the value of this signal in a data record
         if ((dec_phys_flags != NULL) && (dec_phys_flags[Channel])) {
             MdfCnBlock.NumberOfBits = 64;
@@ -503,7 +506,7 @@ int OpenWriteMdfHead (START_MESSAGE_DATA hdrec_data,
         MdfCnBlock.MinimumSignalValue = get_bbvari_min (vids[Channel]); 
         MdfCnBlock.MaximumSignalValue = get_bbvari_max (vids[Channel]);
         //  Sampling rate for a virtual time channel
-        MdfCnBlock.SamplingRate = hdrec_data.SamplePeriod;
+        MdfCnBlock.SamplingRate = 0.0; //hdrec_data.SamplePeriod;
 
         MdfCnBlock.LongSignalName = 0x7FFFFFF;    // this will be written later
         FPos_LongSignalName = ftell (*pfile) + MDF_STRUCT_OFFSET (MdfCnBlock, LongSignalName);
@@ -518,7 +521,7 @@ int OpenWriteMdfHead (START_MESSAGE_DATA hdrec_data,
         // Long signal name
         WriteLinkToHere (*pfile, FPos_LongSignalName);
         MEMCPY (MdfTxBlock.BlockTypeIdentifier, "TX", 2);
-        MdfTxBlock.BlockSize = (MDF_UINT16)(sizeof (MdfTxBlock) + strlen (SignalName) + 1);
+        MdfTxBlock.BlockSize = (uint16_t)(sizeof (MdfTxBlock) + strlen (SignalName) + 1);
         if (fwrite (&MdfTxBlock, sizeof (MdfTxBlock), 1, *pfile) != 1) {
             CLOSE_FILE_FREE_BUFFERS
             return -1;
@@ -533,7 +536,7 @@ int OpenWriteMdfHead (START_MESSAGE_DATA hdrec_data,
         FilePosSave = ftell (*pfile);
         // Conversion formula
         WriteLinkToHere (*pfile, FPos_ConversionFormula);
-        memset(&MdfCcBlock, 0, sizeof(MdfCcBlock));
+        MEMSET(&MdfCcBlock, 0, sizeof(MdfCcBlock));
         MEMCPY (MdfCcBlock.BlockTypeIdentifier, "CC", 2);
         MdfCcBlock.BlockSize = sizeof (MdfCcBlock);
         FPos_BlockSize = ftell (*pfile) + MDF_STRUCT_OFFSET (MdfCcBlock, BlockSize);
@@ -546,27 +549,54 @@ int OpenWriteMdfHead (START_MESSAGE_DATA hdrec_data,
 
         ConvType = get_bbvari_conversiontype (vids[Channel]);
         // If formula defind but variable already physical converted don't write a
-        // Formula into the MDA file
-        if ((ConvType == 1) && (dec_phys_flags != NULL) && (dec_phys_flags[Channel] == 1)) {
-            ConvType = 0;
+        // formula into the MDA file
+        if ((ConvType == BB_CONV_FORMULA) && (dec_phys_flags != NULL) && (dec_phys_flags[Channel] == 1)) {
+            ConvType = BB_CONV_NONE;
         }
         switch (ConvType) {
         default:
-        case 0:  // no conversion
+        case BB_CONV_NONE:  // no conversion
             MdfCcBlock.ConversionType = 65535; //  1:1 conversion formula (Int = Phys)
             break;
-        case 1:  // Formula
-            get_bbvari_conversion (vids[Channel], Conversion, BBVARI_CONVERSION_SIZE); // sizeof (Conversion));
-            if (ConvertFormulaToFacOff (Conversion, &Fac, &Off)) {
-                ConvType = 3;
+        case BB_CONV_FORMULA:  // Formula
+            get_bbvari_conversion (vids[Channel], Conversion, BBVARI_CONVERSION_SIZE);
+            if (ConvertFormulaToFacOff (Conversion, &Conv.Conv.FactorOffset.Factor, &Conv.Conv.FactorOffset.Offset)) {
+                // is it a linear function than switch to factor offset conversion
+                ConvType = BB_CONV_FACTOFF;
                 MdfCcBlock.ConversionType = 0; // CCBLOCK  Linear Function with 2 Parameters
             } else {
                 MdfCcBlock.ConversionType = 10; // ASAM-MCD2 Text formula
             }
             break;
-        case 2:  // ENUM
-            get_bbvari_conversion (vids[Channel], Conversion, BBVARI_CONVERSION_SIZE); // sizeof (Conversion));
+        case BB_CONV_TEXTREP:  // ENUM
+            get_bbvari_conversion (vids[Channel], Conversion, BBVARI_CONVERSION_SIZE);
             MdfCcBlock.ConversionType = 12;  // ASAM-MCD2 Text Range Table (COMPU_VTAB_RANGE)
+            break;
+        case BB_CONV_FACTOFF:   // Linear with factor and offset
+        case BB_CONV_OFFFACT:   // Linear with offset and factor
+            get_bbvari_conversion (vids[Channel], Conversion, BBVARI_CONVERSION_SIZE);
+            if (ConvType == BB_CONV_FACTOFF) {
+                Conv_ParseFactorOffsetString(Conversion, &Conv);
+            } else {
+                Conv_ParseOffsetFactorString(Conversion, &Conv);
+                Conv.Conv.FactorOffset.Offset *= Conv.Conv.FactorOffset.Factor;
+            }
+            MdfCcBlock.ConversionType = 0; // CCBLOCK Linear function with 2 Parameters
+            break;
+        case BB_CONV_TAB_INTP:   // Table with interpolation
+            get_bbvari_conversion (vids[Channel], Conversion, BBVARI_CONVERSION_SIZE);
+            Conv_ParseTableInterpolString(Conversion, &Conv);
+            MdfCcBlock.ConversionType = 1; // tabular with interpolation
+            break;
+        case BB_CONV_TAB_NOINTP:   // Table without interpolation
+            get_bbvari_conversion (vids[Channel], Conversion, BBVARI_CONVERSION_SIZE);
+            Conv_ParseTableNoInterpolString(Conversion, &Conv);
+            MdfCcBlock.ConversionType = 2; // tabular without interpolation
+            break;
+        case BB_CONV_RAT_FUNC:   // Rational function
+            get_bbvari_conversion (vids[Channel], Conversion, BBVARI_CONVERSION_SIZE);
+            Conv_ParseRationalFunctionString(Conversion, &Conv);
+            MdfCcBlock.ConversionType = 9; // CCBLOCK Rational Function with 6 Parameters
             break;
         }
 
@@ -578,21 +608,20 @@ int OpenWriteMdfHead (START_MESSAGE_DATA hdrec_data,
 
         switch (ConvType) {
         default:
-        case 0:  // no conversion
+        case BB_CONV_NONE:  // no conversion
             WriteUINT16ToPos (*pfile, 0, FPos_ConversionDataSize);
-            WriteUINT16ToPos (*pfile, (MDF_UINT16)sizeof(MDF_CCBLOCK), FPos_BlockSize);
+            WriteUINT16ToPos (*pfile, (uint16_t)sizeof(MDF_CCBLOCK), FPos_BlockSize);
             break;
-        case 1:  // Formula
+        case BB_CONV_FORMULA:  // Formula
             {
                 char *s, *d;
                 // # replace wit X1
                 s = Conversion;
                 d = Conversion2;
-                memset (Conversion2, 0, BBVARI_CONVERSION_SIZE);
+                MEMSET (Conversion2, 0, BBVARI_CONVERSION_SIZE);
                 while (*s != 0) {
                     if ((*s == '#') || (*s == '$')) {
                         *d++ = 'X';
-                        //*d++ = '1';
                         s++;
                     } else {
                         *d++ = *s++;
@@ -604,11 +633,11 @@ int OpenWriteMdfHead (START_MESSAGE_DATA hdrec_data,
                     return -1;
                 }
                 FilePos += (int32_t)(strlen (Conversion2) + 1);
-                WriteUINT16ToPos (*pfile, (MDF_UINT16)(strlen (Conversion2) + 1), FPos_ConversionDataSize);
-                WriteUINT16ToPos (*pfile, (MDF_UINT16)(sizeof(MDF_CCBLOCK) + strlen (Conversion2) + 1), FPos_BlockSize);
+                WriteUINT16ToPos (*pfile, (uint16_t)strlen (Conversion2), FPos_ConversionDataSize);
+                WriteUINT16ToPos (*pfile, (uint16_t)(sizeof(MDF_CCBLOCK) + strlen (Conversion2) + 1), FPos_BlockSize);
             }
             break;
-        case 2:  // ENUM
+        case BB_CONV_TEXTREP:  // ENUM
             {
                 int x;
                 int Pos = 0;
@@ -622,15 +651,15 @@ int OpenWriteMdfHead (START_MESSAGE_DATA hdrec_data,
 
                     if (x == -1) {  // First enty is "Undefined" we will ignore this
                         From = To = 0;
-                        strcpy (EnumText, "Undefined");
+                        STRING_COPY_TO_ARRAY (EnumText, "Undefined");
                     } else {
                         Pos = GetNextEnumFromEnumList_Pos (Pos, Conversion, EnumText, sizeof(EnumText), &From, &To, NULL);
                         if (Pos < 0) {
                             break;
                         }
                     }
-                    TabElem.LowerRange = (MDF_REAL)From;
-                    TabElem.UpperRange = (MDF_REAL)To;
+                    TabElem.LowerRange = (double)From;
+                    TabElem.UpperRange = (double)To;
                     TabElem.PointerToTx = FilePosSave + sizeof(MDF_CCBLOCK) + (Size + 1) * sizeof(MDF_COMPU_VTAB_RANGE) + Offset;
 
                     Offset += (int)(sizeof(MDF_TXBLOCK) + strlen(EnumText) + 1);
@@ -648,7 +677,7 @@ int OpenWriteMdfHead (START_MESSAGE_DATA hdrec_data,
 
                     if (x == -1) {  // First enty is "Undefined" we will ignore this
                         From = To = 0;
-                        strcpy (EnumText, "Undefined");
+                        STRING_COPY_TO_ARRAY (EnumText, "Undefined");
                     } else {
                         Pos = GetNextEnumFromEnumList_Pos (Pos, Conversion, EnumText, sizeof(EnumText), &From, &To, NULL);
                         if (Pos < 0) {
@@ -656,7 +685,7 @@ int OpenWriteMdfHead (START_MESSAGE_DATA hdrec_data,
                         }
                     }
                     MEMCPY (Tx.BlockTypeIdentifier, "TX", 2);
-                    Tx.BlockSize = (MDF_UINT16)(sizeof(MDF_TXBLOCK) +strlen(EnumText) + 1);
+                    Tx.BlockSize = (uint16_t)(sizeof(MDF_TXBLOCK) +strlen(EnumText) + 1);
 
                     if (fwrite (&Tx, sizeof (Tx), 1, *pfile) != 1) {
                         CLOSE_FILE_FREE_BUFFERS
@@ -667,23 +696,49 @@ int OpenWriteMdfHead (START_MESSAGE_DATA hdrec_data,
                         return -1;
                     }
                 }
-                WriteUINT16ToPos (*pfile, (MDF_UINT16)(Size + 1), FPos_ConversionDataSize);
-                WriteUINT16ToPos (*pfile, (MDF_UINT16)(sizeof(MDF_CCBLOCK) + (Size + 1) * sizeof(MDF_COMPU_VTAB_RANGE)), FPos_BlockSize);
+                WriteUINT16ToPos (*pfile, (uint16_t)(Size + 1), FPos_ConversionDataSize);
+                WriteUINT16ToPos (*pfile, (uint16_t)(sizeof(MDF_CCBLOCK) + (Size + 1) * sizeof(MDF_COMPU_VTAB_RANGE)), FPos_BlockSize);
             }
             break;
-        case 3:   // Linear with factor and offset
-            if (fwrite (&Off, sizeof (Off), 1, *pfile) != 1) {
+        case BB_CONV_FACTOFF:   // Linear with factor and offset
+        case BB_CONV_OFFFACT:   // Linear with offset and factor
+            if ((fwrite (&Conv.Conv.FactorOffset.Offset, sizeof(double), 1, *pfile) != 1) ||
+                (fwrite (&Conv.Conv.FactorOffset.Factor, sizeof(double), 1, *pfile) != 1)) {
                 CLOSE_FILE_FREE_BUFFERS
-                return -1;
+                    return -1;
+
             }
-            FilePos += sizeof (Off);
-            if (fwrite (&Fac, sizeof (Fac), 1, *pfile) != 1) {
-                CLOSE_FILE_FREE_BUFFERS
-                return -1;
-            }
-            FilePos += sizeof (Fac);
+            FilePos += 2 * sizeof(double);
             WriteUINT16ToPos (*pfile, 2, FPos_ConversionDataSize);
-            WriteUINT16ToPos (*pfile, (MDF_UINT16)(sizeof(MDF_CCBLOCK) + 2 * sizeof (MDF_REAL)), FPos_BlockSize);
+            WriteUINT16ToPos (*pfile, (uint16_t)(sizeof(MDF_CCBLOCK) + 2 * sizeof (double)), FPos_BlockSize);
+            break;
+        case BB_CONV_TAB_NOINTP:   // Table without interpolation
+        case BB_CONV_TAB_INTP:   // Table with interpolation
+            for (x = 0; x < Conv.Conv.Table.Size; x++) {
+                if ((fwrite (&Conv.Conv.Table.Values[x].Raw, sizeof(double), 1, *pfile) != 1) ||
+                    (fwrite (&Conv.Conv.Table.Values[x].Phys, sizeof(double), 1, *pfile) != 1)) {
+                    CLOSE_FILE_FREE_BUFFERS
+                    return -1;
+
+                }
+            }
+            FilePos += Conv.Conv.Table.Size * 2 * sizeof(double);
+            WriteUINT16ToPos (*pfile, Conv.Conv.Table.Size, FPos_ConversionDataSize);
+            WriteUINT16ToPos (*pfile, (uint16_t)(sizeof(MDF_CCBLOCK) + 2 * sizeof (double) * Conv.Conv.Table.Size), FPos_BlockSize);
+            break;
+        case BB_CONV_RAT_FUNC:   // Rational function
+            if ((fwrite (&Conv.Conv.RatFunc.a, sizeof(double), 1, *pfile) != 1) ||
+                (fwrite (&Conv.Conv.RatFunc.b, sizeof(double), 1, *pfile) != 1) ||
+                (fwrite (&Conv.Conv.RatFunc.c, sizeof(double), 1, *pfile) != 1) ||
+                (fwrite (&Conv.Conv.RatFunc.d, sizeof(double), 1, *pfile) != 1) ||
+                (fwrite (&Conv.Conv.RatFunc.e, sizeof(double), 1, *pfile) != 1) ||
+                (fwrite (&Conv.Conv.RatFunc.f, sizeof(double), 1, *pfile) != 1)) {
+                CLOSE_FILE_FREE_BUFFERS
+                return -1;
+            }
+            FilePos += 6 * sizeof(double);
+            WriteUINT16ToPos (*pfile, 6, FPos_ConversionDataSize);
+            WriteUINT16ToPos (*pfile, (uint16_t)(sizeof(MDF_CCBLOCK) + 6 * sizeof (double)), FPos_BlockSize);
             break;
         }
 
@@ -691,9 +746,9 @@ int OpenWriteMdfHead (START_MESSAGE_DATA hdrec_data,
         if (Channel < (ChannelCount - 1)) WriteLinkToHere (*pfile, FPos_NextChannelBlock);
     }
 
-    WriteUINT16ToPos (*pfile, (MDF_UINT16)(BitOffsetInRecord / 8), FPos_SizeOfDataRecord);
+    WriteUINT16ToPos (*pfile, (uint16_t)(BitOffsetInRecord / 8), FPos_SizeOfDataRecord);
 
-    // Now followed by the file
+    // Now followed by the data
     WriteLinkToHere (*pfile, FPos_DataBlock);
     if (Conversion != NULL) my_free (Conversion);
     if (Conversion2 != NULL) my_free (Conversion2);
@@ -769,7 +824,7 @@ static int WriteAllCommentsToMdfFile(FILE *fh, uint64_t RecorderStartTime)
     WriteUINT16ToPos (fh, 2, FPos_NumberOfDataGroups);
     WriteUINT32ToPos (fh, FilePos, FPos_NextDataGroupBlock);
 
-    memcpy (MdfDgBlock.BlockTypeIdentifier, "DG", 2);
+    MEMCPY (MdfDgBlock.BlockTypeIdentifier, "DG", 2);
     MdfDgBlock.BlockSize = sizeof (MdfDgBlock);
     MdfDgBlock.NextDataGroupBlock = 0;       // Pointer to next data group block (DGBLOCK) (NIL allowed)
     MdfDgBlock.FirstChannelGroupBlock = ftell (fh) + (int32_t)sizeof (MdfDgBlock);   // Pointer to first channel group block (CGBLOCK) (NIL allowed)
@@ -789,10 +844,10 @@ static int WriteAllCommentsToMdfFile(FILE *fh, uint64_t RecorderStartTime)
     }
     FilePos += sizeof (MdfDgBlock);
 
-    memcpy (MdfCgBlock.BlockTypeIdentifier, "CG", 2);
+    MEMCPY (MdfCgBlock.BlockTypeIdentifier, "CG", 2);
     MdfCgBlock.BlockSize = sizeof (MdfCgBlock);
     MdfCgBlock.NextChannelGroupBlock = 0;
-    MdfCgBlock.FirstChannelBlock = (MDF_LINK)(ftell (fh) + (long)sizeof (MdfCgBlock));
+    MdfCgBlock.FirstChannelBlock = (uint32_t)(ftell (fh) + (long)sizeof (MdfCgBlock));
     MdfCgBlock.ChannelGroupComment = 0;
     MdfCgBlock.RecordID = 0;             // Record ID, i.e. value of the identifier for a record if the DGBLOCK defines a number of record IDs > 0
     MdfCgBlock.NumberOfChannels = (unsigned short)(1 + 1);    // time + comment
@@ -808,11 +863,11 @@ static int WriteAllCommentsToMdfFile(FILE *fh, uint64_t RecorderStartTime)
 
     // Time-Channel
 
-    memset (&MdfCnBlock, 0, sizeof (MdfCnBlock));
-    memcpy (MdfCnBlock.BlockTypeIdentifier, "CN", 2);
+    MEMSET (&MdfCnBlock, 0, sizeof (MdfCnBlock));
+    MEMCPY (MdfCnBlock.BlockTypeIdentifier, "CN", 2);
     MdfCnBlock.BlockSize = sizeof (MdfCnBlock);
 
-    MdfCnBlock.NextChannelBlock = (MDF_LINK)(ftell (fh) + (long)sizeof (MdfCnBlock));
+    MdfCnBlock.NextChannelBlock = (uint32_t)(ftell (fh) + (long)sizeof (MdfCnBlock));
 
     MdfCnBlock.ConversionFormula = 0;
     MdfCnBlock.SourceDependingExtensions = 0;
@@ -821,14 +876,14 @@ static int WriteAllCommentsToMdfFile(FILE *fh, uint64_t RecorderStartTime)
     MdfCnBlock.ChannelType = 1;     //    1 = time channel for all signals of this group (in each channel group, exactly one channel must be defined as time channel)
     strncpy (MdfCnBlock.ShortSignalName, "t", 31);
     MdfCnBlock.ShortSignalName[31] = 0;
-    strcpy (MdfCnBlock.SignalDescription, "");
+    STRING_COPY_TO_ARRAY (MdfCnBlock.SignalDescription, "");
     //  Start offset in bits to determine the first bit of the signal in the data record.
     //  The start offset is a combination of a "Byte offset" and a "Bit offset".
     //  There can be an "additional Byte offset" (see below) which must be added to the Byte offset.
     //  The (total) Byte offset is applied to the plain record data, i.e. without record ID,
     //  and points to the first Byte that contains bits of the signal value.
     //  The bit offset is used to determine the LSB within the Bytes for the signal value.
-    MdfCnBlock.StartBitOffset = (MDF_UINT16)(BitOffsetInRecord);
+    MdfCnBlock.StartBitOffset = (uint16_t)(BitOffsetInRecord);
     //  Number of bits used to encode the value of this signal in a data record
     MdfCnBlock.NumberOfBits = 64;
     MdfCnBlock.SignalDataType = 3;  // IEEE 754 floating-point format DOUBLE (8 / 10 bytes)
@@ -850,11 +905,11 @@ static int WriteAllCommentsToMdfFile(FILE *fh, uint64_t RecorderStartTime)
 
     // Comments
 
-    memset (&MdfCnBlock, 0, sizeof (MdfCnBlock));
-    memcpy (MdfCnBlock.BlockTypeIdentifier, "CN", 2);
+    MEMSET (&MdfCnBlock, 0, sizeof (MdfCnBlock));
+    MEMCPY (MdfCnBlock.BlockTypeIdentifier, "CN", 2);
     MdfCnBlock.BlockSize = sizeof (MdfCnBlock);
 
-    MdfCnBlock.NextChannelBlock = 0; // no more blocks (MDF_LINK)(ftell (fh) + (long)sizeof (MdfCnBlock));
+    MdfCnBlock.NextChannelBlock = 0; // no more blocks (uint32_t)(ftell (fh) + (long)sizeof (MdfCnBlock));
 
     MdfCnBlock.ConversionFormula = 0;
     MdfCnBlock.SourceDependingExtensions = 0;
@@ -863,14 +918,14 @@ static int WriteAllCommentsToMdfFile(FILE *fh, uint64_t RecorderStartTime)
     MdfCnBlock.ChannelType = 0;     //    1 = time channel for all signals of this group (in each channel group, exactly one channel must be defined as time channel)
     strncpy (MdfCnBlock.ShortSignalName, "Comment", 31);
     MdfCnBlock.ShortSignalName[31] = 0;
-    strcpy (MdfCnBlock.SignalDescription, "Comments entered by the user during measurement");
+    STRING_COPY_TO_ARRAY (MdfCnBlock.SignalDescription, "Comments entered by the user during measurement");
     //  Start offset in bits to determine the first bit of the signal in the data record.
     //  The start offset is a combination of a "Byte offset" and a "Bit offset".
     //  There can be an "additional Byte offset" (see below) which must be added to the Byte offset.
     //  The (total) Byte offset is applied to the plain record data, i.e. without record ID,
     //  and points to the first Byte that contains bits of the signal value.
     //  The bit offset is used to determine the LSB within the Bytes for the signal value.
-    MdfCnBlock.StartBitOffset = (MDF_UINT16)(BitOffsetInRecord);
+    MdfCnBlock.StartBitOffset = (uint16_t)(BitOffsetInRecord);
     //  Number of bits used to encode the value of this signal in a data record
     MdfCnBlock.NumberOfBits = 2048;
     MdfCnBlock.SignalDataType = 7;  // IEEE 754 floating-point format DOUBLE (8 / 10 bytes)
@@ -940,7 +995,7 @@ int WriteCommentToMdf (FILE *File, uint64_t Timestamp, const char *Comment)
         }
     }
     Comments[NoOfComments].Timestamp = Timestamp;
-    memset(Comments[NoOfComments].Comment, 0, sizeof(Comments[NoOfComments].Comment));
+    MEMSET(Comments[NoOfComments].Comment, 0, sizeof(Comments[NoOfComments].Comment));
     strncpy(Comments[NoOfComments].Comment, Comment, sizeof(Comments[NoOfComments].Comment) - 1);
     NoOfComments++;
     return 0;

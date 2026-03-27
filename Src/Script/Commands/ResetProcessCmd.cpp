@@ -49,7 +49,7 @@ int cResetProcessCmd::Execute (cParser *par_Parser, cExecutor *par_Executor)
         par_Executor->SetData (0);
     } else {
         /* handover process name to wait-flag-handler, because th process will restart from there */
-        strcpy (static_cast<char*>(par_Executor->GetDataPtr ()), ProcName);
+        StringCopyMaxCharTruncate (static_cast<char*>(par_Executor->GetDataPtr ()), ProcName, DATA_ARRAY_SIZE * sizeof(uint64_t));
         par_Executor->SetData (1);
     }
     return 0;

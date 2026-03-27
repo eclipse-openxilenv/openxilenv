@@ -26,6 +26,7 @@
 
 extern "C"
 {
+    #include "StringMaxChar.h"
     #include "Message.h"
     #include "Scheduler.h"
     #include "Blackboard.h"
@@ -93,9 +94,9 @@ XCPConfigWidget::XCPConfigWidget(QWidget *parent) :
     ui->checkBoxReadParam->setChecked(xcpconfig_data->ReadParameterAfterCalib != 0);
     ui->lineEditSeedAndKey->setText(xcpconfig_data->SeedKeyDll);
     ui->lineEditCalibrationROMSeg->setText(QString("0x%1").arg(xcpconfig_data->CalibROMSegment, 0, 16));
-    ui->lineEditCalibrationRAMSeg->setText(QString("0x%1").arg(xcpconfig_data->CalibRAMPageNo, 0, 16));
     ui->lineEditCalibrationROMpage->setText(QString("0x%1").arg(xcpconfig_data->CalibROMPageNo, 0, 16));
-    ui->lineEditCalibrationRAMpage->setText(QString("0x%1").arg(xcpconfig_data->CalibRAMSegment, 0, 16));
+    ui->lineEditCalibrationRAMSeg->setText(QString("0x%1").arg(xcpconfig_data->CalibRAMSegment, 0, 16));
+    ui->lineEditCalibrationRAMpage->setText(QString("0x%1").arg(xcpconfig_data->CalibRAMPageNo, 0, 16));
     ui->checkBoxUnit->setChecked(xcpconfig_data->UseUnit != 0);
     ui->checkBoxConversion->setChecked(xcpconfig_data->UseConversion != 0);
     ui->checkBoxMinMax->setChecked(xcpconfig_data->UseMinMax != 0);
@@ -296,7 +297,7 @@ void XCPConfigWidget::on_pushButtonExport_clicked()
 
     QString fileName = FileDialog::getSaveFileName(this, QString ("Save as"), QString(), QString (XCP_EXT));
     txt[0] = 0;
-    strcpy(txt, QStringToConstChar(fileName));
+    STRING_COPY_TO_ARRAY(txt, QStringToConstChar(fileName));
     if ((fh = open_file (txt, "wt")) == nullptr) {
         ThrowError (1, "cannot open file %s", txt);
         return;
@@ -311,7 +312,7 @@ void XCPConfigWidget::on_pushButtonExport_clicked()
         break;
     }
     for (int x = 0; x < ListWidget->count(); x++) {
-        strcpy(txt, QStringToConstChar(ListWidget->item(x)->text()));
+        STRING_COPY_TO_ARRAY(txt, QStringToConstChar(ListWidget->item(x)->text()));
         fprintf (fh, "%s\n", txt);
     }
 
@@ -326,7 +327,7 @@ void XCPConfigWidget::on_pushButtonImport_clicked()
     QString fileName = FileDialog::getOpenFileName(this, "import xcp file", QString(), XCP_EXT);
 
     if(!fileName.isEmpty()) {
-        strcpy(txt, QStringToConstChar(fileName));
+        STRING_COPY_TO_ARRAY(txt, QStringToConstChar(fileName));
         if ((fh = open_file (txt, "rt")) == nullptr) {
             ThrowError (1, "cannot open file %s", txt);
             return;

@@ -21,6 +21,7 @@
 #include <ctype.h>
 #include "Config.h"
 #include "Platform.h"
+#include "StringMaxChar.h"
 #include "Files.h"
 #include "ReadFromBlackboardPipe.h"
 #include "TraceRecorder.h"
@@ -79,10 +80,10 @@ char *DatReadStimulHeaderVariabeles (const char *par_Filename)
             return NULL;
         }
         if (varicount) {
-            strcpy (Ret + Pos, ";");
+            StringCopyMaxCharTruncate (Ret + Pos, ";", (LenOfRet + 1) - Pos);
             Pos += 1;
         }
-        strcpy (Ret + Pos, word);
+        StringCopyMaxCharTruncate (Ret + Pos, word, (LenOfRet + 1) - Pos);
         Pos += (int)strlen (word);
         if (varicount > HDPLAY_MAX_VARIS) {
             ThrowError (1, "max. %i variable allowed", (int)HDPLAY_MAX_VARIS);

@@ -23,6 +23,8 @@
 
 extern "C" {
     #include "MyMemory.h"
+    #include "MemZeroAndCopy.h"
+    #include "PrintFormatToString.h"
     #include "ThrowError.h"
     #include "TextReplace.h"
     #include "BlackboardAccess.h"
@@ -31,6 +33,7 @@ extern "C" {
     #include "ReadWriteValue.h"
     #include "DebugInfoAccessExpression.h"
     #include "GetNextStructEntry.h"
+    #include "BlackboardConversion.h"
     #include "BlackboardConvertFromTo.h"
     #include "Compare2DoubleEqual.h"
     #include "A2LLink.h"
@@ -59,9 +62,9 @@ A2LCalMapData::A2LCalMapData()
     m_DecIncOffset = 1.0;
 
     m_PhysicalFlag = false;
-    memset(&m_XAxisInfo, 0, sizeof(m_XAxisInfo));
-    memset(&m_YAxisInfo, 0, sizeof(m_YAxisInfo));
-    memset(&m_ZAxisInfo, 0, sizeof(m_ZAxisInfo));
+    STRUCT_ZERO_INIT(m_XAxisInfo, CHARACTERISTIC_AXIS_INFO);
+    STRUCT_ZERO_INIT(m_YAxisInfo, CHARACTERISTIC_AXIS_INFO);
+    STRUCT_ZERO_INIT(m_ZAxisInfo, CHARACTERISTIC_AXIS_INFO);
 }
 
 A2LCalMapData::~A2LCalMapData()
@@ -175,6 +178,16 @@ void A2LCalMapData::SetCharacteristicName(QString &par_Characteristic)
     }
 }
 
+int A2LCalMapData::GetLinkNo()
+{
+    return m_LinkNo;
+}
+
+int A2LCalMapData::GetIndex()
+{
+    return m_Index;
+}
+
 int A2LCalMapData::GetType()
 {
     int Ret = 0;
@@ -268,7 +281,7 @@ const char *A2LCalMapData::GetYConversion()
 
 int A2LCalMapData::GetYConversionType()
 {
-    return m_XAxisInfo.m_ConvType;
+    return m_YAxisInfo.m_ConvType;
 }
 
 const char *A2LCalMapData::GetMapUnit()
@@ -285,7 +298,7 @@ const char *A2LCalMapData::GetMapConversion()
 
 int A2LCalMapData::GetMapConversionType()
 {
-    return m_XAxisInfo.m_ConvType;
+    return m_ZAxisInfo.m_ConvType;
 }
 
 int A2LCalMapData::TranslateAxisToArrayNo(enum A2LCalMapData::ENUM_AXIS_TYPE par_Axis)
@@ -424,36 +437,42 @@ double A2LCalMapData::GetValueNorm(int axis, int x, int y)
     }
 }
 
-
-QString A2LCalMapData::ConvertToString(double Value, CHARACTERISTIC_AXIS_INFO &AxisInfo)
+QString A2LCalMapData::ConvertToString(double Value, CHARACTERISTIC_AXIS_INFO &AxisInfo, bool par_PhysFlag)
 {
-    switch (AxisInfo.m_ConvType) {
-    default:
-    case 0: // no conversion
-        {
-            A2L_SINGLE_VALUE Help;
-            Help.Type = A2L_ELEM_TYPE_PHYS_DOUBLE;
-            Help.Value.Double = Value;
-            return ConvertValueToString(&Help, AxisInfo.m_FormatLayout);
-        }
-    case 1: // formula
+    if (par_PhysFlag) {
+        switch (AxisInfo.m_ConvType) {
+        default:
+        case BB_CONV_NONE:
+        case BB_CONV_FORMULA:
+        case BB_CONV_FACTOFF:
+        case BB_CONV_OFFFACT:
+        case BB_CONV_TAB_INTP:
+        case BB_CONV_TAB_NOINTP:
+        case BB_CONV_RAT_FUNC:
         {
             A2L_SINGLE_VALUE Help;
             Help.Type = A2L_ELEM_TYPE_PHYS_DOUBLE;
             Help.Value.Double = Conv(Value, AxisInfo);
             return ConvertValueToString(&Help, AxisInfo.m_FormatLayout);
         }
-    case 2: // text replace
+        case BB_CONV_TEXTREP:
         {
             char Help[256];
             int Color;
             if (convert_value2textreplace ((int64_t)Value, AxisInfo.m_Conversion,
-                                           Help, sizeof(Help), &Color) == 0) {
+                                          Help, sizeof(Help), &Color) == 0) {
                 return QString(Help);
             } else {
                 return QString();
             }
         }
+        }
+    } else {
+        // Raw
+        A2L_SINGLE_VALUE Help;
+        Help.Type = A2L_ELEM_TYPE_PHYS_DOUBLE;
+        Help.Value.Double = Value;
+        return ConvertValueToString(&Help, AxisInfo.m_FormatLayout);
     }
     return QString();
 }
@@ -463,29 +482,17 @@ QString A2LCalMapData::GetValueString(int axis, int x, int y)
     A2L_SINGLE_VALUE *ValuePtr = GetValue(axis, x, y);
     if (ValuePtr == nullptr) return QString();
     double Value = GetRawValue(axis, x, y);
-    if (m_PhysicalFlag) {
-        A2L_SINGLE_VALUE Help;
-        Help.Type = A2L_ELEM_TYPE_PHYS_DOUBLE;
-        switch (axis) {
-        case 0:
-            return ConvertToString(Value, m_XAxisInfo);
-            //Help.Value.Double = Conv(Value, m_XAxisInfo);
-            //break;
-        case 1:
-            return ConvertToString(Value, m_YAxisInfo);
-            //Help.Value.Double = Conv(Value, m_YAxisInfo);
-            //break;
-        case 2:
-            return ConvertToString(Value, m_ZAxisInfo);
-            //Help.Value.Double = Conv(Value, m_ZAxisInfo);
-            //break;
-        default:
-            return QString();
-            break;
-        }
-        //return ConvertValueToString(&Help);
-    } else {
-        return ConvertValueToString(ValuePtr, 3);
+    A2L_SINGLE_VALUE Help;
+    Help.Type = A2L_ELEM_TYPE_PHYS_DOUBLE;
+    switch (axis) {
+    case 0:
+        return ConvertToString(Value, m_XAxisInfo, m_PhysicalFlag);
+    case 1:
+        return ConvertToString(Value, m_YAxisInfo, m_PhysicalFlag);
+    case 2:
+        return ConvertToString(Value, m_ZAxisInfo, m_PhysicalFlag);
+    default:
+        return QString();
     }
 }
 
@@ -495,18 +502,18 @@ QString A2LCalMapData::ConvertValueToString(A2L_SINGLE_VALUE *par_Value, int par
     char String[128];
     switch (par_Value->Type) {
     case A2L_ELEM_TYPE_INT:
-        sprintf(String, "%" PRIi64 "", par_Value->Value.Int);
-        Ret = QString(Ret);
+        PrintFormatToString (String, sizeof(String), "%" PRIi64 "", par_Value->Value.Int);
+        Ret = QString(String);
         break;
     case A2L_ELEM_TYPE_UINT:
-        sprintf(String, "%" PRIu64 "", par_Value->Value.Uint);
-        Ret = QString(Ret);
+        PrintFormatToString (String, sizeof(String), "%" PRIu64 "", par_Value->Value.Uint);
+        Ret = QString(String);
         break;
     case A2L_ELEM_TYPE_DOUBLE:
         {
             int Prec = 15;
             while (1) {
-                sprintf (String, "%.*g", Prec, par_Value->Value.Double);
+                PrintFormatToString (String, sizeof(String), "%.*g", Prec, par_Value->Value.Double);
                 if ((Prec++) == 18 || (par_Value->Value.Double == strtod (String, NULL))) break;
             }
             Ret = QString(String);
@@ -516,8 +523,8 @@ QString A2LCalMapData::ConvertValueToString(A2L_SINGLE_VALUE *par_Value, int par
         Ret = QString().number(par_Value->Value.Double, 'f', par_Precision);
         break;
     case A2L_ELEM_TYPE_TEXT_REPLACE:
-        sprintf(String, "\"%s\"", par_Value->Value.String);
-        Ret = QString(Ret);
+        PrintFormatToString (String, sizeof(String), "\"%s\"", par_Value->Value.String);
+        Ret = QString(String);
         break;
     case A2L_ELEM_TYPE_ERROR:
     default:
@@ -526,27 +533,6 @@ QString A2LCalMapData::ConvertValueToString(A2L_SINGLE_VALUE *par_Value, int par
     }
     return Ret;
 }
-
-/*
-QList<int> A2LCalMapData::GetArraysSizes()
-{
-    QList<int> Ret;
-    int ArrayCount = GetLinkDataDimCount(m_Data);
-    for (int x = 0; x < ArrayCount; x++) {
-        Ret.append(GetLinkDataArraySize(m_Data, x));
-    }
-    return Ret;
-}
-
-int A2LCalMapData::GetSizeOfArray(int par_ArrayNo)
-{
-    int ArrayCount = GetLinkDataDimCount(m_Data);
-    if (par_ArrayNo < ArrayCount) {
-        return GetLinkDataArraySize(m_Data, par_ArrayNo);
-    }
-    return 0;
-}
-*/
 
 bool A2LCalMapData::XAxisNotCalibratable()
 {
@@ -558,38 +544,62 @@ bool A2LCalMapData::YAxisNotCalibratable()
     return false; // ToDo:
 }
 
-/*
-double A2LCalMapData::Norm (double par_Value, double par_Min, double par_Max)
-{
-    if (par_Max <= par_Min) par_Max = par_Min + 1.0;
-    return  (par_Value - par_Min) / (par_Max - par_Min);
-}
-*/
-
 double A2LCalMapData::Conv (double par_Value, CHARACTERISTIC_AXIS_INFO &par_AxisInfo)
 {
     double Ret;
+    bool ConvError = false;
     if (m_PhysicalFlag) {
-        if (par_AxisInfo.m_ConvType == 1) {
+        switch (par_AxisInfo.m_ConvType) {
+        default:
+        case BB_CONV_NONE:
+            Ret = par_Value;
+            break;
+        case BB_CONV_FORMULA:
             if ((par_AxisInfo.m_Conversion != nullptr) && (strlen (par_AxisInfo.m_Conversion) > 0)) {
                 if (direct_solve_equation_err_state_replace_value (par_AxisInfo.m_Conversion, par_Value, &Ret)) {
-                    ThrowError (1, "remove the X axis conversation \"%s\" from the label \"%s\"",
-                           par_AxisInfo.m_Conversion, QStringToConstChar(m_CharacteristicName));
-                    m_PhysicalFlag = false;  // switch back to raw!
-                    Ret = par_Value;   // Fehler in Umrechnung
+                    ConvError = true;
                 }
             } else {
-                Ret = par_Value;   // keine Umrechnung
+                Ret = par_Value;
             }
-        } else {
-            Ret = par_Value;   // keine Umrechnung
+            break;
+        case BB_CONV_FACTOFF:
+            if (Conv_FactorOffsetRawToPhysFromString(par_AxisInfo.m_Conversion, par_Value, &Ret)) {
+                ConvError = true;
+            }
+            break;
+        case BB_CONV_OFFFACT:
+            if (Conv_OffsetFactorRawToPhysFromString(par_AxisInfo.m_Conversion, par_Value, &Ret)) {
+                ConvError = true;
+            }
+            break;
+        case BB_CONV_TAB_INTP:
+            if (Conv_TableInterpolRawToPhysFromString(par_AxisInfo.m_Conversion, par_Value, &Ret)) {
+                ConvError = true;
+            }
+            break;
+        case BB_CONV_TAB_NOINTP:
+            if (Conv_TableNoInterpolRawToPhysFromString(par_AxisInfo.m_Conversion, par_Value, &Ret)) {
+                ConvError = true;
+            }
+            break;
+        case BB_CONV_RAT_FUNC:
+            if (Conv_RationalFunctionRawToPhysFromString(par_AxisInfo.m_Conversion, par_Value, &Ret)) {
+                ConvError = true;
+            }
+            break;
+        }
+        if (ConvError) {
+            ThrowError (1, "switch to raw view because of errors inside conversion \"%s\" from the label \"%s\"",
+                       par_AxisInfo.m_Conversion, m_CharacteristicName.toLatin1().data());
+            m_PhysicalFlag = false;  // switch back to raw!
+            Ret = par_Value;
         }
     } else {
-        Ret = par_Value;   // keine Umrechnung
+        Ret = par_Value;   // no conversion
     }
     return Ret;
 }
-
 
 double A2LCalMapData::ConvNorm (double par_Value, CHARACTERISTIC_AXIS_INFO &par_AxisInfo)
 {
@@ -1024,6 +1034,7 @@ int A2LCalMapData::WriteDataToTargetLink(bool par_Readback)
 {
     if ((m_LinkNo > 0) && (m_GetDataChannelNo >= 0)) {
         INDEX_DATA_BLOCK *idb = GetIndexDataBlock(1);
+        idb->Data->LinkNo = m_LinkNo;
         idb->Data->Index = m_Index;
         idb->Data->Data = m_Data;
         idb->Data->Flags = 0;
@@ -1147,6 +1158,7 @@ int A2LCalMapData::UpdateReq()
 {
     if ((m_LinkNo > 0) && (m_GetDataChannelNo >= 0) && (m_Index >= 0)) {
         INDEX_DATA_BLOCK *idb = GetIndexDataBlock(1);
+        idb->Data->LinkNo = m_LinkNo;
         idb->Data->Index = m_Index;
         idb->Data->Data = m_Data;
         idb->Data->Flags = 0;
@@ -1158,7 +1170,7 @@ int A2LCalMapData::UpdateReq()
 
 int A2LCalMapData::UpdateAck(void *par_Data)
 {
-    m_Data = (A2L_DATA*)par_Data;
+    m_Data = DupA2lData((A2L_DATA*)par_Data);
     if (m_Data == nullptr) {
         return -1;
     }

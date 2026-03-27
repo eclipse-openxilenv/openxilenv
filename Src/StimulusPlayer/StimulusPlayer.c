@@ -28,6 +28,7 @@
 #include "ThrowError.h"
 #include "MyMemory.h"
 #include "StringMaxChar.h"
+#include "EnvironmentVariables.h"
 #include "Message.h"
 #include "Fifos.h"
 #include "Files.h"
@@ -58,6 +59,7 @@ typedef struct {
 
     int my_pid;
     int player_status;
+    int should_send_ping_message;
 
     int vid_hdplay_state;
 } STIMULUS_PLAYER_DATA;
@@ -100,8 +102,10 @@ static int WriteOnSamplesToFiFo(STIMULUS_PLAYER_DATA *StimulusData)
         } else {
             Mask = 0;
         }
-        if ((StimulusData->sample_number & Mask) == Mask) {
+        if (((StimulusData->sample_number & Mask) == Mask) ||
+            StimulusData->should_send_ping_message) {
             Mid = PLAY_DATA_MESSAGE_PING;
+            StimulusData->should_send_ping_message = 1;
         } else {
             Mid = PLAY_DATA_MESSAGE;
         }
@@ -110,8 +114,12 @@ static int WriteOnSamplesToFiFo(STIMULUS_PLAYER_DATA *StimulusData)
                                                  StimulusData->my_pid,
                                                  StimulusData->current_sample_time, (int)sizeof (VARI_IN_PIPE) * StimulusData->varicount,
                                                  (char*)(StimulusData->pipevari_list));
+        if (StimulusData->pipe_status == 0) {
+            StimulusData->should_send_ping_message = 0;
+        }
         return 0;
     } else {
+
         StimulusData->pipe_status = WriteToFiFo (StimulusData->DataFiFo,
                                                  PLAY_NO_MORE_DATA_MESSAGE,
                                                  GET_PID(),
@@ -177,7 +185,7 @@ void cyclic_hdplay (void)
                     }
                     trigger_info.trigger_vid = -1;
                     config_file_line_counter = 1;
-                    while ((token = read_token (fh, word, 63, &config_file_line_counter)) != EOF) {
+                    while ((token = read_token (fh, word, sizeof(word)-1, &config_file_line_counter)) != EOF) {
                         token_count++;
                         if (token_count == 1) {
                             if (token != HDPLAYER_CONFIG_FILE_TOKEN) {
@@ -189,11 +197,13 @@ void cyclic_hdplay (void)
                         } else {
                             switch (token) {
                             case HDPLAYER_FILE_TOKEN:
-                                if (read_word_with_blacks (fh, StimulusData.play_file_name, MAX_PATH, &config_file_line_counter) != 0) {
+                                if (read_word_with_blacks (fh, word, sizeof(word)-1, &config_file_line_counter) != 0) {
                                     ThrowError (1, "inside file %s(%i):\n"
                                               "   expecting a = in HDPLAYER_FILE statement",
                                            filename, config_file_line_counter);
                                     goto ERROR_IN_CONFIGFILE;
+                                } else {
+                                    SearchAndReplaceEnvironmentStrings(word, StimulusData.play_file_name, sizeof(StimulusData.play_file_name));
                                 }
                                 break;
                             case TRIGGER_TOKEN:
@@ -328,6 +338,7 @@ void cyclic_hdplay (void)
                 StimulusData.pipe_status = 0;
                 StimulusData.sample_number = 0;
                 StimulusData.current_sample_time = 0;
+                StimulusData.should_send_ping_message = 0;
 
                 StimulusData.player_status = HDPLAY_FILE_NAME;
 

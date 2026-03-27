@@ -23,6 +23,7 @@
 
 extern "C"
 {
+    #include "StringMaxChar.h"
     #include "IniDataBase.h"
     #include "Blackboard.h"
     #include "Wildcards.h"
@@ -99,7 +100,7 @@ void importvariableproperties::on_buttonBox_accepted()
     }
     file.replace("/","\\");
     char FileName[MAX_PATH];
-    strcpy(FileName, QStringToConstChar(file));
+    STRING_COPY_TO_ARRAY(FileName, QStringToConstChar(file));
     int Fd = IniFileDataBaseOpen(FileName);
     if (Fd <= 0) {
         ThrowError (1, "cannot read \"%s\" file", FileName);
@@ -118,7 +119,7 @@ void importvariableproperties::on_buttonBox_accepted()
     }
     for (int i = 0; i < ui->listWidgetImportVariable->count(); i++) {
         char VarName[BBVARI_NAME_SIZE];
-        strcpy(VarName, QStringToConstChar(ui->listWidgetImportVariable->item(i)->text()));
+        STRING_COPY_TO_ARRAY(VarName, QStringToConstChar(ui->listWidgetImportVariable->item(i)->text()));
         ImportOneVariablePropertiesFlags(Fd,
                                          VarName,
                                          ImportUnit,

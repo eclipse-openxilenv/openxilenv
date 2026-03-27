@@ -264,8 +264,8 @@ void LoadValuesDialog::accept()
     int Pid;
 
 
-    strcpy(SymFileName, QStringToConstChar(ui->lineEditSymbolFile->text()));
-    strcpy(BinFileName, QStringToConstChar(ui->lineEditBinaryFile->text()));
+    STRING_COPY_TO_ARRAY(SymFileName, QStringToConstChar(ui->lineEditSymbolFile->text()));
+    STRING_COPY_TO_ARRAY(BinFileName, QStringToConstChar(ui->lineEditBinaryFile->text()));
 
     ptr = strrchr(SymFileName, '.');
     if (ptr != nullptr) {              /* file extension exists?  */
@@ -278,7 +278,7 @@ void LoadValuesDialog::accept()
         FileFlag=TRUE;
     }
 
-    strcpy(GpLabelAddressStr, ui->lineEditGPLabelAdr->text().toLatin1());
+    STRING_COPY_TO_ARRAY(GpLabelAddressStr, ui->lineEditGPLabelAdr->text().toLatin1());
 
     if (FileFlag == TRUE) {
         strtoull(GpLabelAddressStr, &endptr, 16);
@@ -298,10 +298,10 @@ void LoadValuesDialog::accept()
     BlockSize = strtoull (QStringToConstChar(ui->lineEditAdressWinSize->text()), &End, 0);
     if ((StartAddr + BlockSize) > 0xFFFFFFFFULL)
         BlockSize = 0xFFFFFFFFUL - StartAddr;
-    sprintf (strg, "0x%" PRIX64 "", StartAddr);
+    PrintFormatToString (strg, sizeof(strg), "0x%" PRIX64 "", StartAddr);
     DBWritePrivateProfileString("BasicCalibrationSettings",
                 "StartAddress", strg, ini_path);
-    sprintf (strg, "0x%" PRIX64 "", BlockSize);
+    PrintFormatToString (strg, sizeof(strg), "0x%" PRIX64 "", BlockSize);
     DBWritePrivateProfileString("BasicCalibrationSettings",
                 "BlockSize", strg, ini_path);
 
@@ -312,7 +312,7 @@ void LoadValuesDialog::accept()
     } else {
         idx = ui->listWidgetProcesses->currentIndex().row();
         if (idx >= 0) {
-            strcpy(CurProcess, QStringToConstChar(ui->listWidgetProcesses->item(idx)->text()));
+            STRING_COPY_TO_ARRAY(CurProcess, QStringToConstChar(ui->listWidgetProcesses->item(idx)->text()));
         }
     }
 
@@ -381,7 +381,7 @@ void LoadValuesDialog::accept()
             }
             break;
         case 1:      // Schreib es in ein SVL-File
-            strcpy(SvlFileName, QStringToConstChar(ui->lineEditChooseSVL->text()));
+            STRING_COPY_TO_ARRAY(SvlFileName, QStringToConstChar(ui->lineEditChooseSVL->text()));
             if (file_exists(SvlFileName)) {
                 if (ThrowError(ERROR_OKCANCEL, "File \"%s\" exists already. "
                                "Overwrite it ?", SvlFileName) == IDCANCEL)

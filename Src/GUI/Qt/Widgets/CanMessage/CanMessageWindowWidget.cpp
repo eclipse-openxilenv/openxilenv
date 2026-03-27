@@ -22,6 +22,7 @@
 #include "QtIniFile.h"
 
 extern "C" {
+#include "PrintFormatToString.h"
 #include "EquationParser.h"
 #include "Files.h"
 #include "MyMemory.h"
@@ -113,16 +114,16 @@ bool CANMessageWindowWidget::writeToIni()
     QString SectiopnPath = GetIniSectionPath();
 
     for (x = 0; x < (MAX_CAN_ACCEPTANCE_MASK_ELEMENTS - 1); x++) {
-        sprintf (entry, "cam%i", x);
+        PrintFormatToString (entry, sizeof(entry), "cam%i", x);
         if (x < (m_cam_count-1)) {
-            sprintf (txt, "%i:0x%X,0x%X", m_cam[x].Channel,
+            PrintFormatToString (txt, sizeof(txt), "%i:0x%X,0x%X", m_cam[x].Channel,
                      m_cam[x].Start, m_cam[x].Stop);
             ScQt_IniFileDataBaseWriteString (SectiopnPath, entry, txt, Fd);
         } else ScQt_IniFileDataBaseWriteString (SectiopnPath, entry, nullptr, Fd);
     }
-    sprintf (txt, "%i", m_Record2Disk);
+    PrintFormatToString (txt, sizeof(txt), "%i", m_Record2Disk);
     ScQt_IniFileDataBaseWriteString(SectiopnPath, "Record2Disk", txt, Fd);
-    sprintf (txt, "%i", m_TriggerActiv);
+    PrintFormatToString (txt, sizeof(txt), "%i", m_TriggerActiv);
     ScQt_IniFileDataBaseWriteString(SectiopnPath, "TriggerActiv", txt, Fd);
     ScQt_IniFileDataBaseWriteString(SectiopnPath, "FileName", QStringToConstChar(m_RecorderFileName), Fd);
     ScQt_IniFileDataBaseWriteString(SectiopnPath, "TriggerEquation", QStringToConstChar(m_TriggerEquation), Fd);
@@ -160,7 +161,7 @@ bool CANMessageWindowWidget::readFromIni()
     QString SectiopnPath = GetIniSectionPath();
 
     for (x = 0; x < (MAX_CAN_ACCEPTANCE_MASK_ELEMENTS - 1); x++) {
-        sprintf (entry, "cam%i", x);
+        PrintFormatToString (entry, sizeof(entry), "cam%i", x);
         if (!ScQt_IniFileDataBaseReadString(SectiopnPath, entry, "", txt, sizeof (txt), Fd)) {
             break;
         }
@@ -333,7 +334,7 @@ void CANMessageWindowWidget::resetDefaultVariables(QStringList arg_variables)
     // NOTE: required by inheritance but not used
 }
 
-void CANMessageWindowWidget::BuildAbsoluteTimeString (double Ts, char *Txt)
+void CANMessageWindowWidget::BuildAbsoluteTimeString (double Ts, char *Txt, int Maxc)
 {
     uint32_t Hour;
     uint32_t Minute;
@@ -344,7 +345,7 @@ void CANMessageWindowWidget::BuildAbsoluteTimeString (double Ts, char *Txt)
     Minute = static_cast<uint32_t>(T / 60000.0);  // 1 minute has 60s
     T -= static_cast<double>(Minute) * 60000.0;
     T *= 0.001;
-    sprintf (Txt, "%02i:%02i:%09.6f", Hour, Minute, T);
+    PrintFormatToString (Txt, Maxc, "%02i:%02i:%09.6f", Hour, Minute, T);
 }
 
 int CANMessageWindowWidget::ReadAndProcessCANMessages (void)
@@ -400,7 +401,7 @@ int CANMessageWindowWidget::ReadAndProcessCANMessages (void)
 #endif
                             m_TsOffset -= Ts;
                         }
-                        BuildAbsoluteTimeString (Ts, Txt);
+                        BuildAbsoluteTimeString (Ts, Txt, sizeof(Txt));
                         fprintf (m_fh, "%s\t", Txt);
                         fprintf (m_fh, "%s\t", (pCANMessage->node) ? "->" : "<-");
                         fprintf (m_fh, "%i\t", static_cast<int>(pCANMessage->channel));

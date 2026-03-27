@@ -23,7 +23,9 @@
 #include "QLabel"
 #include "QWidget"
 
+#include <QPoint>
 #include <QAction>
+#include <QVBoxLayout>
 
 class KnobOrTachoWidget : public MdiWindowWidget {
     Q_OBJECT
@@ -150,7 +152,6 @@ public:
     void setDragStatusSignal(QString arg_Name);
 
     void CopyAttributesFrom(KnobOrTachoWidget *par_From);
-
     void CheckChangeOfDragStatusSignal(bool par_DragStatusFlagOld, QString par_DragStatusNameOld);
 
 protected:
@@ -159,32 +160,8 @@ protected:
     virtual void dragLeaveEvent(QDragLeaveEvent *event) Q_DECL_OVERRIDE;
     virtual void dropEvent(QDropEvent *event) Q_DECL_OVERRIDE;
     void mouseDoubleClickEvent(QMouseEvent *event) Q_DECL_OVERRIDE;
-    void mousePressEvent(QMouseEvent *event) Q_DECL_OVERRIDE;
-    void mouseReleaseEvent(QMouseEvent *event) Q_DECL_OVERRIDE;
-    void mouseMoveEvent(QMouseEvent *event) Q_DECL_OVERRIDE;
     void keyPressEvent(QKeyEvent *arg_event) Q_DECL_OVERRIDE;
     void contextMenuEvent(QContextMenuEvent *event) Q_DECL_OVERRIDE;
-
-private:
-    QString SearchAndReplaceEnvironmentVariables(QString &par_String);
-    QColor getTextColorForBackground(const QColor &arg_color) const;
-    double minArcAngleForDial(const double arg_minArcIni) const;
-    double maxArcAngleForDial(const double arg_minArcIni, const double arg_maxArcIni) const;
-    double minArcAngleForIni(const double arg_minArcDial) const;
-    double maxArcAngleForIni(const double arg_minArcDial, const double arg_maxArcDial) const;
-    void paintEvent(QPaintEvent *arg_event) Q_DECL_OVERRIDE;
-    void openDialog() Q_DECL_OVERRIDE;
-
-    void drawValue(); //write the Value on change
-
-    QLabel *VariableNameLabel;
-    QLabel *ValueLabel;
-    QWidget *Drawarea;
-    int maxLabelSize;
-    int maxLabelSizey;
-    int xm;
-    int ym;
-
 
 private slots:
     virtual void CyclicUpdate() Q_DECL_OVERRIDE;
@@ -202,48 +179,34 @@ private slots:
     void ConfigureSlot();
 
 private:
-    void WriteSliderValue(double arg_Value);
-    double PaintRoundScale(QPainter &Painter, int par_Width, int par_Height, int par_Offset);
-    void PaintKnob(QPainter &Painter, int par_Width, int par_Height, double par_Radius, int par_Offset);
-    void PaintNeedle(QPainter &Painter, int par_Width, int par_Height, double par_Radius, int par_Offset);
-    void PaintLinearSlopeScale(QPainter &Painter, int par_Width, int par_Height, int par_Offset);
-    void PaintSliderKnob(QPainter &Painter, int par_Width, int par_Height, int par_Offset);
-    void PaintSliderLine(QPainter &Painter, int par_Width, int par_Height, int par_Offset);
-    void PaintBargraph(QPainter &Painter, int par_Width, int par_Height, int par_Offset);
-    QRect CalcSliderRect(int par_Width, int par_Height);
-    int CalcSliderLen(int par_Height);
+    QString SearchAndReplaceEnvironmentVariables(QString &par_String);
+    QColor getTextColorForBackground(const QColor &arg_color) const;
+    double minArcAngleForDial(const double arg_minArcIni) const;
+    double maxArcAngleForDial(const double arg_minArcIni, const double arg_maxArcIni) const;
+    double minArcAngleForIni(const double arg_minArcDial) const;
+    double maxArcAngleForIni(const double arg_minArcDial, const double arg_maxArcDial) const;
+    void paintEvent(QPaintEvent *arg_event) Q_DECL_OVERRIDE;
+    void openDialog() Q_DECL_OVERRIDE;
 
+    void UpdateNameAndValue();
+
+    void ReadValueFromBlackboard();
+
+    void ResetWindowSize();
+
+    QRect CalcSliderRect(int par_Width, int par_Height);
     void CheckBitmapWindowSizeBehaviour();
+    void ChangeLayout();
+    void LoadBackgroundPixmap();
 
     enum KnobOrTachoType m_KnobOrTachoType;
     bool m_FirstUpdate;
     QSize m_Size;
-
-    QPoint m_MoveStartPoint;
-    bool m_MoveFlag;
-    QPoint m_startDragPosition;
-
-    bool m_Overwind;
-    bool m_OverwindDir;
-
     int m_ConversionType;
     bool m_DisplayUnit;
     int m_DataType;
-
-    double m_CurrentValue;
     double m_DragValue;
-
-    //int m_TextAlign;
-
-    QString m_VariableName;
-
-    int m_Vid;
     int m_VidLastUpdate;
-
-    int m_FontSizeDyn;
-    QFont m_ScaleFont;
-
-    int m_DragStateVid;
 
     class KnobAttributes {
     public:
@@ -314,18 +277,76 @@ private:
 
     KnobAttributes m_Attributes;
     KnobAttributes m_SavedAttributes;
+    QSize m_WindowSizeStored;
+
+    class DrawArea : public QWidget {
+    public:
+        DrawArea(enum KnobOrTachoType par_KnobOrTachoType, KnobAttributes *par_Attributes, QWidget* parent = nullptr);
+        double PaintRoundScale(QPainter &Painter, int par_Width, int par_Height);
+        void PaintKnob(QPainter &Painter, int par_Width, int par_Height, double par_Radius);
+        void PaintNeedle(QPainter &Painter, int par_Width, int par_Height, double par_Radius);
+        void PaintLinearSlopeScale(QPainter &Painter, int par_Width, int par_Height);
+        void PaintSliderKnob(QPainter &Painter, int par_Width, int par_Height);
+        void PaintSliderLine(QPainter &Painter, int par_Width, int par_Height);
+        void PaintBargraph(QPainter &Painter, int par_Width, int par_Height);
+        void SetVid(int par_Vid);
+        int GetVid();
+        void SetDragStateVid(int par_Vid);
+        int GetDragStateVid();
+        double GetCurrentValue();
+        void SetCurrentValue(double par_Value);
+        void SetVariableName(QString par_Name);
+        QString GetVariableName();
+        void SetValueString(QString par_Name);
+        QString GetValueString();
+
+    protected:
+        void mousePressEvent(QMouseEvent *event) Q_DECL_OVERRIDE;
+        void mouseReleaseEvent(QMouseEvent *event) Q_DECL_OVERRIDE;
+        void mouseMoveEvent(QMouseEvent *event) Q_DECL_OVERRIDE;
+
+    private:
+        void paintEvent(QPaintEvent *arg_event) Q_DECL_OVERRIDE;
+        void WriteSliderValue(double arg_Value);
+        int CalcSliderLen(int par_Height);
+
+        enum KnobOrTachoType m_KnobOrTachoType;
+        KnobAttributes *m_Attributes;
+        int maxLabelSize;
+        int maxLabelSizey;
+        int m_FontSizeDyn;
+        QFont m_ScaleFont;
+
+        double m_CurrentValue;
+        double m_DragValue;
+        int m_Vid;
+        int m_DragStateVid;
+
+        QPoint m_MoveStartPoint;
+        bool m_MoveFlag;
+        QPoint m_startDragPosition;
+
+        bool m_Overwind;
+        bool m_OverwindDir;
+
+        int m_LastXpos;
+        int m_LastYpos;
+
+        QString m_VariableName;
+        QString m_ValueString;
+    };
+
+    DrawArea *m_Drawarea;
+    QLabel *m_VariableNameLabel;
+    QLabel *m_ValueLabel;
+    QVBoxLayout *m_Layout;
 
     bool m_bitmapPathExist;
-
+    bool m_NewPixmapIsLoaded;
     QPixmap m_PixmapOrginalSize;
     QPixmap m_PixmapResized;
 
     BlackboardObserverConnection m_ObserverConnection;
-    int m_LastXpos;
-    int m_LastYpos;
-
-    // only for debugging
-    double m_DebugAngle;
 
     QAction *m_ConfigAct;
 };

@@ -23,6 +23,7 @@
 #include "StringHelpers.h"
 
 extern "C" {
+#include "PrintFormatToString.h"
 #include "Blackboard.h"
 }
 
@@ -80,7 +81,7 @@ bool EnumWidget::readFromIni()
 
     int loc_Count = ScQt_IniFileDataBaseReadInt(SectionPath, "VariableCount", 0, Fd);
     for (int i = 0; i < loc_Count; ++i) {
-        sprintf(loc_Entry,"Variable%i",i);
+        PrintFormatToString (loc_Entry, sizeof(loc_Entry), "Variable%i",i);
         QString VariableName = ScQt_IniFileDataBaseReadString(SectionPath, loc_Entry, "", Fd);
         if (!VariableName.isEmpty()) {
             OneEnumVariable *Variable = new OneEnumVariable(QString(VariableName), this);

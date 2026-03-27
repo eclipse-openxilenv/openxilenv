@@ -50,7 +50,7 @@ public slots:
 protected:
     void FlushMessageQueue ();
 
-    void BuildAbsoluteTimeString(double Ts, char *Txt);
+    void BuildAbsoluteTimeString(double Ts, char *Txt, int Maxc);
     int ReadAndProcessCANMessages();
     double TimestampCalc(CAN_FD_FIFO_ELEM *pCanMessage);
     void TimestampCalcLine(CAN_MESSAGE_LINE *pcml);

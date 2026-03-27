@@ -21,6 +21,7 @@
 
 extern "C" {
 #include "MyMemory.h"
+#include "Files.h"
 #include "MainValues.h"
 #include "Blackboard.h"
 #include "BlackboardAccess.h"
@@ -168,7 +169,10 @@ QVariant TextTableModel::data(const QModelIndex& arg_index, int arg_role) const
         switch (arg_index.column()) {
             case 1:
                 if (loc_variable->m_hasOwnBackgroundColor) {
-                    if (loc_variable->m_backgroundColor.red() + loc_variable->m_backgroundColor.green() + loc_variable->m_backgroundColor.blue() > (3*128)) {
+                    int r = loc_variable->m_backgroundColor.red();
+                    int g = loc_variable->m_backgroundColor.green();
+                    int b = loc_variable->m_backgroundColor.blue();
+                    if ((r*300 + g*588 + b*115 > (185 << 8))) {
                         loc_ret = QColor(Qt::black);
                     } else {
                         loc_ret = QColor(Qt::white);
@@ -784,6 +788,11 @@ int TextTableModel::UpdateOneVariable(TextTableModel::Variable *loc_Variable, in
             case 3: // Phys
                 switch(loc_Variable->m_conversionType = get_bbvari_conversiontype(loc_Variable->m_vid)) {  // todo: das sollte auch nur vom Observer uerbnommen werden
                     case BB_CONV_FORMULA:
+                    case BB_CONV_FACTOFF:
+                    case BB_CONV_OFFFACT:
+                    case BB_CONV_TAB_INTP:
+                    case BB_CONV_TAB_NOINTP:
+                    case BB_CONV_RAT_FUNC:
                         {
                             double loc_physValue;
                             if (get_phys_value_for_raw_value (loc_Variable->m_vid, loc_Variable->m_rawDoubleValue, &loc_physValue)) {
@@ -927,7 +936,13 @@ void TextTableModel::blackboardVariableConfigChanged(int arg_vid, unsigned int a
         int loc_conversionType = get_bbvari_conversiontype(arg_vid);
         if (Var != nullptr) Var->m_conversionType = loc_conversionType;
         if (BackupVar != nullptr) BackupVar->m_conversionType = loc_conversionType;
-        if(loc_conversionType == BB_CONV_FORMULA || loc_conversionType == BB_CONV_TEXTREP) {
+        if((loc_conversionType == BB_CONV_FORMULA) ||
+            (loc_conversionType == BB_CONV_TEXTREP) ||
+            (loc_conversionType == BB_CONV_FACTOFF) ||
+            (loc_conversionType == BB_CONV_OFFFACT) ||
+            (loc_conversionType == BB_CONV_TAB_INTP) ||
+            (loc_conversionType == BB_CONV_TAB_NOINTP) ||
+            (loc_conversionType == BB_CONV_RAT_FUNC)) {
             if (Var != nullptr) Var->m_hasConversion = true;
             if (BackupVar != nullptr) BackupVar->m_hasConversion = true;
         } else {
@@ -950,6 +965,68 @@ void TextTableModel::blackboardVariableConfigChanged(int arg_vid, unsigned int a
         }
         if (CallSyncCopyBufferFlag) {
             SyncCopyBuffer();
+        }
+    }
+}
+
+void TextTableModel::WriteContentToFile(bool par_IndentLine, enum FileTypeEnum par_FileType, QTextStream &Stream)
+{
+    int x = 0;
+
+    if (1) {
+        QString Prefix;
+        if (par_IndentLine) {
+            Prefix = "    ";
+        } else {
+            Prefix = "";
+        }
+        foreach(Variable* Element, m_listOfElements) {
+            if (Element->m_exists) {
+                QModelIndex Index = createIndex(x, 1);
+                QString Value = data(Index, Qt::DisplayRole).toString();
+                if (Element->m_type == 3) {  // phys
+                    if (get_bbvari_conversiontype(Element->m_vid) == 2) {   // Textreplace
+                        if(!Value.compare("out of range")) {
+                            char ValueString[256];
+                            bbvari_to_string (m_Types[x],
+                                             m_Values[x],
+                                             10,
+                                             ValueString,
+                                             sizeof(ValueString));
+                            Value = QString(ValueString);
+                            goto __CANNOT_USE_PHYS;
+                        }
+                        switch(par_FileType) {
+                        case SCRIPT_FILE_TYPE:
+                            Stream << Prefix << "SET(" << Element->m_name << " = enum(" << Element->m_name << "@" << Value << "))\n";
+                            break;
+                        case EQU_FILE_TYPE:
+                            Stream << Prefix << Element->m_name << " = enum(" << Element->m_name << "@" << Value << ");\n";
+                            break;
+                        }
+                    } else {
+                        switch(par_FileType) {
+                        case SCRIPT_FILE_TYPE:
+                            Stream << Prefix << "SET(phys(" << Element->m_name << ") = " << Value << ")\n";
+                            break;
+                        case EQU_FILE_TYPE:
+                            Stream << Prefix << "phys(" << Element->m_name << ") = " << Value << ";\n";
+                            break;
+                        }
+                    }
+                } else {
+__CANNOT_USE_PHYS:
+                    switch(par_FileType) {
+                    case SCRIPT_FILE_TYPE:
+                        Stream << Prefix << "SET(" << Element->m_name << " = " << Value << ")\n";
+                        break;
+                    case EQU_FILE_TYPE:
+                         Stream << Prefix <<  Element->m_name << " = " << Value << ";\n";
+                        break;
+                    }
+                }
+            }
+            x++;
         }
     }
 }

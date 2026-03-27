@@ -48,11 +48,11 @@ private slots:
 
     void on_ColorLineEdit_editingFinished();
 
-    void on_ConversionTypeComboBox_currentTextChanged(const QString &ConversionType);
-
     void on_ColorValidCheckBox_stateChanged(int arg1);
 
     void handleSelectionChanged(const QItemSelection &selected, const QItemSelection &deselected);
+
+    void on_ConversionTypeComboBox_currentIndexChanged(int index);
 
 private:
     class DialogData {

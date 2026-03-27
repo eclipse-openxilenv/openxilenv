@@ -140,6 +140,9 @@ set(CommonFileList
     LoadRefListCmd.cpp
     SaveSvlCmd.cpp
     StartTriggerCmd.cpp
+    ExportA2lMeasurementListCmd.cpp
+    ImportA2lMeasurementListCmd.cpp
+    ConvertDbcToCanCmd.cpp
 )
 
 target_sources(XilEnv  PRIVATE ${CommonFileList})

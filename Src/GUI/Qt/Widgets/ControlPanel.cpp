@@ -35,6 +35,7 @@
 
 extern "C" {
     #include "Config.h"
+    #include "StringMaxChar.h"
     #include "Message.h"
     #include "ThrowError.h"
     #include "ConfigurablePrefix.h"
@@ -363,7 +364,7 @@ void ControlPanel::UpdateStatusDisplay()
     char Text[256];
     int Color;
 
-    strcpy (Text, "unknown");
+    STRING_COPY_TO_ARRAY (Text, "unknown");
     switch (ui->d_tabWidget->currentIndex()) {
     case 0:  // Script
         if (read_bbvari_textreplace (m_ScriptStatusVid, Text, sizeof (Text), &Color) == 0) {
@@ -421,7 +422,7 @@ void ControlPanel::on_d_pushBtnScriptRun_clicked()
     if (script_status_flag != RUNNING) {
          QString ScriptFile = ui->d_comboBoxScriptFile->currentText();
          if (!ScriptFile.isEmpty()) {
-             strcpy (script_filename, QStringToConstChar(ScriptFile));
+             STRING_COPY_TO_ARRAY (script_filename, QStringToConstChar(ScriptFile));
              script_status_flag = START;
          }
     }

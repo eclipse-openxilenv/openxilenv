@@ -254,7 +254,9 @@ void UserControlConfigDialog::PasteAct()
     if (m_CopyBuffer != nullptr) {
         QModelIndex Index = ui->ControlItemsTreeView->currentIndex();
         UserControlElement *Item = PasteBufferRecursive(m_CopyBuffer, nullptr, -1);   // -1 -> appand
-        m_Model->InsertItem(-1, Item, Index);
+        if (Item != nullptr) {
+            m_Model->InsertItem(-1, Item, Index);
+        }
     }
 }
 
@@ -265,7 +267,9 @@ void UserControlConfigDialog::PasteBeforeAct()
         if (Index.isValid()) {
             QModelIndex ParentIndex = Index.parent();
             UserControlElement *Item = PasteBufferRecursive(m_CopyBuffer, nullptr, Index.row());
-            m_Model->InsertItem(Index.row(), Item, ParentIndex);
+            if (Item != nullptr) {
+                m_Model->InsertItem(Index.row(), Item, ParentIndex);
+            }
         }
     }
 }
@@ -277,7 +281,9 @@ void UserControlConfigDialog::PasteBehindAct()
         if (Index.isValid()) {
             QModelIndex ParentIndex = Index.parent();
             UserControlElement *Item = PasteBufferRecursive(m_CopyBuffer, nullptr, Index.row());
-            m_Model->InsertItem(Index.row()+1, Item, ParentIndex);
+            if (Item != nullptr) {
+                m_Model->InsertItem(Index.row()+1, Item, ParentIndex);
+            }
         }
     }
 }
@@ -304,8 +310,9 @@ void UserControlConfigDialog::on_UpdatePushButton_clicked()
 
 void UserControlConfigDialog::CopyRecursiveToBuffer(UserControlConfigDialog::CopyBufferElem *par_Buffer, QModelIndex &par_Index)
 {
-    par_Buffer->m_Line = par_Index.data(Qt::DisplayRole).toString();
-    par_Buffer->m_Line.append(par_Index.data(Qt::UserRole).toString());  // UserRole == Parameter
+    QModelIndex Index = par_Index.model()->index(par_Index.row(), 0, par_Index);
+    par_Buffer->m_Line =Index.data(Qt::DisplayRole).toString();
+    par_Buffer->m_Line.append(Index.data(Qt::UserRole).toString());  // UserRole == Parameter
     for (int Row = 0; ; Row++) {
         QModelIndex Child = par_Index.model()->index(Row, 0, par_Index);
         if (!Child.isValid()) break;

@@ -19,6 +19,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
+#include "PrintFormatToString.h"
 #include "MainValues.h"
 #include "FileExtensions.h"
 #include "Message.h"
@@ -39,7 +40,7 @@ static char messagefilename[MAX_PATH_LAENGE] = "script.msg";
 
 void init_messagefilename (char *prefix)
 {
-	sprintf (messagefilename, "%sscript.msg", prefix);
+    PrintFormatToString (messagefilename, sizeof(messagefilename), "%sscript.msg", prefix);
 }
 
 void AddScriptMessageOnlyMessageWindow (const char *szText)

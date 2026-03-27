@@ -41,10 +41,10 @@ int cEof::Execute (cParser *par_Parser, cExecutor *par_Executor)
         if (par_Parser->GenDebugFile ()) par_Parser->PrintDebugFile ("/* end of main script */");
         return 0xE0F;    // End of main Script
     } else {
-        int ReturnToIp; 
-        char Fimename[MAX_PATH];
-        par_Executor->Stack.RemoveRunReturnToScript (par_Parser, &ReturnToIp, Fimename);
-        if (par_Parser->GenDebugFile ()) par_Parser->PrintDebugFile ("/* go back to script file \"%s\" (%i)*/", Fimename, ReturnToIp);
+        int ReturnToIp;
+        char Filename[MAX_PATH];
+        par_Executor->Stack.RemoveRunReturnToScript (par_Parser, &ReturnToIp, Filename, sizeof(Filename));
+        if (par_Parser->GenDebugFile ()) par_Parser->PrintDebugFile ("/* go back to script file \"%s\" (%i)*/", Filename, ReturnToIp);
         par_Executor->SetNextIp (ReturnToIp + 1);
         return 0;
     }

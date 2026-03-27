@@ -25,6 +25,7 @@
 extern "C" {
 #include "MyMemory.h"
 #include "StringMaxChar.h"
+#include "PrintFormatToString.h"
 #include "ThrowError.h"
 #include "Blackboard.h"
 #include "BlackboardAccess.h"
@@ -88,7 +89,7 @@ int cStack::AddRunReturnToScript (int par_RunReturnToIp, const char *par_Fimenam
     return 0;
 }
 
-int cStack::RemoveRunReturnToScript (cParser *par_Parser, int *ret_RunReturnToIp, char *ret_Fimename)
+int cStack::RemoveRunReturnToScript (cParser *par_Parser, int *ret_RunReturnToIp, char *ret_Fimename, int par_Maxc)
 {
     STACK_ELEM *Sp;
 
@@ -107,7 +108,7 @@ int cStack::RemoveRunReturnToScript (cParser *par_Parser, int *ret_RunReturnToIp
             break;
         case SCRIPT_STACK_BACK_TO_FILE:
             *ret_RunReturnToIp = Sp->Data.RunReturnToIp;
-            if (ret_Fimename != nullptr) strcpy (ret_Fimename, Sp->Name);
+            if (ret_Fimename != nullptr) StringCopyMaxCharTruncate (ret_Fimename, Sp->Name, par_Maxc);
             StackPointerToScriptStack = Sp->PosOfPrev;
             StackChangedCounter++;  // Stack has changed
             return 0;
@@ -298,27 +299,27 @@ int cStack::PrintOneStackToString (int par_Index, char *par_String, int par_MaxC
             case SCRIPT_STACK_ENDOF:
                 goto END_OF_STACK;
             case SCRIPT_STACK_LOCAL_VARIABLE:
-                sprintf (par_String, "SCRIPT_STACK_LOCAL_VARIABLE Name = \"%s\" = %f", Sp->Name, Sp->Data.Value);
+                PrintFormatToString (par_String, par_MaxChar, "SCRIPT_STACK_LOCAL_VARIABLE Name = \"%s\" = %f", Sp->Name, Sp->Data.Value);
                 break;
             case SCRIPT_STACK_REF_TO_LOCAL_VARIABLE:
                 if ((Sp->Data.Ref >> 32) == 1) {   // ist eine VID
-                    sprintf (par_String, "SCRIPT_STACK_REF_TO_LOCAL_VARIABLE RefName = \"%s\" poits to (VID) %i", Sp->Name, static_cast<int>(Sp->Data.Ref));
+                    PrintFormatToString (par_String, par_MaxChar, "SCRIPT_STACK_REF_TO_LOCAL_VARIABLE RefName = \"%s\" poits to (VID) %i", Sp->Name, static_cast<int>(Sp->Data.Ref));
                 } else {
-                    sprintf (par_String, "SCRIPT_STACK_REF_TO_LOCAL_VARIABLE RefName = \"%s\" poits to %i", Sp->Name, static_cast<int>(Sp->Data.Ref));
+                    PrintFormatToString (par_String, par_MaxChar, "SCRIPT_STACK_REF_TO_LOCAL_VARIABLE RefName = \"%s\" poits to %i", Sp->Name, static_cast<int>(Sp->Data.Ref));
                 }
                 break;
             case SCRIPT_STACK_PROC_CALL:
-                sprintf (par_String, "SCRIPT_STACK_PROC_CALL Return to proc = \"%s\" ProcIdx %i",
+                PrintFormatToString (par_String, par_MaxChar, "SCRIPT_STACK_PROC_CALL Return to proc = \"%s\" ProcIdx %i",
                          Sp->Name, Sp->Data.RetFromProc.RetToProcIdx);
                 break;
             case SCRIPT_STACK_BACK_TO_FILE:
-                sprintf (par_String, "SCRIPT_STACK_BACK_TO_FILE Return to file = \"%s\"", Sp->Name);
+                PrintFormatToString (par_String, par_MaxChar, "SCRIPT_STACK_BACK_TO_FILE Return to file = \"%s\"", Sp->Name);
                 break;
             case SCRIPT_STACK_END_OF_BLOCK:
-                sprintf (par_String, "SCRIPT_STACK_END_OF_BLOCK");
+                PrintFormatToString (par_String, par_MaxChar, "SCRIPT_STACK_END_OF_BLOCK");
                 break;
             case SCRIPT_STACK_GOSUB:
-                sprintf (par_String, "SCRIPT_STACK_GOSUB to \"%s\" Ip = %i, AtomicDepth = %i", Sp->Name, Sp->Data.RetFromGosub.Ip, Sp->Data.RetFromGosub.AtomicDepth);
+                PrintFormatToString (par_String, par_MaxChar, "SCRIPT_STACK_GOSUB to \"%s\" Ip = %i, AtomicDepth = %i", Sp->Name, Sp->Data.RetFromGosub.Ip, Sp->Data.RetFromGosub.AtomicDepth);
                 break;
             }
             return 1;
