@@ -96,7 +96,7 @@ int cToParseFileStack::AddFile (char *par_Name)
     int Idx;
 
     Idx = SearchFile (par_Name);
-    if (Idx <= 0) {
+    if (Idx < 0) {
         // noch kein Label mit diesem Namen vorhanden
         if (CheckSizeOf ()) return -2;
         Idx = WrPosInFileTable;
