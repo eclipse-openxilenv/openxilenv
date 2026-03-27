@@ -600,7 +600,7 @@ static int RPCFunc_WriteFrameWaitReadFrame(RPC_CONNECTION *par_Connection, RPC_A
         par_Connection->DoNextCycleFlag = 1;
         write_bbvari_frame_pid (GetRPCControlPid(), (VID*)(void*)((char*)In + In->Offset_int32_WriteSize_WriteVids), (double*)(void*)((char*)In + In->Offset_double_WriteSize_WriteValues), In->WriteSize);
         RemoteProcedureMarkedForWaitForConnection(par_Connection);
-        make_n_next_cycles(SCHEDULER_CONTROLED_BY_RPC, 1, __SCWriteFrameWaitReadFramCallBack, par_Connection);
+        make_n_next_cycles(SCHEDULER_CONTROLED_BY_RPC, 1, NULL, __SCWriteFrameWaitReadFramCallBack, par_Connection);
         RemoteProcedureWaitForConnection(par_Connection);
         Out->Header.ReturnValue = read_bbvari_frame  ((VID*)(void*)((char*)In + In->Offset_int32_ReadSize_ReadVids), (double*)(void*)((char*)Out + Out->Offset_double_ReadSize_ReadValuesRet), In->ReadSize);
         if (Out->Header.ReturnValue == 0) {

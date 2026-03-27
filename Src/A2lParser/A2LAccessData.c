@@ -2456,7 +2456,9 @@ A2L_DATA *DupA2lData(void *par_Data)
     A2L_DATA* Ret;
     if (Src != NULL) {
         Ret = (A2L_DATA*)A2L_DATA_MALLOC(Src->StructSize);
-        MEMCPY(Ret, par_Data, Src->StructSize);
+        if (Ret != NULL) {
+            MEMCPY(Ret, par_Data, Src->StructSize);
+        }
     } else {
         Ret = NULL;
     }

@@ -149,7 +149,7 @@ void BlackboardInternalDialog::on_VariableListWidget_currentItemChanged(QListWid
                                 Horizontal << "Pid" << "Attach counter" << "Unknown wait attach counter" << "Access flags" << "WR flags" << "WR enable Flags" << "RangeControl";
                                 ui->ProcessAttachCounteTableWidget->setHorizontalHeaderLabels (Horizontal);
                                 for (int x = 0; x < 64; x++) {
-                                    if (GetProcessShortName(blackboard_infos.pid_access_masks[x], ProcessName) == 0) {
+                                    if (GetProcessShortName(blackboard_infos.pid_access_masks[x], ProcessName, sizeof(ProcessName)) == 0) {
                                         Vertical.append(QString (ProcessName));
                                     } else {
                                         Vertical.append(QString ("unused"));

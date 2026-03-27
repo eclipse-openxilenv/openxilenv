@@ -77,11 +77,11 @@ void cSCHotkey::activateHotkeys()
         disable_scheduler_at_end_of_cycle (SCHEDULER_CONTROLED_BY_USER, nullptr, nullptr);
         break;
     case 7:   // Run control next one
-        make_n_next_cycles(SCHEDULER_CONTROLED_BY_USER, 1, nullptr, nullptr);
+        make_n_next_cycles(SCHEDULER_CONTROLED_BY_USER, 1, nullptr, nullptr, nullptr);
         break;
     case 8:   // Run control next xxx
         make_n_next_cycles(SCHEDULER_CONTROLED_BY_USER, s_main_ini_val.NumberOfNextCycles,
-                           nullptr, nullptr);
+                           nullptr, nullptr, nullptr);
         break;
     default:
         break;

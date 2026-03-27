@@ -56,7 +56,7 @@ inline void *ZEROMEM(void *addr, size_t size)
 #ifdef __STDC_WANT_LIB_EXT1__
 #define MEMSET(dst, value, size) memset_s(dst, size, value, size)
 #define MEMCPY(dst, src, size) memcpy_s(dst, size, src, size)
-#define ZEROMEM(addr, size) memset_s(addr, 0, size)
+#define ZEROMEM(addr, size) memset_s(addr, size, 0, size)
 #else
 #define MEMSET(dst, value, size) memset(dst, value, size)
 #define MEMCPY(dst, src, size) memcpy(dst, src, size)

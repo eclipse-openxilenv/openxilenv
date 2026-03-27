@@ -550,7 +550,7 @@ int CalibrationTreeItem::DelayedGetLabelValueString(bool ErrMsgFlag)
             if (ErrMsgFlag) {
                 char Processname[MAX_PATH];
                 QString CompleteName;
-                if (get_name_by_pid(Pid,Processname) == 0) {
+                if (get_name_by_pid(Pid, Processname, sizeof(Processname)) == 0) {
                     CompleteName = GetLabelCompleteName();
                 } else {
                     Processname[0] = 0;

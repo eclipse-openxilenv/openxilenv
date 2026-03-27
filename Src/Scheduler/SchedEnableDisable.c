@@ -388,13 +388,13 @@ int RemoveAllStopRequest(SCHEDULER_STOP_REQ *par_Requests)
     }
     ENTER_CRITICAL_SECTION_LOG (&par_Requests->StopStartRequestCriticalSection);
     for (x = 0; x < par_Requests->OpenStopRequestCount; x++) {
-        int y;
-        par_Requests->OpenStopRequestCount--;
-        for (y = x; y < par_Requests->OpenStopRequestCount; y++) {
-            par_Requests->StopRequestElems[y] = par_Requests->StopRequestElems[y+1];
+        if (par_Requests->StopRequestElems[x].ExecStack != NULL) {
+            remove_exec_stack(par_Requests->StopRequestElems[x].ExecStack);
+            par_Requests->StopRequestElems[x].ExecStack = NULL;
         }
     }
-    Ret = par_Requests->OpenStopRequestCount;
+    par_Requests->OpenStopRequestCount = 0;
+    Ret = 0;
     LEAVE_CRITICAL_SECTION_LOG (&par_Requests->StopStartRequestCriticalSection);
     return Ret;
 }
@@ -471,10 +471,6 @@ static int ShouldSchedulerStoppedAndAckAllStopRequest(SCHEDULER_STOP_REQ *par_Re
         (par_Requests->RpcEnableDisableCounter)) {
         Ret = 1;  // Should be stopped
         par_Requests->SchedulerDisabledFlag = 1;
-        if (par_Requests->StopRequestElems[x].ExecStack != NULL) {
-            remove_exec_stack(par_Requests->StopRequestElems[x].ExecStack);
-            par_Requests->StopRequestElems[x].ExecStack = NULL;
-        }
         for (x = 0; x < par_Requests->StopCallbackCount; x++) {
             Callbacks[CallbackCount] = par_Requests->StopCallbackElems[x].Callback;
             CallbackParameters[CallbackCount] = par_Requests->StopCallbackElems[x].Parameter;

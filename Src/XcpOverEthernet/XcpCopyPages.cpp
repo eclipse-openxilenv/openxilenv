@@ -278,7 +278,7 @@ int cCopyPages::ReadSectionInfosFromAllExecutable (void)
         *d = 0;
         int Pid;
 
-        if ((Pid = GetProcessPidAndExecutableAndDllName (ProcessName, ExecutableFileName, DllFileName, &ProcessInsideExecutableNumber)) > 0) {
+        if ((Pid = GetProcessPidAndExecutableAndDllName (ProcessName, ExecutableFileName, sizeof(ExecutableFileName), DllFileName, sizeof(DllFileName), &ProcessInsideExecutableNumber)) > 0) {
             if ((ProcessInsideExecutableNumber < 0) || (ProcessInsideExecutableNumber >= 8)) {
                 ThrowError (1, "not more than 8 processes can be in one executable not %i", ProcessInsideExecutableNumber);
             }

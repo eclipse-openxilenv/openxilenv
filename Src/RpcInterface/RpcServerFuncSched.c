@@ -289,7 +289,7 @@ static int RPCFunc_DoNextCycles(RPC_CONNECTION *par_Connection, RPC_API_BASE_MES
             (par_Connection->SchedulerDisableCounter == 1)) {
             par_Connection->SchedulerDisableCounter--;
             par_Connection->DoNextCycleFlag = 1;
-            make_n_next_cycles (SCHEDULER_CONTROLED_BY_RPC, In->Cycles, __SCDoNextCyclesDisableCallBack, par_Connection);
+            make_n_next_cycles (SCHEDULER_CONTROLED_BY_RPC, In->Cycles, NULL, __SCDoNextCyclesDisableCallBack, par_Connection);
         } else {
             Out->Header.ReturnValue = -1;
         }
@@ -327,7 +327,7 @@ static int RPCFunc_DoNextCyclesAndWait(RPC_CONNECTION *par_Connection, RPC_API_B
             par_Connection->SchedulerDisableCounter--;
             par_Connection->DoNextCycleFlag = 1;
             RemoteProcedureMarkedForWaitForConnection(par_Connection);
-            make_n_next_cycles(SCHEDULER_CONTROLED_BY_RPC, In->Cycles, __SCDoNextCyclesAndWaitSchedDisableCallBack, par_Connection);
+            make_n_next_cycles(SCHEDULER_CONTROLED_BY_RPC, In->Cycles, NULL, __SCDoNextCyclesAndWaitSchedDisableCallBack, par_Connection);
             RemoteProcedureWaitForConnection(par_Connection);
         } else {
             Out->Header.ReturnValue = -1;

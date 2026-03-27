@@ -135,7 +135,7 @@ IniFileDosNotExist::IniFileDosNotExist(char *par_SelectedIniFile, void *par_Appl
 #else
         {
             DIR *Dir;
-            GetXilEnvHomeDirectory(HistoryFileChar);
+            GetXilEnvHomeDirectory(HistoryFileChar, sizeof(HistoryFileChar));
             StringAppendMaxCharTruncate(HistoryFileChar, "/.", sizeof(HistoryFileChar));
             StringAppendMaxCharTruncate(HistoryFileChar, ProgramName, sizeof(HistoryFileChar));
             if ((Dir = opendir(HistoryFileChar)) == nullptr) {

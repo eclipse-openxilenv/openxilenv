@@ -133,14 +133,14 @@ void ControlPanel::btnRunControlStop()
 void ControlPanel::btnRunControlNextOne()
 {
     SetSchedulerUserState(false);
-    make_n_next_cycles(SCHEDULER_CONTROLED_BY_USER, 1, nullptr, nullptr);
+    make_n_next_cycles(SCHEDULER_CONTROLED_BY_USER, 1, nullptr, nullptr, nullptr);
 }
 
 void ControlPanel::btnRunControlNext()
 {
     int Cycles = ui->d_spinBoxCycles->value();
     SetSchedulerUserState(false);
-    make_n_next_cycles(SCHEDULER_CONTROLED_BY_USER, Cycles, nullptr, nullptr);
+    make_n_next_cycles(SCHEDULER_CONTROLED_BY_USER, Cycles, nullptr, nullptr, nullptr);
 }
 
 void ControlPanel::btnRunControlBreakpoint(int value)

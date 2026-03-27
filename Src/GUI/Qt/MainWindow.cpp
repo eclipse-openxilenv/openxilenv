@@ -1727,7 +1727,7 @@ void MainWindow::toolbarStopScheduler()
 
 void MainWindow::toolbarNextOneScheduler()
 {
-    make_n_next_cycles(SCHEDULER_CONTROLED_BY_USER, 1, nullptr, nullptr);
+    make_n_next_cycles(SCHEDULER_CONTROLED_BY_USER, 1, nullptr, nullptr, nullptr);
 }
 
 void MainWindow::toolbarSuppressNonExistValues(bool existValue)

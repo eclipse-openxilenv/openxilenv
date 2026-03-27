@@ -42,7 +42,7 @@ int cResetProcessCmd::Execute (cParser *par_Parser, cExecutor *par_Executor)
     PID loc_pid;
     char ProcName[MAX_PATH];
     loc_pid = get_pid_by_name (par_Parser->GetParameter (0));
-    get_name_by_pid (loc_pid, ProcName);
+    get_name_by_pid (loc_pid, ProcName, sizeof(ProcName));
     // kill the process
     if (terminate_process (loc_pid) == UNKNOWN_PROCESS) {
         par_Parser->Error (SCRIPT_PARSER_WARNING, "Unknown process \"%s\"", par_Parser->GetParameter (0));

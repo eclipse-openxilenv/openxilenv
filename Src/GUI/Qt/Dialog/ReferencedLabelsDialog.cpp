@@ -65,7 +65,7 @@ ReferencedLabelsDialog::ReferencedLabelsDialog(QString par_ProcessName, QWidget 
         }
     } else {
         char ShortProcessName[MAX_PATH];
-        TruncatePathFromProcessName (ShortProcessName, QStringToConstChar(par_ProcessName));
+        TruncatePathFromProcessName (ShortProcessName, QStringToConstChar(par_ProcessName), sizeof(ShortProcessName));
         ui->ProcessComboBox->setCurrentText (CharToQString(ShortProcessName));
     }
     FillModel(m_ProcessName);
@@ -115,7 +115,7 @@ void ReferencedLabelsDialog::FillModel (const QString &par_Process)
     m_Model->setHeaderData (0, Qt::Horizontal, QObject::tr("label"));
     m_Model->setHeaderData (1, Qt::Horizontal, QObject::tr("rename to"));
 
-    TruncatePathFromProcessName (pname_withoutpath, QStringToConstChar(par_Process));
+    TruncatePathFromProcessName (pname_withoutpath, QStringToConstChar(par_Process), sizeof(pname_withoutpath));
     sprintf (section_filter, "referenced variables *%s", pname_withoutpath);
     if (IniFileDataBaseFindNextSectionNameRegExp (0, section_filter, 0, section, sizeof(section), Fd) >= 0) {
         for (int Row = 0;;Row++) {
@@ -230,7 +230,7 @@ void ReferencedLabelsDialog::WriteModelToIni (const QString &par_Process)
     char displayname[BBVARI_NAME_SIZE];
 
 
-    TruncatePathFromProcessName (pname_withoutpath, QStringToConstChar(par_Process));
+    TruncatePathFromProcessName (pname_withoutpath, QStringToConstChar(par_Process), sizeof(pname_withoutpath));
     sprintf (section_filter, "referenced variables *%s", pname_withoutpath);
     if (IniFileDataBaseFindNextSectionNameRegExp (0, section_filter, 0, section, sizeof(section), GetMainFileDescriptor()) >= 0) {
         DEBUG_INFOS_ASSOCIATED_CONNECTION *DebugInfos;

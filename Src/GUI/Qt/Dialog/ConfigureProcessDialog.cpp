@@ -194,8 +194,8 @@ struct ConfigureProcessDialog::DialogData ConfigureProcessDialog::ReadProcessInf
 
     GetBeforeProcessEquationFileName (QStringToConstChar(SelectedProcess), Ret.m_EquationBefore);
     GetBehindProcessEquationFileName (QStringToConstChar(SelectedProcess), Ret.m_EquationBehind);
-    GetSVLFileLoadedBeforeInitProcessFileName (QStringToConstChar(SelectedProcess), Ret.m_SvlFile);
-    GetA2LFileAssociatedProcessFileName(QStringToConstChar(SelectedProcess), Ret.m_A2LFile, &Ret.m_UpdateA2LFileFlags);
+    GetSVLFileLoadedBeforeInitProcessFileName (QStringToConstChar(SelectedProcess), Ret.m_SvlFile, sizeof(Ret.m_SvlFile));
+    GetA2LFileAssociatedProcessFileName(QStringToConstChar(SelectedProcess), Ret.m_A2LFile, sizeof(Ret.m_A2LFile), &Ret.m_UpdateA2LFileFlags);
 
     return Ret;
 }
@@ -338,7 +338,7 @@ void ConfigureProcessDialog::UpdateProcessListView()
     for (i = m_ProcessInfos.begin(); i != m_ProcessInfos.end(); ++i) {
         QString ProcessName(i.key());
         QListWidgetItem *Item = new QListWidgetItem(ProcessName,ui->ProceessListWidget);
-        GetProcessLongName(get_pid_by_name (QStringToConstChar(i.key())), LongProcessName);
+        GetProcessLongName(get_pid_by_name (QStringToConstChar(i.key())), LongProcessName, sizeof(LongProcessName));
         Item->setToolTip(QString(LongProcessName));
     }
 }
@@ -538,7 +538,7 @@ void ConfigureProcessDialog::SetProcessInfos (QString &SelectedProcess)
 
         char LongProcessName[MAX_PATH];
         strcpy (LongProcessName, "");
-        GetProcessLongName (Data.m_Pid, LongProcessName);
+        GetProcessLongName (Data.m_Pid, LongProcessName, sizeof(LongProcessName));
         ui->LongProcessNameLineEdit->setText (CharToQString(LongProcessName));
 
         if (!Data.m_IsRunning) {
@@ -731,7 +731,7 @@ void ConfigureProcessDialog::StoreProcessInfos (QString &par_ProcessName, struct
                 // process is running
                 char OldA2LFile[512+64];
                 int OldUpdateA2LFileFlags;
-                if (GetA2LFileAssociatedProcessFileName(QStringToConstChar(par_ProcessName), OldA2LFile, &OldUpdateA2LFileFlags) > 0) {
+                if (GetA2LFileAssociatedProcessFileName(QStringToConstChar(par_ProcessName), OldA2LFile, sizeof(OldA2LFile), &OldUpdateA2LFileFlags) > 0) {
 #ifdef _WIN32
                     if (strcmpi(OldA2LFile, par_Data.m_A2LFile) ||
 #else

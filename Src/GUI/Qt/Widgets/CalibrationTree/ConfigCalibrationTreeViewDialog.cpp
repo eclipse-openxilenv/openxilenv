@@ -62,7 +62,7 @@ ConfigCalibrationTreeViewDialog::ConfigCalibrationTreeViewDialog(QString &par_Wi
         }
     } else {
         char ShortProcessName[MAX_PATH];
-        TruncatePathFromProcessName (ShortProcessName, pProcessName);
+        TruncatePathFromProcessName (ShortProcessName, pProcessName, sizeof(ShortProcessName));
         ui->ProcessComboBox->setCurrentText (QString (ShortProcessName));
     }
     ui->Filter->SetFilter (par_IncExcFilter);
