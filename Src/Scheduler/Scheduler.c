@@ -1825,9 +1825,9 @@ static void *SchedulerThreadProc(void* lpParam)
     }
     pSchedulerData->CycleDiffTimeVid = add_bbvari (Help, BB_DOUBLE, "s");
     if (pSchedulerData->CycleDiffTimeVid < 0) {
-        ThrowError (1, "cannot add blackboard variable %sCycleDiffTime %i", GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_LONG2_BLACKBOARD), pSchedulerData->CycleCounterVid);
+        ThrowError (1, "cannot add blackboard variable %sCycleDiffTime %i", GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_LONG2_BLACKBOARD), pSchedulerData->CycleDiffTimeVid);
     }
-    write_bbvari_udword (pSchedulerData->CycleDiffTimeVid, 0);
+    write_bbvari_double (pSchedulerData->CycleDiffTimeVid, 0.0);
 
     pSchedulerData->CurrentTcb = NULL;
     if (pSchedulerData->SchedulerNr == 0) {

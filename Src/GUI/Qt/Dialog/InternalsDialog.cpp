@@ -79,7 +79,7 @@ InternalsDialog::InternalsDialog(QWidget *parent) : Dialog(parent),
         int id = 0;
         char line[1024];
         while (1) {
-            id = GetRuntimeMeassurement (id, line);
+            id = GetRuntimeMeassurement (id, line, (int)sizeof(line));
             if (id == 0) break;
             ui->listWidgetFunctionRuntime->addItem(QString(line));
         }

@@ -22,7 +22,7 @@ int BeginRuntimeMeassurement (const char *Name, int id);
 
 int EndRuntimeMeassurement (int id, unsigned int max);
 
-int GetRuntimeMeassurement (int id, char *line);
+int GetRuntimeMeassurement (int id, char *line, int par_MaxLine);
 
 #ifdef FUNCTION_RUNTIME
 #define BEGIN_RUNTIME_MEASSUREMENT(FunctionName) \

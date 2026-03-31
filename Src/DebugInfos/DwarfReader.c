@@ -2865,7 +2865,7 @@ int32_t parse_dwarf_from_exe_file (char *par_ExeFileName, DEBUG_INFOS_DATA *papp
 #endif
 #ifdef PER_PROCESS_LOGGING
     STRING_COPY_TO_ARRAY (DebugPrintFileName, "c:\\temp\\");
-    if (GetProcessNameWithoutPath (pappldata->pid, DebugPrintFileName + strlen (DebugPrintFileName)) == 0) {
+    if (GetProcessNameWithoutPath (pappldata->pid, DebugPrintFileName + strlen (DebugPrintFileName), sizeof(DebugPrintFileName) - strlen(DebugPrintFileName)) == 0) {
         STRING_APPEND_TO_ARRAY (DebugPrintFileName, ".txt");
 #endif
         DebugOut = fopen (DebugPrintFileName, "wt");

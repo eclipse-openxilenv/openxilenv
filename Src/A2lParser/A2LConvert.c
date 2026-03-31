@@ -120,6 +120,7 @@ static int ConvertValuePairsToRaw (ASAP2_MODULE_DATA* Module, const char *Name, 
                 ret_Raw->Value.Double = CompuTab->ValuePairs[x-1].InVal_InValMin;
                 ret_Raw->Type = A2L_ELEM_TYPE_DOUBLE;
             }
+            return 0;
         case 1: // COMPU_VTAB
         case 2: // COMPU_VTAB_RANGE
         default:
@@ -176,6 +177,7 @@ int ConvertPhysToRaw(ASAP2_MODULE_DATA* Module, const char *par_ConvertName, A2L
                     }
                 }
             }
+            break;
         default:
             // This will be ignored
             *ret_Raw = *par_Phys;
@@ -331,6 +333,7 @@ static int ConvertRawToPhysByTable (ASAP2_MODULE_DATA* Module, const char *Name,
                 ret_Phys->Value.Double = CompuTab->ValuePairs[x-1].OutVal_InValMax;
                 ret_Phys->Type = A2L_ELEM_TYPE_PHYS_DOUBLE;
             }
+            return 0;
         case 1: // COMPU_VTAB
         case 2: // COMPU_VTAB_RANGE
         default:
@@ -446,8 +449,8 @@ int ConvertRawToPhys(ASAP2_MODULE_DATA* Module, const char *par_ConvertName, int
                         if ((par_Flags & A2L_GET_UNIT_FLAG) == A2L_GET_UNIT_FLAG) {
                             AddUnitToValue(ret_Phys, CompuMethod->Unit);
                         }
+                        Ret = 0;
                     }
-                    Ret = 0;
                 }
             } else {
                 ValueCopy(ret_Phys, par_Raw);

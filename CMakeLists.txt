@@ -61,7 +61,7 @@ else()
         find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets)
 
         # Svg support is only optional for copy to clipboard inside oscilloscope
-        find_package(QT NAMES Qt6 Qt5 OPTINAL_COMPONENTS COMPONENTS Svg)
+        find_package(QT NAMES Qt6 Qt5 OPTIONAL_COMPONENTS COMPONENTS Svg)
         find_package(Qt${QT_VERSION_MAJOR} OPTIONAL_COMPONENTS COMPONENTS Svg)
 
         if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
