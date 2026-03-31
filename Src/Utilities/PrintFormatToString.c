@@ -25,7 +25,7 @@ int VariableArgumentsListPrintFormatToString(char *ret_DestBuffer, int par_SizeO
         (ret_DestBuffer != NULL) &&
         (par_Format != NULL)) {
 #ifdef _WIN32
-        Ret = vsnprintf_s (ret_DestBuffer, par_SizeOfDestBuffer, par_SizeOfDestBuffer, par_Format, vlist);
+        Ret = vsnprintf_s (ret_DestBuffer, par_SizeOfDestBuffer, _TRUNCATE, par_Format, vlist);
 #else
         Ret = vsnprintf (ret_DestBuffer, par_SizeOfDestBuffer, par_Format, vlist);
 #endif
@@ -53,7 +53,7 @@ int PrintFormatToString(char *ret_DestBuffer, int par_SizeOfDestBuffer, const ch
         (ret_DestBuffer != NULL) &&
         (par_Format != NULL)) {
 #ifdef _WIN32
-        Ret = vsnprintf_s (ret_DestBuffer, par_SizeOfDestBuffer, par_SizeOfDestBuffer, par_Format, args);
+        Ret = vsnprintf_s (ret_DestBuffer, par_SizeOfDestBuffer, _TRUNCATE, par_Format, args);
 #else
         Ret = vsnprintf (ret_DestBuffer, par_SizeOfDestBuffer, par_Format, args);
 #endif

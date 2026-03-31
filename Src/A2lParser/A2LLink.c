@@ -964,7 +964,7 @@ int A2LRemoveOneReferencesForProcess(int par_LinkNr, int par_Pid, const char *pa
             int i;
             char *p = Name + strlen(Name);
             for (i = 0; i < XDim; i++) {
-                PrintFormatToString(p, p - Name, "[%i]", i);
+                PrintFormatToString(p, (int)(sizeof(Name) - (p - Name)), "[%i]", i);
                 scm_unref_vari(Address, par_Pid, Name, Type);
                 A2LIncDecGetReferenceToDataFromLink(par_LinkNr, par_Index, -1, 0, 0);
                 Address += GetDataTypeByteSize(Type);
@@ -974,7 +974,7 @@ int A2LRemoveOneReferencesForProcess(int par_LinkNr, int par_Pid, const char *pa
             char *p = Name + strlen(Name);
             for (j = 0; j < YDim; j++) {
                 for (i = 0; i < XDim; i++) {
-                    PrintFormatToString(p, p- Name, "[%i][%i]", j, i);
+                    PrintFormatToString(p, (int)(sizeof(Name) - (p - Name)), "[%i][%i]", j, i);
                     scm_unref_vari(Address, par_Pid, Name, Type);
                     A2LIncDecGetReferenceToDataFromLink(par_LinkNr, par_Index, -1, 0, 0);
                     Address += GetDataTypeByteSize(Type);

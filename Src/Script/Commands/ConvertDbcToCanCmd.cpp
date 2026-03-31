@@ -5,6 +5,7 @@ extern "C" {
 #include "IniDataBase.h"
 #include "ImportDbc.h"
 #include "StringMaxChar.h"
+#include "PrintFormatToString.h"
 
 }
 #include "Parser.h"
@@ -44,7 +45,7 @@ static int GetVariantIndexByName(char *par_Name)
 
     Size = IniFileDataBaseReadInt ("CAN/Global", "can_varianten_count", 0, GetMainFileDescriptor());
     for (i = 0; i < Size; i++) {
-        sprintf (section, "CAN/Variante_%i", i);
+        PrintFormatToString (section, sizeof(section), "CAN/Variante_%i", i);
         IniFileDataBaseReadString (section, "name", "", txt, sizeof (txt), GetMainFileDescriptor());
         if (!strcmp(txt, par_Name)) {
             return i;

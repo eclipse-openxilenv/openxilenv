@@ -44,8 +44,8 @@ int remove_referenced_vari_ini (int pid, char *lname)
     char DisplayName[2*BBVARI_NAME_SIZE+1];
     int x, found = 0;
 
-    get_name_by_pid ((unsigned short)pid, pname);
-    if (GetProcessNameWithoutPath (pid, pname_withoutpath)) {
+    get_name_by_pid ((unsigned short)pid, pname, sizeof(pname));
+    if (GetProcessNameWithoutPath (pid, pname_withoutpath, sizeof(pname_withoutpath))) {
         return -1;
     }
     sprintf (section_filter, "referenced variables *%s", pname_withoutpath);
@@ -137,7 +137,7 @@ static int RefillListBox (HWND hwnd, int pid, int DisplayNameFirstFlag)
     char ListboxString[2*BBVARI_NAME_SIZE + 16];
 
     SendDlgItemMessage (hwnd, 102, (UINT)LB_RESETCONTENT, 0, 0);
-    if (GetProcessNameWithoutPath (pid, pname_withoutpath)) {
+    if (GetProcessNameWithoutPath (pid, pname_withoutpath, sizeof(pname_withoutpath))) {
         return -1;
     }
     sprintf (section_filter, "referenced variables *%s", pname_withoutpath);
