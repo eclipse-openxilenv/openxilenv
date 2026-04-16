@@ -48,6 +48,7 @@ int get_pid_by_name(char *Name);
 MESSAGE_BUFFER *GetMessageQueueForProcess(int par_Pid);
 
 uint64_t get_timestamp_counter(void);
+uint64_t GetSimulatedTimeSinceStartedInNanoSecond (void);
 
 uint64_t get_rt_cycle_counter(void);
 uint64_t GetCycleCounter64(void);

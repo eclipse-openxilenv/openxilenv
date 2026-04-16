@@ -28,6 +28,7 @@ extern "C" {
 #include "Platform.h"
 }
 
+#define DATA_BUFFER_SIZE (64*1024)
 
 class CANMessageWindowWidget : public MdiWindowWidget
 {
@@ -43,16 +44,20 @@ public:
     virtual void resizeEvent(QResizeEvent *event) Q_DECL_OVERRIDE;
     virtual CustomDialogFrame* dialogSettings(QWidget *arg_parent) Q_DECL_OVERRIDE;
 
+    bool IsRecorderRunning() { return m_Record2Disk; }
+
 public slots:
     void ConfigDialogSlot();
     void ClearSlot();
+    void StartRecSlot();
+    void StopRecSlot();
 
 protected:
     void FlushMessageQueue ();
 
     void BuildAbsoluteTimeString(double Ts, char *Txt, int Maxc);
     int ReadAndProcessCANMessages();
-    double TimestampCalc(CAN_FD_FIFO_ELEM *pCanMessage);
+    double TimestampCalc(CAN_FIFO_ELEM_HEADER *pCanMessage);
     void TimestampCalcLine(CAN_MESSAGE_LINE *pcml);
 
     void CalcColumnNummbers();
@@ -72,6 +77,7 @@ private:
 #define DISPLAY_DEC 1
 #define DISPLAY_BIN 2
 
+    bool m_Record2DiskIni;
     bool m_Record2Disk;
     QString m_RecorderFileName;
     FILE *m_fh;
@@ -82,6 +88,7 @@ private:
 
     int m_RefreshCounter;
     double m_AbtastPeriodeInMs;
+    bool m_DecodeFlag;
     bool m_DisplayColumnCounterFlag;
     bool m_DisplayColumnTimeAbsoluteFlag;
     bool m_DisplayColumnTimeDiffFlag;
@@ -94,7 +101,9 @@ private:
     int m_DisplayColumnDirWidth;
     int m_DisplayColumnChannelWidth;
     int m_DisplayColumnIdWidth;
+    int m_DisplayColumnTypeWidth;
     int m_DisplayColumnSizeWidth;
+    int m_DisplayColumnNameWidth;
     int m_DisplayColumnDataWidth;
 #ifdef _WIN32
     SYSTEMTIME m_SystemTimeStartCANLogging;
@@ -106,6 +115,11 @@ private:
 
     CANMessageTreeView *m_TreeView;
     CANMessageWindowModel *m_Model;
+
+    //CAN_FD_FIFO_ELEM m_CANMessages[64];
+    CAN_FIFO_ELEM_HEADER m_CANMessages[64];
+    uint8_t *m_DataPtrs[64];
+    uint8_t *m_Buffer;
 
 //signals:
 

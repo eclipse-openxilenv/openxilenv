@@ -283,10 +283,14 @@ public:
             IdxLabelTable = SearchLabel (par_Name, par_FileNr);
             if (IdxLabelTable < 0) return -1;
         }
-        *ret_ToPos = LabelTable[IdxLabelTable].DefLocalsTreePos;
-        *ret_Ip = LabelTable[IdxLabelTable].Ip;
-        *ret_DiffAtomicDepth = LabelTable[IdxLabelTable].AtomicDepth - GotoTable[par_Idx].AtomicDepth;
-        return 0;
+        if (LabelTable[IdxLabelTable].Ref.JumpTargetFlag) {
+            *ret_ToPos = LabelTable[IdxLabelTable].DefLocalsTreePos;
+            *ret_Ip = LabelTable[IdxLabelTable].Ip;
+            *ret_DiffAtomicDepth = LabelTable[IdxLabelTable].AtomicDepth - GotoTable[par_Idx].AtomicDepth;
+            return 0;
+        } else {
+            return -1;
+        }
     }
 
     int PrintLabelAndGotoTable (FILE *par_FileHandle)

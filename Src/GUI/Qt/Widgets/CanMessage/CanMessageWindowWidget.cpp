@@ -39,7 +39,8 @@ CANMessageWindowWidget::CANMessageWindowWidget (QString par_WindowTitle, MdiSubW
     m_OnOff = 0;
     m_cam_count = 0;
     m_DisplayFormat = DISPLAY_HEX;
-    m_Record2Disk = 0;
+    m_Record2Disk = false;
+    m_Record2DiskIni = false;
     m_fh = nullptr;
     m_TriggerActiv = 0;
     m_Triggered = 0;
@@ -65,6 +66,8 @@ CANMessageWindowWidget::CANMessageWindowWidget (QString par_WindowTitle, MdiSubW
     m_WaitForFirstMessageFlag = 0.0;
     m_TsOffset = 0.0;
 
+    m_Buffer = (uint8_t*)my_malloc(DATA_BUFFER_SIZE);
+
     if (s_main_ini_val.ConnectToRemoteMaster) {
         m_CanFiFoHandle = CreateCanFifos (10000, 0x1);
     } else {
@@ -78,13 +81,17 @@ CANMessageWindowWidget::CANMessageWindowWidget (QString par_WindowTitle, MdiSubW
     m_TreeView = new CANMessageTreeView (this, this);
 
     m_Model = new CANMessageWindowModel (m_AbtastPeriodeInMs,
+                                         m_DecodeFlag,
                                          m_TreeView);
+    m_Model->SetColumnFlags(m_DisplayColumnCounterFlag,
+                            m_DisplayColumnTimeAbsoluteFlag,
+                            m_DisplayColumnTimeDiffFlag,
+                            m_DisplayColumnTimeDiffMinMaxFlag);
     m_TreeView->setModel(m_Model);
 
     SwitchColumnsOnOff();
     SetAllColumnsWidth();
     FitNewColumnsToHeader();
-
 }
 
 CANMessageWindowWidget::~CANMessageWindowWidget()
@@ -96,6 +103,7 @@ CANMessageWindowWidget::~CANMessageWindowWidget()
     }
     writeToIni();
     DeleteCanFifos (m_CanFiFoHandle);
+    if (m_Buffer != nullptr) my_free(m_Buffer);
 }
 
 void CANMessageWindowWidget::FlushMessageQueue ()
@@ -116,17 +124,17 @@ bool CANMessageWindowWidget::writeToIni()
     for (x = 0; x < (MAX_CAN_ACCEPTANCE_MASK_ELEMENTS - 1); x++) {
         PrintFormatToString (entry, sizeof(entry), "cam%i", x);
         if (x < (m_cam_count-1)) {
-            PrintFormatToString (txt, sizeof(txt), "%i:0x%X,0x%X", m_cam[x].Channel,
-                     m_cam[x].Start, m_cam[x].Stop);
+            PrintFormatToString (txt, sizeof(txt), "%i:0x%X,0x%X,0x%X", m_cam[x].Channel,
+                     m_cam[x].Start, m_cam[x].Stop, m_cam[x].Flags);
             ScQt_IniFileDataBaseWriteString (SectiopnPath, entry, txt, Fd);
         } else ScQt_IniFileDataBaseWriteString (SectiopnPath, entry, nullptr, Fd);
     }
-    PrintFormatToString (txt, sizeof(txt), "%i", m_Record2Disk);
-    ScQt_IniFileDataBaseWriteString(SectiopnPath, "Record2Disk", txt, Fd);
-    PrintFormatToString (txt, sizeof(txt), "%i", m_TriggerActiv);
-    ScQt_IniFileDataBaseWriteString(SectiopnPath, "TriggerActiv", txt, Fd);
+    ScQt_IniFileDataBaseWriteInt(SectiopnPath, "Record2Disk",  m_Record2DiskIni, Fd);
+    ScQt_IniFileDataBaseWriteInt(SectiopnPath, "TriggerActiv", m_TriggerActiv, Fd);
     ScQt_IniFileDataBaseWriteString(SectiopnPath, "FileName", QStringToConstChar(m_RecorderFileName), Fd);
     ScQt_IniFileDataBaseWriteString(SectiopnPath, "TriggerEquation", QStringToConstChar(m_TriggerEquation), Fd);
+
+    ScQt_IniFileDataBaseWriteInt (SectiopnPath, "Decode", m_DecodeFlag, Fd);
 
     ScQt_IniFileDataBaseWriteInt (SectiopnPath, "DisplayColumnCounter", m_DisplayColumnCounterFlag, Fd);
     ScQt_IniFileDataBaseWriteInt (SectiopnPath, "DisplayColumnTimeAbsolute", m_DisplayColumnTimeAbsoluteFlag, Fd);
@@ -141,7 +149,9 @@ bool CANMessageWindowWidget::writeToIni()
     ScQt_IniFileDataBaseWriteInt (SectiopnPath, "DisplayColumnDirWidth", m_DisplayColumnDirWidth, Fd);
     ScQt_IniFileDataBaseWriteInt (SectiopnPath, "DisplayColumnChannelWidth", m_DisplayColumnChannelWidth, Fd);
     ScQt_IniFileDataBaseWriteInt (SectiopnPath, "DisplayColumnIdentifierWidth", m_DisplayColumnIdWidth, Fd);
+    ScQt_IniFileDataBaseWriteInt (SectiopnPath, "DisplayColumnTypeWidth", m_DisplayColumnTypeWidth, Fd);
     ScQt_IniFileDataBaseWriteInt (SectiopnPath, "DisplayColumnSizeWidth", m_DisplayColumnSizeWidth, Fd);
+    ScQt_IniFileDataBaseWriteInt (SectiopnPath, "DisplayColumnNameWidth", m_DisplayColumnNameWidth, Fd);
     ScQt_IniFileDataBaseWriteInt (SectiopnPath, "DisplayColumnDataWidth", m_DisplayColumnDataWidth, Fd);
 
     return true;
@@ -155,7 +165,7 @@ bool CANMessageWindowWidget::readFromIni()
     char Line[INI_MAX_LINE_LENGTH];
     char *p, *endptr;
     int32_t channel;
-    uint32_t start, stop;
+    uint32_t start, stop, flags;
     int Fd = ScQt_GetMainFileDescriptor();
 
     QString SectiopnPath = GetIniSectionPath();
@@ -174,20 +184,30 @@ bool CANMessageWindowWidget::readFromIni()
         if ((endptr == nullptr) || *endptr != ',') break;
         p = endptr + 1;
         stop = strtoul (p, &endptr, 0);
+        if ((endptr != nullptr) && *endptr == ',') {
+            p = endptr + 1;
+            flags = strtoul (p, &endptr, 0);
+        } else {
+            flags = 0;  // 0 is default: display all type of messages ecxept J1939MP
+        }
         m_cam[x].Channel = channel;
         m_cam[x].Start = start;
         m_cam[x].Stop = stop;
+        m_cam[x].Flags = flags;
     }
     m_cam[x].Channel = -1;
     m_cam[x].Start = 0;
     m_cam[x].Stop = 0;
     m_cam_count = x+1;
-    m_Record2Disk = ScQt_IniFileDataBaseReadInt(SectiopnPath, "Record2Disk", 0, Fd);
+    m_Record2DiskIni = ScQt_IniFileDataBaseReadInt(SectiopnPath, "Record2Disk", 0, Fd);
+    m_Record2Disk = m_Record2DiskIni;
     m_TriggerActiv = ScQt_IniFileDataBaseReadInt(SectiopnPath, "TriggerActiv", 0, Fd);
     ScQt_IniFileDataBaseReadString(SectiopnPath, "FileName", "", Line, sizeof (Line), Fd);
     m_RecorderFileName = CharToQString(Line);
     ScQt_IniFileDataBaseReadString(SectiopnPath, "TriggerEquation", "", Line, sizeof (Line), Fd);
     m_TriggerEquation = CharToQString(Line);
+
+    m_DecodeFlag = ScQt_IniFileDataBaseReadInt (SectiopnPath, "Decode", 1, Fd);
 
     m_DisplayColumnCounterFlag = ScQt_IniFileDataBaseReadInt (SectiopnPath, "DisplayColumnCounter", 1, Fd);
     m_DisplayColumnTimeAbsoluteFlag = ScQt_IniFileDataBaseReadInt (SectiopnPath, "DisplayColumnTimeAbsolute", 0, Fd);
@@ -201,14 +221,16 @@ bool CANMessageWindowWidget::readFromIni()
     m_DisplayColumnDirWidth = ScQt_IniFileDataBaseReadInt (SectiopnPath, "DisplayColumnDirWidth", 0, Fd);
     m_DisplayColumnChannelWidth = ScQt_IniFileDataBaseReadInt (SectiopnPath, "DisplayColumnChannelWidth", 0, Fd);
     m_DisplayColumnIdWidth = ScQt_IniFileDataBaseReadInt (SectiopnPath, "DisplayColumnIdentifierWidth", 0, Fd);
+    m_DisplayColumnTypeWidth = ScQt_IniFileDataBaseReadInt (SectiopnPath, "DisplayColumnTypeWidth", 0, Fd);
     m_DisplayColumnSizeWidth = ScQt_IniFileDataBaseReadInt (SectiopnPath, "DisplayColumnSizeWidth", 0, Fd);
+    m_DisplayColumnNameWidth = ScQt_IniFileDataBaseReadInt (SectiopnPath, "DisplayColumnNameWidth", 0, Fd);
     m_DisplayColumnDataWidth = ScQt_IniFileDataBaseReadInt (SectiopnPath, "DisplayColumnDataWidth", 0, Fd);
 
     return true;
 }
 
 // return value are milliseconds
-double CANMessageWindowWidget::TimestampCalc (CAN_FD_FIFO_ELEM *pCanMessage)
+double CANMessageWindowWidget::TimestampCalc (CAN_FIFO_ELEM_HEADER *pCanMessage)
 {
     double Ts;
 
@@ -249,51 +271,60 @@ double CANMessageWindowWidget::TimestampCalc (CAN_FD_FIFO_ELEM *pCanMessage)
 
 void CANMessageWindowWidget::GetAllColumnsWidth()
 {
-    m_DisplayColumnCounterWidth = m_TreeView->columnWidth(0);
-    m_DisplayColumnTimeAbsoluteWidth = m_TreeView->columnWidth(1);
-    m_DisplayColumnTimeDiffWidth = m_TreeView->columnWidth(2);
-    m_DisplayColumnTimeDiffMinMaxWidth = m_TreeView->columnWidth(3);
-    m_DisplayColumnDirWidth = m_TreeView->columnWidth (4);
-    m_DisplayColumnChannelWidth = m_TreeView->columnWidth (5);
-    m_DisplayColumnIdWidth = m_TreeView->columnWidth (6);
-    m_DisplayColumnSizeWidth = m_TreeView->columnWidth (7);
-    m_DisplayColumnDataWidth = m_TreeView->columnWidth (8);
+    m_DisplayColumnCounterWidth = m_TreeView->columnWidth(CANMessageWindowModel::COLUMN_TYPE_COUNT);
+    m_DisplayColumnTimeAbsoluteWidth = m_TreeView->columnWidth(CANMessageWindowModel::COLUMN_TYPE_TIME);
+    m_DisplayColumnTimeDiffWidth = m_TreeView->columnWidth(CANMessageWindowModel::COLUMN_TYPE_DIFF_TIME);
+    m_DisplayColumnTimeDiffMinMaxWidth = m_TreeView->columnWidth(CANMessageWindowModel::COLUMN_TYPE_MIN_MAX_DIFF_TIME);
+    m_DisplayColumnDirWidth = m_TreeView->columnWidth (CANMessageWindowModel::COLUMN_TYPE_DIR);
+    m_DisplayColumnChannelWidth = m_TreeView->columnWidth (CANMessageWindowModel::COLUMN_TYPE_CHANNEL);
+    m_DisplayColumnIdWidth = m_TreeView->columnWidth (CANMessageWindowModel::COLUMN_TYPE_IDENTIFIER);
+    m_DisplayColumnTypeWidth = m_TreeView->columnWidth (CANMessageWindowModel::COLUMN_TYPE_TYPE);
+    m_DisplayColumnSizeWidth = m_TreeView->columnWidth (CANMessageWindowModel::COLUMN_TYPE_SIZE);
+    m_DisplayColumnNameWidth = m_TreeView->columnWidth (CANMessageWindowModel::COLUMN_TYPE_NAME);
+    m_DisplayColumnDataWidth = m_TreeView->columnWidth (CANMessageWindowModel::COLUMN_TYPE_DATA);
 }
 
 void CANMessageWindowWidget::SetAllColumnsWidth()
 {
-    m_TreeView->setColumnWidth (0, m_DisplayColumnCounterWidth);
-    m_TreeView->setColumnWidth (1, m_DisplayColumnTimeAbsoluteWidth);
-    m_TreeView->setColumnWidth (2, m_DisplayColumnTimeDiffWidth);
-    m_TreeView->setColumnWidth (3, m_DisplayColumnTimeDiffMinMaxWidth);
-    m_TreeView->setColumnWidth (4, m_DisplayColumnDirWidth);
-    m_TreeView->setColumnWidth (5, m_DisplayColumnChannelWidth);
-    m_TreeView->setColumnWidth (6, m_DisplayColumnIdWidth);
-    m_TreeView->setColumnWidth (7, m_DisplayColumnSizeWidth);
-    m_TreeView->setColumnWidth (8, m_DisplayColumnDataWidth);
+    m_TreeView->setColumnWidth (CANMessageWindowModel::COLUMN_TYPE_COUNT, m_DisplayColumnCounterWidth);
+    m_TreeView->setColumnWidth (CANMessageWindowModel::COLUMN_TYPE_TIME, m_DisplayColumnTimeAbsoluteWidth);
+    m_TreeView->setColumnWidth (CANMessageWindowModel::COLUMN_TYPE_DIFF_TIME, m_DisplayColumnTimeDiffWidth);
+    m_TreeView->setColumnWidth (CANMessageWindowModel::COLUMN_TYPE_MIN_MAX_DIFF_TIME, m_DisplayColumnTimeDiffMinMaxWidth);
+    m_TreeView->setColumnWidth (CANMessageWindowModel::COLUMN_TYPE_DIR, m_DisplayColumnDirWidth);
+    m_TreeView->setColumnWidth (CANMessageWindowModel::COLUMN_TYPE_CHANNEL, m_DisplayColumnChannelWidth);
+    m_TreeView->setColumnWidth (CANMessageWindowModel::COLUMN_TYPE_IDENTIFIER, m_DisplayColumnIdWidth);
+    m_TreeView->setColumnWidth (CANMessageWindowModel::COLUMN_TYPE_TYPE, m_DisplayColumnTypeWidth);
+    m_TreeView->setColumnWidth (CANMessageWindowModel::COLUMN_TYPE_SIZE, m_DisplayColumnSizeWidth);
+    m_TreeView->setColumnWidth (CANMessageWindowModel::COLUMN_TYPE_NAME, m_DisplayColumnNameWidth);
+    m_TreeView->setColumnWidth (CANMessageWindowModel::COLUMN_TYPE_DATA, m_DisplayColumnDataWidth);
     FitNewColumnsToHeader();
 }
 
 void CANMessageWindowWidget::FitNewColumnsToHeader()
 {
-    if (m_DisplayColumnCounterWidth <= 0) m_TreeView->resizeColumnToContents(0);
-    if (m_DisplayColumnTimeAbsoluteWidth <= 0) m_TreeView->resizeColumnToContents(1);
-    if (m_DisplayColumnTimeDiffWidth <= 0) m_TreeView->resizeColumnToContents(2);
-    if (m_DisplayColumnTimeDiffMinMaxWidth <= 0) m_TreeView->resizeColumnToContents(3);
-    if (m_DisplayColumnDirWidth <= 0) m_TreeView->resizeColumnToContents(4);
-    if (m_DisplayColumnChannelWidth <= 0) m_TreeView->resizeColumnToContents(5);
-    if (m_DisplayColumnIdWidth <= 0) m_TreeView->resizeColumnToContents(6);
-    if (m_DisplayColumnSizeWidth <= 0) m_TreeView->resizeColumnToContents(7);
-    if (m_DisplayColumnDataWidth <= 0) m_TreeView->resizeColumnToContents(8);
+    if (m_DisplayColumnCounterWidth <= 0) m_TreeView->resizeColumnToContents(CANMessageWindowModel::COLUMN_TYPE_COUNT);
+    if (m_DisplayColumnTimeAbsoluteWidth <= 0) m_TreeView->resizeColumnToContents(CANMessageWindowModel::COLUMN_TYPE_TIME);
+    if (m_DisplayColumnTimeDiffWidth <= 0) m_TreeView->resizeColumnToContents(CANMessageWindowModel::COLUMN_TYPE_DIFF_TIME);
+    if (m_DisplayColumnTimeDiffMinMaxWidth <= 0) m_TreeView->resizeColumnToContents(CANMessageWindowModel::COLUMN_TYPE_MIN_MAX_DIFF_TIME);
+    if (m_DisplayColumnDirWidth <= 0) m_TreeView->resizeColumnToContents(CANMessageWindowModel::COLUMN_TYPE_DIR);
+    if (m_DisplayColumnChannelWidth <= 0) m_TreeView->resizeColumnToContents(CANMessageWindowModel::COLUMN_TYPE_CHANNEL);
+    if (m_DisplayColumnIdWidth <= 0) m_TreeView->resizeColumnToContents(CANMessageWindowModel::COLUMN_TYPE_IDENTIFIER);
+    if (m_DisplayColumnTypeWidth <= 0) m_TreeView->resizeColumnToContents(CANMessageWindowModel::COLUMN_TYPE_TYPE);
+    if (m_DisplayColumnSizeWidth <= 0) m_TreeView->resizeColumnToContents(CANMessageWindowModel::COLUMN_TYPE_SIZE);
+    if (m_DisplayColumnNameWidth <= 0) m_TreeView->resizeColumnToContents(CANMessageWindowModel::COLUMN_TYPE_NAME);
+    if (m_DisplayColumnDataWidth <= 0) m_TreeView->resizeColumnToContents(CANMessageWindowModel::COLUMN_TYPE_DATA);
 }
 
 
 void CANMessageWindowWidget::SwitchColumnsOnOff()
 {
-    m_TreeView->setColumnHidden(0, !m_DisplayColumnCounterFlag);
-    m_TreeView->setColumnHidden(1, !m_DisplayColumnTimeAbsoluteFlag);
-    m_TreeView->setColumnHidden(2, !m_DisplayColumnTimeDiffFlag);
-    m_TreeView->setColumnHidden(3, !m_DisplayColumnTimeDiffMinMaxFlag);
+    m_TreeView->setColumnHidden(CANMessageWindowModel::COLUMN_TYPE_NAME, !m_DecodeFlag);
+    m_TreeView->setColumnHidden(CANMessageWindowModel::COLUMN_TYPE_COUNT, !m_DisplayColumnCounterFlag);
+    m_TreeView->setColumnHidden(CANMessageWindowModel::COLUMN_TYPE_TIME, !m_DisplayColumnTimeAbsoluteFlag);
+    m_TreeView->setColumnHidden(CANMessageWindowModel::COLUMN_TYPE_DIFF_TIME, !m_DisplayColumnTimeDiffFlag);
+    m_TreeView->setColumnHidden(CANMessageWindowModel::COLUMN_TYPE_MIN_MAX_DIFF_TIME, !m_DisplayColumnTimeDiffMinMaxFlag);
+    // swich off the name column if it is not decoded
+    m_TreeView->setColumnHidden(CANMessageWindowModel::COLUMN_TYPE_NAME, !m_DecodeFlag);
 }
 
 void CANMessageWindowWidget::changeColor(QColor arg_color)
@@ -350,14 +381,15 @@ void CANMessageWindowWidget::BuildAbsoluteTimeString (double Ts, char *Txt, int 
 
 int CANMessageWindowWidget::ReadAndProcessCANMessages (void)
 {
-    CAN_FD_FIFO_ELEM *pCANMessage, CANMessages[64];
+    //CAN_FD_FIFO_ELEM *pCANMessage;
+    CAN_FIFO_ELEM_HEADER *pCANMessage;
     int i, x;
     int ReadElements;
     double Ts;
     char Txt[64];
 
     do {
-        ReadElements = ReadCanFdMessagesFromFifo2Process (m_CanFiFoHandle, CANMessages, 64);   // read max 64 CAN object
+        ReadElements = ReadCanFlexMessagesFromFifo2Process (m_CanFiFoHandle, m_CANMessages, 64, m_DataPtrs, m_Buffer, DATA_BUFFER_SIZE);   // read max 64 CAN object
         if (m_Record2Disk) {
             if (m_TriggerActiv) {
                 if (!m_Triggered) {
@@ -368,23 +400,24 @@ int CANMessageWindowWidget::ReadAndProcessCANMessages (void)
 
             if (m_Triggered) {
                 if (m_fh == nullptr) {
-                    if ((m_fh = open_file (QStringToConstChar(m_RecorderFileName), "wt")) == nullptr) {
+                    if ((m_fh = OpenFile4WriteWithPrefix (QStringToConstChar(m_RecorderFileName), "wt")) == nullptr) {
                         m_Record2Disk = 0;
                         ThrowError (1, "cannot open file %s", QStringToConstChar(m_RecorderFileName));
                     } else {
                         m_WaitForFirstMessageFlag = 1;
                         fprintf (m_fh, "Time\t");
                         fprintf (m_fh, "Dir\t");
-                        fprintf (m_fh, "C\t");
+                        fprintf (m_fh, "Ch\t");
                         fprintf (m_fh, "Id\t");
+                        fprintf (m_fh, "Type\t");
                         fprintf (m_fh, "Size\t");
-                        fprintf (m_fh, "Data[0...7/63]\n");
+                        fprintf (m_fh, "Data[0...n]\n");
                         goto __WRITE_A_LINE;
                     }
                 } else {
                   __WRITE_A_LINE:
                     for (x = 0; x < ReadElements; x++) {
-                        pCANMessage = &CANMessages[x];
+                        pCANMessage = &m_CANMessages[x];
                         Ts = TimestampCalc (pCANMessage);
                         if (m_WaitForFirstMessageFlag) {
 #ifdef _WIN32
@@ -405,7 +438,7 @@ int CANMessageWindowWidget::ReadAndProcessCANMessages (void)
                         fprintf (m_fh, "%s\t", Txt);
                         fprintf (m_fh, "%s\t", (pCANMessage->node) ? "->" : "<-");
                         fprintf (m_fh, "%i\t", static_cast<int>(pCANMessage->channel));
-                        fprintf (m_fh, "0x%X", static_cast<int>(pCANMessage->id));
+                        fprintf (m_fh, "0x%X\t", static_cast<int>(pCANMessage->id));
                         switch (pCANMessage->ext) {
                         case 0:
                             fprintf (m_fh, "n\t");
@@ -431,12 +464,18 @@ int CANMessageWindowWidget::ReadAndProcessCANMessages (void)
                         case 7:
                             fprintf (m_fh, "fbe\t");
                             break;
+                        case 0x10:
+                            fprintf (m_fh, "J1939MP\t");
+                            break;
+                        default:
+                            fprintf (m_fh, "undef\t");
+                            break;
                         }
 
                         fprintf (m_fh, "%i\t", static_cast<int>(pCANMessage->size));
 
                         for (i = 0; (i < pCANMessage->size) && (i < 64); i++) {
-                            fprintf (m_fh, "0x%02X ", static_cast<int>(pCANMessage->data[i]));
+                            fprintf (m_fh, "0x%02X ", static_cast<int>(m_DataPtrs[x][i]));
                         }
                         fprintf (m_fh, "\n");
                     }
@@ -446,8 +485,7 @@ int CANMessageWindowWidget::ReadAndProcessCANMessages (void)
             close_file (m_fh);
             m_fh = nullptr;
         }
-
-        m_Model->AddNewCANMessages (ReadElements, CANMessages);
+        m_Model->AddNewCANMessages (ReadElements, m_CANMessages, m_DataPtrs);
 
     } while (ReadElements == 64);   // repeat till fifo is empty
     return 0;
@@ -457,7 +495,18 @@ int CANMessageWindowWidget::ReadAndProcessCANMessages (void)
 void CANMessageWindowWidget::CyclicUpdate()
 {
     ReadAndProcessCANMessages();
-    m_TreeView->reset();
+    QModelIndex TopLeftIndex = m_TreeView->indexAt(m_TreeView->rect().topLeft());
+    QModelIndex ButtomRightIndex = m_TreeView->indexAt(m_TreeView->rect().bottomRight());
+    int VisibleLeftColumn = TopLeftIndex.column();
+    if (VisibleLeftColumn < 0) VisibleLeftColumn = 0;
+    int VisibleRightColumn = ButtomRightIndex.column();
+    if (VisibleRightColumn < 0) VisibleRightColumn = INT_MAX;
+    int VisibleTopRow = TopLeftIndex.row();
+    if (VisibleTopRow < 0) VisibleTopRow = 0;
+    int VisibleButtomRow = ButtomRightIndex.row();
+    if (VisibleButtomRow < 0) VisibleButtomRow = INT_MAX;
+    m_Model->UpdateViews(m_TreeView, VisibleLeftColumn, VisibleRightColumn,
+                         VisibleTopRow, VisibleButtomRow);
     if ((m_fh != nullptr) && (m_RefreshCounter)) {
         m_RefreshCounter = 0;
         QString Title = GetWindowTitle().append(QString (" (recording)"));
@@ -474,11 +523,12 @@ void CANMessageWindowWidget::ConfigDialogSlot()
     CANMessageWindowConfigDialog Dlg (GetWindowTitle(),
                                       m_cam_count,
                                       m_cam,
+                                      m_DecodeFlag,
                                       m_DisplayColumnCounterFlag,
                                       m_DisplayColumnTimeAbsoluteFlag,
                                       m_DisplayColumnTimeDiffFlag,
                                       m_DisplayColumnTimeDiffMinMaxFlag,
-                                      m_Record2Disk,
+                                      m_Record2DiskIni,
                                       m_RecorderFileName,
                                       m_TriggerActiv,
                                       m_TriggerEquation);
@@ -488,14 +538,40 @@ void CANMessageWindowWidget::ConfigDialogSlot()
         }
         m_cam_count = Dlg.GetAcceptanceMask(m_cam);
 
+        m_DecodeFlag = Dlg.GetDecodeFlag();
         Dlg.GetDisplayFlags (&m_DisplayColumnCounterFlag,
                              &m_DisplayColumnTimeAbsoluteFlag,
                              &m_DisplayColumnTimeDiffFlag,
                              &m_DisplayColumnTimeDiffMinMaxFlag);
-        m_RecorderFileName = Dlg.GetRecorderFilename (&m_Record2Disk);
+        m_Model->SetColumnFlags(m_DisplayColumnCounterFlag,
+                                m_DisplayColumnTimeAbsoluteFlag,
+                                m_DisplayColumnTimeDiffFlag,
+                                m_DisplayColumnTimeDiffMinMaxFlag);
+        bool Record2DiskIni;
+        QString FileName = Dlg.GetRecorderFilename (&Record2DiskIni);
+        if (m_RecorderFileName.compare(FileName)) {
+            // File name has changed
+            m_Record2Disk = false;
+            if (m_fh != nullptr) {
+                close_file (m_fh);
+                m_fh = nullptr;
+            }
+            m_RecorderFileName = FileName;
+        }
+        if (Record2DiskIni) {
+            m_Record2Disk = true;
+        } else if (m_Record2DiskIni) {
+            m_Record2Disk = false;
+            if (m_fh != nullptr) {
+                close_file (m_fh);
+                m_fh = nullptr;
+            }
+        }
+        m_Record2DiskIni = Record2DiskIni;
+
         m_TriggerEquation = Dlg.GetTrigger (&m_TriggerActiv);
 
-        m_Model->Clear();
+        m_Model->ClearAll(m_DecodeFlag);
 
         m_TreeView->reset();
 
@@ -508,11 +584,19 @@ void CANMessageWindowWidget::ConfigDialogSlot()
 
 void CANMessageWindowWidget::ClearSlot()
 {
-    m_Model->Clear();
-    m_TreeView->reset();
+    m_Model->ClearAll(m_DecodeFlag);
     FlushMessageQueue ();
 }
 
+void CANMessageWindowWidget::StartRecSlot()
+{
+    m_Record2Disk = true;
+}
+
+void CANMessageWindowWidget::StopRecSlot()
+{
+    m_Record2Disk = false;
+}
 
 void CANMessageWindowWidget::resizeEvent(QResizeEvent * /* event */)
 {

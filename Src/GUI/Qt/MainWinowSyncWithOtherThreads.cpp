@@ -54,7 +54,6 @@ void MainWinowSyncWithOtherThreads::SchedulerStateChangedAck(int par_ThreadId)
 int MainWinowSyncWithOtherThreads::OpenWindowByNameFromOtherThread(char *par_WindowName, bool par_PosFlag, int par_XPos, int par_YPos, bool par_SizeFlag, int par_Width, int par_Hight)
 {
     EnterCriticalSection (&m_CriticalSection);
-    check("OpenWindowByNameFromOtherThread");
     emit OpenWindowByNameSignal(my_GetCurrentThreadId(), par_WindowName, par_PosFlag, par_XPos, par_YPos, par_SizeFlag, par_Width, par_Hight);
     int Ret = WaitCurrentThread(INFINITE);
     LeaveCriticalSection (&m_CriticalSection);
@@ -71,7 +70,6 @@ void MainWinowSyncWithOtherThreads::OpenWindowByNameFromOtherThreadAck(int par_T
 int MainWinowSyncWithOtherThreads::IsWindowOpenFromOtherThread(char *par_WindowName)
 {
     EnterCriticalSection (&m_CriticalSection);
-    check("IsWindowOpenFromOtherThread");
     emit IsWindowOpenSignal(my_GetCurrentThreadId(), par_WindowName);
     int Ret = WaitCurrentThread(INFINITE);
     LeaveCriticalSection (&m_CriticalSection);
@@ -88,7 +86,6 @@ void MainWinowSyncWithOtherThreads::IsWindowOpenFromOtherThreadAck(int par_Threa
 void MainWinowSyncWithOtherThreads::SaveAllConfigToIniDataBaseFromOtherThread()
 {
     EnterCriticalSection (&m_CriticalSection);
-    check("SaveAllConfigToIniDataBaseFromOtherThread");
     emit SaveAllConfigToIniDataBaseSignal(my_GetCurrentThreadId());
     WaitCurrentThread(INFINITE);
     LeaveCriticalSection (&m_CriticalSection);
@@ -104,7 +101,6 @@ void MainWinowSyncWithOtherThreads::SaveAllConfigToIniDataBaseFromOtherThreadAck
 int MainWinowSyncWithOtherThreads::CloseWindowByNameFromOtherThread(char *par_WindowName)
 {
     EnterCriticalSection (&m_CriticalSection);
-    check("CloseWindowByNameFromOtherThread");
     emit CloseWindowByNameSignal(my_GetCurrentThreadId(), par_WindowName);
     int Ret = WaitCurrentThread(INFINITE);
     LeaveCriticalSection (&m_CriticalSection);
@@ -121,7 +117,6 @@ void MainWinowSyncWithOtherThreads::CloseWindowByNameFromOtherThreadAck(int par_
 int MainWinowSyncWithOtherThreads::SelectSheetFromOtherThread(char *par_SheetName)
 {
     EnterCriticalSection (&m_CriticalSection);
-    check("SelectSheetFromOtherThread");
     emit SelectSheetSignal(my_GetCurrentThreadId(), par_SheetName);
     int Ret = WaitCurrentThread(INFINITE);
     LeaveCriticalSection (&m_CriticalSection);
@@ -138,7 +133,6 @@ void MainWinowSyncWithOtherThreads::SelectSheetFromOtherThreadAck(int par_Thread
 int MainWinowSyncWithOtherThreads::AddSheetFromOtherThread(char *par_SheetName)
 {
     EnterCriticalSection (&m_CriticalSection);
-    check("AddSheetFromOtherThread");
     emit AddSheetSignal(my_GetCurrentThreadId(), par_SheetName);
     int Ret = WaitCurrentThread(INFINITE);
     LeaveCriticalSection (&m_CriticalSection);
@@ -155,7 +149,6 @@ void MainWinowSyncWithOtherThreads::AddSheetFromOtherThreadAck(int par_ThreadId,
 int MainWinowSyncWithOtherThreads::DeleteSheetFromOtherThread(char *par_SheetName)
 {
     EnterCriticalSection (&m_CriticalSection);
-    check("DeleteSheetFromOtherThread");
     emit DeleteSheetSignal(my_GetCurrentThreadId(), par_SheetName);
     int Ret = WaitCurrentThread(INFINITE);
     LeaveCriticalSection (&m_CriticalSection);
@@ -172,7 +165,6 @@ void MainWinowSyncWithOtherThreads::DeleteSheetFromOtherThreadAck(int par_Thread
 int MainWinowSyncWithOtherThreads::RenameSheetFromOtherThread(char *par_OldSheetName, char *par_NewSheetName)
 {
     EnterCriticalSection (&m_CriticalSection);
-    check("RenameSheetFromOtherThread");
     emit RenameSheetSignal(my_GetCurrentThreadId(), par_OldSheetName, par_NewSheetName);
     int Ret = WaitCurrentThread(INFINITE);
     LeaveCriticalSection (&m_CriticalSection);
@@ -189,7 +181,6 @@ void MainWinowSyncWithOtherThreads::RenameSheetFromOtherThreadAck(int par_Thread
 int MainWinowSyncWithOtherThreads::ImportHotkeyFromOtherThread(char *par_Filename)
 {
     EnterCriticalSection (&m_CriticalSection);
-    check("ImportHotkeyFromOtherThread");
     QString Filename(par_Filename);
     emit ImportHotkeySignal(my_GetCurrentThreadId(), Filename);
     int Ret = WaitCurrentThread(INFINITE);
@@ -207,7 +198,6 @@ void MainWinowSyncWithOtherThreads::ImportHotkeyFromOtherThreadAck(int par_Threa
 int MainWinowSyncWithOtherThreads::ExportHotkeyFromOtherThread(char *par_Filename)
 {
     EnterCriticalSection (&m_CriticalSection);
-    check("ExportHotkeyFromOtherThread");
     QString Filename(par_Filename);
     emit ExportHotkeySignal(my_GetCurrentThreadId(), Filename);
     int Ret = WaitCurrentThread(INFINITE);
@@ -240,7 +230,6 @@ void MainWinowSyncWithOtherThreads::DeactivateBreakpointFromOtherThread()
 void MainWinowSyncWithOtherThreads::AddNewScriptErrorMessageFromOtherThread(int par_Level, int par_LineNr, const char *par_Filename, const char *par_Message)
 {
     EnterCriticalSection (&m_CriticalSection);
-    check("AddNewScriptErrorMessageFromOtherThread");
     emit AddNewScriptErrorMessageSignal(my_GetCurrentThreadId(), par_Level, par_LineNr, par_Filename, par_Message);
     WaitCurrentThread(INFINITE);
     LeaveCriticalSection (&m_CriticalSection);
@@ -336,7 +325,6 @@ void MainWinowSyncWithOtherThreads::CloseProgressBarFromOtherThread(int par_Prog
 int MainWinowSyncWithOtherThreads::ScriptCreateDialogFromOtherThread(char *par_Headline)
 {
     EnterCriticalSection (&m_CriticalSection);
-    check("ScriptCreateDialogFromOtherThread");
     QString loc_Headline =  CharToQString(par_Headline);
     emit ScriptCreateDialogSignal(my_GetCurrentThreadId(), loc_Headline);
     int Ret = WaitCurrentThread(INFINITE);
@@ -354,7 +342,6 @@ void MainWinowSyncWithOtherThreads::ScriptCreateDialogFromOtherThreadAck(int par
 int MainWinowSyncWithOtherThreads::ScriptAddDialogItemFromOtherThread(char *par_Element, char *par_Label)
 {
     EnterCriticalSection (&m_CriticalSection);
-    check("ScriptCreateDialogFromOtherThread");
     QString loc_Element = CharToQString(par_Element);
     QString loc_Label = CharToQString(par_Label);
     emit ScriptAddDialogItemSignal(my_GetCurrentThreadId(), loc_Element, loc_Label);
@@ -373,7 +360,6 @@ void MainWinowSyncWithOtherThreads::ScriptAddDialogItemFromOtherThreadAck(int pa
 int MainWinowSyncWithOtherThreads::ScriptShowDialogFromOtherThread()
 {
     EnterCriticalSection (&m_CriticalSection);
-    check("ScriptCreateDialogFromOtherThread");
     emit ScriptShowDialogSignal(my_GetCurrentThreadId());
     int Ret = WaitCurrentThread(INFINITE);
     LeaveCriticalSection (&m_CriticalSection);
@@ -390,7 +376,6 @@ void MainWinowSyncWithOtherThreads::ScriptShowDialogFromOtherThreadAck(int par_T
 int MainWinowSyncWithOtherThreads::ScriptDestroyDialogFromOtherThread()
 {
     EnterCriticalSection (&m_CriticalSection);
-    check("ScriptCreateDialogFromOtherThread");
     emit ScriptDestroyDialogSignal(my_GetCurrentThreadId());
     int Ret = WaitCurrentThread(INFINITE);
     LeaveCriticalSection (&m_CriticalSection);
@@ -407,7 +392,6 @@ void MainWinowSyncWithOtherThreads::ScriptDestroyDialogFromOtherThreadAck(int pa
 int MainWinowSyncWithOtherThreads::IsScriptDialogClosedFromOtherThread()
 {
     EnterCriticalSection (&m_CriticalSection);
-    check("ScriptCreateDialogFromOtherThread");
     emit IsScriptDialogClosedSignal(my_GetCurrentThreadId());
     int Ret = WaitCurrentThread(INFINITE);
     LeaveCriticalSection (&m_CriticalSection);
@@ -429,7 +413,6 @@ void MainWinowSyncWithOtherThreads::StopOscilloscopeFromOtherThread(void *par_Os
 int MainWinowSyncWithOtherThreads::RemoteProcedureCallRequestFromOtherThread(void *par_Connection, const void *par_In, void *ret_Out)
 {
     EnterCriticalSection (&m_CriticalSection);
-    check("RemoteProcedureCallRequestFromOtherThread");
     emit RemoteProcedureCallRequestSignal(my_GetCurrentThreadId(), par_Connection, par_In, ret_Out);
     int Ret = WaitCurrentThread(INFINITE);
     LeaveCriticalSection (&m_CriticalSection);
@@ -441,21 +424,6 @@ void MainWinowSyncWithOtherThreads::RemoteProcedureCallRequestFromOtherThreaddAc
     EnterCriticalSection (&m_CriticalSection);
     WakeThread(par_ThreadId, par_RetrunValue);
     LeaveCriticalSection (&m_CriticalSection);
-}
-
-void MainWinowSyncWithOtherThreads::check(const char *par_Name)
-{
-    int CurrentThreadId = my_GetCurrentThreadId();
-    for (int x = 0; x < 32; x++) {
-        if ((m_Wait[x].ThreadId == CurrentThreadId) &&
-            (m_Wait[x].Wait == true)) {
-            FILE *fh = fopen("c:\\tmp\\check.txt", "at");
-            if (fh != nullptr) {
-                fprintf (fh, "check(\"%s\")\n", par_Name);
-                fclose(fh);
-            }
-        }
-    }
 }
 
 int MainWinowSyncWithOtherThreads::WaitCurrentThread(unsigned long par_Timeout)

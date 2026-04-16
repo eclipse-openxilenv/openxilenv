@@ -37,6 +37,7 @@ public:
     explicit CANMessageWindowConfigDialog(QString par_WindowTitle,
                                           int par_AcceptanceMaskRows,
                                           CAN_ACCEPT_MASK *par_AcceptanceMask,
+                                          bool par_DecodeFlag,
                                           bool par_DisplayColumnCounterFlag,
                                           bool par_DisplayColumnTimeAbsoluteFlag,
                                           bool par_DisplayColumnTimeDiffFlag,
@@ -51,6 +52,7 @@ public:
     QString GetWindowTitle ();
     bool WindowTitleChanged ();
     int GetAcceptanceMask (CAN_ACCEPT_MASK *AcceptanceMask);
+    bool GetDecodeFlag();
     void GetDisplayFlags (bool *ret_DisplayColumnCounterFlag,
                           bool *ret_DisplayColumnTimeAbsoluteFlag,
                           bool *ret_DisplayColumnTimeDiffFlag,
@@ -63,7 +65,6 @@ private slots:
 
     void on_DeletePushButton_clicked();
 
-//public slots:
     void accept();
 
     void on_RecorderFilePushButton_clicked();

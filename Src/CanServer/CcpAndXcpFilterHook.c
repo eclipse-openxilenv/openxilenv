@@ -194,7 +194,7 @@ int CcpMessageFilter (MESSAGE_HEAD *mhead, NEW_CAN_SERVER_CONFIG *csc)
                                                (uint32_t)CanObject.Id,
                                                CanObject.Data,
                                                (unsigned char)CanObject.ExtFlag,
-                                               (unsigned char)CanObject.Size, 1, (uint64_t)blackboard_infos.ActualCycleNumber);
+                                               CanObject.Size, 1, (uint64_t)blackboard_infos.ActualCycleNumber);
             }
         }
         ret = 1;

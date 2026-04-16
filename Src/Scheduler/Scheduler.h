@@ -109,6 +109,9 @@ typedef struct SCHEDULER_DATA_STRUCT {
     int SchedulerHaveRecogizedTerminationRequeFlag;
 
     int CycleDiffTimeVid;
+    int CycleDiffTimeMinVid;
+    int CycleDiffTimeMaxVid;
+    int CycleDiffTimeResetMinMaxVid;
 } SCHEDULER_DATA;
 
 int GetSchedulerCount (void);

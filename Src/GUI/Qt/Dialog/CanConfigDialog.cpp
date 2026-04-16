@@ -1894,10 +1894,6 @@ CanConfigVariant::CanConfigVariant(CanConfigServer *par_ParentBase, QString par_
     m_DataBaudRate = 4000;
     m_DataSamplePoint = 0.8;
     m_EnableJ1939 = false;
-    for (int x = 0; x < 4; x++) {
-        m_EnableJ1939Addresses[x] = false;
-        m_J1939Addresses[x] = 0;
-    }
     m_ControlBlackboardName = PrefixId;
 }
 
@@ -1911,10 +1907,6 @@ CanConfigVariant::CanConfigVariant(const CanConfigVariant &par_Variant)
     m_DataBaudRate = par_Variant.m_DataBaudRate;
     m_DataSamplePoint = par_Variant.m_DataSamplePoint;
     m_EnableJ1939 = par_Variant.m_EnableJ1939;
-    for (int x = 0; x < 4; x++) {
-        m_EnableJ1939Addresses[x] = par_Variant.m_EnableJ1939Addresses[x];
-        m_J1939Addresses[x] = par_Variant.m_J1939Addresses[x];
-    }
     m_ControlBlackboardName = par_Variant.m_ControlBlackboardName;
 
     foreach (CanConfigObject *Object, par_Variant.m_Objects) {
@@ -1955,16 +1947,6 @@ bool CanConfigVariant::ReadFromIni(int par_VariantNr, int par_Fd)
 
     m_EnableJ1939 = IniFileDataBaseReadYesNo(section, "j1939", 0, par_Fd);
 
-    for (x = 0; x < 4; x++) {
-        PrintFormatToString (entry, sizeof(entry), "j1939 src addr %i", x);
-        if (IniFileDataBaseReadString (section, entry, "", txt, sizeof (txt), par_Fd) > 0) {
-            m_EnableJ1939Addresses[x] = true;
-            m_J1939Addresses[x] = strtol (txt, nullptr, 0);
-        } else {
-            m_EnableJ1939Addresses[x] = false;
-            m_J1939Addresses[x] = 0;
-        }
-    }
     IniFileDataBaseReadString (section, "ControlBbName", "PrefixId", txt, sizeof (txt), par_Fd);
     if (!strcmpi ("NoPrefixObjName", txt)) {
         m_ControlBlackboardName = NoPrefixObjName;
@@ -2014,12 +1996,6 @@ void CanConfigVariant::WriteToIni(int par_VariantNr, int par_Fd, bool par_Delete
 
     IniFileDataBaseWriteYesNo(section, "j1939", m_EnableJ1939, par_Fd);
 
-    for (x = 0; x < 4; x++) {
-        if (m_EnableJ1939Addresses[x]) {
-            PrintFormatToString (entry, sizeof(entry), "j1939 src addr %i", x);
-            IniFileDataBaseWriteUInt (section, entry,  m_J1939Addresses[x], par_Fd);
-        }
-    }
     switch (m_ControlBlackboardName) {
     case NoPrefixObjName:
         IniFileDataBaseWriteString (section, "ControlBbName", "NoPrefixObjName", par_Fd);
@@ -2145,14 +2121,6 @@ void CanConfigVariant::FillDialogTab(Ui::CanConfigDialog *ui, QModelIndex par_In
         ui->VariantDataSamplePointLineEdit->SetValue(m_DataSamplePoint);
     }
     ui->VariantEnableJ1939CheckBox->setChecked(m_EnableJ1939);
-    ui->VariantEnableJ1939FirstAddressCheckBox->setChecked(m_EnableJ1939Addresses[0]);
-    ui->VariantJ1939FirstAddressLineEdit->SetValue(m_J1939Addresses[0], 16);
-    ui->VariantEnableJ1939SecondAddressCheckBox->setChecked(m_EnableJ1939Addresses[1]);
-    ui->VariantJ1939SecondAddressLineEdit->SetValue(m_J1939Addresses[1], 16);
-    ui->VariantEnableJ1939ThirdAddressCheckBox->setChecked(m_EnableJ1939Addresses[2]);
-    ui->VariantJ1939ThirdAddressLineEdit->SetValue(m_J1939Addresses[2], 16);
-    ui->VariantEnableJ1939FourthAddressCheckBox->setChecked(m_EnableJ1939Addresses[3]);
-    ui->VariantJ1939FourthAddressLineEdit->SetValue(m_J1939Addresses[3], 16);
 
     switch (m_ControlBlackboardName) {
     case NoPrefixObjName:
@@ -2190,14 +2158,6 @@ void CanConfigVariant::StoreDialogTab(Ui::CanConfigDialog *ui)
     m_DataSamplePoint = ui->VariantDataSamplePointLineEdit->GetDoubleValue();
 
     m_EnableJ1939 = ui->VariantEnableJ1939CheckBox->isChecked();
-    m_EnableJ1939Addresses[0] = ui->VariantEnableJ1939FirstAddressCheckBox->isChecked();
-    m_J1939Addresses[0] = ui->VariantJ1939FirstAddressLineEdit->GetIntValue();
-    m_EnableJ1939Addresses[1] = ui->VariantEnableJ1939SecondAddressCheckBox->isChecked();
-    m_J1939Addresses[1] = ui->VariantJ1939SecondAddressLineEdit->GetIntValue();
-    m_EnableJ1939Addresses[2] = ui->VariantEnableJ1939ThirdAddressCheckBox->isChecked();
-    m_J1939Addresses[2] = ui->VariantJ1939ThirdAddressLineEdit->GetIntValue();
-    m_EnableJ1939Addresses[3] = ui->VariantEnableJ1939FourthAddressCheckBox->isChecked();
-    m_J1939Addresses[3] = ui->VariantJ1939FourthAddressLineEdit->GetIntValue();
 
     if (ui->ObjectControlOnlyObjNameRadioButton->isChecked()) {
         m_ControlBlackboardName = NoPrefixObjName;
@@ -2743,11 +2703,11 @@ void CanConfigObject::FillDialogTab(Ui::CanConfigDialog *ui, QModelIndex par_Ind
         ui->ObjectByteOrderComboBox->setCurrentText(QString("lsb_first"));
     }
     if (m_Type == J1939) {
-        ui->ObjectSizeSpinBox->setRange(1, 1785); // J1939_MAX_DATA_LENGTH);
+        ui->ObjectSizeSpinBox->setRange(0, 1785); // J1939_MAX_DATA_LENGTH);
     } else if ((m_BitRateSwitch) || (m_Type == J1939_Multi_PG) || (m_Type == J1939_C_PG)) {
-        ui->ObjectSizeSpinBox->setRange(1, 64);
+        ui->ObjectSizeSpinBox->setRange(0, 64);
     } else {
-        ui->ObjectSizeSpinBox->setRange(1, 8);
+        ui->ObjectSizeSpinBox->setRange(0, 8);
     }
     m_Size = SizeSave;
     ui->ObjectSizeSpinBox->setValue(m_Size);

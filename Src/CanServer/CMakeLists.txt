@@ -6,6 +6,12 @@ target_sources(LinuxRemoteMasterCore
     CanServer.c
     CcpAndXcpFilterHook.c
 )
+if (BUILD_WITH_J1939_SUPPORT)
+target_sources(LinuxRemoteMasterCore
+    PRIVATE
+    J1939MultiPackage.c
+)
+endif()
 endif()
 
 set(CommonFileList
@@ -25,10 +31,14 @@ if(BUILD_WITH_GATEWAY_VIRTUAL_CAN)
     )
 endif()
 
+if (BUILD_WITH_J1939_SUPPORT)
+set(CommonFileList
+    ${CommonFileList}
+    J1939MultiPackage.c
+)
+endif()
+
 target_sources(XilEnv PRIVATE ${CommonFileList})
 
 target_sources(XilEnvGui PRIVATE ${CommonFileList})
 
-if (BUILD_WITH_J1939_SUPPORT)
-    add_subdirectory("J1939")
-endif()

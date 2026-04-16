@@ -277,8 +277,6 @@ public:
     int m_DataBaudRate;
     double m_DataSamplePoint;
     bool m_EnableJ1939;
-    bool m_EnableJ1939Addresses[4];
-    int m_J1939Addresses[4];
 
     enum ControlBlackboardName {PrefixId, PrefixObjName, NoPrefixObjName, PrefixVarObjName, NoPrefixVarObjName} m_ControlBlackboardName;
 

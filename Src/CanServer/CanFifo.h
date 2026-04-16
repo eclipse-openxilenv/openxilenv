@@ -50,12 +50,24 @@ typedef struct {
     uint8_t data[64];       // 64
 }  CAN_FD_FIFO_ELEM;               // 88 Byte
 
+typedef struct {
+    uint32_t id;            // 4
+    uint16_t size;          // 2
+    uint8_t ext;            // 1
+    uint8_t flag;           // 1
+    uint8_t channel;        // 1
+    uint8_t node;           // 1      1 -> oneself transmitted 0 -> external
+    uint8_t fill[6];        // 6
+    uint64_t timestamp;     // 8
+    // uint8_t data[0...2048];
+}  CAN_FIFO_ELEM_HEADER;               // 24 Byte
+
 
 typedef struct {
     int32_t Channel;
     uint32_t Start;
     uint32_t Stop;
-    int32_t Fill1;
+    int32_t Flags;
 }  CAN_ACCEPT_MASK;
 
 int CreateCanFifos (int Depth, int FdFlag);
@@ -77,6 +89,8 @@ int ReadCanFdMessageFromFifo2Process (int Handle, CAN_FD_FIFO_ELEM *pCanMessage)
 //            -1 -> not a valid fifo handle
 int ReadCanMessagesFromFifo2Process (int Handle, CAN_FIFO_ELEM *pCanMessage, int MaxMessages);
 int ReadCanFdMessagesFromFifo2Process (int Handle, CAN_FD_FIFO_ELEM *pCanMessage, int MaxMessages);
+int ReadCanFlexMessagesFromFifo2Process (int Handle, CAN_FIFO_ELEM_HEADER *pCanMessage, int MaxMessages,
+                                         uint8_t **Data, uint8_t *Buffer, int BufferSize);
 
 // FIFO->CAN
 int WriteCanMessageFromFifo2Can (NEW_CAN_SERVER_CONFIG *csc, int Channel);
@@ -96,9 +110,12 @@ int WriteCanFdMessageFromProcess2Fifo (int Handle, CAN_FD_FIFO_ELEM *pCanMessage
 
 // CAN->FIFOs
 int WriteCanMessageFromBus2Fifos (int Channel, uint32_t Id,
-                                  unsigned char *Data, unsigned char Ext,
-                                  unsigned char Size, unsigned char Node,
-                                  uint64_t Timestamp);
+                                 unsigned char *Data, unsigned char Ext,
+                                 int Size, unsigned char Node,
+                                 uint64_t Timestamp);
+
+void SetupCanTxFiFos(NEW_CAN_SERVER_CONFIG *csc);
+void CleanupCanTxFiFos(void);
 
 void InitCANFifoCriticalSection(void);
 

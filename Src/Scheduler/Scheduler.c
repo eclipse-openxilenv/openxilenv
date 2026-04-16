@@ -18,6 +18,7 @@
 #include "Platform.h"
 #ifdef _WIN32
 #include <Psapi.h>
+#include <processthreadsapi.h>
 #else
 #include <ctype.h>
 #include <string.h>
@@ -27,6 +28,7 @@
 #include <stdlib.h>
 #include <malloc.h>
 #include <time.h>
+#include <float.h>
 #include "RunTimeMeasurement.h"
 
 #include "Config.h"
@@ -863,7 +865,20 @@ void CalculateRealtimeFactor (SCHEDULER_DATA *pSchedulerData)
     Time = GetTimeOfSystemIsRunning ();
     pSchedulerData->SchedPeriodNotFiltered = Time - pSchedulerData->LastSchedCallTime;
 
-    write_bbvari_double(pSchedulerData->CycleDiffTimeVid, pSchedulerData->SchedPeriodNotFiltered);
+    if (pSchedulerData->Cycle > 0) { // ignore the first cycle
+        write_bbvari_double(pSchedulerData->CycleDiffTimeVid, pSchedulerData->SchedPeriodNotFiltered);
+        if(pSchedulerData->SchedPeriodNotFiltered < read_bbvari_double(pSchedulerData->CycleDiffTimeMinVid)) {
+            write_bbvari_double(pSchedulerData->CycleDiffTimeMinVid, pSchedulerData->SchedPeriodNotFiltered);
+        }
+        if(pSchedulerData->SchedPeriodNotFiltered > read_bbvari_double(pSchedulerData->CycleDiffTimeMaxVid)) {
+            write_bbvari_double(pSchedulerData->CycleDiffTimeMaxVid, pSchedulerData->SchedPeriodNotFiltered);
+        }
+        if (read_bbvari_ubyte(pSchedulerData->CycleDiffTimeResetMinMaxVid)) {
+            write_bbvari_double(pSchedulerData->CycleDiffTimeMinVid, DBL_MAX);
+            write_bbvari_double(pSchedulerData->CycleDiffTimeMaxVid, 0);
+            write_bbvari_ubyte(pSchedulerData->CycleDiffTimeResetMinMaxVid, 0);
+        }
+    }
     pSchedulerData->LastSchedCallTime = Time;
 
     pSchedulerData->SchedPeriodFiltered = pSchedulerData->SchedPeriodFiltered * (1.0 - T) + pSchedulerData->SchedPeriodNotFiltered * T;
@@ -1754,6 +1769,67 @@ static int CheckIfAllSchedulerHaveRecogizedTerminationRequest(SCHEDULER_DATA *pS
     return Ret;
 }
 
+static void AddSchedulerTimingSignalsToBlackboard(SCHEDULER_DATA *pSchedulerData)
+{
+    char Help[MAX_SCHEDULER_NAME_LENGTH + 64];
+    pSchedulerData->CurrentTcb = &GuiTcb;
+    if (pSchedulerData->SchedulerNr == 0) {
+        PrintFormatToString (Help, sizeof(Help), "%sCycleCounter", GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_LONG2_BLACKBOARD));
+    } else {
+        PrintFormatToString (Help, sizeof(Help), "%sCycleCounter_%s", GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_LONG2_BLACKBOARD), pSchedulerData->SchedulerName);
+    }
+    pSchedulerData->CycleCounterVid = add_bbvari (Help, BB_UDWORD, "");
+    if (pSchedulerData->CycleCounterVid < 0) {
+        ThrowError (1, "cannot add blackboard variable %sCycleCounter %i", GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_LONG2_BLACKBOARD), pSchedulerData->CycleCounterVid);
+    }
+    write_bbvari_udword (pSchedulerData->CycleCounterVid, 0);
+
+    if (pSchedulerData->SchedulerNr == 0) {
+        PrintFormatToString (Help, sizeof(Help), "%sCycleDiffTime", GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_LONG2_BLACKBOARD));
+    } else {
+        PrintFormatToString (Help, sizeof(Help), "%sCycleDiffTime_%s", GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_LONG2_BLACKBOARD), pSchedulerData->SchedulerName);
+    }
+    pSchedulerData->CycleDiffTimeVid = add_bbvari (Help, BB_DOUBLE, "s");
+    if (pSchedulerData->CycleDiffTimeVid < 0) {
+        ThrowError (1, "cannot add blackboard variable %s %i", Help, pSchedulerData->CycleDiffTimeVid);
+    }
+    write_bbvari_double (pSchedulerData->CycleDiffTimeVid, 0.0);
+    // Min
+    if (pSchedulerData->SchedulerNr == 0) {
+        PrintFormatToString (Help, sizeof(Help), "%sCycleDiffTimeMin", GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_LONG2_BLACKBOARD));
+    } else {
+        PrintFormatToString (Help, sizeof(Help), "%sCycleDiffTimeMin_%s", GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_LONG2_BLACKBOARD), pSchedulerData->SchedulerName);
+    }
+    pSchedulerData->CycleDiffTimeMinVid = add_bbvari (Help, BB_DOUBLE, "");
+    if (pSchedulerData->CycleDiffTimeMinVid < 0) {
+        ThrowError (1, "cannot add blackboard variable %s %i", Help, pSchedulerData->CycleDiffTimeMinVid);
+    }
+    write_bbvari_double (pSchedulerData->CycleDiffTimeMinVid, DBL_MAX);
+    // Max
+    if (pSchedulerData->SchedulerNr == 0) {
+        PrintFormatToString (Help, sizeof(Help), "%sCycleDiffTimeMax", GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_LONG2_BLACKBOARD));
+    } else {
+        PrintFormatToString (Help, sizeof(Help), "%sCycleDiffTimeMax_%s", GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_LONG2_BLACKBOARD), pSchedulerData->SchedulerName);
+    }
+    pSchedulerData->CycleDiffTimeMaxVid = add_bbvari (Help, BB_DOUBLE, "");
+    if (pSchedulerData->CycleDiffTimeMaxVid < 0) {
+        ThrowError (1, "cannot add blackboard variable %s %i", Help, pSchedulerData->CycleDiffTimeMaxVid);
+    }
+    write_bbvari_double (pSchedulerData->CycleDiffTimeMaxVid, 0.0);
+    // MinMaxReset
+    if (pSchedulerData->SchedulerNr == 0) {
+        PrintFormatToString (Help, sizeof(Help), "%sCycleDiffTimeResetMinMax", GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_LONG2_BLACKBOARD));
+    } else {
+        PrintFormatToString (Help, sizeof(Help), "%sCycleDiffTimeResetMinMax_%s", GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_LONG2_BLACKBOARD), pSchedulerData->SchedulerName);
+    }
+    pSchedulerData->CycleDiffTimeResetMinMaxVid = add_bbvari (Help, BB_UBYTE, "");
+    if (pSchedulerData->CycleDiffTimeResetMinMaxVid < 0) {
+        ThrowError (1, "cannot add blackboard variable %s %i", Help, pSchedulerData->CycleDiffTimeResetMinMaxVid);
+    }
+    write_bbvari_ubyte (pSchedulerData->CycleDiffTimeResetMinMaxVid, 0);
+
+    pSchedulerData->CurrentTcb = NULL;
+}
 
 #ifdef _WIN32
 static DWORD WINAPI SchedulerThreadProc (LPVOID lpParam);
@@ -1780,7 +1856,6 @@ static void *SchedulerThreadProc(void* lpParam)
     SCHEDULER_DATA *pSchedulerData;
     TASK_CONTROL_BLOCK *CurrentTcb;
     TASK_CONTROL_BLOCK *NextTcb;
-    char Help[MAX_SCHEDULER_NAME_LENGTH + 64];
 
     pSchedulerData = (SCHEDULER_DATA*)lpParam;
     pSchedulerData->SchedulerThreadId = GetCurrentThreadId ();
@@ -1806,30 +1881,8 @@ static void *SchedulerThreadProc(void* lpParam)
     pthread_setschedprio(pthread_self(), -1 * pSchedulerData->Prio);   // Prioritaet negieren (Windows ist hier genau anderherum!)
 #endif
 
-    pSchedulerData->CurrentTcb = &GuiTcb;
-    if (pSchedulerData->SchedulerNr == 0) {
-        PrintFormatToString (Help, sizeof(Help), "%sCycleCounter", GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_LONG2_BLACKBOARD));
-    } else {
-        PrintFormatToString (Help, sizeof(Help), "%sCycleCounter_%s", GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_LONG2_BLACKBOARD), pSchedulerData->SchedulerName);
-    }
-    pSchedulerData->CycleCounterVid = add_bbvari (Help, BB_UDWORD, "");
-    if (pSchedulerData->CycleCounterVid < 0) {
-        ThrowError (1, "cannot add blackboard variable %sCycleCounter %i", GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_LONG2_BLACKBOARD), pSchedulerData->CycleCounterVid);
-    }
-    write_bbvari_udword (pSchedulerData->CycleCounterVid, 0);
+    AddSchedulerTimingSignalsToBlackboard(pSchedulerData);
 
-    if (pSchedulerData->SchedulerNr == 0) {
-        PrintFormatToString (Help, sizeof(Help), "%sCycleDiffTime", GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_LONG2_BLACKBOARD));
-    } else {
-        PrintFormatToString (Help, sizeof(Help), "%sCycleDiffTime%s", GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_LONG2_BLACKBOARD), pSchedulerData->SchedulerName);
-    }
-    pSchedulerData->CycleDiffTimeVid = add_bbvari (Help, BB_DOUBLE, "s");
-    if (pSchedulerData->CycleDiffTimeVid < 0) {
-        ThrowError (1, "cannot add blackboard variable %sCycleDiffTime %i", GetConfigurablePrefix(CONFIGURABLE_PREFIX_TYPE_LONG2_BLACKBOARD), pSchedulerData->CycleDiffTimeVid);
-    }
-    write_bbvari_double (pSchedulerData->CycleDiffTimeVid, 0.0);
-
-    pSchedulerData->CurrentTcb = NULL;
     if (pSchedulerData->SchedulerNr == 0) {
         CycleCounterVid = pSchedulerData->CycleCounterVid; // The control panel will use this blackboard variable
     }
@@ -2543,7 +2596,7 @@ int AddPipeSchedulers (char *par_SchedulerName, int par_IsMainScheduler)
     pScheduler->SimulatedTimeInNanoSecond = 0;
 
     // Before first scheduler call
-    pScheduler->LastSchedCallTime = GetTickCount();
+    pScheduler->LastSchedCallTime = GetTimeOfSystemIsRunning();
     pScheduler->SchedPeriodFiltered = pScheduler->SchedPeriod;
 
     CreateSchedulerThread (pScheduler);
@@ -4676,20 +4729,49 @@ int get_real_running_process_name (char *pname, int maxc)
     }
 }
 
+int TryDisablePowerThrottling(void)
+{
+    int Ret = 0;
+#if _WIN32
+#define PROCESS_POWER_THROTTLING_IGNORE_TIMER_RESOLUTION 0x4
+    PROCESS_POWER_THROTTLING_STATE state = {0};
+    state.Version = PROCESS_POWER_THROTTLING_CURRENT_VERSION;
+    state.ControlMask = PROCESS_POWER_THROTTLING_IGNORE_TIMER_RESOLUTION | PROCESS_POWER_THROTTLING_EXECUTION_SPEED;
+    Ret = GetProcessInformation(GetCurrentProcess(), ProcessPowerThrottling, &state, sizeof(state));
+    state.ControlMask = PROCESS_POWER_THROTTLING_IGNORE_TIMER_RESOLUTION | PROCESS_POWER_THROTTLING_EXECUTION_SPEED;
+    state.StateMask = PROCESS_POWER_THROTTLING_IGNORE_TIMER_RESOLUTION | PROCESS_POWER_THROTTLING_EXECUTION_SPEED;
+    Ret = SetProcessInformation(GetCurrentProcess(), ProcessPowerThrottling, &state, sizeof(state));
+    Ret = GetProcessInformation(GetCurrentProcess(), ProcessPowerThrottling, &state, sizeof(state));
+#endif
+    return Ret;
+}
+
 int SetPriority (char *txt)
 {
     int Ret = 0;
-    int priority = THREAD_PRIORITY_NORMAL;
-
-    if (!strcmp ("PRIORITY_NORMAL_NO_SLEEP", txt)) {
-        priority = THREAD_PRIORITY_NORMAL;
+    int priority = NORMAL_PRIORITY_CLASS;
+    if (!strcmp ("PRIORITY_TIME_CRITICAL_NO_SLEEP", txt)) {
+        TryDisablePowerThrottling();
+        priority = REALTIME_PRIORITY_CLASS;
         Ret = 1;
-    } else if (!strcmp ("PRIORITY_NORMAL", txt)) priority = THREAD_PRIORITY_NORMAL;
-    else if (!strcmp ("PRIORITY_BELOW_NORMAL", txt)) priority = THREAD_PRIORITY_BELOW_NORMAL;
-    else if (!strcmp ("PRIORITY_LOWEST", txt)) priority = THREAD_PRIORITY_LOWEST;
-    else if (!strcmp ("PRIORITY_IDLE", txt)) priority = THREAD_PRIORITY_IDLE;
+    } else if (!strcmp ("PRIORITY_HIGHEST_NO_SLEEP", txt)) {
+        TryDisablePowerThrottling();
+        priority = HIGH_PRIORITY_CLASS;
+        Ret = 1;
+    } else if (!strcmp ("PRIORITY_ABOVE_NORMAL_NO_SLEEP", txt)) {
+        TryDisablePowerThrottling();
+        priority = ABOVE_NORMAL_PRIORITY_CLASS;
+        Ret = 1;
+    } else if (!strcmp ("PRIORITY_NORMAL_NO_SLEEP", txt)) {
+        TryDisablePowerThrottling();
+        priority = NORMAL_PRIORITY_CLASS;
+        Ret = 1;
+    } else if (!strcmp ("PRIORITY_NORMAL", txt)) priority = NORMAL_PRIORITY_CLASS;
+    else if (!strcmp ("PRIORITY_BELOW_NORMAL", txt)) priority = BELOW_NORMAL_PRIORITY_CLASS;
+    else if (!strcmp ("PRIORITY_LOWEST", txt)) priority = BELOW_NORMAL_PRIORITY_CLASS;
+    else if (!strcmp ("PRIORITY_IDLE", txt)) priority = IDLE_PRIORITY_CLASS;
 #ifdef _WIN32
-    if (SetThreadPriority (GetCurrentThread (), priority) == 0) {
+    if (SetPriorityClass (GetCurrentProcess(), priority) == 0) {
         ThrowError (1, "cannot set priority");
     }
 #else

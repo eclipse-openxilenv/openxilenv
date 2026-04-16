@@ -146,10 +146,11 @@ int CanRecorderReadAndProcessMessages (struct CAN_RECORDER *par_Rec)
                     fprintf (par_Rec->m_fh, "Time\t");
                     //fprintf (m_fh, "Cycle\t");
                     fprintf (par_Rec->m_fh, "Dir\t");
-                    fprintf (par_Rec->m_fh, "C\t");
+                    fprintf (par_Rec->m_fh, "Ch\t");
                     fprintf (par_Rec->m_fh, "Id\t");
+                    fprintf (par_Rec->m_fh, "Type\t");
                     fprintf (par_Rec->m_fh, "Size\t");
-                    fprintf (par_Rec->m_fh, "Data[0...7/63]\n");
+                    fprintf (par_Rec->m_fh, "Data[0...n]\n");
 
                     par_Rec->m_CanFiFoHandle = CreateCanFifos (10000, ((uint32_t)-1 << 16) | 0x1); // do not lose any message ((uint32_t)-1 << 16)
                     par_Rec->m_AbtastPeriodeInMs = GetSchedulingPeriode () * 1000.0;
@@ -186,7 +187,7 @@ __WRITE_A_LINE:
                     fprintf (par_Rec->m_fh, "%s\t", (pCANMessage->node) ? "->" : "<-");
                     //fprintf (m_fh, "%i\t", (int)CANMessage.timestamp);
                     fprintf (par_Rec->m_fh, "%i\t", (int)(pCANMessage->channel));
-                    fprintf (par_Rec->m_fh, "0x%X", (int)(pCANMessage->id));
+                    fprintf (par_Rec->m_fh, "0x%X\n", (int)(pCANMessage->id));
                     switch (pCANMessage->ext) {
                     case 0:
                         fprintf (par_Rec->m_fh, "n\t");
@@ -211,6 +212,12 @@ __WRITE_A_LINE:
                         break;
                     case 7:
                         fprintf (par_Rec->m_fh, "fbe\t");
+                        break;
+                    case 0x10:
+                        fprintf (par_Rec->m_fh, "J1939MP\t");
+                        break;
+                    default:
+                        fprintf (par_Rec->m_fh, "undef\t");
                         break;
                     }
 

@@ -112,13 +112,13 @@ int cStarCanRecorderCmd::Execute (cParser *par_Parser, cExecutor *par_Executor)
         AcceptanceMasks[AcceptanceMaskCount].Channel = Channel;
         AcceptanceMasks[AcceptanceMaskCount].Start = Start;
         AcceptanceMasks[AcceptanceMaskCount].Stop = Stop;
-        AcceptanceMasks[AcceptanceMaskCount].Fill1 = 0;
+        AcceptanceMasks[AcceptanceMaskCount].Flags = 0;
         AcceptanceMaskCount++;
     }
     AcceptanceMasks[AcceptanceMaskCount].Channel = -1;;
     AcceptanceMasks[AcceptanceMaskCount].Start = 0;
     AcceptanceMasks[AcceptanceMaskCount].Stop = 0;
-    AcceptanceMasks[AcceptanceMaskCount].Fill1 = 0;
+    AcceptanceMasks[AcceptanceMaskCount].Flags = 0;
     AcceptanceMaskCount++;
 
 

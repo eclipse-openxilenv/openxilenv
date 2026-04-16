@@ -119,6 +119,7 @@ int ThrowError (int level, const char *format, ...)
         va_end(args);
     } while (Len >= Size);
 
+
     va_start(args, format);
     Ret = ThrowErrorString(level, GetCycleCounter(), MessageBuffer);
     va_end(args);

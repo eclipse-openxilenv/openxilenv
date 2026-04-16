@@ -88,7 +88,7 @@ typedef  struct {
     /* 1 */    int8_t empty_filler;
     /* 1 */    int8_t cycle_is_execst;
     /* 1 */    int8_t should_be_send;
-
+/* 104 */
                union {
                    struct {
     /* 4 */            uint32_t Mask;
@@ -101,15 +101,22 @@ typedef  struct {
     /* 1 */            int8_t fill1;
     /*23 */        } Mux;
                    struct {
-    /* 4 */            uint32_t C_PGs_ArrayIdx;
     /* 4 */            int32_t vid_dlc;   // if <= 0 than fixed
-    /* 4 */            int32_t ret_dlc;
     /* 4 */            int32_t dst_addr_vid;
+    /* 2 */            uint16_t size;
+    /* 2 */            uint16_t ret_dlc;
     /* 1 */            uint8_t dst_addr;
     /* 1 */            uint8_t status;
-                   } J1939;
-    /* 23 */   } Protocol;
-           int8_t fill[128-120];
+    /* 1 */            uint8_t number_of_packages;
+    /* 1 */            uint8_t current_number_of_package;
+    /* 1 */            uint8_t format;
+    /*27 */        } J1939;
+                   struct {
+    /* 4 */            uint32_t C_PGs_ArrayIdx;
+                   } J1939_22;
+    /*27 */   } Protocol;
+    /* 4 */    int32_t NameIdx;
+           //int8_t fill[128-124];
 }  NEW_CAN_SERVER_OBJECT;     /* 128 Bytes */
 
 typedef struct {
@@ -175,50 +182,6 @@ typedef enum _eJ1939Tp_RxChanCtrlTypes
   E_J1939TP_RX_CHAN_CTRL_RX_PENDING = 1u     // rx channel used for RX message
 } eJ1939Tp_RxChanCtrlTypes;
 
-//*** TX Channel Control types
-typedef enum _eJ1939Tp_TxChanCtrlTypes
-{
-  E_J1939TP_TX_CHAN_CTRL_FREE           = 0u,    // tx channel not used
-  E_J1939TP_TX_CHAN_CTRL_NEWOBJECT      = 1u,    // tx channel shall start with new object
-  E_J1939TP_TX_CHAN_CTRL_WAITFOR_CTS    = 2u,    // tx channel waits for CTS message
-  E_J1939TP_TX_CHAN_CTRL_WAITFOR_EOMACK = 3u,    // tx channel waits for EOMACK message
-  E_J1939TP_TX_CHAN_CTRL_TRM_STOPPED    = 4u,    // tx channel transmission is stopped
-  E_J1939TP_TX_CHAN_CTRL_SEND_DATA      = 5u     // tx channel shall send data
-} eJ1939Tp_TxChanCtrlTypes;
-
-//*** structure to control the reception of multipackage messages
-typedef struct J1939Tp_MP_RxChannel {
-/*8*/    uint64_t Timeout;
-/*8*/    uint8_t  *p_data;                  // Pointer to msg-data
-/*4*/    uint32_t MsgHandle;                // Message id for callback
-/*4*/    eJ1939Tp_RxChanCtrlTypes ChannelCtrl; // channel control
-/*4*/    uint32_t RxMsgPgn;                 //  Parameter Group Number of packeted message!
-/*2*/    uint16_t NoOfDataBytes;            // total number of transmitted data bytes
-/*1*/    uint8_t CMType;                    // connection management type (BAM / RTS CTS)
-/*1*/    uint8_t SourceAddr;               // Source Adress
-/*1*/    uint8_t DestAddr;                 // destination adress
-/*1*/    uint8_t NumOfAllPackages;         // total number of data messages
-/*1*/    uint8_t NumOfReceivedPackages;    // number of already received data messages
-         uint8_t Fill[64-35];
-}  sJ1939Tp_MP_RxChannel;
-
-//*** structure to control the transmission of multipackage messages
-typedef struct J1939Tp_MP_TxChannel {
-/*8*/    uint64_t Timeout;
-/*8*/    uint8_t *p_data;                   // Pointer to msg-data
-/*4*/    uint32_t MsgHandle;                // Message id for callback
-/*4*/    eJ1939Tp_TxChanCtrlTypes ChannelCtrl;  // status of the TX operation
-/*4*/    uint32_t Id;
-/*2*/    uint16_t Dlc;
-/*1*/    uint8_t CMType;                   // connection management type (BAM / RTS CTS)
-/*1*/    uint8_t NumOfPackagesTilNewCTS;   // number of expected receive data messages
-/*1*/    uint8_t NumOfTransmittedPackages; // number of already received data messages
-/*1*/    uint8_t DestAddr;                 // target address of message
-         uint8_t Fill[64-34];
-}  sJ1939Tp_MP_TxChannel;
-
-// end J1939
-
 typedef struct NEW_CAN_SERVER_CONFIG_STRUCT {
     int32_t channel_count;    // 1, 2, 3, oder 4
     int32_t channel_type;
@@ -277,14 +240,26 @@ typedef struct NEW_CAN_SERVER_CONFIG_STRUCT {
     /*2*/    uint16_t fill1;
     /*2*/    uint32_t fill2;
     /*32*/   uint16_t j1939_rx_objects[J1939TP_MP_MAX_OBJECTS];
-
+#if 0
     /*64*4*/ sJ1939Tp_MP_RxChannel J1939Tp_MP_RxChannels[J1939TP_MP_CHANNELS_MAX];
     /*64*4*/ sJ1939Tp_MP_TxChannel J1939Tp_MP_TxChannels[J1939TP_MP_CHANNELS_MAX];
+#endif
+
+             int32_t J1939RxDstAddrObjIdx[256];
+
+#define J1939_MAX_SIMULTANEOUS_CONNECTIONS  64
+             int16_t J1939TimeoutObjIdx[J1939_MAX_SIMULTANEOUS_CONNECTIONS];
+             uint64_t J1939Timeout[J1939_MAX_SIMULTANEOUS_CONNECTIONS];
+             uint16_t J1939TimeoutObjIdxPos;
+
+             int16_t J1939CurrentTxObjIdx[J1939_MAX_SIMULTANEOUS_CONNECTIONS];
+             uint16_t J1939CurrentTxObjIdxPos;
 
     /*4*/    int32_t VirtualNetworkId;
     /*4*/    int32_t StartupState;   // 0 -> off 1, -> on
     /*4*/    int32_t BaudrateConfig;
-             int8_t filler[8192-5300];
+//             int8_t filler[8192-6328];
+             int8_t filler[1608];
     } channels[MAX_CAN_CHANNELS];
 
     NEW_CAN_SERVER_OBJECT objects[MAX_OBJECTS_ALL_CHANNELS];
@@ -301,6 +276,7 @@ typedef struct NEW_CAN_SERVER_CONFIG_STRUCT {
 
 }  NEW_CAN_SERVER_CONFIG;
 
+#define GET_CAN_OBJECT_NAME(c, i) (&c->Symbols[c->objects[i].NameIdx])
 #define GET_CAN_SIG_NAME(c, i) (&c->Symbols[c->bb_signals[i].NameIdx])
 #define GET_CAN_SIG_UNIT(c, i) (&c->Symbols[c->bb_signals[i].UnitIdx])
 #define GET_CAN_SIG_BYTECODE(c, i) (&c->Symbols[c->bb_signals[i].ConvIdx])
@@ -309,7 +285,7 @@ typedef struct NEW_CAN_SERVER_CONFIG_STRUCT {
 
 #define GET_CAN_INIT_DATA_OBJECT(c, i) (&c->Symbols[c->objects[i].InitDataIdx])
 
-#define GET_CAN_J1939_MULTI_C_PG_OBJECT(c, i) ((uint32_t*)(&c->Symbols[c->objects[i].Protocol.J1939.C_PGs_ArrayIdx]))
+#define GET_CAN_J1939_MULTI_C_PG_OBJECT(c, i) ((uint32_t*)(&c->Symbols[c->objects[i].Protocol.J1939_22.C_PGs_ArrayIdx]))
 
 
 
@@ -359,6 +335,14 @@ typedef struct {
 // If par_Conversion == NULL and par_SignalName == NULL reset all conversions.
 
 int SendAddOrRemoveReplaceCanSigConvReq (int par_Channel, int par_Id, char *par_SignalName, struct EXEC_STACK_ELEM *par_ExecStack, int par_UseCANData);
+
+
+typedef void (*NEW_CAN_CONFIG_CALLBACK_FUNC_PTR_TYPE)();
+void InitCanConfigCriticalSection (void);
+void ChangeCurrentCanConfig(NEW_CAN_SERVER_CONFIG *par_CanServerConfig);
+NEW_CAN_SERVER_CONFIG *GetACopyOfCurrentCanConfig(void);
+void DeleteCopiedCanConfig(NEW_CAN_SERVER_CONFIG *par_CanConfig);
+void RegisterChangeCanConfigCallback(NEW_CAN_CONFIG_CALLBACK_FUNC_PTR_TYPE par_Callback);
 
 #ifndef __GNUC__
 #pragma pack ()

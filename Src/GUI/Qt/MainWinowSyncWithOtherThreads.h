@@ -134,8 +134,6 @@ signals:
     void RemoteProcedureCallRequestSignal(int par_ThreadId, void *par_Connection, const void *par_In, void *ret_Out);
 
 private:
-    void check(const char *par_Name);
-
     CRITICAL_SECTION m_CriticalSection;
     CONDITION_VARIABLE m_ConditionVariable;
 

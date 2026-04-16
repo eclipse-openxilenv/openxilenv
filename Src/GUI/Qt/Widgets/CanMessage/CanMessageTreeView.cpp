@@ -40,6 +40,11 @@ void CANMessageTreeView::contextMenuEvent(QContextMenuEvent *event)
 
         menu.addAction (m_ConfigDialogAct);
         menu.addAction (m_ClearAct);
+        if (m_CANMessageWindowWidget->IsRecorderRunning()) {
+            menu.addAction (m_StopRecAct);
+        } else {
+            menu.addAction (m_StartRecAct);
+        }
         menu.exec(event->globalPos());
     }
 }
@@ -51,9 +56,13 @@ void CANMessageTreeView::createActions(void)
         m_ConfigDialogAct = new QAction(tr("&config"), this);
         m_ConfigDialogAct->setStatusTip(tr("configure CAN message view"));
         connect(m_ConfigDialogAct, SIGNAL(triggered()), m_CANMessageWindowWidget, SLOT(ConfigDialogSlot()));
-        m_ClearAct = new QAction(tr("&clear"), this);
+        m_ClearAct = new QAction(tr("c&lear"), this);
         m_ClearAct->setStatusTip(tr("clear CAN message view"));
         connect(m_ClearAct, SIGNAL(triggered()), m_CANMessageWindowWidget, SLOT(ClearSlot()));
+        m_StartRecAct = new QAction(tr("&start recorder"), this);
+        connect(m_StartRecAct, SIGNAL(triggered()), m_CANMessageWindowWidget, SLOT(StartRecSlot()));
+        m_StopRecAct = new QAction(tr("&stop recorder"), this);
+        connect(m_StopRecAct, SIGNAL(triggered()), m_CANMessageWindowWidget, SLOT(StopRecSlot()));
     }
 }
 
@@ -68,3 +77,4 @@ void CANMessageTreeView::GetColumnsWidth(int par_Column)
 {
     columnWidth(par_Column);
 }
+
