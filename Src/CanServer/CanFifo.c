@@ -31,23 +31,18 @@
 #define UNUSED(x) (void)(x)
 
 typedef struct {
-    union {
-        CAN_FIFO_ELEM *noFd;
-        CAN_FD_FIFO_ELEM *Fd;
-    } pElems;
-    int Depth;
-    int ElemCount;
-    int ReadPtr;
-    int WritePtr;
+    int size;              /* Size of the message buffer */
+    int rp;                /* Current read position */
+    int wp;                /* Current write position */
+    int count;             /* Number of messages inside the queue */
+    char *buffer;          /* Pointer to the memory storing the messages */
 } CAN_FIFO;
-
 
 typedef struct {
     int AssignedHandle;  // Consists a 8bit wide index (0...9) and a 16bit counter this will be incremented by one for each new fifo
     CAN_FIFO RxQueue;
-    CAN_FIFO TxQueue[MAX_CAN_CHANNELS];
     CAN_ACCEPT_MASK *CanAcceptMasks;
-    int Channel;
+    //int Channel;
     int CanFdFlag;
     int OverFlowBehaviour;  // 0 -> lose the oldest message immediately,
                             // 1...32767 -> wait the number of 10ms than lose the oldest message
@@ -55,6 +50,7 @@ typedef struct {
 } CAN_FIFO_NODE;
 
 static CAN_FIFO_NODE *CanFifoNodes[MAX_CAN_FIFO_COUNT];
+static CAN_FIFO TxQueue[MAX_CAN_CHANNELS];
 
 #ifdef REMOTE_MASTER
 static int LagacyCanFifoGlobalHandle;
@@ -84,6 +80,7 @@ int CreateCanFifos (int Depth, int FdFlag)
     CAN_FIFO_NODE *pcf;
     int x, node, i, y;
     int Ret = -2;    // not -1 because DEFAULT_PROCESS_PARAMETER is -1
+    Depth *= 32;
 
 #ifdef REMOTE_MASTER
     int UseAsLagacyCanFifoGlobalHandle = 0;
@@ -111,55 +108,13 @@ int CreateCanFifos (int Depth, int FdFlag)
     pcf->CanFdFlag = (FdFlag & 0x1);
     pcf->OverFlowBehaviour = (FdFlag >> 16);
     pcf->CanAcceptMasks = NULL;
-    if (FdFlag) {
-        if ((pcf->RxQueue.pElems.Fd = (CAN_FD_FIFO_ELEM*)my_calloc ((size_t)Depth, sizeof (CAN_FD_FIFO_ELEM))) == NULL) {
-            my_free (pcf);
-            goto __OUT;
-        }
-    } else {
-        if ((pcf->RxQueue.pElems.noFd = (CAN_FIFO_ELEM*)my_calloc ((size_t)Depth, sizeof (CAN_FIFO_ELEM))) == NULL) {
-            my_free (pcf);
-            goto __OUT;
-        }
+    if ((pcf->RxQueue.buffer = (char*)my_calloc ((size_t)Depth, sizeof (char))) == NULL) {
+        my_free (pcf);
+        goto __OUT;
     }
-    pcf->RxQueue.Depth = Depth;
-    pcf->RxQueue.ElemCount = 0;
-    pcf->RxQueue.ReadPtr = pcf->RxQueue.WritePtr = 0;
-    if (FdFlag) {
-        for (x = 0; x < Depth; x++) pcf->RxQueue.pElems.Fd[x].flag = 0;
-    } else {
-        for (x = 0; x < Depth; x++) pcf->RxQueue.pElems.noFd[x].flag = 0;
-    }
-    // MAX_CAN_CHANNELS TX-Queues
-    for (i = 0; i < MAX_CAN_CHANNELS; i++) {
-        if (FdFlag) {
-            if ((pcf->TxQueue[i].pElems.Fd = (CAN_FD_FIFO_ELEM*)my_calloc ((size_t)Depth, sizeof (CAN_FD_FIFO_ELEM))) == NULL) {
-                for (y = 0; y < i; y++) {
-                    my_free (pcf->TxQueue[y].pElems.Fd);
-                }
-                my_free (pcf->RxQueue.pElems.Fd);
-                my_free (pcf);
-                goto __OUT;
-            }
-        } else {
-            if ((pcf->TxQueue[i].pElems.noFd = (CAN_FIFO_ELEM*)my_calloc ((size_t)Depth, sizeof (CAN_FIFO_ELEM))) == NULL) {
-                for (y = 0; y < i; y++) {
-                    my_free (pcf->TxQueue[y].pElems.noFd);
-                }
-                my_free (pcf->RxQueue.pElems.noFd);
-                my_free (pcf);
-                goto __OUT;
-            }
-        }
-        pcf->TxQueue[i].Depth = Depth;
-        pcf->TxQueue[i].ElemCount = 0;
-        pcf->TxQueue[i].ReadPtr = pcf->TxQueue[i].WritePtr = 0;
-        if (FdFlag) {
-            for (x = 0; x < Depth; x++) pcf->TxQueue[i].pElems.Fd[x].flag = 0;
-        } else {
-            for (x = 0; x < Depth; x++) pcf->TxQueue[i].pElems.noFd[x].flag = 0;
-        }
-    }
+    pcf->RxQueue.size = Depth;
+    pcf->RxQueue.count = 0;
+    pcf->RxQueue.rp = pcf->RxQueue.wp = 0;
 
     CanFifoNodes[node] = pcf;
 #ifdef REMOTE_MASTER
@@ -195,8 +150,7 @@ int DeleteCanFifos (int Handle)
         pcf = CanFifoNodes[x];
         if (pcf != NULL) {
             if (pcf->AssignedHandle == Handle) {
-                my_free (pcf->RxQueue.pElems.noFd);
-                for (i = 0; i < MAX_CAN_CHANNELS; i++) my_free (pcf->TxQueue[i].pElems.noFd);
+                my_free (pcf->RxQueue.buffer);
                 if (pcf->CanAcceptMasks != NULL) {
                     my_free (pcf->CanAcceptMasks);
                 }
@@ -215,7 +169,7 @@ int DeleteCanFifos (int Handle)
 }
 
 /* Check if a CAN message should be accepted */
-static int CheckAcceptMask (CAN_ACCEPT_MASK *pMask, unsigned long Id, int Channel)
+static int CheckAcceptMask (CAN_ACCEPT_MASK *pMask, uint32_t Id, uint8_t Ext, int Channel)
 {
     int x;
 
@@ -224,7 +178,20 @@ static int CheckAcceptMask (CAN_ACCEPT_MASK *pMask, unsigned long Id, int Channe
         if ((Channel == pMask[x].Channel) &&
             (Id >= pMask[x].Start) &&
             (Id <= pMask[x].Stop)) {
-            return 1;
+            // now check the flags:
+            // if ext = 0 -> normal 11 bit identifier
+            // if ext = 1 -> extended 19 bit identifier
+            // if ext = 2 -> FD + normal 11 bit identifier
+            // if ext = 3 -> FD + extended 19 bit identifier
+            // if ext = 6 -> FD + normal 11 bit identifier + bit rate switch
+            // if ext = 7 -> FD + extended 19 bit identifier + bit rate switch
+            // if ext = 0x10 -> J1939MP
+            // if Flags == 0 it should be accepted all except J1939MP
+            if (((~(uint8_t)pMask[x].Flags & Ext & (uint8_t)0xF) != 0) ||
+                 (((pMask[x].Flags & 0x100) == 0) && (Ext == 0)) ||    // are normal 11 bit identifier not switched off?
+                 (((pMask[x].Flags & 0x200) != 0) && (Ext == 0x10))) { // are J1939MP switched on?
+                return 1;
+            }
         }
     }
     return 0;
@@ -261,13 +228,135 @@ if (a) { \
 }
 #endif
 
+static void ReadFromFifo(char *dst,  CAN_FIFO *fifo, int size)
+{
+    char *src;
+    int parta, partb;
+
+    src = (char*)&fifo->buffer[fifo->rp];
+
+    parta = fifo->size - fifo->rp;
+    partb = size - parta;
+
+    if (parta >= size) {
+        MEMCPY (dst, src, size);
+        fifo->rp += size;
+    } else {
+        MEMCPY (dst, src, (size_t)parta);
+        MEMCPY (&dst[parta], fifo->buffer, (size_t)partb);
+        fifo->rp = partb;
+    }
+}
+
+static int PeakFromFifo(char *dst,  CAN_FIFO *fifo, int size)
+{
+    char *src;
+    int parta, partb;
+    int ret;
+
+    src = (char*)&fifo->buffer[fifo->rp];
+
+    parta = fifo->size - fifo->rp;
+    partb = size - parta;
+
+    if (parta >= size) {
+        MEMCPY (dst, src, size);
+        ret = fifo->rp + size;
+    } else {
+        MEMCPY (dst, src, (size_t)parta);
+        MEMCPY (&dst[parta], fifo->buffer, (size_t)partb);
+        ret = partb;
+    }
+    return ret;
+}
+
+static void SetReadPosFifo(CAN_FIFO *fifo, int pos)
+{
+    fifo->rp = pos;
+}
+
+static void RemoveFromFifo(CAN_FIFO *fifo, int size)
+{
+    int parta, partb;
+
+    parta = fifo->size - fifo->rp;
+    partb = size - parta;
+
+    if (parta >= size) {
+        fifo->rp += size;
+    } else {
+        fifo->rp = partb;
+    }
+}
+
+static void RemoveOneMessageFromFifo(CAN_FIFO *fifo)
+{
+    CAN_FIFO_ELEM_HEADER Head;
+    ReadFromFifo((char*)&Head, fifo, sizeof(Head));
+    RemoveFromFifo(fifo, Head.size);
+    fifo->count--;
+}
+
+static int CalculateFreeSpace(CAN_FIFO *fifo)
+{
+    int free_space;
+    if (fifo->rp > fifo->wp) {
+        free_space = fifo->rp - fifo->wp;
+    } else {
+        free_space = fifo->size - (fifo->wp - fifo->rp);
+    }
+    return free_space;
+}
+
+static int FiFoIsEmpty(CAN_FIFO *fifo)
+{
+    return (fifo->rp == fifo->wp);
+}
+
+static void AddMessagetoFifo(CAN_FIFO *fifo, CAN_FIFO_ELEM_HEADER *Head, unsigned char *Data, int Size)
+{
+    char *src;
+    char *dst;
+    int parta, partb;
+
+    dst = (char*)&fifo->buffer[fifo->wp];
+    src = (char*)Head;
+    parta = fifo->size - fifo->wp;
+    partb = (int)sizeof (CAN_FIFO_ELEM_HEADER) - parta;
+
+    if (parta >= (int)sizeof (CAN_FIFO_ELEM_HEADER)) {
+        MEMCPY (dst, src, sizeof (CAN_FIFO_ELEM_HEADER));
+        fifo->wp += sizeof (CAN_FIFO_ELEM_HEADER);
+    } else {
+        MEMCPY (dst, src, (size_t)parta);
+        MEMCPY (fifo->buffer, &src[parta], (size_t)partb);
+        fifo->wp = partb;
+    }
+
+    /* Than the data */
+    dst = (char*)&fifo->buffer[fifo->wp];
+    parta = fifo->size - fifo->wp;
+    partb = Size - parta;
+
+    if (parta >= Size) {
+        MEMCPY (dst, Data, (size_t)Size);
+        fifo->wp += Size;
+    } else {
+        MEMCPY (dst, Data, (size_t)parta);
+        MEMCPY (fifo->buffer, &Data[parta], (size_t)partb);
+        fifo->wp = partb;
+    }
+    fifo->count++;
+}
+
 // CAN->FIFOs
 int WriteCanMessageFromBus2Fifos (int Channel, uint32_t Id,
                                   unsigned char *Data, unsigned char Ext,
-                                  unsigned char Size, unsigned char Node,
+                                  int Size, unsigned char Node,
                                   uint64_t Timestamp)
 {
     UNUSED(Timestamp);
+
     int x, wrptr_old;
     CAN_FIFO_NODE *pcf;
     CAN_FIFO *prxcf;
@@ -279,77 +368,51 @@ IF_NO_SPACE_WAIT_A_LITTLE_BIT_JUMP_POINT
         pcf = CanFifoNodes[x];
         if (pcf != NULL) {
             //ThrowError (1, "write 0x%X", Id);
-            if (CheckAcceptMask (pcf->CanAcceptMasks, Id, Channel)) {
-                if (pcf->CanFdFlag){
-                    CAN_FD_FIFO_ELEM CanMessage;
-                    CanMessage.id = Id;
-                    MEMCPY (CanMessage.data, Data, Size);
-                    CanMessage.size = Size;
-                    CanMessage.ext = Ext;
-                    CanMessage.channel = (unsigned char)Channel;
-                    CanMessage.flag = 0;
-                    CanMessage.node = Node;
-                #ifdef REMOTE_MASTER
-                    CanMessage.timestamp = Timestamp;
-                #else
-                    CanMessage.timestamp = Timestamp;
-                #endif
-                    prxcf = &(pcf->RxQueue);
-                    IF_NO_SPACE_WAIT_A_LITTLE_BIT (prxcf->pElems.Fd[prxcf->WritePtr].flag,
-                                                   pcf->OverFlowBehaviour);
-                    if (prxcf->pElems.Fd[prxcf->WritePtr].flag) {  // There are no free element inside the FIFO any more -> overwrite oldest entry
-                        int rdptr_old = prxcf->ReadPtr;
-                        prxcf->ReadPtr++;
-                        if (prxcf->ReadPtr >= prxcf->Depth) prxcf->ReadPtr = 0;
-                        prxcf->ElemCount--;
-                        prxcf->pElems.Fd[rdptr_old].flag = 0;
-                    }
-                    prxcf->pElems.Fd[prxcf->WritePtr] = CanMessage;
-                    wrptr_old = prxcf->WritePtr;
-                    prxcf->WritePtr++;
-                    if (prxcf->WritePtr >= prxcf->Depth) prxcf->WritePtr = 0;
-                    prxcf->ElemCount++;
-                    prxcf->pElems.Fd[wrptr_old].flag = 1;
-                } else if (Size <= 8) {
-                    CAN_FIFO_ELEM CanMessage;
-                    CanMessage.id = Id;
-                    MEMCPY (CanMessage.data, Data, Size);
-                    CanMessage.size = Size;
-                    CanMessage.ext = Ext;
-                    CanMessage.channel = (unsigned char)Channel;
-                    CanMessage.flag = 0;
-                    CanMessage.node = Node;
-                #ifdef REMOTE_MASTER
-                    CanMessage.timestamp = Timestamp;
-                #else
-                    CanMessage.timestamp = (uint64_t)blackboard_infos.ActualCycleNumber;
-                #endif
-                    prxcf = &(pcf->RxQueue);
-                    IF_NO_SPACE_WAIT_A_LITTLE_BIT (prxcf->pElems.noFd[prxcf->WritePtr].flag,
-                                                   pcf->OverFlowBehaviour);
-                    if (prxcf->pElems.noFd[prxcf->WritePtr].flag) {  // There are no free element inside the FIFO any more -> overwrite oldest entry
-                        int rdptr_old = prxcf->ReadPtr;
-                        prxcf->ReadPtr++;
-                        if (prxcf->ReadPtr >= prxcf->Depth) prxcf->ReadPtr = 0;
-                        prxcf->ElemCount--;
-                        prxcf->pElems.noFd[rdptr_old].flag = 0;
-                    }
-                    prxcf->pElems.noFd[prxcf->WritePtr] = CanMessage;
-                    wrptr_old = prxcf->WritePtr;
-                    prxcf->WritePtr++;
-                    if (prxcf->WritePtr >= prxcf->Depth) prxcf->WritePtr = 0;
-                    prxcf->ElemCount++;
-                    prxcf->pElems.noFd[wrptr_old].flag = 1;
+            if (CheckAcceptMask (pcf->CanAcceptMasks, Id, Ext, Channel)) {
+                int need_space;
+                int free_space;
+                CAN_FIFO_ELEM_HEADER Head;
+
+                Head.id = Id;
+                Head.size = Size;
+                Head.ext = Ext;
+                Head.channel = (unsigned char)Channel;
+                Head.flag = 0;
+                Head.node = Node;
+            #ifdef REMOTE_MASTER
+                Head.timestamp = Timestamp;
+            #else
+                Head.timestamp = Timestamp;
+            #endif
+                prxcf = &(pcf->RxQueue);
+
+                /* Check if there is enough space for this message */
+                need_space = Size + (int)sizeof(CAN_FIFO_ELEM_HEADER);
+                if (need_space > prxcf->size) {
+                    x__ReleaseSpinlock (&CANFifoGlobalSpinlock);
+                    return -1;
                 }
+                free_space = CalculateFreeSpace(prxcf);
+                IF_NO_SPACE_WAIT_A_LITTLE_BIT ((need_space >= free_space),
+                                               pcf->OverFlowBehaviour);
+                // recalculate the free space it can be changed
+                free_space = CalculateFreeSpace(prxcf);
+                // remove the oldest message till we have enough space that we can store the new message
+                while (need_space >= free_space) {
+                    RemoveOneMessageFromFifo(prxcf);
+                    free_space = CalculateFreeSpace(prxcf);
+                }
+                AddMessagetoFifo(prxcf, &Head, Data, Size);
+            } else {
+                break;  // for(;;)
             }
-        } else break;
+        }
     }
     x__ReleaseSpinlock (&CANFifoGlobalSpinlock);
     return 0;
 }
 
-
-// FIFO->Process
+// FIFO->Process (CAN, no CAN FD/XL
 int ReadCanMessageFromFifo2Process (int Handle, CAN_FIFO_ELEM *pCanMessage)
 {
     int x, rdptr_old;
@@ -370,18 +433,27 @@ int ReadCanMessageFromFifo2Process (int Handle, CAN_FIFO_ELEM *pCanMessage)
     for (x = 0; x < MAX_CAN_FIFO_COUNT; x++) {
         pcf = CanFifoNodes[x];
         if (pcf != NULL) {
-            if ((pcf->AssignedHandle == Handle) &&
-                (pcf->CanFdFlag == 0)) {
+            if (pcf->AssignedHandle == Handle) {
                 prxcf = &(pcf->RxQueue);
-                if (prxcf->pElems.noFd[prxcf->ReadPtr].flag) {  // There are at least one element inside the FIFO
-                    *pCanMessage = prxcf->pElems.noFd[prxcf->ReadPtr];
-                    rdptr_old = prxcf->ReadPtr;
-                    prxcf->ReadPtr++;
-                    if (prxcf->ReadPtr >= prxcf->Depth) prxcf->ReadPtr = 0;
-                    prxcf->ElemCount--;
-                    prxcf->pElems.noFd[rdptr_old].flag = 0;
-                    x__ReleaseSpinlock (&CANFifoGlobalSpinlock);
-                    return 1;
+                while (!FiFoIsEmpty(prxcf)) {
+                    CAN_FIFO_ELEM_HEADER Head;
+                    ReadFromFifo((char*)&Head, prxcf, sizeof(Head));
+                    if ((Head.size > 8) || ((Head.ext & 0x10) == 0x10)) {
+                        // it is a CAN FD/XL or J1939MP message -> ignore this message
+                        RemoveFromFifo(prxcf, Head.size);
+                        prxcf->count--;
+                    } else {
+                        pCanMessage->channel = Head.channel;
+                        pCanMessage->ext = Head.ext;
+                        pCanMessage->id = Head.id;
+                        pCanMessage->node = Head.node;
+                        pCanMessage->size = Head.size;
+                        pCanMessage->timestamp = Head.timestamp;
+                        ReadFromFifo((char*)&pCanMessage->data[0], prxcf, Head.size);
+                        prxcf->count--;
+                        x__ReleaseSpinlock (&CANFifoGlobalSpinlock);
+                        return 1;
+                    }
                 }
                 x__ReleaseSpinlock (&CANFifoGlobalSpinlock);
                 return 0;
@@ -412,18 +484,27 @@ int ReadCanFdMessageFromFifo2Process (int Handle, CAN_FD_FIFO_ELEM *pCanMessage)
     for (x = 0; x < MAX_CAN_FIFO_COUNT; x++) {
         pcf = CanFifoNodes[x];
         if (pcf != NULL) {
-            if ((pcf->AssignedHandle == Handle) &&
-                (pcf->CanFdFlag == 1)) {
+            if (pcf->AssignedHandle == Handle) {
                 prxcf = &(pcf->RxQueue);
-                if (prxcf->pElems.Fd[prxcf->ReadPtr].flag) {  // There are at least one element inside the FIFO
-                    *pCanMessage = prxcf->pElems.Fd[prxcf->ReadPtr];
-                    rdptr_old = prxcf->ReadPtr;
-                    prxcf->ReadPtr++;
-                    if (prxcf->ReadPtr >= prxcf->Depth) prxcf->ReadPtr = 0;
-                    prxcf->ElemCount--;
-                    prxcf->pElems.Fd[rdptr_old].flag = 0;
-                    x__ReleaseSpinlock (&CANFifoGlobalSpinlock);
-                    return 1;
+                while (!FiFoIsEmpty(prxcf)) {
+                    CAN_FIFO_ELEM_HEADER Head;
+                    ReadFromFifo((char*)&Head, prxcf, sizeof(Head));
+                    if ((Head.size > 64) || ((Head.ext & 0x10) == 0x10)) {
+                        // it is a CAN XL or J1939MP message -> ignore this message
+                        RemoveFromFifo(prxcf, Head.size);
+                        prxcf->count--;
+                    } else {
+                        pCanMessage->channel = Head.channel;
+                        pCanMessage->ext = Head.ext;
+                        pCanMessage->id = Head.id;
+                        pCanMessage->node = Head.node;
+                        pCanMessage->size = Head.size;
+                        pCanMessage->timestamp = Head.timestamp;
+                        ReadFromFifo((char*)&pCanMessage->data[0], prxcf, Head.size);
+                        prxcf->count--;
+                        x__ReleaseSpinlock (&CANFifoGlobalSpinlock);
+                        return 1;
+                    }
                 }
                 x__ReleaseSpinlock (&CANFifoGlobalSpinlock);
                 return 0;
@@ -455,19 +536,29 @@ int ReadCanMessagesFromFifo2Process (int Handle, CAN_FIFO_ELEM *pCanMessage, int
     for (x = 0; x < MAX_CAN_FIFO_COUNT; x++) {
         pcf = CanFifoNodes[x];
         if (pcf != NULL) {
-            if ((pcf->AssignedHandle == Handle) &&
-                (pcf->CanFdFlag == 0)) {
+            if (pcf->AssignedHandle == Handle) {
                 prxcf = &(pcf->RxQueue);
-                while ((prxcf->pElems.noFd[prxcf->ReadPtr].flag) && (CopyMessageCounter < MaxMessages)) {  // There are at least one element inside the FIFO
-                    pCanMessage[CopyMessageCounter++] = prxcf->pElems.noFd[prxcf->ReadPtr];
-                    rdptr_old = prxcf->ReadPtr;
-                    prxcf->ReadPtr++;
-                    if (prxcf->ReadPtr >= prxcf->Depth) prxcf->ReadPtr = 0;
-                    prxcf->ElemCount--;
-                    prxcf->pElems.noFd[rdptr_old].flag = 0;
+                while (!FiFoIsEmpty(prxcf) && (CopyMessageCounter < MaxMessages)) {
+                    CAN_FIFO_ELEM_HEADER Head;
+                    ReadFromFifo((char*)&Head, prxcf, sizeof(Head));
+                    if ((Head.size > 8) || ((Head.ext & 0x10) == 0x10)) {
+                        // it is a CAN FD/XL J1939MP message -> ignore this message
+                        RemoveFromFifo(prxcf, Head.size);
+                        prxcf->count--;
+                    } else {
+                        pCanMessage[CopyMessageCounter].channel = Head.channel;
+                        pCanMessage[CopyMessageCounter].ext = Head.ext;
+                        pCanMessage[CopyMessageCounter].id = Head.id;
+                        pCanMessage[CopyMessageCounter].node = Head.node;
+                        pCanMessage[CopyMessageCounter].size = Head.size;
+                        pCanMessage[CopyMessageCounter].timestamp = Head.timestamp;
+                        ReadFromFifo((char*)&pCanMessage[CopyMessageCounter].data[0], prxcf, Head.size);
+                        CopyMessageCounter++;
+                        prxcf->count--;
+                    }
                 }
                 x__ReleaseSpinlock (&CANFifoGlobalSpinlock);
-                return CopyMessageCounter;  // Count of readed messages
+                return CopyMessageCounter;
             }
         }
     }
@@ -496,25 +587,91 @@ int ReadCanFdMessagesFromFifo2Process (int Handle, CAN_FD_FIFO_ELEM *pCanMessage
     for (x = 0; x < MAX_CAN_FIFO_COUNT; x++) {
         pcf = CanFifoNodes[x];
         if (pcf != NULL) {
-            if ((pcf->AssignedHandle == Handle) &&
-                (pcf->CanFdFlag == 1)) {
+            if (pcf->AssignedHandle == Handle) {
                 prxcf = &(pcf->RxQueue);
-                while ((prxcf->pElems.Fd[prxcf->ReadPtr].flag) && (CopyMessageCounter < MaxMessages)) {  // There are at least one element inside the FIFO
-                    pCanMessage[CopyMessageCounter++] = prxcf->pElems.Fd[prxcf->ReadPtr];
-                    rdptr_old = prxcf->ReadPtr;
-                    prxcf->ReadPtr++;
-                    if (prxcf->ReadPtr >= prxcf->Depth) prxcf->ReadPtr = 0;
-                    prxcf->ElemCount--;
-                    prxcf->pElems.Fd[rdptr_old].flag = 0;
+                while (!FiFoIsEmpty(prxcf) && (CopyMessageCounter < MaxMessages)) {
+                    CAN_FIFO_ELEM_HEADER Head;
+                    ReadFromFifo((char*)&Head, prxcf, sizeof(Head));
+                    if ((Head.size > 64) || ((Head.ext & 0x10) == 0x10)) {
+                        // it is a CAN XL or J1939MP message -> ignore this message
+                        RemoveFromFifo(prxcf, Head.size);
+                        prxcf->count--;
+                    } else {
+                        pCanMessage[CopyMessageCounter].channel = Head.channel;
+                        pCanMessage[CopyMessageCounter].ext = Head.ext;
+                        pCanMessage[CopyMessageCounter].id = Head.id;
+                        pCanMessage[CopyMessageCounter].node = Head.node;
+                        pCanMessage[CopyMessageCounter].size = Head.size;
+                        pCanMessage[CopyMessageCounter].timestamp = Head.timestamp;
+                        ReadFromFifo((char*)&pCanMessage[CopyMessageCounter].data[0], prxcf, Head.size);
+                        CopyMessageCounter++;
+                        prxcf->count--;
+                    }
                 }
                 x__ReleaseSpinlock (&CANFifoGlobalSpinlock);
-                return CopyMessageCounter;  // Count of readed messages
+                return CopyMessageCounter;
             }
         }
     }
     x__ReleaseSpinlock (&CANFifoGlobalSpinlock);
     return -1;
 }
+
+int ReadCanFlexMessagesFromFifo2Process (int Handle, CAN_FIFO_ELEM_HEADER *pCanMessage, int MaxMessages,
+                                         uint8_t **Data, uint8_t *Buffer, int BufferSize)
+{
+    int x, rdptr_old;
+    CAN_FIFO_NODE *pcf;
+    CAN_FIFO *prxcf;
+    int CopyMessageCounter = 0;
+    int BufferPos = 0;
+
+#ifdef REMOTE_MASTER
+    if (Handle == DEFAULT_PROCESS_PARAMETER) {
+        Handle = LagacyCanFifoGlobalHandle;
+    }
+#else
+    if (s_main_ini_val.ConnectToRemoteMaster) {
+       // TODO:
+       //return rm_ReadCanFdMessagesFromFifo2Process (Handle, pCanMessage, MaxMessages);
+    }
+#endif
+
+    x__AcquireSpinlock (&CANFifoGlobalSpinlock, __LINE__, __FILE__);
+    for (x = 0; x < MAX_CAN_FIFO_COUNT; x++) {
+        pcf = CanFifoNodes[x];
+        if (pcf != NULL) {
+            if (pcf->AssignedHandle == Handle) {
+                prxcf = &(pcf->RxQueue);
+                while (!FiFoIsEmpty(prxcf) && (CopyMessageCounter < MaxMessages)) {
+                    CAN_FIFO_ELEM_HEADER Head;
+                    int ReadPos = PeakFromFifo((char*)&Head, prxcf, sizeof(Head));
+                    if (Head.size > (BufferSize - BufferPos)) {
+                        break;  // while()
+                    }
+                    SetReadPosFifo(prxcf, ReadPos);
+
+                    pCanMessage[CopyMessageCounter].channel = Head.channel;
+                    pCanMessage[CopyMessageCounter].ext = Head.ext;
+                    pCanMessage[CopyMessageCounter].id = Head.id;
+                    pCanMessage[CopyMessageCounter].node = Head.node;
+                    pCanMessage[CopyMessageCounter].size = Head.size;
+                    pCanMessage[CopyMessageCounter].timestamp = Head.timestamp;
+                    Data[CopyMessageCounter] = Buffer + BufferPos;
+                    ReadFromFifo((char*)Data[CopyMessageCounter], prxcf, Head.size);
+                    CopyMessageCounter++;
+                    BufferPos += Head.size;
+                    prxcf->count--;
+                }
+                x__ReleaseSpinlock (&CANFifoGlobalSpinlock);
+                return CopyMessageCounter;
+            }
+        }
+    }
+    x__ReleaseSpinlock (&CANFifoGlobalSpinlock);
+    return -1;
+}
+
 
 int FlushCanFifo (int Handle, int Flags)
 {
@@ -539,44 +696,13 @@ int FlushCanFifo (int Handle, int Flags)
             if (pcf->AssignedHandle == Handle) {
                 if ((Flags & 0x00000001) == 0x00000001) {
                     prxcf = &(pcf->RxQueue);
-                    if (pcf->CanFdFlag) {
-                        while (prxcf->pElems.Fd[prxcf->ReadPtr].flag) {  // There are at least one element inside the FIFO
-                            rdptr_old = prxcf->ReadPtr;
-                            prxcf->ReadPtr++;
-                            if (prxcf->ReadPtr >= prxcf->Depth) prxcf->ReadPtr = 0;
-                            prxcf->ElemCount--;
-                            prxcf->pElems.Fd[rdptr_old].flag = 0;
-                        }
-                    } else {
-                        while (prxcf->pElems.noFd[prxcf->ReadPtr].flag) {  // There are at least one element inside the FIFO
-                            rdptr_old = prxcf->ReadPtr;
-                            prxcf->ReadPtr++;
-                            if (prxcf->ReadPtr >= prxcf->Depth) prxcf->ReadPtr = 0;
-                            prxcf->ElemCount--;
-                            prxcf->pElems.noFd[rdptr_old].flag = 0;
-                        }
-                    }
+                    prxcf->rp = prxcf->wp = 0;
                 }
                 if ((Flags & 0x00000002) == 0x00000002) {
                     for (y = 0; y < MAX_CAN_CHANNELS; y++) {
-                        ptxcf = &(pcf->TxQueue[y]);
-                        if (pcf->CanFdFlag) {
-                            while (ptxcf->pElems.Fd[ptxcf->ReadPtr].flag) {  // There are at least one element inside the FIFO
-                                rdptr_old = ptxcf->ReadPtr;
-                                ptxcf->ReadPtr++;
-                                if (ptxcf->ReadPtr >= ptxcf->Depth) ptxcf->ReadPtr = 0;
-                                ptxcf->ElemCount--;
-                                ptxcf->pElems.Fd[rdptr_old].flag = 0;
-                            }
-                        } else {
-                            while (ptxcf->pElems.noFd[ptxcf->ReadPtr].flag) {  // There are at least one element inside the FIFO
-                                rdptr_old = ptxcf->ReadPtr;
-                                ptxcf->ReadPtr++;
-                                if (ptxcf->ReadPtr >= ptxcf->Depth) ptxcf->ReadPtr = 0;
-                                ptxcf->ElemCount--;
-                                ptxcf->pElems.noFd[rdptr_old].flag = 0;
-                            }
-                        }
+                        ptxcf = &(TxQueue[y]);
+                        ptxcf->rp = 0;
+                        ptxcf->wp = 0;
                     }
                 }
                 x__ReleaseSpinlock (&CANFifoGlobalSpinlock);
@@ -587,7 +713,6 @@ int FlushCanFifo (int Handle, int Flags)
     x__ReleaseSpinlock (&CANFifoGlobalSpinlock);
     return -1;
 }
-
 
 /* Setup an acceptance filter */
 int SetAcceptMask4CanFifo (int Handle, CAN_ACCEPT_MASK *cam, int Size)
@@ -640,107 +765,14 @@ int SetAcceptMask4CanFifo (int Handle, CAN_ACCEPT_MASK *cam, int Size)
 // Process->FIFO
 int WriteCanMessageFromProcess2Fifo (int Handle, CAN_FIFO_ELEM *pCanMessage)
 {
-    int x, wrptr_old;
-    CAN_FIFO_NODE *pcf;
-    CAN_FIFO *ptxcf;
-    IF_NO_SPACE_WAIT_A_LITTLE_BIT_LOOP_COUNTER
-
-#ifdef REMOTE_MASTER
-    if (Handle == DEFAULT_PROCESS_PARAMETER) {
-        Handle = LagacyCanFifoGlobalHandle;
-    }
-#else
-    if (s_main_ini_val.ConnectToRemoteMaster) {
-       return rm_WriteCanMessageFromProcess2Fifo (Handle, pCanMessage);
-    }
-#endif
-
-    x__AcquireSpinlock (&CANFifoGlobalSpinlock, __LINE__, __FILE__);
-IF_NO_SPACE_WAIT_A_LITTLE_BIT_JUMP_POINT
-     for (x = 0; x < MAX_CAN_FIFO_COUNT; x++) {
-        pcf = CanFifoNodes[x];
-        if (pcf != NULL) {
-            if ((pcf->AssignedHandle == Handle) &&
-                (pcf->CanFdFlag == 0)) {
-                if (pCanMessage->channel < MAX_CAN_CHANNELS) {
-                    ptxcf = &(pcf->TxQueue[pCanMessage->channel]);
-                    IF_NO_SPACE_WAIT_A_LITTLE_BIT (ptxcf->pElems.noFd[ptxcf->WritePtr].flag,
-                                                  pcf->OverFlowBehaviour);
-                    if (ptxcf->pElems.noFd[ptxcf->WritePtr].flag) {  // There are no free element inside the FIFO any more -> overwrite oldest entry
-                        int rdptr_old = ptxcf->ReadPtr;
-                        ptxcf->ReadPtr++;
-                        if (ptxcf->ReadPtr >= ptxcf->Depth) ptxcf->ReadPtr = 0;
-                        ptxcf->ElemCount--;
-                        ptxcf->pElems.noFd[rdptr_old].flag = 0;
-                    }
-                    ptxcf->pElems.noFd[ptxcf->WritePtr] = *pCanMessage;
-                    wrptr_old = ptxcf->WritePtr;
-                    ptxcf->WritePtr++;
-                    if (ptxcf->WritePtr >= ptxcf->Depth) ptxcf->WritePtr = 0;
-                    ptxcf->ElemCount++;
-                    ptxcf->pElems.noFd[wrptr_old].flag = 1;
-                    x__ReleaseSpinlock (&CANFifoGlobalSpinlock);
-                    return 0;
-                }
-            }
-        } else break;
-    }
-    x__ReleaseSpinlock (&CANFifoGlobalSpinlock);
-    return -1;
+    return ((WriteCanMessagesFromProcess2Fifo (Handle, pCanMessage, 1) == 1) ? 0 : -1);
 }
 
 int WriteCanFdMessageFromProcess2Fifo (int Handle, CAN_FD_FIFO_ELEM *pCanMessage)
 {
-    int x, wrptr_old;
-    CAN_FIFO_NODE *pcf;
-    CAN_FIFO *ptxcf;
-    IF_NO_SPACE_WAIT_A_LITTLE_BIT_LOOP_COUNTER
-
-#ifdef REMOTE_MASTER
-    if (Handle == DEFAULT_PROCESS_PARAMETER) {
-        Handle = LagacyCanFifoGlobalHandle;
-    }
-#else
-    if (s_main_ini_val.ConnectToRemoteMaster) {
-       return rm_WriteCanFdMessageFromProcess2Fifo (Handle, pCanMessage);
-    }
-#endif
-
-    x__AcquireSpinlock (&CANFifoGlobalSpinlock, __LINE__, __FILE__);
-IF_NO_SPACE_WAIT_A_LITTLE_BIT_JUMP_POINT
-     for (x = 0; x < MAX_CAN_FIFO_COUNT; x++) {
-        pcf = CanFifoNodes[x];
-        if (pcf != NULL) {
-            if ((pcf->AssignedHandle == Handle) &&
-                (pcf->CanFdFlag == 1)) {
-                if (pCanMessage->channel < MAX_CAN_CHANNELS) {
-                    ptxcf = &(pcf->TxQueue[pCanMessage->channel]);
-                    IF_NO_SPACE_WAIT_A_LITTLE_BIT (ptxcf->pElems.Fd[ptxcf->WritePtr].flag,
-                                                   pcf->OverFlowBehaviour);
-                    if (ptxcf->pElems.Fd[ptxcf->WritePtr].flag) {  // There are no free element inside the FIFO any more -> overwrite oldest entry
-                        int rdptr_old = ptxcf->ReadPtr;
-                        ptxcf->ReadPtr++;
-                        if (ptxcf->ReadPtr >= ptxcf->Depth) ptxcf->ReadPtr = 0;
-                        ptxcf->ElemCount--;
-                        ptxcf->pElems.Fd[rdptr_old].flag = 0;
-                    }
-                    ptxcf->pElems.Fd[ptxcf->WritePtr] = *pCanMessage;
-                    wrptr_old = ptxcf->WritePtr;
-                    ptxcf->WritePtr++;
-                    if (ptxcf->WritePtr >= ptxcf->Depth) ptxcf->WritePtr = 0;
-                    ptxcf->ElemCount++;
-                    ptxcf->pElems.Fd[wrptr_old].flag = 1;
-                    x__ReleaseSpinlock (&CANFifoGlobalSpinlock);
-                    return 0;
-                }
-            }
-        } else break;
-    }
-    x__ReleaseSpinlock (&CANFifoGlobalSpinlock);
-    return -1;
+    return ((WriteCanFdMessagesFromProcess2Fifo (Handle, pCanMessage, 1) == 1) ? 0 : -1);
 }
 
-// Process->FIFO
 int WriteCanMessagesFromProcess2Fifo (int Handle, CAN_FIFO_ELEM *pCanMessage, int MaxMessages)
 {
     int x, wrptr_old;
@@ -758,38 +790,54 @@ int WriteCanMessagesFromProcess2Fifo (int Handle, CAN_FIFO_ELEM *pCanMessage, in
        return rm_WriteCanMessagesFromProcess2Fifo (Handle, pCanMessage, MaxMessages);
     }
 #endif
-
     x__AcquireSpinlock (&CANFifoGlobalSpinlock, __LINE__, __FILE__);
 IF_NO_SPACE_WAIT_A_LITTLE_BIT_JUMP_POINT
-     for (x = 0; x < MAX_CAN_FIFO_COUNT; x++) {
+    for (x = 0; x < MAX_CAN_FIFO_COUNT; x++) {
         pcf = CanFifoNodes[x];
         if (pcf != NULL) {
             if ((pcf->AssignedHandle == Handle) &&
                 (pcf->CanFdFlag == 0)) {
-                if (pCanMessage->channel < MAX_CAN_CHANNELS) {
-                    ptxcf = &(pcf->TxQueue[pCanMessage->channel]);
-                    while (CopyMessageCounter < MaxMessages) {
-                        IF_NO_SPACE_WAIT_A_LITTLE_BIT (ptxcf->pElems.noFd[ptxcf->WritePtr].flag,
-                                                      pcf->OverFlowBehaviour);
-                        if (ptxcf->pElems.noFd[ptxcf->WritePtr].flag) { // There are no free element inside the FIFO any more -> overwrite oldest entry
-                            int rdptr_old = ptxcf->ReadPtr;
-                            ptxcf->ReadPtr++;
-                            if (ptxcf->ReadPtr >= ptxcf->Depth) ptxcf->ReadPtr = 0;
-                            ptxcf->ElemCount--;
-                            ptxcf->pElems.noFd[rdptr_old].flag = 0;
+                while (CopyMessageCounter < MaxMessages) {
+                    CAN_FIFO_ELEM_HEADER Head;
+                    int need_space, free_space;
+                    if (pCanMessage->channel < MAX_CAN_CHANNELS) {
+                        ptxcf = &(TxQueue[pCanMessage->channel]);
+                        if (ptxcf->buffer != NULL) {
+                            /* Check if there is enough space for this message */
+                            need_space = pCanMessage->size + (int)sizeof(CAN_FIFO_ELEM_HEADER);
+                            if (need_space > ptxcf->size) {
+                                x__ReleaseSpinlock (&CANFifoGlobalSpinlock);
+                                return -1;
+                            }
+                            free_space = CalculateFreeSpace(ptxcf);
+                            IF_NO_SPACE_WAIT_A_LITTLE_BIT ((need_space >= free_space),
+                                                           pcf->OverFlowBehaviour);
+                            // recalculate the free space it can be changed
+                            free_space = CalculateFreeSpace(ptxcf);
+                            // remove the oldest message till we have enough space that we can store the new message
+                            while (need_space >= free_space) {
+                                RemoveOneMessageFromFifo(ptxcf);
+                                free_space = CalculateFreeSpace(ptxcf);
+                            }
+                            Head.channel = pCanMessage[CopyMessageCounter].channel;
+                            Head.ext = pCanMessage[CopyMessageCounter].ext;
+                            Head.flag = 0;
+                            Head.id = pCanMessage[CopyMessageCounter].id;
+                            Head.node = 1; // 1 -> oneself pCanMessage[CopyMessageCounter].node;
+                            Head.size = pCanMessage[CopyMessageCounter].size;
+                            Head.timestamp = pCanMessage[CopyMessageCounter].timestamp;
+                            AddMessagetoFifo(ptxcf, &Head, pCanMessage[CopyMessageCounter].data, pCanMessage[CopyMessageCounter].size);
                         }
-                        ptxcf->pElems.noFd[ptxcf->WritePtr] = pCanMessage[CopyMessageCounter++];
-                        wrptr_old = ptxcf->WritePtr;
-                        ptxcf->WritePtr++;
-                        if (ptxcf->WritePtr >= ptxcf->Depth) ptxcf->WritePtr = 0;
-                        ptxcf->ElemCount++;
-                        ptxcf->pElems.noFd[wrptr_old].flag = 1;
                     }
-                    x__ReleaseSpinlock (&CANFifoGlobalSpinlock);
-                    return CopyMessageCounter;  // Anzahl der gelesenen Messages
+                    CopyMessageCounter++;
                 }
+                x__ReleaseSpinlock (&CANFifoGlobalSpinlock);
+                return CopyMessageCounter;  // Number of written messages
             }
-        } else break;
+        } else {
+            // End of list
+            break;
+        }
     }
     x__ReleaseSpinlock (&CANFifoGlobalSpinlock);
     return 0;
@@ -812,38 +860,54 @@ int WriteCanFdMessagesFromProcess2Fifo (int Handle, CAN_FD_FIFO_ELEM *pCanMessag
        return rm_WriteCanFdMessagesFromProcess2Fifo (Handle, pCanMessage, MaxMessages);
     }
 #endif
-
     x__AcquireSpinlock (&CANFifoGlobalSpinlock, __LINE__, __FILE__);
 IF_NO_SPACE_WAIT_A_LITTLE_BIT_JUMP_POINT
-     for (x = 0; x < MAX_CAN_FIFO_COUNT; x++) {
+    for (x = 0; x < MAX_CAN_FIFO_COUNT; x++) {
         pcf = CanFifoNodes[x];
         if (pcf != NULL) {
             if ((pcf->AssignedHandle == Handle) &&
                 (pcf->CanFdFlag == 1)) {
-                if (pCanMessage->channel < MAX_CAN_CHANNELS) {
-                    ptxcf = &(pcf->TxQueue[pCanMessage->channel]);
-                    while ((CopyMessageCounter < MaxMessages)) {
-                        IF_NO_SPACE_WAIT_A_LITTLE_BIT (ptxcf->pElems.Fd[ptxcf->WritePtr].flag,
-                                                       pcf->OverFlowBehaviour);
-                        if (ptxcf->pElems.Fd[ptxcf->WritePtr].flag) { // There are no free element inside the FIFO any more -> overwrite oldest entry
-                            int rdptr_old = ptxcf->ReadPtr;
-                            ptxcf->ReadPtr++;
-                            if (ptxcf->ReadPtr >= ptxcf->Depth) ptxcf->ReadPtr = 0;
-                            ptxcf->ElemCount--;
-                            ptxcf->pElems.Fd[rdptr_old].flag = 0;
+                while (CopyMessageCounter < MaxMessages) {
+                    CAN_FIFO_ELEM_HEADER Head;
+                    int need_space, free_space;
+                    if (pCanMessage->channel < MAX_CAN_CHANNELS) {
+                        ptxcf = &(TxQueue[pCanMessage->channel]);
+                        if (ptxcf->buffer != NULL) {
+                            /* Check if there is enough space for this message */
+                            need_space = pCanMessage->size + (int)sizeof(CAN_FIFO_ELEM_HEADER);
+                            if (need_space > ptxcf->size) {
+                                x__ReleaseSpinlock (&CANFifoGlobalSpinlock);
+                                return -1;
+                            }
+                            free_space = CalculateFreeSpace(ptxcf);
+                            IF_NO_SPACE_WAIT_A_LITTLE_BIT ((need_space >= free_space),
+                                                           pcf->OverFlowBehaviour);
+                            // recalculate the free space it can be changed
+                            free_space = CalculateFreeSpace(ptxcf);
+                            // remove the oldest message till we have enough space that we can store the new message
+                            while (need_space >= free_space) {
+                                RemoveOneMessageFromFifo(ptxcf);
+                                free_space = CalculateFreeSpace(ptxcf);
+                            }
+                            Head.channel = pCanMessage[CopyMessageCounter].channel;
+                            Head.ext = pCanMessage[CopyMessageCounter].ext;
+                            Head.flag = 0;
+                            Head.id = pCanMessage[CopyMessageCounter].id;
+                            Head.node = 1; // 1 -> oneself pCanMessage[CopyMessageCounter].node;
+                            Head.size = pCanMessage[CopyMessageCounter].size;
+                            Head.timestamp = pCanMessage[CopyMessageCounter].timestamp;
+                            AddMessagetoFifo(ptxcf, &Head, pCanMessage[CopyMessageCounter].data, pCanMessage[CopyMessageCounter].size);
                         }
-                        ptxcf->pElems.Fd[ptxcf->WritePtr] = pCanMessage[CopyMessageCounter++];
-                        wrptr_old = ptxcf->WritePtr;
-                        ptxcf->WritePtr++;
-                        if (ptxcf->WritePtr >= ptxcf->Depth) ptxcf->WritePtr = 0;
-                        ptxcf->ElemCount++;
-                        ptxcf->pElems.Fd[wrptr_old].flag = 1;
                     }
-                    x__ReleaseSpinlock (&CANFifoGlobalSpinlock);
-                    return CopyMessageCounter;  // Count of readed messages
+                    CopyMessageCounter++;
                 }
+                x__ReleaseSpinlock (&CANFifoGlobalSpinlock);
+                return CopyMessageCounter;  // Number of written messages
             }
-        } else break;
+        } else {
+            // End of list
+            break;
+        }
     }
     x__ReleaseSpinlock (&CANFifoGlobalSpinlock);
     return 0;
@@ -860,164 +924,85 @@ int WriteCanMessageFromFifo2Can (NEW_CAN_SERVER_CONFIG *csc, int Channel)
 
     x__AcquireSpinlock (&CANFifoGlobalSpinlock, __LINE__, __FILE__);
 IF_NO_SPACE_WAIT_A_LITTLE_BIT_JUMP_POINT
-    for (x = 0; x < MAX_CAN_FIFO_COUNT; x++) {
-        pcf = CanFifoNodes[x];
-        if (pcf != NULL) {
-            ptxcf = &(pcf->TxQueue[Channel]);
-            if (pcf->CanFdFlag) {
-                CAN_FD_FIFO_ELEM *pfe;
-                while (1) {
-                    pfe = &(ptxcf->pElems.Fd[ptxcf->ReadPtr]);
-                    if (pfe->flag) {  // There are at least one element inside the FIFO
-                        if (csc->channels[Channel].queue_write_can (csc, Channel,
-                                                                    pfe->id,
-                                                                    pfe->data,
-                                                                    pfe->ext,
-                                                                    pfe->size) != -1) {
-                            for (x2 = 0; x2 < MAX_CAN_FIFO_COUNT; x2++) {
-                                if (x2 != x) {
-                                    pcf2 = CanFifoNodes[x2];
-                                    if (pcf2 != NULL) {
-                                        if (CheckAcceptMask (pcf2->CanAcceptMasks, pfe->id, Channel)) {
-                                        #ifdef REMOTE_MASTER
-                                            pfe->timestamp = (uint64_t)get_rt_cycle_counter(); // << 32;
-                                                            // (unsigned __int64)GetT4Master () << 16 |
-                                                            // Timestamp;
-                                        #else
-                                            pfe->timestamp = (uint64_t)blackboard_infos.ActualCycleNumber << 32;
-                                        #endif
-
-                                            prxcf = &(pcf2->RxQueue);
-                                            if (pcf2->CanFdFlag) {
-                                                // CAN FD -> CAN FD
-                                                IF_NO_SPACE_WAIT_A_LITTLE_BIT (prxcf->pElems.Fd[prxcf->WritePtr].flag,
-                                                                               pcf->OverFlowBehaviour);
-                                                if (!prxcf->pElems.Fd[prxcf->WritePtr].flag) {  // There are at least one element inside the FIFO leer
-                                                    prxcf->pElems.Fd[prxcf->WritePtr] = *pfe;
-                                                    // will be transmitted oneself
-                                                    prxcf->pElems.Fd[prxcf->WritePtr].node = 1;
-                                                    wrptr_old = prxcf->WritePtr;
-                                                    prxcf->WritePtr++;
-                                                    if (prxcf->WritePtr >= prxcf->Depth) prxcf->WritePtr = 0;
-                                                    prxcf->ElemCount++;
-                                                    prxcf->pElems.Fd[wrptr_old].flag = 1;
-                                                }
-                                            } else {
-                                                // CAN FD -> CAN
-                                                if (pfe->size <= 8) {  // only if message are smaller or equal 8 bytes long
-                                                    IF_NO_SPACE_WAIT_A_LITTLE_BIT (prxcf->pElems.noFd[prxcf->WritePtr].flag,
-                                                                                   pcf->OverFlowBehaviour);
-                                                    if (!prxcf->pElems.noFd[prxcf->WritePtr].flag) {  // There are at least one element inside the FIFO leer
-                                                        prxcf->pElems.noFd[prxcf->WritePtr].channel = pfe->channel;
-                                                        MEMCPY(prxcf->pElems.noFd[prxcf->WritePtr].data, pfe->data, 8);
-                                                        prxcf->pElems.noFd[prxcf->WritePtr].ext = pfe->ext;
-                                                        prxcf->pElems.noFd[prxcf->WritePtr].id = pfe->id;
-                                                        prxcf->pElems.noFd[prxcf->WritePtr].size = pfe->size;
-                                                        prxcf->pElems.noFd[prxcf->WritePtr].timestamp = pfe->timestamp;
-                                                        // will be transmitted oneself
-                                                        prxcf->pElems.noFd[prxcf->WritePtr].node = 1;
-                                                        wrptr_old = prxcf->WritePtr;
-                                                        prxcf->WritePtr++;
-                                                        if (prxcf->WritePtr >= prxcf->Depth) prxcf->WritePtr = 0;
-                                                        prxcf->ElemCount++;
-                                                        prxcf->pElems.noFd[wrptr_old].flag = 1;
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    } else break;
-                                }
+    for (x = 0; x < csc->channel_count; x++) {
+        ptxcf = &(TxQueue[Channel]);
+        while (!FiFoIsEmpty(ptxcf)) {
+            CAN_FIFO_ELEM_HEADER Head;
+            char *Data;
+            ReadFromFifo((char*)&Head, ptxcf, sizeof(Head));
+            Data = alloca(Head.size);
+            ReadFromFifo(Data, ptxcf, Head.size);
+            ptxcf->count--;
+            if (csc->channels[Channel].queue_write_can (csc, Channel,
+                                                        Head.id,
+                                                        (unsigned char*)Data,
+                                                        Head.ext,
+                                                        Head.size) != -1) {
+                for (x2 = 0; x2 < MAX_CAN_FIFO_COUNT; x2++) {
+                    //if (x2 != x) {
+                    pcf2 = CanFifoNodes[x2];
+                    if (pcf2 != NULL) {
+                        if (CheckAcceptMask (pcf2->CanAcceptMasks, Head.id, Head.ext, Channel)) {
+                            int need_space;
+                            int free_space;
+                        #ifdef REMOTE_MASTER
+                            Head.timestamp = (uint64_t)get_rt_cycle_counter(); // << 32;
+                        #else
+                            Head.timestamp = (uint64_t)blackboard_infos.ActualCycleNumber << 32;
+                        #endif
+                            prxcf = &(pcf2->RxQueue);
+                            /* Check if there is enough space for this message */
+                            need_space = Head.size + (int)sizeof(CAN_FIFO_ELEM_HEADER);
+                            if (need_space > prxcf->size) {
+                                x__ReleaseSpinlock (&CANFifoGlobalSpinlock);
+                                return -1;
                             }
-
-                            rdptr_old = ptxcf->ReadPtr;
-                            ptxcf->ReadPtr++;
-                            if (ptxcf->ReadPtr >= ptxcf->Depth) ptxcf->ReadPtr = 0;
-                            ptxcf->ElemCount--;
-                            ptxcf->pElems.Fd[rdptr_old].flag = 0;
-                        } else {
-                            break;    // while(1)
-                        }
-                    } else break;     // while(1)
-                }
-            } else {
-                CAN_FIFO_ELEM *pfe;
-                while (1) {
-                    pfe = &(ptxcf->pElems.noFd[ptxcf->ReadPtr]);
-                    if (pfe->flag) {  // There are at least one element inside the FIFO
-                        if (csc->channels[Channel].queue_write_can (csc, Channel,
-                                                                    pfe->id,
-                                                                    pfe->data,
-                                                                    pfe->ext,
-                                                                    pfe->size) != -1) {
-                            for (x2 = 0; x2 < MAX_CAN_FIFO_COUNT; x2++) {
-                                if (x2 != x) {
-                                    pcf2 = CanFifoNodes[x2];
-                                    if (pcf2 != NULL) {
-                                        if (CheckAcceptMask (pcf2->CanAcceptMasks, pfe->id, Channel)) {
-                                        #ifdef REMOTE_MASTER
-                                            pfe->timestamp = (uint64_t)get_rt_cycle_counter(); // << 32;
-                                                            // (unsigned __int64)GetT4Master () << 16 |
-                                                            // Timestamp;
-                                        #else
-                                            pfe->timestamp = (uint64_t)blackboard_infos.ActualCycleNumber << 32;
-                                        #endif
-
-                                            prxcf = &(pcf2->RxQueue);
-                                            if (!pcf2->CanFdFlag) {
-                                                // CAN -> CAN
-                                                IF_NO_SPACE_WAIT_A_LITTLE_BIT (prxcf->pElems.noFd[prxcf->WritePtr].flag,
-                                                                               pcf->OverFlowBehaviour);
-                                                if (!prxcf->pElems.noFd[prxcf->WritePtr].flag) {  // There are at least one element inside the FIFO leer
-                                                    prxcf->pElems.noFd[prxcf->WritePtr] = *pfe;
-                                                    // will be transmitted oneself
-                                                    prxcf->pElems.noFd[prxcf->WritePtr].node = 1;
-                                                    wrptr_old = prxcf->WritePtr;
-                                                    prxcf->WritePtr++;
-                                                    if (prxcf->WritePtr >= prxcf->Depth) prxcf->WritePtr = 0;
-                                                    prxcf->ElemCount++;
-                                                    prxcf->pElems.noFd[wrptr_old].flag = 1;
-                                                }
-                                            } else {
-                                                // CAN -> CAN-FD
-                                                IF_NO_SPACE_WAIT_A_LITTLE_BIT (prxcf->pElems.Fd[prxcf->WritePtr].flag,
-                                                                               pcf->OverFlowBehaviour);
-                                                if (!prxcf->pElems.Fd[prxcf->WritePtr].flag) {  // There are at least one element inside the FIFO leer
-                                                    prxcf->pElems.Fd[prxcf->WritePtr].channel = pfe->channel;
-                                                    MEMCPY(prxcf->pElems.Fd[prxcf->WritePtr].data, pfe->data, 8);
-                                                    prxcf->pElems.Fd[prxcf->WritePtr].ext = pfe->ext;
-                                                    prxcf->pElems.Fd[prxcf->WritePtr].id = pfe->id;
-                                                    prxcf->pElems.Fd[prxcf->WritePtr].size = pfe->size;
-                                                    prxcf->pElems.Fd[prxcf->WritePtr].timestamp = pfe->timestamp;
-                                                    // will be transmitted oneself
-                                                    prxcf->pElems.Fd[prxcf->WritePtr].node = 1;
-                                                    wrptr_old = prxcf->WritePtr;
-                                                    prxcf->WritePtr++;
-                                                    if (prxcf->WritePtr >= prxcf->Depth) prxcf->WritePtr = 0;
-                                                    prxcf->ElemCount++;
-                                                    prxcf->pElems.Fd[wrptr_old].flag = 1;
-                                                }
-
-                                            }
-                                        }
-                                    } else break;
-                                }
+                            free_space = CalculateFreeSpace(prxcf);
+                            IF_NO_SPACE_WAIT_A_LITTLE_BIT ((need_space >= free_space),
+                                                           pcf2->OverFlowBehaviour);
+                            // recalculate the free space it can be changed
+                            free_space = CalculateFreeSpace(prxcf);
+                            // remove the oldest message till we have enough space that we can store the new message
+                            while (need_space >= free_space) {
+                                RemoveOneMessageFromFifo(prxcf);
+                                free_space = CalculateFreeSpace(prxcf);
                             }
-
-                            rdptr_old = ptxcf->ReadPtr;
-                            ptxcf->ReadPtr++;
-                            if (ptxcf->ReadPtr >= ptxcf->Depth) ptxcf->ReadPtr = 0;
-                            ptxcf->ElemCount--;
-                            ptxcf->pElems.noFd[rdptr_old].flag = 0;
-                        } else {
-                            break;    // while(1)
+                            AddMessagetoFifo(prxcf, &Head, (unsigned char*)Data, Head.size);
                         }
-                    } else break;     // while(1)
+                    }
                 }
-            }
-        } else break;
+           }
+        }
     }
     x__ReleaseSpinlock (&CANFifoGlobalSpinlock);
     return 0;
+}
+
+void SetupCanTxFiFos(NEW_CAN_SERVER_CONFIG *csc)
+{
+    int x;
+    x__AcquireSpinlock (&CANFifoGlobalSpinlock, __LINE__, __FILE__);
+    for (x = 0; x < csc->channel_count; x++) {
+        TxQueue[x].rp = TxQueue[x].wp = 0;
+        if (TxQueue[x].buffer == NULL) {
+            TxQueue[x].size = 64*1024;
+            TxQueue[x].buffer = my_malloc(TxQueue[x].size);
+        }
+    }
+    x__ReleaseSpinlock (&CANFifoGlobalSpinlock);
+}
+
+void CleanupCanTxFiFos(void)
+{
+    int x;
+    x__AcquireSpinlock (&CANFifoGlobalSpinlock, __LINE__, __FILE__);
+    for (x = 0; x < MAX_CAN_CHANNELS; x++) {
+        TxQueue[x].size = 0;
+        TxQueue[x].rp = TxQueue[x].wp = 0;
+        if (TxQueue[x].buffer != NULL) my_free(TxQueue[x].buffer);
+        TxQueue[x].buffer = NULL;
+    }
+    x__ReleaseSpinlock (&CANFifoGlobalSpinlock);
 }
 
 void InitCANFifoCriticalSection(void)
@@ -1029,3 +1014,4 @@ void InitCANFifoCriticalSection(void)
 #endif
 
 }
+

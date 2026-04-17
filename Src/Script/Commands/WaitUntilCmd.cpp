@@ -55,10 +55,10 @@ int cWaitUntilCmd::SyntaxCheck (cParser *par_Parser)
             int LineNr;
 
             FileOffset = par_Parser->GetCurrentScriptFile ()->Ftell (&LineNr);
-            if (par_Parser->GetNumNoneSolvedEnvVars (0) || par_Parser->GetNumSolvedEnvVars (0)) {
+            if (par_Parser->GetNumNoneSolvedEnvVars (3) || par_Parser->GetNumSolvedEnvVars (3)) {
                 // GOTO with unsolved environment variables will throw a warning
                 if (par_Parser->GetNumNoneSolvedEnvVars (0)) {
-                    par_Parser->Error (SCRIPT_PARSER_WARNING, "WAIT_UNTIL with GOTO \"%s\" which includes an unknown environment variable at compile time, try to resolve it at run time", par_Parser->GetParameter (0));
+                    par_Parser->Error (SCRIPT_PARSER_WARNING, "WAIT_UNTIL with GOTO \"%s\" which includes an unknown environment variable at compile time, try to resolve it at run time", par_Parser->GetParameter (3));
                 }
                 Idx = par_Parser->AddGoto (nullptr, par_Parser->GetCurrentIp (),
                                            static_cast<uint32_t>(LineNr),
@@ -82,10 +82,10 @@ int cWaitUntilCmd::SyntaxCheck (cParser *par_Parser)
 
             FileOffset = par_Parser->GetCurrentScriptFile ()->Ftell (&LineNr);
             // if there are a unsolved environment variables, try to solve it now
-            if (par_Parser->GetNumNoneSolvedEnvVars (0) || par_Parser->GetNumSolvedEnvVars (0)) {
+            if (par_Parser->GetNumNoneSolvedEnvVars (3) || par_Parser->GetNumSolvedEnvVars (3)) {
                 // GOSUB with unsolved environment variables will throw a warning
-                if (par_Parser->GetNumNoneSolvedEnvVars (0)) {
-                    par_Parser->Error (SCRIPT_PARSER_WARNING, "WAIT_UNTIL with GOSUB \"%s\" which includes an unknown environment variable at compile time, try to resolve it at run time", par_Parser->GetParameter (0));
+                if (par_Parser->GetNumNoneSolvedEnvVars (3)) {
+                    par_Parser->Error (SCRIPT_PARSER_WARNING, "WAIT_UNTIL with GOSUB \"%s\" which includes an unknown environment variable at compile time, try to resolve it at run time", par_Parser->GetParameter (3));
                 }
                 Idx = par_Parser->AddGoto (nullptr, par_Parser->GetCurrentIp (),
                                            static_cast<uint32_t>(LineNr),
@@ -247,8 +247,8 @@ int cWaitUntilCmd::Wait (cParser *par_Parser, cExecutor *par_Executor, int Cycle
 
                     int Idx = static_cast<int>(par_Executor->GetOptParameterCurrentCmd ());
                     if (par_Executor->GetGotoFromToDefLocalsPos (Idx, &FromPos, &ToPos, &GotoIp, &DiffAtomicDepth,
-                                                                 par_Parser->GetParameter (0), par_Parser->GetCurrentFileNr ())) {
-                        par_Parser->Error (SCRIPT_PARSER_FATAL_ERROR, "cannot goto \"%s\" the label include a environment variable but this or the resulting label doesn't exist", par_Parser->GetParameter (0));
+                                                                 par_Parser->GetParameter (3), par_Parser->GetCurrentFileNr ())) {
+                        par_Parser->Error (SCRIPT_PARSER_FATAL_ERROR, "cannot goto \"%s\" the label include a environment variable but this or the resulting label doesn't exist", par_Parser->GetParameter (3));
                         return -1;
                     }
                     if (DiffAtomicDepth) {
@@ -275,12 +275,12 @@ int cWaitUntilCmd::Wait (cParser *par_Parser, cExecutor *par_Executor, int Cycle
 
                     int Idx = static_cast<int>(par_Executor->GetOptParameterCurrentCmd ());
                     if (par_Executor->GetGotoFromToDefLocalsPos (Idx, &FromPos, &ToPos, &GotoIp, &DiffAtomicDepth,
-                                                                 par_Parser->GetParameter (0), par_Parser->GetCurrentFileNr ())) {
-                        par_Parser->Error (SCRIPT_PARSER_FATAL_ERROR, "cannot gosub \"%s\" the label include a environment variable but this or the resulting label doesn't exist", par_Parser->GetParameter (0));
+                                                                 par_Parser->GetParameter (3), par_Parser->GetCurrentFileNr ())) {
+                        par_Parser->Error (SCRIPT_PARSER_FATAL_ERROR, "cannot gosub \"%s\" the label include a environment variable but this or the resulting label doesn't exist", par_Parser->GetParameter (3));
                         return -1;
                     }
                     DiffAtomicDepth = 0;
-                    par_Executor->Stack.AddGosubToStack (par_Parser->GetParameter (0), par_Executor->GetCurrentIp (), par_Executor->GetCurrentAtomicDepth ());
+                    par_Executor->Stack.AddGosubToStack (par_Parser->GetParameter (3), par_Executor->GetCurrentIp (), par_Executor->GetCurrentAtomicDepth ());
                     par_Executor->GotoFromToDefLocalsPos (FromPos, ToPos, DiffAtomicDepth, par_Parser, par_Executor);
                     par_Executor->SetNextIp (GotoIp - 1);
                     // end nearly the same as in cGosubCmd::Execute

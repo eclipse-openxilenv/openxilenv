@@ -131,31 +131,127 @@ int remove_canserver_config (NEW_CAN_SERVER_CONFIG *csc)
     return ret;
 }
 
+static CRITICAL_SECTION CanServerConfigCriticalSection;
+static NEW_CAN_SERVER_CONFIG *CanServerConfig;
+static NEW_CAN_CONFIG_CALLBACK_FUNC_PTR_TYPE *NewCanConfigCallbacks;
+static int NewCanConfigCallbacksSize;
+
+void InitCanConfigCriticalSection (void)
+{
+    InitializeCriticalSection (&CanServerConfigCriticalSection);
+}
+
+void CleanupCurrentCanConfig(void)
+{
+    EnterCriticalSection(&CanServerConfigCriticalSection);
+    if (CanServerConfig != NULL) {
+        my_free(CanServerConfig);
+    }
+    CanServerConfig = NULL;
+    LeaveCriticalSection(&CanServerConfigCriticalSection);
+}
+
+void ChangeCurrentCanConfig(NEW_CAN_SERVER_CONFIG *par_CanServerConfig)
+{
+    CleanupCurrentCanConfig();
+    EnterCriticalSection(&CanServerConfigCriticalSection);
+    int StructSize = (int)sizeof (NEW_CAN_SERVER_CONFIG) + par_CanServerConfig->SymSize;
+    CanServerConfig = (NEW_CAN_SERVER_CONFIG *)my_malloc(StructSize);
+    if (CanServerConfig != NULL) {
+        MEMCPY(CanServerConfig, par_CanServerConfig, StructSize);
+        NEW_CAN_CONFIG_CALLBACK_FUNC_PTR_TYPE *Callbacks;
+        int x, CallbacksSize;
+        CallbacksSize = NewCanConfigCallbacksSize;
+        Callbacks = my_malloc(CallbacksSize * sizeof(NEW_CAN_CONFIG_CALLBACK_FUNC_PTR_TYPE));
+        MEMCPY(Callbacks, NewCanConfigCallbacks, CallbacksSize * sizeof(NEW_CAN_CONFIG_CALLBACK_FUNC_PTR_TYPE));
+
+        // This must be called outside the lock
+        LeaveCriticalSection(&CanServerConfigCriticalSection);
+        for (x = 0; x < CallbacksSize; x++) {
+            if (Callbacks[x] != NULL) {
+                Callbacks[x]();
+            }
+        }
+        EnterCriticalSection(&CanServerConfigCriticalSection);
+
+        my_free(Callbacks);
+    }
+    LeaveCriticalSection(&CanServerConfigCriticalSection);
+}
+
+NEW_CAN_SERVER_CONFIG *GetACopyOfCurrentCanConfig(void)
+{
+    NEW_CAN_SERVER_CONFIG *Ret = NULL;
+    EnterCriticalSection(&CanServerConfigCriticalSection);
+    if (CanServerConfig != NULL) {
+        int StructSize = (int)sizeof (NEW_CAN_SERVER_CONFIG) + CanServerConfig->SymSize;
+        Ret = (NEW_CAN_SERVER_CONFIG *)my_malloc(StructSize);
+        if (Ret != NULL) {
+            MEMCPY(Ret, CanServerConfig, StructSize);
+        }
+    }
+    LeaveCriticalSection(&CanServerConfigCriticalSection);
+    return Ret;
+}
+
+void DeleteCopiedCanConfig(NEW_CAN_SERVER_CONFIG *par_CanConfig)
+{
+    EnterCriticalSection(&CanServerConfigCriticalSection);
+    my_free(par_CanConfig);
+    LeaveCriticalSection(&CanServerConfigCriticalSection);
+}
+
+void RegisterChangeCanConfigCallback(NEW_CAN_CONFIG_CALLBACK_FUNC_PTR_TYPE par_Callback)
+{
+    EnterCriticalSection(&CanServerConfigCriticalSection);
+    NewCanConfigCallbacksSize++;
+    NewCanConfigCallbacks = my_realloc(NewCanConfigCallbacks, sizeof(NEW_CAN_CONFIG_CALLBACK_FUNC_PTR_TYPE) * NewCanConfigCallbacksSize);
+    if (NewCanConfigCallbacks != NULL) {
+        NewCanConfigCallbacks[NewCanConfigCallbacksSize - 1] = par_Callback;
+    }
+    LeaveCriticalSection(&CanServerConfigCriticalSection);
+}
+
+void UnRegisterChangeCanConfigCallback(NEW_CAN_CONFIG_CALLBACK_FUNC_PTR_TYPE par_Callback)
+{
+    int x;
+    EnterCriticalSection(&CanServerConfigCriticalSection);
+    for (x = 0; x < NewCanConfigCallbacksSize; x++) {
+        if (NewCanConfigCallbacks[x] == par_Callback) {
+            for (x++; x < NewCanConfigCallbacksSize; x++) {
+                NewCanConfigCallbacks[x-1] = NewCanConfigCallbacks[x];
+            }
+            NewCanConfigCallbacksSize--;
+            NewCanConfigCallbacks = my_realloc(NewCanConfigCallbacks, sizeof(NEW_CAN_CONFIG_CALLBACK_FUNC_PTR_TYPE) * NewCanConfigCallbacksSize);
+        }
+    }
+    LeaveCriticalSection(&CanServerConfigCriticalSection);
+}
 
 NEW_CAN_SERVER_CONFIG *LoadCanConfigAndStart (int par_Fd)
 {
+    static NEW_CAN_SERVER_CONFIG *LocalCanServerConfig;
     if (s_main_ini_val.ConnectToRemoteMaster) {
         NEW_CAN_SERVER_CONFIG *ret = NULL;
-        static NEW_CAN_SERVER_CONFIG *csc;
 
         // This must be locked
         IniFileDataBaseEnterCriticalSectionUser(__FILE__, __LINE__);
 
         // If ther is already an old configuration loaded -> remove this
-        if (csc != NULL) remove_canserver_config (csc);
-        csc = NULL;
+        if (LocalCanServerConfig != NULL) remove_canserver_config (LocalCanServerConfig);
+        LocalCanServerConfig = NULL;
         if (par_Fd <= 0) {
             IniFileDataBaseLeaveCriticalSectionUser();
             return NULL;
         }
 
-        if ((csc = ReadCanConfig (par_Fd)) != NULL) {
-            if (sizeof (csc->channels[0]) != 8192) {
-                ThrowError (1, "(sizeof (csc->channels[0]) != 8192)   %i != 8192", sizeof (csc->channels[0]));
+        if ((LocalCanServerConfig = ReadCanConfig (par_Fd)) != NULL) {
+            if (sizeof (LocalCanServerConfig->channels[0]) != 8192) {
+                ThrowError (1, "(sizeof (csc->channels[0]) != 8192)   %i != 8192", sizeof (LocalCanServerConfig->channels[0]));
             }
-            if ((int32_t)sizeof (NEW_CAN_SERVER_CONFIG) + csc->SymSize > MESSAGE_MAX_SIZE) {
+            if ((int32_t)sizeof (NEW_CAN_SERVER_CONFIG) + LocalCanServerConfig->SymSize > MESSAGE_MAX_SIZE) {
                 ThrowError (1, "sizeof (NEW_CAN_SERVER_CONFIG) + csc->SymSize %i > MESSAGE_MAX_SIZE % i",
-                       (int32_t)sizeof (NEW_CAN_SERVER_CONFIG) + csc->SymSize, MESSAGE_MAX_SIZE);
+                       (int32_t)sizeof (NEW_CAN_SERVER_CONFIG) + LocalCanServerConfig->SymSize, MESSAGE_MAX_SIZE);
                 ret = NULL;
             } else {
                 write_message (get_pid_by_name ("CANServer"),
@@ -164,10 +260,10 @@ NEW_CAN_SERVER_CONFIG *LoadCanConfigAndStart (int par_Fd)
                                                 NULL);
                 write_message (get_pid_by_name ("CANServer"),
                                                 NEW_CANSERVER_INIT,
-                                                (int)sizeof (NEW_CAN_SERVER_CONFIG) + csc->SymSize,
-                                                (char*)csc);
+                                                (int)sizeof (NEW_CAN_SERVER_CONFIG) + LocalCanServerConfig->SymSize,
+                                                (char*)LocalCanServerConfig);
 
-                ret = csc;
+                ret = LocalCanServerConfig;
             }
         } else {
             ThrowError (1, "cannot read CAN config!?");
@@ -570,7 +666,7 @@ static NEW_CAN_SERVER_CONFIG* Add_C_PGs(NEW_CAN_SERVER_CONFIG *csc, int o_pos, c
                 if ((h == NULL) || (h == p)) break;
                 if (run == 0) count++;
                 else if (run == 1) {
-                    int Idx = csc->objects[o_pos].Protocol.J1939.C_PGs_ArrayIdx;
+                    int Idx = csc->objects[o_pos].Protocol.J1939_22.C_PGs_ArrayIdx;
                     Ids = (uint32_t*)&(csc->Symbols[Idx]);
                     Ids = GET_CAN_J1939_MULTI_C_PG_OBJECT(csc, o_pos);
                     Ids[x] = Id;
@@ -584,7 +680,7 @@ static NEW_CAN_SERVER_CONFIG* Add_C_PGs(NEW_CAN_SERVER_CONFIG *csc, int o_pos, c
                 int32_t HelpInt;
                 csc = AllocMemInsideCanCfg(csc, &HelpInt, (count + 1) * sizeof(int32_t));
                 if (csc == NULL) return NULL;
-                csc->objects[o_pos].Protocol.J1939.C_PGs_ArrayIdx = HelpInt;
+                csc->objects[o_pos].Protocol.J1939_22.C_PGs_ArrayIdx = HelpInt;
                 Ids = GET_CAN_J1939_MULTI_C_PG_OBJECT(csc, o_pos);
                 Ids[0] = count;  // first enry is the size
             }
@@ -711,6 +807,164 @@ int ReadBaudrateConfig(NEW_CAN_SERVER_CONFIG *csc, int c, int VariantenCount, ch
     return 0;
 }
 
+typedef struct {
+    int Value;
+    int ObjectPos;
+} SORT_OBJECT_MUX_ELEM;
+
+typedef struct {
+    int Id;
+    int Ext;
+    int StartBit;
+    int BitSize;
+    int ObjectPosSameIdPos;
+    SORT_OBJECT_MUX_ELEM *ObjectPosSameId;
+} SORT_OBJECT_MUX;
+
+
+/*  *elem1  < *elem2        fcmp returns an integer < 0
+    *elem1 == *elem2       fcmp returns 0
+    *elem1  > *elem2        fcmp returns an integer > 0 */
+static int MuxObjectQsortFunction( const void *a, const void *b)
+{
+    const SORT_OBJECT_MUX_ELEM *aa = (const SORT_OBJECT_MUX_ELEM *)a;
+    const SORT_OBJECT_MUX_ELEM *bb = (const SORT_OBJECT_MUX_ELEM *)b;
+    if (bb->Value > aa->Value) return -1;
+    if (bb->Value < aa->Value) return 1;
+    return 0;
+}
+
+void SortMuxObjects(NEW_CAN_SERVER_CONFIG *csc, int c)
+{
+    int x, o;
+    int NumOfMuxObjects;
+    SORT_OBJECT_MUX *MuxObject = (SORT_OBJECT_MUX*)my_malloc(sizeof(SORT_OBJECT_MUX) * csc->channels[c].object_count);
+    for (NumOfMuxObjects = o = 0; o < csc->channels[c].object_count; o++) {
+        int o_p = csc->channels[c].objects[o];
+        if (csc->objects[o_p].type == MUX_OBJECT) {
+            for (x = 0; x < NumOfMuxObjects; x++) {
+                if (MuxObject[x].Id == csc->objects[o_p].id) break;
+            }
+            if (x == NumOfMuxObjects) {
+                MuxObject[NumOfMuxObjects].Id = csc->objects[o_p].id;
+                MuxObject[NumOfMuxObjects].StartBit = csc->objects[o_p].Protocol.Mux.BitPos;
+                MuxObject[NumOfMuxObjects].BitSize = csc->objects[o_p].Protocol.Mux.Size;
+                MuxObject[NumOfMuxObjects].ObjectPosSameIdPos = 0;
+                MuxObject[NumOfMuxObjects].ObjectPosSameId = (SORT_OBJECT_MUX_ELEM*)my_calloc(sizeof(SORT_OBJECT_MUX_ELEM), csc->channels[c].object_count);
+                NumOfMuxObjects++;
+            }
+        }
+    }
+    if (NumOfMuxObjects > 0) {
+        for (o = 0; o < csc->channels[c].object_count; o++) {
+            int o_p = csc->channels[c].objects[o];
+            if (csc->objects[o_p].type == MUX_OBJECT) {
+                int x;
+                for (x = 0; x < NumOfMuxObjects; x++) {
+                    if (MuxObject[x].Id == csc->objects[o_p].id) {
+                        if ((MuxObject[x].StartBit == csc->objects[o_p].Protocol.Mux.BitPos) &&
+                            (MuxObject[x].BitSize == csc->objects[o_p].Protocol.Mux.Size)) {
+                            MuxObject[x].ObjectPosSameId[MuxObject[x].ObjectPosSameIdPos].ObjectPos = o_p;
+                            MuxObject[x].ObjectPosSameId[MuxObject[x].ObjectPosSameIdPos].Value = csc->objects[o_p].Protocol.Mux.Value;
+                            MuxObject[x].ObjectPosSameIdPos++;
+                        } else {
+                            ThrowError(1, "The multiplexer of a mux object must have the same start and size");
+                        }
+                    }
+                }
+            }
+        }
+        // Now sort it
+        for (x = 0; x < NumOfMuxObjects; x++) {
+            qsort((void *)MuxObject[x].ObjectPosSameId, MuxObject[x].ObjectPosSameIdPos, sizeof(SORT_OBJECT_MUX_ELEM), MuxObjectQsortFunction);
+        }
+        // write it back
+        for (x = 0; x < NumOfMuxObjects; x++) {
+            int i;
+            int next;
+            int master_mux_pos;
+            next = master_mux_pos = MuxObject[x].ObjectPosSameId[0].ObjectPos;
+            csc->objects[master_mux_pos].Protocol.Mux.token = master_mux_pos; // start with master mux object
+            for (i = MuxObject[x].ObjectPosSameIdPos - 1;  i >= 0; i--) {
+                int o_p = MuxObject[x].ObjectPosSameId[i].ObjectPos;
+                if (i == 0) {  // first element will be the master
+                    csc->objects[o_p].Protocol.Mux.master = -1; // master
+                } else {
+                    // slave have a reference to the master
+                    csc->objects[o_p].Protocol.Mux.master = master_mux_pos;
+                }
+                csc->objects[o_p].Protocol.Mux.next = next;
+                next = o_p;
+            }
+        }
+    }
+    // free the local memory
+    for (x = 0; x < NumOfMuxObjects; x++) {
+        my_free(MuxObject[x].ObjectPosSameId);
+    }
+    my_free(MuxObject);
+}
+
+static void AddToPos(uint16_t **ObjPosArray, uint16_t *ObjPosArraySize, uint8_t Addr, uint16_t ObjPos)
+{
+    if (ObjPosArray[Addr] != NULL) {
+        ObjPosArray[Addr] = (uint16_t*)my_malloc(2*sizeof(uint16_t));
+        ObjPosArray[Addr][0] = ObjPos;
+        ObjPosArray[Addr][1] = -1;
+        ObjPosArraySize[Addr] = 1;
+    } else {
+        ObjPosArray[Addr] = (uint16_t*)my_realloc(ObjPosArray[Addr], (ObjPosArraySize[Addr] + 2) * sizeof(uint16_t));
+        ObjPosArray[Addr][ObjPosArraySize[Addr]] = ObjPos;
+        ObjPosArray[Addr][ObjPosArraySize[Addr] + 1] = -1;
+        ObjPosArraySize[Addr]++;
+    }
+}
+
+NEW_CAN_SERVER_CONFIG *J1939InitMultiPackages(NEW_CAN_SERVER_CONFIG *CanServerConfig, int Channel)
+{
+    int o, x;
+    uint16_t *ObjPosArray[256];
+    uint16_t ObjPosArraySize[256];
+    for (x = 0; x < 256; x++) {
+        ObjPosArray[x] = NULL;
+        ObjPosArraySize[x] = 0;
+    }
+    for (o = 0; o < CanServerConfig->channels[Channel].object_count; o++) {
+        int ObjPos = CanServerConfig->channels[Channel].objects[o];
+        NEW_CAN_SERVER_OBJECT *Object = &CanServerConfig->objects[ObjPos];
+        if ((Object->type == J1939_OBJECT) && (Object->size > 8)) {
+            int DstAddr = Object->Protocol.J1939.dst_addr;
+            int SrcAddr = Object->id & 0xFF;
+            if (Object->dir == READ_OBJECT) {
+                if (DstAddr == 0xFF) {
+                    // if address is 0xFF we should receive all (0...0xFF)
+                    int x;
+                    for (x = 0; x <= 0xFF; x++) {
+                        AddToPos(ObjPosArray, ObjPosArraySize, x, ObjPos);
+                    }
+                } else {
+                    AddToPos(ObjPosArray, ObjPosArraySize, DstAddr, ObjPos);
+                }
+            }
+        }
+    }
+    for (x = 0; x < 256; x++) {
+        if (ObjPosArray[x] != NULL) {
+            int i, Index;
+            CanServerConfig = AllocMemInsideCanCfg(CanServerConfig, &Index, (ObjPosArraySize[x] + 1) * sizeof(uint16_t));
+            uint16_t *ObjPosArrayOnAddr = (uint16_t*)&CanServerConfig->Symbols[Index];
+            for (i = 0; i < (ObjPosArraySize[x] + 1); i++) {
+                ObjPosArrayOnAddr[i] = ObjPosArray[x][i];
+            }
+            CanServerConfig->channels[Channel].J1939RxDstAddrObjIdx[x] = Index;
+            my_free(ObjPosArray[x]);
+        } else {
+            CanServerConfig->channels[Channel].J1939RxDstAddrObjIdx[x] = -1;
+        }
+    }
+    return CanServerConfig;
+}
+
 NEW_CAN_SERVER_CONFIG *ReadCanConfig (int par_Fd)
 {
     NEW_CAN_SERVER_CONFIG *csc;
@@ -815,7 +1069,6 @@ NEW_CAN_SERVER_CONFIG *ReadCanConfig (int par_Fd)
             return NULL;
         }
         p = VariantsPerChannel;
-        csc->channels[c].StartupState =  IniFileDataBaseReadInt ("CAN/Global", entry, 1, par_Fd);
         PrintFormatToString (entry, sizeof(entry), "can_controller%i_variante", c+1);
         IniFileDataBaseReadString ("CAN/Global", entry, "", VariantsPerChannel, sizeof (VariantsPerChannel), par_Fd);
         p = VariantsPerChannel;
@@ -916,7 +1169,10 @@ NEW_CAN_SERVER_CONFIG *ReadCanConfig (int par_Fd)
                 }
                 IniFileDataBaseReadString (section, "id", "", txt, sizeof (txt), par_Fd);
                 csc->objects[o_pos].id = strtoul (txt, NULL, 0);
-
+                // truncate object name to max 32 characters and store it inside the struct so the CAN message window can read this
+                IniFileDataBaseReadString (section, "name", "", txt, 32, par_Fd);
+                csc = AddByteCode2CanCfg (csc, &HelpInt, txt, strlen(txt)+1);
+                csc->objects[o_pos].NameIdx = HelpInt;
 __TRY_AGAIN:
                 switch (ControlBlackboardName) {
                 case NoPrefixObjName:
@@ -977,7 +1233,7 @@ __TRY_AGAIN:
                 else if (!strcmpi ("j1939_multi_c_pg", txt)) csc->objects[o_pos].type = J1939_22_MULTI_C_PG;
                 else if (!strcmpi ("j1939_c_pg", txt)) csc->objects[o_pos].type = J1939_22_C_PG;
                 else csc->objects[o_pos].type = NORMAL_OBJECT;
-                if (csc->objects[o_pos].size < 1) csc->objects[o_pos].size = 1;
+                if (csc->objects[o_pos].size < 0) csc->objects[o_pos].size = 0;
                 if (csc->objects[o_pos].type == J1939_OBJECT) {
                     if (csc->objects[o_pos].size > 1785) csc->objects[o_pos].size = 1785;
                     if (IniFileDataBaseReadString (section, "variable_dlc", "", Name, 512, par_Fd)) {
@@ -1328,7 +1584,6 @@ __TRY_AGAIN:
             }
             VariantCount++;
         }
-
         // all Objects of the channel
         for (o = 0; o < csc->channels[c].object_count; o++) {
             int o_p, oi, master_o_pos, on;
@@ -1338,25 +1593,12 @@ __TRY_AGAIN:
                 C_PGs_Translate(csc, c, o_p);  // J1939 22 Multi C_PGs translate IDs in positions
             }
             SortMuxSignals (csc, o_p);
-            if ((csc->objects[o_p].type == MUX_OBJECT) &&
-                (csc->objects[o_p].Protocol.Mux.master == -2)) {
-                csc->objects[o_p].Protocol.Mux.master = -1;  // Master Mux-Objekt
-                csc->objects[o_p].Protocol.Mux.token = o_p;
-                on = master_o_pos = o_p;
-                for (oi = o; oi < csc->channels[c].object_count; oi++) {
-                    o_p = csc->channels[c].objects[oi];
-                    if ((csc->objects[o_p].type == MUX_OBJECT) &&
-                        (csc->objects[o_p].Protocol.Mux.master == -2) &&
-                        (csc->objects[master_o_pos].id == csc->objects[o_p].id)) {
-                        csc->objects[o_p].Protocol.Mux.master = master_o_pos;
-                        csc->objects[o_p].Protocol.Mux.next = on;
-                        csc->objects[o_p].Protocol.Mux.token = 0;
-                        on = o_p;
-                    }
-                }
-                csc->objects[master_o_pos].Protocol.Mux.next = on;
-            }
         }
+
+        SortMuxObjects(csc, c);
+
+        csc = J1939InitMultiPackages(csc, c);
+
         // For faster search of objects there exists 2 sorted  arrays (one for TX and one for RX objects)
         // alle Objekte des Kanals
         csc->channels[c].rx_object_count = csc->channels[c].tx_object_count = 0;
@@ -1365,10 +1607,11 @@ __TRY_AGAIN:
             if ((csc->objects[o_p].dir == READ_OBJECT) ||
                 (csc->objects[o_pos].dir == READ_STARTUP_VARIABLE_ID_OBJECT)) {        // read object
                 if ((csc->objects[o_p].type == NORMAL_OBJECT) ||   // normal object
-                    (csc->objects[o_p].type == J1939_22_MULTI_C_PG) ||   // J1939 22 multi C_PG
+                    (csc->objects[o_p].type == J1939_OBJECT)  ||   // J1939 object
                     // J1939 Objekt nicht einsortieren
+                    (csc->objects[o_p].type == J1939_22_MULTI_C_PG) ||   // J1939 22 multi C_PG
                     ((csc->objects[o_p].type == MUX_OBJECT) && (csc->objects[o_p].Protocol.Mux.master == -1))) { // or Master MUX-Objekt
-                    csc->channels[c].hash_rx[csc->channels[c].rx_object_count].id = (uint32_t)csc->objects[o_p].id;
+                    csc->channels[c].hash_rx[csc->channels[c].rx_object_count].id = ((uint32_t)csc->objects[o_p].ext << 31) | (uint32_t)csc->objects[o_p].id;
                     csc->channels[c].hash_rx[csc->channels[c].rx_object_count].pos = o_p;
                     csc->channels[c].rx_object_count++;
                 }
@@ -1379,7 +1622,7 @@ __TRY_AGAIN:
                     (csc->objects[o_p].type == J1939_22_C_PG) ||   // J1939 22 C_PG
                     (csc->objects[o_p].type == J1939_22_MULTI_C_PG) ||   // J1939 22 multi C_PG
                     ((csc->objects[o_p].type == MUX_OBJECT) && (csc->objects[o_p].Protocol.Mux.master == -1))) { // or Master MUX-Objekt
-                    csc->channels[c].hash_tx[csc->channels[c].tx_object_count].id = (uint32_t)csc->objects[o_p].id;
+                    csc->channels[c].hash_tx[csc->channels[c].tx_object_count].id = ((uint32_t)csc->objects[o_p].ext << 31) | (uint32_t)csc->objects[o_p].id;
                     csc->channels[c].hash_tx[csc->channels[c].tx_object_count].pos = o_p;
                     csc->channels[c].tx_object_count++;
                 }
@@ -1394,11 +1637,14 @@ __TRY_AGAIN:
             csc->channels[c].hash_tx[x].pos = 0;
         }
 
-        // Sort CAN objects on the basis of there ID's
+        // Sort CAN objects on the basis of there ID's and ext flag
         qsort((void *)csc->channels[c].hash_rx, MAX_RX_OBJECTS_ONE_CHANNEL, sizeof(NEW_CAN_HASH_ARRAY_ELEM), qsort_function);
         Sort_Multi_C_PG_Tx(csc, c);
 
     }
+
+    ChangeCurrentCanConfig(csc);
+
     return csc;
 }
 

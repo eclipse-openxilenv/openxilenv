@@ -551,8 +551,8 @@ int CANDB_Import (const char *FileName,
                                     // Convert factor and offset
                                     if (!strcmp (Dir, "write")) {
                                         // CAN = BB / FAKTOR   -   OFFSET / FAKTOR
-                                        if (Factor == 0.0) { 
-                                            ThrowError (1, "cannot convert cersion because factor is zero (%s [%i])", FileName, LineCounter);
+                                        if (Factor == 0.0) {
+                                            ThrowError (1, "cannot convert because factor is zero (%s [%i])", FileName, LineCounter);
                                         } else {
                                             Offset = - Offset / Factor;
                                             Factor = 1 / Factor;

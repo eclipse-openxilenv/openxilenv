@@ -104,6 +104,8 @@ int StartupInit (void * par_Application)
 
     InitDebugInfosCriticalSections ();
 
+    InitCanConfigCriticalSection();
+
     InitOsciCycleCriticalSection ();
 
     InitCANFifoCriticalSection();

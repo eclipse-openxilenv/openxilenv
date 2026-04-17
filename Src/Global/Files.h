@@ -38,7 +38,7 @@ int get_count_open_files_infos (void);
 int expand_filename (const char *src_name, char *dst_name, int maxc);
 
 FILE *open_file (const char * const name, const char *flags);
-FILE *OpenFile4WriteWithPrefix (char *name, char *flags);
+FILE *OpenFile4WriteWithPrefix (const char *name, const char *flags);
 
 void close_file (FILE *handle);
 

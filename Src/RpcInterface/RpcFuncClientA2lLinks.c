@@ -561,7 +561,7 @@ CFUNC SCRPCDLL_API int __STDCALL__ XilEnv_GetLinkArrayValueDimension(XILENV_LINK
     if (d == NULL) return -1;
     Array = GetArray(d, ArrayNo);
     if (Array == NULL) return -1;
-    if ((DimNo < 0) && (DimNo >= Array->DimensionCount)) return -1;
+    if ((DimNo < 0) || (DimNo >= Array->DimensionCount)) return -1;
     return Array->DimensionOrOffsets[DimNo];
 }
 

@@ -61,6 +61,7 @@ private:
     int m_ScriptErrorMessageRowAllocated;
     int m_ScriptErrorMessageRowCount;
 
+    QPixmap *m_StopPixmap;
     QPixmap *m_ErrorPixmap;
     QPixmap *m_InfoPixmap;
     QPixmap *m_WarningPixmap;

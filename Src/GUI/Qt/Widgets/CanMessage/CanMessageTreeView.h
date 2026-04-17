@@ -41,6 +41,8 @@ private:
 
     QAction *m_ConfigDialogAct;
     QAction *m_ClearAct;
+    QAction *m_StartRecAct;
+    QAction *m_StopRecAct;
 
     CANMessageWindowWidget *m_CANMessageWindowWidget;
 

@@ -369,7 +369,7 @@ int OscilloscopeDesc::ValueToString (int Pos,
                 }
             }
             if (dec_phys_flag || (Type == BB_FLOAT) || (Type == BB_DOUBLE)) {
-                PrintFormatToString (String, sizeof(String), "%s %*.*lf", Prefix,
+                PrintFormatToString (String, maxc, "%s %*.*lf", Prefix,
                          get_bbvari_format_width (Vid),
                          get_bbvari_format_prec (Vid),
                          Value);

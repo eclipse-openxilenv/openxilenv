@@ -34,6 +34,8 @@ extern "C" {
 #include "ScriptMessageFile.h"
 }
 
+#include "Parser.h"
+
 #define UNUSED(x) (void)(x)
 
 ScriptErrorModel::ScriptErrorModel(QObject *parent)
@@ -42,7 +44,7 @@ ScriptErrorModel::ScriptErrorModel(QObject *parent)
     m_ScriptErrorMessageRowCount = 0;
     m_ScriptErrorMessageRowAllocated = 0;
     m_ScriptErrorMessageLines = nullptr;
-
+    m_StopPixmap = new QPixmap (":/Icons/stop.png");
     m_ErrorPixmap = new QPixmap (":/Icons/ext_err_error.png");
     m_InfoPixmap = new QPixmap (":/Icons/ext_err_info.png");
     m_WarningPixmap = new QPixmap (":/Icons/ext_err_warning.png");
@@ -53,6 +55,7 @@ ScriptErrorModel::~ScriptErrorModel()
 {
     // Speicher frei geben
     Clear();
+    delete m_StopPixmap;
     delete m_ErrorPixmap;
     delete m_InfoPixmap;
     delete m_WarningPixmap;
@@ -102,12 +105,15 @@ QVariant ScriptErrorModel::data(const QModelIndex &index, int role) const
     } else if (role == Qt::DecorationRole) {
         if (Column == 0) {
             switch (m_ScriptErrorMessageLines[Row].Level) {
-            case 0:
+            case SCRIPT_PARSER_MESSAGE:
+            case SCRIPT_PARSER_NO_ERROR:
                 return QVariant(*m_InfoPixmap);
-            case 1:
+            case SCRIPT_PARSER_WARNING:
                 return QVariant(*m_WarningPixmap);
-            case 2:
+            case SCRIPT_PARSER_ERROR_CONTINUE:
                 return QVariant(*m_ErrorPixmap);
+            case SCRIPT_PARSER_FATAL_ERROR:
+                return QVariant(*m_StopPixmap);
             default:
                 return QVariant(*m_UnknownPixmap);
             }

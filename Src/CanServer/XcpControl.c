@@ -1527,7 +1527,7 @@ static void StartMeasurement_CommandScheduer (XCP_CONNECTTION *pCon, int Connect
         break;
 
     case XCP_BUILD_DTOS:
-        if (BuildDTOs (&pCon->dto_conf, pCon->CcpMeasurementLabelListSize, pCon->CcpMeasurementLabelList, 255, Connection,
+        if (BuildDTOs (&pCon->dto_conf, pCon->CcpMeasurementLabelListSize, pCon->CcpMeasurementLabelList, CCP_MAX_DTO_PACKAGES, Connection,
                        pCon->XcpConfig.UseUnitFlag, pCon->XcpConfig.UseConvFlag, pCon->XcpConfig.UseMinMaxFlag)) {
             pCon->XcpCommand = 0;
             pCon->XcpCommandSequence = 0;

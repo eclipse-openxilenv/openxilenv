@@ -18,13 +18,14 @@
 #include "ScriptErrorDialog.h"
 #include "ScriptErrorMsgDlg.h"
 
-void cScriptErrorMsgDlg::ScriptErrorMsgDlgAddMsg (int par_LineNr, const char *par_Filename, const char *par_Msg)
+void cScriptErrorMsgDlg::ScriptErrorMsgDlgAddMsg (int par_LineNr, const char *par_Filename,
+                                                 int par_Level, const char *par_Msg)
 {
-    ScriptErrorDialog::ScriptErrorMsgDlgAddMsgFromOtherThread (0, par_LineNr, par_Filename, par_Msg);
+    ScriptErrorDialog::ScriptErrorMsgDlgAddMsgFromOtherThread (par_Level, par_LineNr, par_Filename, par_Msg);
 }
 
 void cScriptErrorMsgDlg::ScriptErrorMsgDlgReset (void)
 {
-    ScriptErrorMsgDlgAddMsg (-1, nullptr, nullptr);
+    ScriptErrorMsgDlgAddMsg (-1, nullptr, 0, nullptr);
 }
 

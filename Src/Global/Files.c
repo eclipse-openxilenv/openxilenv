@@ -407,12 +407,12 @@ int StringCommaSeparate (char *str, ...)
     return counter;
 }
 
-FILE *OpenFile4WriteWithPrefix (char *name, char *flags)
+FILE *OpenFile4WriteWithPrefix (const char *name, const char *flags)
 {
      char txt[512];
      char txt2[512];
      FILE *file;
-     char *p;
+     const char *p;
      int qpos = -1;
      int qsize = -1;
      int max_count;
@@ -441,7 +441,7 @@ FILE *OpenFile4WriteWithPrefix (char *name, char *flags)
              max_count *= 10;
          }
          for (x = 0; x < max_count; x++) {
-             StringCopyMaxCharTruncate(txt, name, (size_t)qpos);      // File name till the first '?'
+             StringCopyMaxCharTruncate(txt, name, (size_t)(qpos + 1));      // File name till the first '?'
              PrintFormatToString (&(txt[qpos]), sizeof(txt) - qpos, "%0*i", qsize, x);
              StringCopyMaxCharTruncate (&(txt[qpos+qsize]), &(name[qpos+qsize]), sizeof(txt) - (qpos+qsize));
              SearchAndReplaceEnvironmentStrings (txt, txt2, sizeof (txt2));

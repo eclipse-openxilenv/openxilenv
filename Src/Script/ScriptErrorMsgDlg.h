@@ -23,7 +23,8 @@
 
 class cScriptErrorMsgDlg {
    public:
-    static void ScriptErrorMsgDlgAddMsg (int par_LineNr, const char *par_Filename, const char *par_Msg);
+    static void ScriptErrorMsgDlgAddMsg (int par_LineNr, const char *par_Filename,
+                                         int par_Level, const char *par_Msg);
     static void ScriptErrorMsgDlgReset (void);
 
 };

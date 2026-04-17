@@ -112,7 +112,7 @@ int cParser::Error (int Level, const char * const FormatStr, ...)
     if (SyntaxOrRunningFlag == 0) { // Only if syntax check is active write to script.err file
         AddScriptError (MessageBuffer, ERR_COUNTER);
     }
-    cScriptErrorMsgDlg::ScriptErrorMsgDlgAddMsg  (LineNr, Filename, MessageBuffer);
+    cScriptErrorMsgDlg::ScriptErrorMsgDlgAddMsg  (LineNr, Filename, Level, MessageBuffer);
     my_free(MessageBuffer);
     return 0;
 }
@@ -276,7 +276,9 @@ int cParser::SyntaxCheck (char *par_Filename)
             }
         }
     }
-    
+    // check all GOTO/GOSUB labels inside the "main" procedure
+    CheckIfAllGotosResovedInCurrentProc();
+
     return ErrorCounter;
 }
 

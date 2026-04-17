@@ -20,11 +20,14 @@
 
 #include "tcb.h"
 
+NEW_CAN_SERVER_CONFIG *GetACopyOfTheCurrentCanConfig(void);
+
 int SendCanObjectForOtherProcesses (int Channel, unsigned int Id, int Ext, int Size, unsigned char *Data);
 int Mixed11And29BitIdsAllowed (int Channel);
 uint32_t GetCanServerCycleTime_ms(void);
 
-void DecodeJ1939RxMultiPackageFrame(NEW_CAN_SERVER_CONFIG *csc, int Channel, int ObjectPos);
+void DecodeJ1939RxMultiPackageFrame(NEW_CAN_SERVER_CONFIG *csc, int Channel, int ObjectPos, uint64_t TimeStamp);
+void HaveTransmittedJ1939TxMultiPackageFrame(NEW_CAN_SERVER_CONFIG *csc, int Channel, int ObjectPos, uint64_t Timestamp);
 
 
 extern TASK_CONTROL_BLOCK new_canserv_tcb;

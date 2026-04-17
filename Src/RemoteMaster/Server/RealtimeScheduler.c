@@ -863,6 +863,11 @@ uint64_t get_timestamp_counter(void)
     return  (uint64_t)(Schedulers[0].SimulatedTimeSinceStartedInNanoSecond);
 }
 
+uint64_t GetSimulatedTimeSinceStartedInNanoSecond (void)
+{
+    return Schedulers[0].SimulatedTimeSinceStartedInNanoSecond;
+}
+
 uint64_t get_rt_cycle_counter(void)
 {
     return Schedulers[0].CycleCounter;

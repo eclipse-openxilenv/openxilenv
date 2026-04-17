@@ -143,6 +143,13 @@ typedef struct {
 #define THREAD_PRIORITY_ABOVE_NORMAL    1
 #define THREAD_PRIORITY_HIGHEST         2
 
+#define NORMAL_PRIORITY_CLASS           0
+#define REALTIME_PRIORITY_CLASS        15
+#define HIGH_PRIORITY_CLASS             3
+#define ABOVE_NORMAL_PRIORITY_CLASS     2
+#define BELOW_NORMAL_PRIORITY_CLASS    -1
+#define IDLE_PRIORITY_CLASS           -15
+
 #define GetCurrentThreadId() ((DWORD)syscall(__NR_gettid))
 
 #define _isnan(v) isnan(v)

@@ -57,7 +57,7 @@
 #define INC_CCP        1
 
 #ifdef BUILD_WITH_J1939_SUPPORT
-#include "J1939_21_MultiPackage.h"
+#include "J1939MultiPackage.h"
 #endif
 
 static int can_init_flag = 0;
@@ -111,7 +111,7 @@ static int SendCANCardInfosToProcess (int SendToPid)
     return Ret;
 }
 #else
-#define get_rt_cycle_counter() (blackboard_infos.ActualCycleNumber)
+#define get_rt_cycle_counter() GetCycleCounter64() //(blackboard_infos.ActualCycleNumber)
 #endif
 
 
@@ -137,12 +137,6 @@ int new_canserv_init (void)
     }
     if (sizeof (NEW_CAN_SERVER_SIGNAL) != 128) {
         ThrowError (1, "sizeof (NEW_CAN_SERVER_SIGNAL) = %i != 128", sizeof (NEW_CAN_SERVER_SIGNAL));
-    }
-    if (sizeof (sJ1939Tp_MP_RxChannel) != 64) {
-        ThrowError (1, "sizeof (sJ1939Tp_MP_RxChannel) = %i != 64", sizeof (sJ1939Tp_MP_RxChannel));
-    }
-    if (sizeof (sJ1939Tp_MP_TxChannel) != 64) {
-        ThrowError (1, "sizeof (sJ1939Tp_MP_TxChannel) = %i != 64", sizeof (sJ1939Tp_MP_TxChannel));
     }
     if (sizeof (CanServerConfig->channels[0]) != 8192) {
         ThrowError (1, "sizeof (CanServerConfig->channels[0]) = %i != 8192", sizeof (CanServerConfig->channels[0]));
@@ -370,7 +364,7 @@ static __inline uint64_t GetValue (NEW_CAN_SERVER_OBJECT *po,
         Ret = *(uint64_t *)(void*)(po->Data + PosByte) >> PosBit;
         Ret |= ((uint64_t)po->Data[PosByte + 8] << (8 - PosBit)) << 56;
    }
-    return Ret &= ps->mask;
+    return Ret & ps->mask;
 }
 
 
@@ -426,7 +420,7 @@ static __inline int32_t GetMuxValue (NEW_CAN_SERVER_OBJECT *po,
         Ret = *(uint32_t *)(void*)(po->Data + PosByte) >> PosBit;
         Ret |= ((uint32_t)po->Data[PosByte + 4] << (8 - PosBit)) << 24;
    }
-    return (int32_t)(Ret &= ps->mux_mask);
+    return (int32_t)(Ret & ps->mux_mask);
 }
 
 // Remark Data and OldData arrays must be +-3 Bytes larger as needed!
@@ -480,8 +474,8 @@ static __inline uint32_t GetMuxObjValue (NEW_CAN_SERVER_OBJECT *po, unsigned cha
         PosByte = (uint32_t)(po->Protocol.Mux.BitPos >> 3);
         Ret = *(uint32_t*)(void*)(Data + PosByte) >> PosBit;
         Ret |= ((uint32_t)Data[PosByte + 4] << (8 - PosBit)) << 24;
-   }
-    return Ret &= po->Protocol.Mux.Mask;
+    }
+    return Ret & po->Protocol.Mux.Mask;
 }
 
 
@@ -945,7 +939,7 @@ static void attach_one_bbvari_equation (NEW_CAN_SERVER_CONFIG *csc, int c, int o
 }
 #endif
 
-#if defined BUILD_WITH_J1939_SUPPORT
+#ifdef BUILD_WITH_J1939_SUPPORT
 static int config_all_j1939_messages (NEW_CAN_SERVER_CONFIG *csc)
 {
     int c, o, o_pos;
@@ -956,7 +950,6 @@ static int config_all_j1939_messages (NEW_CAN_SERVER_CONFIG *csc)
             if (csc->objects[o_pos].type == J1939_OBJECT) {
                 if (csc->channels[c].j1939_flag) {
                     //ThrowError (1, "J1939ConfigMessage ()");
-#ifdef BUILD_WITH_J1939_SUPPORT
                     if (csc->channels[c].j1939_rx_object_count < J1939TP_MP_MAX_OBJECTS) {
                         csc->channels[c].j1939_rx_objects[csc->channels[c].j1939_rx_object_count] = o_pos;
                         csc->channels[c].j1939_rx_object_count++;
@@ -964,7 +957,6 @@ static int config_all_j1939_messages (NEW_CAN_SERVER_CONFIG *csc)
                         ThrowError (1, "not more than %i CAN j1939 objects allowed on channel %i\n"
                                "Id = 0x%X will be ignored", J1939TP_MP_MAX_OBJECTS, c, csc->objects[o_pos].id);
                     }
-#endif
                 }
             }
         }
@@ -983,7 +975,7 @@ static int attach_all_bbvaris_and_equations (NEW_CAN_SERVER_CONFIG *csc)
         for (o = 0; o < csc->channels[c].object_count; o++) {
             o_pos = csc->channels[c].objects[o];
             attach_bbvari (csc->objects[o_pos].vid);
-#if defined BUILD_WITH_J1939_SUPPORT
+#ifdef BUILD_WITH_J1939_SUPPORT
             if (csc->objects[o_pos].type == J1939_OBJECT) {
                 if (!csc->channels[c].j1939_flag) {
                     ThrowError(1, "the global J1939 flag is not set for that reason there are no J1939 objects allowed (will be ignored)");
@@ -1386,6 +1378,7 @@ static int CanServerSelectCanCard (void)
 #endif
         CheckCanFdAllowedOnChannel(c);
     }
+    SetupCanTxFiFos(CanServerConfig);
     return 0;
 }
 
@@ -1398,11 +1391,6 @@ static void CanServerOpenCan (void)
     if (alloc_all_data_blocks (CanServerConfig)) {
         can_init_flag = CANSERVER_NOT_INIT;
     } else {
-#ifdef BUILD_WITH_J1939_SUPPORT
-        //ThrowError (1, "GetCanServerCycleTime_ms() = %i, get_sched_periode_timer_clocks() = %i", GetCanServerCycleTime_ms(), get_sched_periode_timer_clocks());
-        NewJ1939Config (CanServerConfig, GetCanServerCycleTime_ms () * (get_sched_periode_timer_clocks() / 1000));
-        config_all_j1939_messages (CanServerConfig);
-#endif
 
 #ifdef REMOTE_MASTER
         attach_all_bbvaris_and_equations (CanServerConfig);
@@ -1489,6 +1477,7 @@ static __inline int BasicCANMessageFilter (uint32_t IdIn,
     }
 }
 
+uint64_t CurrentCycleCounter;
 
 static void CanServerCyclic (void)
 {
@@ -1502,6 +1491,7 @@ static void CanServerCyclic (void)
     NEW_CAN_SERVER_OBJECT *po, *pmo;
     int32_t mux_value;
 
+    CurrentCycleCounter = get_rt_cycle_counter();
     if (CanBitError.Command) {   // Simulate an bit error inside a CAN object.
         uint64_t Cycle = GetCycleCounter64();
         if (CycleAtStartPoint + CanBitError.Counter > Cycle) {
@@ -1627,15 +1617,13 @@ static void CanServerCyclic (void)
 #ifdef INC_CCP
                 if (GlobalXcpCcpActiveFlag) CppCanMessageFilter (CanServerConfig, c, id, data, size);
 #endif
-#if defined BUILD_WITH_J1939_SUPPORT
+#ifdef BUILD_WITH_J1939_SUPPORT
                 if (CanServerConfig->channels[c].j1939_flag) {
-                    if (NewJ1939CanMessageFilter (CanServerConfig, c, id, data, size) == IS_J1939_SIGNLE_FRAME_MESSAGE_RET) {
-                        // nothing todo all happens inside NewJ1939CanMessageFilter
-                    }
+                    J1939MultiPackageCanMessageFilter(CanServerConfig, c, id, data, size, TimeStamp);
                 }
 #endif
             }
-            if ((o_pos = BasicCANMessageFilter (id, CanServerConfig->channels[c].hash_rx)) >= 0) {
+            if ((o_pos = BasicCANMessageFilter (((uint32_t)ext << 31) | id, CanServerConfig->channels[c].hash_rx)) >= 0) {
                 size_t size_checked;
                 po = &CanServerConfig->objects[o_pos];
                 cc = read_bbvari_udword (po->vid);
@@ -1705,12 +1693,13 @@ static void CanServerCyclic (void)
                     case J1939_22_C_PG:
                     case J1939_22_MULTI_C_PG:
                     case NORMAL_OBJECT:   // No MUX object
+HANDLE_J1939_AS_NORMAL_OBJECT:
                         if (!po->EventOrCyclic) {   // Cyclic
                             if (ObjectShouldBeSend (po)) {
                                 if (Blackboard2Object (CanServerConfig, c, o_pos) == 0) {
                                     if (po->type != J1939_22_C_PG) {
                                         CanServerConfig->channels[c].write_can (CanServerConfig, c, o_pos);
-                                        WriteCanMessageFromBus2Fifos (c, po->id, po->DataPtr, (unsigned char)po->ext, (unsigned char)po->size, 1, get_rt_cycle_counter());
+                                        WriteCanMessageFromBus2Fifos (c, po->id, po->DataPtr, (unsigned char)po->ext, (unsigned char)po->size, 1, CurrentCycleCounter);
                                     } else {
                                         po->flag = 1;
                                     }
@@ -1726,7 +1715,7 @@ static void CanServerCyclic (void)
                                 if (Blackboard2Object (CanServerConfig, c, o_pos) == 0) {
                                     if (po->type != J1939_22_C_PG) {
                                         CanServerConfig->channels[c].write_can (CanServerConfig, c, o_pos);
-                                        WriteCanMessageFromBus2Fifos (c, po->id, po->DataPtr, (unsigned char)po->ext, (unsigned char)po->size, 1, get_rt_cycle_counter());
+                                        WriteCanMessageFromBus2Fifos (c, po->id, po->DataPtr, (unsigned char)po->ext, (unsigned char)po->size, 1, CurrentCycleCounter);
                                     } else {
                                         po->flag = 1;
                                     }
@@ -1742,7 +1731,7 @@ static void CanServerCyclic (void)
                                 if (to_bool_FloatOrInt64(value, type)) {
                                     if (po->type != J1939_22_C_PG) {
                                         CanServerConfig->channels[c].write_can (CanServerConfig, c, o_pos);
-                                        WriteCanMessageFromBus2Fifos (c, po->id, po->DataPtr, (unsigned char)po->ext, (unsigned char)po->size, 1, get_rt_cycle_counter());
+                                        WriteCanMessageFromBus2Fifos (c, po->id, po->DataPtr, (unsigned char)po->ext, (unsigned char)po->size, 1, CurrentCycleCounter);
                                     } else {
                                         po->flag = 1;
                                     }
@@ -1756,25 +1745,16 @@ static void CanServerCyclic (void)
                         if (po->Protocol.Mux.master == -1) {      // Master MUX object
                             s_o_pos = po->Protocol.Mux.token;
                             pmo = &CanServerConfig->objects[s_o_pos];
-                            if (ObjectShouldBeSend (pmo)) {
-                                if (Blackboard2Object (CanServerConfig, c, s_o_pos) == 0) {
-                                    MEMCPY (po->Data, pmo->Data, (size_t)po->size);
-                                    MEMCPY (po->OldData, po->Data, (size_t)po->size);
-                                    CanServerConfig->channels[c].write_can (CanServerConfig, c, o_pos);
-                                    WriteCanMessageFromBus2Fifos (c, po->id, po->DataPtr, (unsigned char)po->ext, (unsigned char)po->size, 1, get_rt_cycle_counter());
-                                    po->Protocol.Mux.token = pmo->Protocol.Mux.next;  // switch to next MUX object
-                                }
-                                ObjectAreSended(pmo);
-                            }
-                        }
-                        break;
-                    case J1939_OBJECT:
-#if defined BUILD_WITH_J1939_SUPPORT
-                        if (po->Protocol.J1939.status != SC_J1939_STATUS_PENDING) {
-                            int do_call_J1939Transmit = 0;
                             if (!po->EventOrCyclic) {   // Cyclic
                                 if (ObjectShouldBeSend (po)) {
-                                    if (Blackboard2Object (CanServerConfig, c, o_pos) == 0) { do_call_J1939Transmit = 1; }
+                                    if (Blackboard2Object (CanServerConfig, c, s_o_pos) == 0) {
+                                        MEMCPY (po->Data, pmo->Data, (size_t)po->size);
+                                        MEMCPY (po->OldData, po->Data, (size_t)po->size);
+                                        CanServerConfig->channels[c].write_can (CanServerConfig, c, o_pos);
+                                        WriteCanMessageFromBus2Fifos (c, po->id, po->DataPtr, (unsigned char)po->ext, (unsigned char)po->size, 1, CurrentCycleCounter);
+                                        po->Protocol.Mux.token = pmo->Protocol.Mux.next;  // switch to next MUX object
+                                    }
+                                    ObjectAreSended(po);
                                 }
                             } else if (po->EventOrCyclic == 1) {
                                 union FloatOrInt64 value;
@@ -1782,16 +1762,72 @@ static void CanServerCyclic (void)
                                 int type = FLOAT_OR_INT_64_TYPE_F64;
                                 type = execute_stack_whith_can_parameter ((struct EXEC_STACK_ELEM *)GET_CAN_EVENT_BYTECODE(CanServerConfig, o_pos), value, type, po, &value);
                                 if (to_bool_FloatOrInt64(value, type)) {
-                                    if (Blackboard2Object (CanServerConfig, c, o_pos) == 0) { do_call_J1939Transmit = 1; }
+                                    if (Blackboard2Object (CanServerConfig, c, s_o_pos) == 0) {
+                                        MEMCPY (po->Data, pmo->Data, (size_t)po->size);
+                                        MEMCPY (po->OldData, po->Data, (size_t)po->size);
+                                        CanServerConfig->channels[c].write_can (CanServerConfig, c, o_pos);
+                                        WriteCanMessageFromBus2Fifos (c, po->id, po->DataPtr, (unsigned char)po->ext, (unsigned char)po->size, 1, CurrentCycleCounter);
+                                        po->Protocol.Mux.token = pmo->Protocol.Mux.next;  // switch to next MUX object
+                                    }
+                                    ObjectAreSended(pmo);
                                 }
-                            } else {   // == 2
+                            } else {   // == 2:  Event uses CAN data
                                 union FloatOrInt64 value;
                                 value.d = 0.0;
                                 int type = FLOAT_OR_INT_64_TYPE_F64;
-                                if (Blackboard2Object (CanServerConfig, c, o_pos) == 0) {
+                                if (Blackboard2Object (CanServerConfig, c, s_o_pos) == 0) {
                                     type = execute_stack_whith_can_parameter ((struct EXEC_STACK_ELEM *)GET_CAN_EVENT_BYTECODE(CanServerConfig, o_pos), value, type, po, &value);
-                                    if (to_bool_FloatOrInt64(value, type)) { do_call_J1939Transmit = 1; }
+                                    if (to_bool_FloatOrInt64(value, type)) {
+                                        MEMCPY (po->Data, pmo->Data, (size_t)po->size);
+                                        MEMCPY (po->OldData, po->Data, (size_t)po->size);
+                                        CanServerConfig->channels[c].write_can (CanServerConfig, c, o_pos);
+                                        WriteCanMessageFromBus2Fifos (c, po->id, po->DataPtr, (unsigned char)po->ext, (unsigned char)po->size, 1, CurrentCycleCounter);
+                                        po->Protocol.Mux.token = pmo->Protocol.Mux.next;  // switch to next MUX object
+                                        ObjectAreSended(pmo);
+                                    }
                                     MEMCPY (po->OldData, po->Data, (size_t)po->size);
+                                }
+                            }
+                        }
+                        break;
+                    case J1939_OBJECT:
+                        if (po->size <= 8) {
+                            goto HANDLE_J1939_AS_NORMAL_OBJECT;
+                        } else {
+#if defined BUILD_WITH_J1939_SUPPORT
+                            int do_call_J1939Transmit = 0;
+                            if (po->Protocol.J1939.status == J1939_MULTI_PACKAGE_WAIT_FOR_RESOURCE) {
+                                do_call_J1939Transmit = 1;
+                            } else {
+                                if (po->Protocol.J1939.status == J1939_MULTI_PACKAGE_IDLE) {
+                                    if (!po->EventOrCyclic) {   // Cyclic
+                                        if (ObjectShouldBeSend (po)) {
+                                            if (Blackboard2Object (CanServerConfig, c, o_pos) == 0) {
+                                                do_call_J1939Transmit = 1;
+                                            }
+                                        }
+                                    } else if (po->EventOrCyclic == 1) {
+                                        union FloatOrInt64 value;
+                                        value.d = 0.0;
+                                        int type = FLOAT_OR_INT_64_TYPE_F64;
+                                        type = execute_stack_whith_can_parameter ((struct EXEC_STACK_ELEM *)GET_CAN_EVENT_BYTECODE(CanServerConfig, o_pos), value, type, po, &value);
+                                        if (to_bool_FloatOrInt64(value, type)) {
+                                            if (Blackboard2Object (CanServerConfig, c, o_pos) == 0) {
+                                                do_call_J1939Transmit = 1;
+                                            }
+                                        }
+                                    } else {   // == 2
+                                        union FloatOrInt64 value;
+                                        value.d = 0.0;
+                                        int type = FLOAT_OR_INT_64_TYPE_F64;
+                                        if (Blackboard2Object (CanServerConfig, c, o_pos) == 0) {
+                                            type = execute_stack_whith_can_parameter ((struct EXEC_STACK_ELEM *)GET_CAN_EVENT_BYTECODE(CanServerConfig, o_pos), value, type, po, &value);
+                                            if (to_bool_FloatOrInt64(value, type)) {
+                                                do_call_J1939Transmit = 1;
+                                            }
+                                            MEMCPY (po->OldData, po->Data, (size_t)po->size);
+                                        }
+                                    }
                                 }
                             }
                             if (do_call_J1939Transmit != 0) { // It should be transmit
@@ -1799,29 +1835,47 @@ static void CanServerCyclic (void)
                                 unsigned short da;
                                 if (po->Protocol.J1939.vid_dlc > 0) {
                                     dlc = read_bbvari_uword(po->Protocol.J1939.vid_dlc);
-                                    if (dlc > po->size) { dlc = (unsigned short)po->size; } // check max.
+                                    if (dlc > po->size) {   // check max. (size of the object is the max. size if a signal is configured)
+                                        dlc = (unsigned short)po->size;
+                                    }
                                 } else {
                                     dlc = (unsigned short)po->size;
                                 }
+                                po->Protocol.J1939.size = dlc;
                                 if (po->Protocol.J1939.dst_addr_vid > 0) {
-                                    da = read_bbvari_ubyte(po->Protocol.J1939.dst_addr_vid);
-                                } else {
-                                    da = po->Protocol.J1939.dst_addr;
+                                    po->Protocol.J1939.dst_addr = read_bbvari_ubyte(po->Protocol.J1939.dst_addr_vid);
                                 }
                                 //ThrowError (1, "J1939Transmit");
-#ifdef BUILD_WITH_J1939_SUPPORT
-                                NewJ1939Transmit (CanServerConfig, c, (short)o_pos, dlc, (unsigned char)da);
-#endif
+                                switch (J1939MultiPackageCanTransmit (CanServerConfig, c, o_pos)) {
+                                case 0:
+                                case -1:   // Message is in transmiting state
+                                default:
+                                    break;
+                                case -2:   // Resource not free wait till it is free
+                                    // wait till the recource became free
+                                    po->Protocol.J1939.status = J1939_MULTI_PACKAGE_WAIT_FOR_RESOURCE;
+                                    break;
+                                }
                                 po->should_be_send = 0;  // do not call ObjectAreSended(po);
                             }
-                        }
 #endif
+                        }
                         break;
                     }
                 }
             }
+#ifdef BUILD_WITH_J1939_SUPPORT
+            if (CanServerConfig->channels[c].j1939_flag) {
+                J1939CheckAllTimeOuts (CanServerConfig, c);
+            }
+#endif
+        } else {
+#ifdef BUILD_WITH_J1939_SUPPORT
+            if (CanServerConfig->channels[c].j1939_flag) {
+                J1939ClearAllTimeOuts (CanServerConfig, c);
+            }
+#endif
         }
-
         // polling the FIFOs
         WriteCanMessageFromFifo2Can (CanServerConfig, c);
 
@@ -1849,7 +1903,7 @@ static void CanServerStop (void)
         CanServerConfig->channels[c].close_can (CanServerConfig, c);
     }
 #ifdef BUILD_WITH_J1939_SUPPORT
-    NewJ1939Stop ();
+    //NewJ1939Stop ();
 #endif
     remove_additional_bbvaris (CanServerConfig);
     free_all_data_blocks (CanServerConfig);
@@ -1899,7 +1953,8 @@ void new_canserv_cyclic (void)
 
     case CANSERVER_CYCLIC:
         CanServerCyclic ();
-#ifdef BUILD_WITH_J1939_SUPPORT
+//#ifdef BUILD_WITH_J1939_SUPPORT
+#if 0
         if (CanServerConfig->j1939_flag) {
             int c;
             for (c = 0; c < CanServerConfig->channel_count; c++) {
@@ -1943,55 +1998,54 @@ int SendCanObjectForOtherProcesses (int Channel, unsigned int Id, int Ext, int S
             if ((CanBitError.Command != 0) &&   // Simulate an bit error inside a CAN object.
                  (CanBitError.Channel == Channel) &&
                  ((uint32_t)CanBitError.Id == Id)) {
-                int SizeChecked;
+                int SizeChecked = Size;
                 uint8_t DataCopy[CAN_BIT_ERROR_MAX_SIZE];
                 switch (CanBitError.Command) {
                 case OVERWRITE_DATA_BYTES:
-                SizeChecked = Size;
-                if (SizeChecked > CAN_BIT_ERROR_MAX_SIZE) SizeChecked = CAN_BIT_ERROR_MAX_SIZE;
-                for (int x = 0; x < SizeChecked; x++) {
-                    DataCopy[x] = Data[x] & CanBitError.AndMask[x];
-                    DataCopy[x] |= CanBitError.OrMask[x];
-                }
-                if (CanBitError.ByteOrder) {
+                    if (SizeChecked > CAN_BIT_ERROR_MAX_SIZE) SizeChecked = CAN_BIT_ERROR_MAX_SIZE;
                     for (int x = 0; x < SizeChecked; x++) {
-                        int xx = (SizeChecked - 1) - x;
-                        uint8_t LocalData = Data[x];
-                        LocalData &= CanBitError.AndMask[xx];
-                        LocalData |= CanBitError.OrMask[xx];
-                        DataCopy[x] = LocalData;
+                        DataCopy[x] = Data[x] & CanBitError.AndMask[x];
+                        DataCopy[x] |= CanBitError.OrMask[x];
                     }
-                } else {
-                    for (int x = 0; x < SizeChecked; x++) {
-                        uint8_t LocalData =  Data[x];
-                        LocalData &= CanBitError.AndMask[x];
-                        LocalData |= CanBitError.OrMask[x];
-                        DataCopy[x] = LocalData;
+                    if (CanBitError.ByteOrder) {
+                        for (int x = 0; x < SizeChecked; x++) {
+                            int xx = (SizeChecked - 1) - x;
+                            uint8_t LocalData = Data[x];
+                            LocalData &= CanBitError.AndMask[xx];
+                            LocalData |= CanBitError.OrMask[xx];
+                            DataCopy[x] = LocalData;
+                        }
+                    } else {
+                        for (int x = 0; x < SizeChecked; x++) {
+                            uint8_t LocalData =  Data[x];
+                            LocalData &= CanBitError.AndMask[x];
+                            LocalData |= CanBitError.OrMask[x];
+                            DataCopy[x] = LocalData;
+                        }
                     }
-                }
-                break;
+                    break;
                 case CHANGE_DATA_LENGTH:
-                SizeChecked = CanBitError.Size;
-                for (int x = 0; x < SizeChecked; x++) {
-                    DataCopy[x] = Data[x];
-                }
-                break;
+                    SizeChecked = CanBitError.Size;
+                    for (int x = 0; x < SizeChecked; x++) {
+                        DataCopy[x] = Data[x];
+                    }
+                    break;
                 case SUSPEND_TRANSMITION:
-                Channel = -1;    // This Object should not be transmitted
-                break;
-                default:
-                break;
+                    Channel = -1;    // This Object should not be transmitted
+                    break;
+                    default:
+                    break;
                 }
                 if (Channel >= 0) {
-                int Status = CanServerConfig->channels[Channel].queue_write_can (CanServerConfig, Channel, Id, DataCopy, (unsigned char)Ext, (unsigned char)SizeChecked);
-                WriteCanMessageFromBus2Fifos (Channel, Id, DataCopy, (unsigned char)Ext, (unsigned char)SizeChecked, 1, get_rt_cycle_counter());
-                return Status;
+                    int Status = CanServerConfig->channels[Channel].queue_write_can (CanServerConfig, Channel, Id, DataCopy, (unsigned char)Ext, (unsigned char)SizeChecked);
+                    WriteCanMessageFromBus2Fifos (Channel, Id, DataCopy, (unsigned char)Ext, (unsigned char)SizeChecked, 1, CurrentCycleCounter);
+                    return Status;
                 } else {
-                return 0; // This Object should not be transmitted
+                    return 0; // This Object should not be transmitted
                 }
             } else {
                 int Status = CanServerConfig->channels[Channel].queue_write_can (CanServerConfig, Channel, Id, Data, (unsigned char)Ext, (unsigned char)Size);
-                WriteCanMessageFromBus2Fifos (Channel, Id, Data, (unsigned char)Ext, (unsigned char)Size, 1, get_rt_cycle_counter());
+                WriteCanMessageFromBus2Fifos (Channel, Id, Data, (unsigned char)Ext, (unsigned char)Size, 1, CurrentCycleCounter);
                 return Status;
             }
         }
@@ -2030,7 +2084,7 @@ int Mixed11And29BitIdsAllowed (int Channel)
     return Ret;
 }
 
-void DecodeJ1939RxMultiPackageFrame(NEW_CAN_SERVER_CONFIG *csc, int Channel, int ObjectPos)
+void DecodeJ1939RxMultiPackageFrame(NEW_CAN_SERVER_CONFIG *csc, int Channel, int ObjectPos, uint64_t TimeStamp)
 {
     NEW_CAN_SERVER_OBJECT *po;
     uint32_t cc;
@@ -2043,4 +2097,12 @@ void DecodeJ1939RxMultiPackageFrame(NEW_CAN_SERVER_CONFIG *csc, int Channel, int
         write_bbvari_uword (po->Protocol.J1939.vid_dlc, (uint16_t)po->Protocol.J1939.ret_dlc);
     }
     Object2Blackboard (csc, Channel, ObjectPos, po->Protocol.J1939.ret_dlc);
+    WriteCanMessageFromBus2Fifos(Channel, po->id, po->DataPtr, 0x10, po->Protocol.J1939.size , 0, TimeStamp);
+}
+
+void HaveTransmittedJ1939TxMultiPackageFrame(NEW_CAN_SERVER_CONFIG *csc, int Channel, int ObjectPos, uint64_t Timestamp)
+{
+    NEW_CAN_SERVER_OBJECT *po;
+    po = &csc->objects[ObjectPos];
+    WriteCanMessageFromBus2Fifos(Channel, po->id, po->DataPtr, 0x10, po->Protocol.J1939.size , 1, CurrentCycleCounter);
 }
