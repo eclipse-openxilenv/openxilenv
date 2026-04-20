@@ -57,7 +57,7 @@ int cWaitUntilCmd::SyntaxCheck (cParser *par_Parser)
             FileOffset = par_Parser->GetCurrentScriptFile ()->Ftell (&LineNr);
             if (par_Parser->GetNumNoneSolvedEnvVars (3) || par_Parser->GetNumSolvedEnvVars (3)) {
                 // GOTO with unsolved environment variables will throw a warning
-                if (par_Parser->GetNumNoneSolvedEnvVars (0)) {
+                if (par_Parser->GetNumNoneSolvedEnvVars (3)) {
                     par_Parser->Error (SCRIPT_PARSER_WARNING, "WAIT_UNTIL with GOTO \"%s\" which includes an unknown environment variable at compile time, try to resolve it at run time", par_Parser->GetParameter (3));
                 }
                 Idx = par_Parser->AddGoto (nullptr, par_Parser->GetCurrentIp (),

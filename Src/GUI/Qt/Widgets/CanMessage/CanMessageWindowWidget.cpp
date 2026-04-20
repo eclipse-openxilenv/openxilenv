@@ -318,12 +318,11 @@ void CANMessageWindowWidget::FitNewColumnsToHeader()
 
 void CANMessageWindowWidget::SwitchColumnsOnOff()
 {
-    m_TreeView->setColumnHidden(CANMessageWindowModel::COLUMN_TYPE_NAME, !m_DecodeFlag);
     m_TreeView->setColumnHidden(CANMessageWindowModel::COLUMN_TYPE_COUNT, !m_DisplayColumnCounterFlag);
     m_TreeView->setColumnHidden(CANMessageWindowModel::COLUMN_TYPE_TIME, !m_DisplayColumnTimeAbsoluteFlag);
     m_TreeView->setColumnHidden(CANMessageWindowModel::COLUMN_TYPE_DIFF_TIME, !m_DisplayColumnTimeDiffFlag);
     m_TreeView->setColumnHidden(CANMessageWindowModel::COLUMN_TYPE_MIN_MAX_DIFF_TIME, !m_DisplayColumnTimeDiffMinMaxFlag);
-    // swich off the name column if it is not decoded
+    // switch off the name column if it is not decoded
     m_TreeView->setColumnHidden(CANMessageWindowModel::COLUMN_TYPE_NAME, !m_DecodeFlag);
 }
 

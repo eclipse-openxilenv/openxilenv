@@ -187,7 +187,7 @@ __WRITE_A_LINE:
                     fprintf (par_Rec->m_fh, "%s\t", (pCANMessage->node) ? "->" : "<-");
                     //fprintf (m_fh, "%i\t", (int)CANMessage.timestamp);
                     fprintf (par_Rec->m_fh, "%i\t", (int)(pCANMessage->channel));
-                    fprintf (par_Rec->m_fh, "0x%X\n", (int)(pCANMessage->id));
+                    fprintf (par_Rec->m_fh, "0x%X\t", (int)(pCANMessage->id));
                     switch (pCANMessage->ext) {
                     case 0:
                         fprintf (par_Rec->m_fh, "n\t");

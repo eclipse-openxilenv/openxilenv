@@ -907,7 +907,7 @@ void SortMuxObjects(NEW_CAN_SERVER_CONFIG *csc, int c)
 
 static void AddToPos(uint16_t **ObjPosArray, uint16_t *ObjPosArraySize, uint8_t Addr, uint16_t ObjPos)
 {
-    if (ObjPosArray[Addr] != NULL) {
+    if (ObjPosArray[Addr] == NULL) {
         ObjPosArray[Addr] = (uint16_t*)my_malloc(2*sizeof(uint16_t));
         ObjPosArray[Addr][0] = ObjPos;
         ObjPosArray[Addr][1] = -1;
