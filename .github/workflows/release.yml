@@ -1,0 +1,147 @@
+name: Release OpenXilEnv
+
+# Build self-contained packages for Linux and Windows and publish them together
+# as a single GitHub Release whenever a version tag (e.g. v0.9.2) is pushed.
+#
+# The packages are produced with CPack (TGZ on Linux, ZIP on Windows) so the
+# exact same archives can be reproduced manually:
+#   cmake -G Ninja -DXILENV_BUNDLE_QT=ON -DXILENV_PACKAGE_VERSION=<ver> <src>
+#   cmake --build . && cpack
+on:
+  push:
+    tags:
+      - 'v*'
+
+# Never publish a partial release: the `release` job requires BOTH platform
+# jobs to succeed (see its `needs:`), so Windows and Linux are always released
+# together.
+jobs:
+  linux-package:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          path: openxilenv
+
+      - name: Derive version from tag
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake ninja-build gcc g++ patchelf
+          sudo apt-get install -y libglx-dev libgl1-mesa-dev
+
+      - name: Install aqtinstall
+        run: pip install aqtinstall
+
+      - name: Install Qt 6.5.3
+        run: |
+          aqt install-qt linux desktop 6.5.3 gcc_64 -O "$GITHUB_WORKSPACE/Qt"
+          echo "$GITHUB_WORKSPACE/Qt/6.5.3/gcc_64/bin" >> "$GITHUB_PATH"
+          echo "Qt6_DIR=$GITHUB_WORKSPACE/Qt/6.5.3/gcc_64" >> "$GITHUB_ENV"
+
+      - name: Configure
+        run: |
+          cmake -G Ninja \
+            -S "$GITHUB_WORKSPACE/openxilenv" \
+            -B "$GITHUB_WORKSPACE/build" \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DXILENV_BUNDLE_QT=ON \
+            -DXILENV_PACKAGE_VERSION="$VERSION"
+
+      - name: Build
+        run: cmake --build "$GITHUB_WORKSPACE/build"
+
+      - name: Package (CPack / TGZ)
+        run: cd "$GITHUB_WORKSPACE/build" && cpack -G TGZ
+
+      - name: Upload package
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-package
+          path: ${{ github.workspace }}/build/*.tar.gz
+          if-no-files-found: error
+
+  windows-package:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          path: openxilenv
+
+      - name: Derive version from tag
+        shell: bash
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
+
+      - name: Download niXman MinGW-w64 GCC 14.2.0
+        run: curl -L -o D:/a/_temp/mingw.7z https://github.com/niXman/mingw-builds-binaries/releases/download/14.2.0-rt_v12-rev2/x86_64-14.2.0-release-win32-seh-ucrt-rt_v12-rev2.7z
+
+      - name: Extract MinGW
+        run: 7z x D:/a/_temp/mingw.7z -oD:/a/_temp/mingw -y
+
+      - name: Add MinGW to PATH
+        shell: bash
+        run: echo "D:/a/_temp/mingw/mingw64/bin" >> "$GITHUB_PATH"
+
+      - name: Install Qt 6.9.2
+        uses: jurplel/install-qt-action@v4.3.0
+        with:
+          version: '6.9.2'
+          host: 'windows'
+          target: 'desktop'
+          arch: 'win64_mingw'
+
+      - name: Configure
+        shell: cmd
+        run: >
+          cmake -G Ninja
+          -S %GITHUB_WORKSPACE%\openxilenv
+          -B %GITHUB_WORKSPACE%\build
+          -DCMAKE_BUILD_TYPE=Release
+          -DXILENV_BUNDLE_QT=ON
+          -DXILENV_PACKAGE_VERSION=%VERSION%
+
+      - name: Build
+        shell: cmd
+        run: cmake --build %GITHUB_WORKSPACE%\build
+
+      - name: Package (CPack / ZIP)
+        shell: cmd
+        run: cd %GITHUB_WORKSPACE%\build && cpack -G ZIP
+
+      - name: Upload package
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-package
+          path: ${{ github.workspace }}\build\*.zip
+          if-no-files-found: error
+
+  release:
+    # Requires both platform packages -> Windows and Linux are published together.
+    needs: [linux-package, windows-package]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download all packages
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: OpenXilEnv ${{ github.ref_name }}
+          # Auto-generate the release body from merged PRs since the last tag,
+          # categorized via .github/release.yml.
+          generate_release_notes: true
+          # Tags containing a hyphen (e.g. v0.9.2-rc1) are marked as pre-release.
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          fail_on_unmatched_files: true
+          files: |
+            dist/*.tar.gz
+            dist/*.zip

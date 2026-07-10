@@ -1,0 +1,33 @@
+# Configuration for GitHub's automatically generated release notes.
+# See: https://docs.github.com/en/repositories/releasing-projects-on-github/automatically-generated-release-notes
+# Pull requests merged since the previous tag are grouped by their labels.
+changelog:
+  exclude:
+    labels:
+      - ignore-for-release
+    authors:
+      - dependabot
+      - github-actions
+  categories:
+    - title: 🚀 Features
+      labels:
+        - feature
+        - enhancement
+    - title: 🐛 Bug Fixes
+      labels:
+        - bug
+        - fix
+    - title: 📝 Documentation
+      labels:
+        - documentation
+        - docs
+    - title: 🔧 Build & CI
+      labels:
+        - build
+        - ci
+    - title: ⬆️ Dependencies
+      labels:
+        - dependencies
+    - title: Other Changes
+      labels:
+        - "*"

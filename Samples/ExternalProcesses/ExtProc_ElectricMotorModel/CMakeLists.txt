@@ -24,9 +24,9 @@ endif()
 
 install(TARGETS ${ExtProc_TargetName}
     BUNDLE DESTINATION .
-    RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/${SampleOutputFolder}/ExtProc_ElectricMotorModel
+    RUNTIME DESTINATION ${SampleOutputFolder}/ExtProc_ElectricMotorModel
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
 if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-    install(FILES $<TARGET_PDB_FILE:${ExtProc_TargetName}> DESTINATION ${CMAKE_INSTALL_PREFIX}/${SampleOutputFolder}/ExtProc_ElectricMotorModel OPTIONAL)
+    install(FILES $<TARGET_PDB_FILE:${ExtProc_TargetName}> DESTINATION ${SampleOutputFolder}/ExtProc_ElectricMotorModel OPTIONAL)
 endif()

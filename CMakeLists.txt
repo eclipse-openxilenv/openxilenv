@@ -2,6 +2,30 @@ cmake_minimum_required(VERSION 3.19)
 
 project(XilEnvGui VERSION 10.0 LANGUAGES C CXX)
 
+# Derive the authoritative product version from Src/Global/Config.h so that
+# packaging (CPack) reports the real version (e.g. 0.9.2) instead of the stale
+# project() version above. The version can be overridden at package time via
+# `cpack -R <version>` (used by the release workflow to inject the git tag).
+file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/Src/Global/Config.h" _xilenv_version_lines
+    REGEX "^#define[ \t]+XILENV_(MINOR_|PATCH_)?VERSION[ \t]+[0-9]+")
+foreach(_line IN LISTS _xilenv_version_lines)
+    if(_line MATCHES "XILENV_VERSION[ \t]+([0-9]+)")
+        set(XILENV_VERSION_MAJOR "${CMAKE_MATCH_1}")
+    elseif(_line MATCHES "XILENV_MINOR_VERSION[ \t]+([0-9]+)")
+        set(XILENV_VERSION_MINOR "${CMAKE_MATCH_1}")
+    elseif(_line MATCHES "XILENV_PATCH_VERSION[ \t]+([0-9]+)")
+        set(XILENV_VERSION_PATCH "${CMAKE_MATCH_1}")
+    endif()
+endforeach()
+set(XILENV_VERSION_STRING "${XILENV_VERSION_MAJOR}.${XILENV_VERSION_MINOR}.${XILENV_VERSION_PATCH}")
+message(STATUS "OpenXilEnv product version: ${XILENV_VERSION_STRING}")
+
+# When ON, the Qt runtime (libraries + plugins) is deployed next to the
+# executables on install, producing a self-contained tree that CPack can
+# package. OFF by default so the normal developer/CI build is unchanged; the
+# release workflow enables it with -DXILENV_BUNDLE_QT=ON.
+option(XILENV_BUNDLE_QT "Bundle the Qt runtime into the install/package tree" OFF)
+
 option(BUILD_ONLY_EXAMPLES "Build only examples" OFF)
 
 option(BUILD_32BIT "Build 32 bit target (only librarys and/or examples)" OFF)
@@ -264,10 +288,10 @@ else()
 
     if(${MY_CMAKE_SIZEOF_VOID_P} GREATER 4)
         set(XilEnvExtProcTargetName XilEnvExtProc64)
-        set(XilEnvExtProcLibPath "")
+        set(XilEnvExtProcLibPath ".")
     else()
         set(XilEnvExtProcTargetName XilEnvExtProc32)
-        set(XilEnvExtProcLibPath "/Bin32")
+        set(XilEnvExtProcLibPath "Bin32")
     endif()
 
     add_library(${XilEnvExtProcTargetName} SHARED)
@@ -374,10 +398,10 @@ else()
             target_link_libraries(LinuxRemoteMaster.Out PRIVATE m)
 
             install(TARGETS LinuxRemoteMaster.Out LinuxRemoteMaster LinuxRemoteMasterCore
-                RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/rt_linux
-                LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX}/rt_linux
-                ARCHIVE DESTINATION ${CMAKE_INSTALL_PREFIX}/rt_linux
-                PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_PREFIX}/rt_linux
+                RUNTIME DESTINATION rt_linux
+                LIBRARY DESTINATION rt_linux
+                ARCHIVE DESTINATION rt_linux
+                PUBLIC_HEADER DESTINATION rt_linux
             )
         endif()
     endif()   # if(UNIX)
@@ -390,18 +414,18 @@ else()
 
     if(${MY_CMAKE_SIZEOF_VOID_P} GREATER 4)
         install(TARGETS XilEnvGui XilEnv XilEnvRpc
-            RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}
-            LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX}
-            ARCHIVE DESTINATION ${CMAKE_INSTALL_PREFIX}
-            PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_PREFIX}/include
+            RUNTIME DESTINATION .
+            LIBRARY DESTINATION .
+            ARCHIVE DESTINATION .
+            PUBLIC_HEADER DESTINATION include
         )
     endif()
 
     install(TARGETS ${XilEnvExtProcTargetName}
-        RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}${XilEnvExtProcLibPath}
-        LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX}${XilEnvExtProcLibPath}
-        ARCHIVE DESTINATION ${CMAKE_INSTALL_PREFIX}${XilEnvExtProcLibPath}
-        PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_PREFIX}/include
+        RUNTIME DESTINATION ${XilEnvExtProcLibPath}
+        LIBRARY DESTINATION ${XilEnvExtProcLibPath}
+        ARCHIVE DESTINATION ${XilEnvExtProcLibPath}
+        PUBLIC_HEADER DESTINATION include
     )
 
     # copy additional none *.h files to the include folder
@@ -410,11 +434,11 @@ else()
             ./Src/ExternalProcess/XilEnvExtProcMain.c
             ./Src/ExternalProcess/XilEnvExtProcInterfaceMethods.c 
             ./Src/ExternalProcess/XilEnvExtProcCan.h
-            DESTINATION  ${CMAKE_INSTALL_PREFIX}/include
+            DESTINATION  include
         )
         INSTALL(FILES
             ./Userguide/OpenXiL_Userguide.pdf
-            DESTINATION  ${CMAKE_INSTALL_PREFIX}
+            DESTINATION  .
         )
 	else()
 		# copy the 32-bit mingw dlls into the Bin32 folder
@@ -422,14 +446,61 @@ else()
 		message("C_COMPILER_PATH")
 		message(${C_COMPILER_PATH})
 		INSTALL(DIRECTORY "${C_COMPILER_PATH}/"
-			DESTINATION ${CMAKE_INSTALL_PREFIX}${XilEnvExtProcLibPath}
+			DESTINATION ${XilEnvExtProcLibPath}
 			FILES_MATCHING PATTERN "*.dll")
     endif()
 
     if(${MY_CMAKE_SIZEOF_VOID_P} GREATER 4)
         if(QT_VERSION_MAJOR EQUAL 6)
             qt_finalize_executable(XilEnvGui)
+
+            # Self-contained packaging: deploy the Qt runtime (Qt libs + plugins,
+            # windeployqt on Windows) into the install tree so the released
+            # package runs without a system-wide Qt installation. Runs as part of
+            # `cmake --install` / CPack so manual `cpack` runs stay complete too.
+            if(XILENV_BUNDLE_QT)
+                qt_generate_deploy_app_script(
+                    TARGET XilEnvGui
+                    OUTPUT_SCRIPT XILENV_QT_DEPLOY_SCRIPT
+                    NO_UNSUPPORTED_PLATFORM_ERROR)
+                install(SCRIPT ${XILENV_QT_DEPLOY_SCRIPT})
+            endif()
         endif()
     endif()
 endif() #  if(BUILD_ONLY_EXAMPLES)
+
+# ---------------------------------------------------------------------------
+# Packaging (CPack)
+#
+# Produces distributable archives from the install tree. Manual usage:
+#   cmake -G Ninja -DXILENV_BUNDLE_QT=ON <src> && cmake --build . && cpack
+# The release workflow injects the git tag at configure time so both the
+# package version and file name match the tag:
+#   cmake ... -DXILENV_PACKAGE_VERSION=<tag>
+# ---------------------------------------------------------------------------
+set(XILENV_PACKAGE_VERSION "${XILENV_VERSION_STRING}"
+    CACHE STRING "Version string used for CPack packages (defaults to the product version)")
+
+set(CPACK_PACKAGE_NAME "OpenXilEnv")
+set(CPACK_PACKAGE_VENDOR "Eclipse OpenXilEnv")
+set(CPACK_PACKAGE_VERSION "${XILENV_PACKAGE_VERSION}")
+set(CPACK_PACKAGE_VERSION_MAJOR "${XILENV_VERSION_MAJOR}")
+set(CPACK_PACKAGE_VERSION_MINOR "${XILENV_VERSION_MINOR}")
+set(CPACK_PACKAGE_VERSION_PATCH "${XILENV_VERSION_PATCH}")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "OpenXilEnv - open X-in-the-loop simulation environment")
+set(CPACK_PACKAGE_HOMEPAGE_URL "https://github.com/eclipse-openxilenv/openxilenv")
+set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE.txt")
+set(CPACK_VERBATIM_VARIABLES ON)
+set(CPACK_STRIP_FILES ON)
+
+if(WIN32)
+    set(CPACK_GENERATOR "ZIP")
+    set(CPACK_SYSTEM_NAME "Windows-x86_64")
+else()
+    set(CPACK_GENERATOR "TGZ")
+    set(CPACK_SYSTEM_NAME "Linux-x86_64")
+endif()
+set(CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CPACK_SYSTEM_NAME}")
+
+include(CPack)
 

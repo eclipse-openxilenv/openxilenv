@@ -6,7 +6,7 @@ target_sources(RemoteStartServer
 
 if(${MY_CMAKE_SIZEOF_VOID_P} GREATER 4)
     install(TARGETS RemoteStartServer
-        RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/rt_linux
+        RUNTIME DESTINATION rt_linux
     )
 endif()
 

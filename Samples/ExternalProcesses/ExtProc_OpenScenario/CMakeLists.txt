@@ -25,12 +25,12 @@ endif()
 
 install(TARGETS ${ExtProc_TargetName}
     BUNDLE DESTINATION .
-    RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/${SampleOutputFolder}/ExtProc_OpenScenario
+    RUNTIME DESTINATION ${SampleOutputFolder}/ExtProc_OpenScenario
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
 if(WIN32)
     INSTALL(DIRECTORY "${ESMINI_LIBRARY_PATH}/bin/"
-            DESTINATION ${CMAKE_INSTALL_PREFIX}/${SampleOutputFolder}/ExtProc_OpenScenario
+            DESTINATION ${SampleOutputFolder}/ExtProc_OpenScenario
             FILES_MATCHING PATTERN "*.dll")
  endif()
 
