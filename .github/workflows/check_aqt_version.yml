@@ -13,7 +13,7 @@ jobs:
     
     steps:
     - name: Install aqtinstall
-      run: pip install aqtinstall==3.3.30
+      run: pip install aqtinstall==3.3.0
 
     - name: Show aqtinstall version
       run: aqt version
