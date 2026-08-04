@@ -141,7 +141,7 @@ jobs:
         ninja --version
     
     - name: Install Qt
-      uses: jurplel/install-qt-action@v4.3.0
+      uses: jurplel/install-qt-action@v4.3.1
       with:
         version: '6.4.2'
         host: 'windows'
