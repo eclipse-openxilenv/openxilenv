@@ -13,12 +13,12 @@ jobs:
     
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
       with:
         path: openxilenv
     
     - name: Setup Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v6
       with:
         python-version: '3.11'
         
@@ -95,7 +95,7 @@ jobs:
         pytest -vv
 
     - name: Upload artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: OpenXilEnv-Linux-Qt6_4_2
         path: ${{ github.workspace }}/tools/OpenXilEnv/**
@@ -105,12 +105,12 @@ jobs:
     
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
       with:
         path: openxilenv
     
     - name: Setup Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v6
       with:
         python-version: '3.11'
     
@@ -187,7 +187,7 @@ jobs:
         pytest -vv
 
     - name: Upload artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: OpenXilEnv-Windows-Qt6_4_2
         path: D:/a/tools/OpenXilEnv/**
