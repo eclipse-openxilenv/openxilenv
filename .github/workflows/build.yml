@@ -143,7 +143,7 @@ jobs:
     - name: Install Qt
       uses: jurplel/install-qt-action@v4.3.0
       with:
-        version: '6.9.2'
+        version: '6.4.2'
         host: 'windows'
         target: 'desktop'
         arch: 'win64_mingw'
@@ -189,5 +189,5 @@ jobs:
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: OpenXilEnv-Windows-Qt6_9_2
+        name: OpenXilEnv-Windows-Qt6_4_2
         path: D:/a/tools/OpenXilEnv/**
