@@ -38,7 +38,7 @@ jobs:
         echo ""
         
     - name: Install aqtinstall
-      run: pip install aqtinstall
+      run: pip install aqtinstall==3.3.0
   
     - name: Install Qt 6.4.2
       run: |
