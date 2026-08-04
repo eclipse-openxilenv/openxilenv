@@ -1,0 +1,19 @@
+name: Check aqt version
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:  # Allow manual triggers
+
+jobs:
+  linux-build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Install aqtinstall
+      run: pip install aqtinstall
+
+    - name: Show aqtinstall version
+      run: aqt version
