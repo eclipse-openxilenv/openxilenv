@@ -173,7 +173,7 @@ jobs:
       shell: pwsh
       run: |
         cd D:\a\tools\OpenXilEnv
-        windeployqt.exe --debug XilEnvGui.exe
+        windeployqt.exe --release XilEnvGui.exe
 
     - name: Test OpenXilEnv installation 
       shell: pwsh
