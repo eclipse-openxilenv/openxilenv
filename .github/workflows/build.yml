@@ -117,7 +117,7 @@ jobs:
     - name: Download niXman MinGW-w64 GCC 14.2.0
       run: |
         cd D:/a/_temp/
-        curl -L -o D:/a/_temp/mingw.7z https://github.com/niXman/mingw-builds-binaries/releases/download/14.2.0-rt_v12-rev2/x86_64-14.2.0-release-win32-seh-ucrt-rt_v12-rev2.7z
+        curl -L -o D:/a/_temp/mingw.7z https://github.com/niXman/mingw-builds-binaries/releases/download/14.2.0-rt_v12-rev2/x86_64-14.2.0-release-posix-seh-ucrt-rt_v12-rev2.7z
 
     - name: Extract & add to PATH
       run: |
