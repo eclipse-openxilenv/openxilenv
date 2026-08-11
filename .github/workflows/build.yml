@@ -71,7 +71,7 @@ jobs:
         cd $GITHUB_WORKSPACE
         mkdir openxilenv-build
         cd openxilenv-build
-        cmake -G Ninja -DCMAKE_INSTALL_PREFIX=$GITHUB_WORKSPACE/tools/OpenXilEnv ../openxilenv
+        cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=$GITHUB_WORKSPACE/tools/OpenXilEnv ../openxilenv
 
     - name: Build OpenXilEnv
       run: |
@@ -147,6 +147,7 @@ jobs:
         host: 'windows'
         target: 'desktop'
         arch: 'win64_mingw'
+        aqtversion: '==3.3.0'
 
     - name: Prepare OpenXilEnv Build
       shell: cmd 
@@ -154,7 +155,7 @@ jobs:
         cd D:\a\openxilenv\openxilenv
         mkdir openxilenv-build
         cd openxilenv-build
-        cmake -G Ninja -DCMAKE_INSTALL_PREFIX=D:\a\tools\OpenXilEnv ..\openxilenv
+        cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=D:\a\tools\OpenXilEnv ..\openxilenv
 
     - name: Build OpenXilEnv
       shell: cmd 
@@ -172,7 +173,7 @@ jobs:
       shell: pwsh
       run: |
         cd D:\a\tools\OpenXilEnv
-        windeployqt.exe XilEnvGui.exe
+        windeployqt.exe --debug XilEnvGui.exe
 
     - name: Test OpenXilEnv installation 
       shell: pwsh
