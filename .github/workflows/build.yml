@@ -40,14 +40,14 @@ jobs:
     - name: Install aqtinstall
       run: pip install aqtinstall==3.3.0
   
-    - name: Install Qt 6.6.1
+    - name: Install Qt 6.6.3
       run: |
-        aqt install-qt linux desktop 6.6.1 gcc_64 -O $GITHUB_WORKSPACE/Qt
+        aqt install-qt linux desktop 6.6.3 gcc_64 -O $GITHUB_WORKSPACE/Qt
         echo ""
-        ls -la $GITHUB_WORKSPACE/Qt/6.6.1
+        ls -la $GITHUB_WORKSPACE/Qt/6.6.3
         echo ""
-        echo "$GITHUB_WORKSPACE/Qt/6.6.1/gcc_64/bin" >> $GITHUB_PATH
-        echo "Qt6_DIR=$GITHUB_WORKSPACE/Qt/6.6.1/gcc_64" >> $GITHUB_ENV
+        echo "$GITHUB_WORKSPACE/Qt/6.6.3/gcc_64/bin" >> $GITHUB_PATH
+        echo "Qt6_DIR=$GITHUB_WORKSPACE/Qt/6.6.3/gcc_64" >> $GITHUB_ENV
     
     - name: Verify Qt installation
       run: |
@@ -97,7 +97,7 @@ jobs:
     - name: Upload artifacts
       uses: actions/upload-artifact@v6
       with:
-        name: OpenXilEnv-Linux-Qt6_6_1
+        name: OpenXilEnv-Linux-Qt6_6_3
         path: ${{ github.workspace }}/tools/OpenXilEnv/**
 
   windows-build:
@@ -140,20 +140,20 @@ jobs:
         where ninja
         ninja --version
 
-    - name: Restore Qt 6.6.1 cache
+    - name: Restore Qt 6.6.3 cache
       id: cache-qt
       uses: actions/cache@v4
       with:
-        path: D:\a\_temp\Qt6_6_1
-        key: ${{ runner.os }}-qt-6.6.1-mingw14.2-v1
+        path: D:\a\_temp\Qt6_6_3
+        key: ${{ runner.os }}-qt-6.6.3-mingw14.2-v1
     
-    - name: Download Qt 6.6.1 source
+    - name: Download Qt 6.6.3 source
       if: steps.cache-qt.outputs.cache-hit != 'true'
       shell: cmd
       run: |
         cd D:\a\_temp\
-        git clone --depth 1 --branch v6.6.1 https://github.com/qt/qtbase.git qtbase-6.6.1
-        git clone --depth 1 --branch v6.6.1 https://github.com/qt/qtsvg.git qtsvg-6.6.1
+        git clone --depth 1 --branch v6.6.3 https://github.com/qt/qtbase.git qtbase-6.6.3
+        git clone --depth 1 --branch v6.6.3 https://github.com/qt/qtsvg.git qtsvg-6.6.3
 
     - name: Create Qt build directory
       if: steps.cache-qt.outputs.cache-hit != 'true'
@@ -161,15 +161,15 @@ jobs:
       run: |
         mkdir D:\a\_temp\Qt-build
 
-    - name: Configure Qt 6.6.1
+    - name: Configure Qt 6.6.3
       if: steps.cache-qt.outputs.cache-hit != 'true'
       shell: cmd
       run: |
         set PATH=D:\a\_temp\mingw\mingw64\bin;%PATH%
         cd D:\a\_temp\Qt-build
-        D:\a\_temp\qtbase-6.6.1\configure.bat -release -opensource -confirm-license -no-feature-sql-psql -prefix D:\a\_temp\Qt6_6_1
+        D:\a\_temp\qtbase-6.6.3\configure.bat -release -opensource -confirm-license -no-feature-sql-psql -prefix D:\a\_temp\Qt6_6_3
 
-    - name: Build Qt 6.6.1
+    - name: Build Qt 6.6.3
       if: steps.cache-qt.outputs.cache-hit != 'true'
       shell: cmd
       run: |
@@ -177,31 +177,31 @@ jobs:
         cd D:\a\_temp\Qt-build
         cmake --build . --parallel
 
-    - name: Install Qt 6.6.1
+    - name: Install Qt 6.6.3
       if: steps.cache-qt.outputs.cache-hit != 'true'
       shell: cmd
       run: |
         cd D:\a\_temp\Qt-build
         cmake --install . --config Release
 
-    - name: Configure qtsvg 6.6.1 against Qt 6.6.1
+    - name: Configure qtsvg 6.6.3 against Qt 6.6.3
       if: steps.cache-qt.outputs.cache-hit != 'true'
       shell: cmd
       run: |
         mkdir D:\a\_temp\qtsvg-build
         cd D:\a\_temp\qtsvg-build
-        set PATH=D:\a\_temp\mingw\mingw64\bin;D:\a\_temp\Qt6_6_1\bin;%PATH%
-        cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=D:\a\_temp\Qt6_6_1 -DQt6_DIR=D:\a\_temp\Qt6_6_1\lib\cmake\Qt6 D:\a\_temp\qtsvg-6.6.1
+        set PATH=D:\a\_temp\mingw\mingw64\bin;D:\a\_temp\Qt6_6_3\bin;%PATH%
+        cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=D:\a\_temp\Qt6_6_3 -DQt6_DIR=D:\a\_temp\Qt6_6_3\lib\cmake\Qt6 D:\a\_temp\qtsvg-6.6.3
 
-    - name: Build qtsvg 6.6.1
+    - name: Build qtsvg 6.6.3
       if: steps.cache-qt.outputs.cache-hit != 'true'
       shell: cmd
       run: |
         cd D:\a\_temp\qtsvg-build
-        set PATH=D:\a\_temp\mingw\mingw64\bin;D:\a\_temp\Qt6_6_1\bin;%PATH%
+        set PATH=D:\a\_temp\mingw\mingw64\bin;D:\a\_temp\Qt6_6_3\bin;%PATH%
         cmake --build . --parallel
 
-    - name: Install qtsvg 6.6.1
+    - name: Install qtsvg 6.6.3
       if: steps.cache-qt.outputs.cache-hit != 'true'
       shell: cmd
       run: |
@@ -211,17 +211,17 @@ jobs:
     - name: Add Qt to PATH
       shell: bash
       run: |
-        echo "D:/a/_temp/Qt6_6_1/bin" >> $GITHUB_PATH
-        echo "Qt6_DIR=D:/a/_temp/Qt6_6_1" >> $GITHUB_ENV
+        echo "D:/a/_temp/Qt6_6_3/bin" >> $GITHUB_PATH
+        echo "Qt6_DIR=D:/a/_temp/Qt6_6_3" >> $GITHUB_ENV
 
     - name: Prepare OpenXilEnv Build
       shell: cmd 
       run: |
-        set PATH=D:\a\_temp\Qt6_6_1\bin;%PATH%
+        set PATH=D:\a\_temp\Qt6_6_3\bin;%PATH%
         cd D:\a\openxilenv\openxilenv
         mkdir openxilenv-build
         cd openxilenv-build
-        cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=D:\a\tools\OpenXilEnv -DQt6_DIR=D:\a\_temp\Qt6_6_1\lib\cmake\Qt6 ..\openxilenv
+        cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=D:\a\tools\OpenXilEnv -DQt6_DIR=D:\a\_temp\Qt6_6_3\lib\cmake\Qt6 ..\openxilenv
 
     - name: Build OpenXilEnv
       shell: cmd 
@@ -256,5 +256,5 @@ jobs:
     - name: Upload artifacts
       uses: actions/upload-artifact@v6
       with:
-        name: OpenXilEnv-Windows-Qt6_6_1
+        name: OpenXilEnv-Windows-Qt6_6_3
         path: D:/a/tools/OpenXilEnv/**
