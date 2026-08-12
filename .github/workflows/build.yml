@@ -71,7 +71,7 @@ jobs:
         cd $GITHUB_WORKSPACE
         mkdir openxilenv-build
         cd openxilenv-build
-        cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=$GITHUB_WORKSPACE/tools/OpenXilEnv ../openxilenv
+        cmake -G Ninja -DCMAKE_INSTALL_PREFIX=$GITHUB_WORKSPACE/tools/OpenXilEnv ../openxilenv
 
     - name: Build OpenXilEnv
       run: |
@@ -114,10 +114,10 @@ jobs:
       with:
         python-version: '3.11'
     
-    - name: Download niXman MinGW-w64 GCC 11.2.0 (matches Qt 6.6.1 win64_mingw build)
+    - name: Download niXman MinGW-w64 GCC 14.2.0
       run: |
         cd D:/a/_temp/
-        curl -L -o D:/a/_temp/mingw.7z https://github.com/niXman/mingw-builds-binaries/releases/download/11.2.0-rt_v9-rev1/x86_64-11.2.0-release-posix-seh-rt_v9-rev1.7z
+        curl -L -o D:/a/_temp/mingw.7z https://github.com/niXman/mingw-builds-binaries/releases/download/14.2.0-rt_v12-rev2/x86_64-14.2.0-release-win32-seh-ucrt-rt_v12-rev2.7z
 
     - name: Extract & add to PATH
       run: |
@@ -212,7 +212,7 @@ jobs:
       shell: cmd 
       run: |
         cd D:\a\openxilenv\openxilenv\openxilenv-build
-        cmake --build .
+        cmake --build . --parallel
 
     - name: Install OpenXilEnv 
       shell: cmd
