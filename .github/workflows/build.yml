@@ -140,13 +140,12 @@ jobs:
         where ninja
         ninja --version
     
-    - name: Download Qt 6.6.1 source with SVG submodule
+    - name: Download Qt 6.6.1 source
       shell: cmd
       run: |
         cd D:\a\_temp\
         git clone --depth 1 --branch v6.6.1 https://github.com/qt/qtbase.git qtbase-6.6.1
-        cd qtbase-6.6.1
-        git submodule update --init qtsvg
+        git clone --depth 1 --branch v6.1.1 https://github.com/qt/qtsvg.git qtsvg-6.1.1
 
     - name: Create Qt build directory
       shell: cmd
@@ -171,6 +170,27 @@ jobs:
       shell: cmd
       run: |
         cd D:\a\_temp\Qt-build
+        cmake --install . --config Release
+
+    - name: Configure qtsvg 6.1.1 against Qt 6.6.1
+      shell: cmd
+      run: |
+        mkdir D:\a\_temp\qtsvg-build
+        cd D:\a\_temp\qtsvg-build
+        set PATH=D:\a\_temp\mingw\mingw64\bin;D:\a\_temp\Qt6_6_1\bin;%PATH%
+        cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=D:\a\_temp\Qt6_6_1 -DQt6_DIR=D:\a\_temp\Qt6_6_1\lib\cmake\Qt6 D:\a\_temp\qtsvg-6.1.1
+
+    - name: Build qtsvg 6.1.1
+      shell: cmd
+      run: |
+        cd D:\a\_temp\qtsvg-build
+        set PATH=D:\a\_temp\mingw\mingw64\bin;D:\a\_temp\Qt6_6_1\bin;%PATH%
+        cmake --build . --parallel
+
+    - name: Install qtsvg 6.1.1
+      shell: cmd
+      run: |
+        cd D:\a\_temp\qtsvg-build
         cmake --install . --config Release
 
     - name: Add Qt to PATH
