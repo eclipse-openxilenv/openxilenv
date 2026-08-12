@@ -157,7 +157,7 @@ jobs:
       run: |
         set PATH=D:\a\_temp\mingw\mingw64\bin;%PATH%
         cd D:\a\_temp\Qt-build
-        D:\a\_temp\qtbase-6.6.1\configure.bat -release -opensource -confirm-license -prefix D:\a\_temp\Qt6_6_1
+        D:\a\_temp\qtbase-6.6.1\configure.bat -release -opensource -confirm-license -no-feature-sql-psql -prefix D:\a\_temp\Qt6_6_1
 
     - name: Build Qt 6.6.1
       shell: cmd
