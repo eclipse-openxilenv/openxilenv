@@ -40,14 +40,14 @@ jobs:
     - name: Install aqtinstall
       run: pip install aqtinstall==3.3.0
   
-    - name: Install Qt 6.4.2
+    - name: Install Qt 6.6.1
       run: |
-        aqt install-qt linux desktop 6.4.2 gcc_64 -O $GITHUB_WORKSPACE/Qt
+        aqt install-qt linux desktop 6.6.1 gcc_64 -O $GITHUB_WORKSPACE/Qt
         echo ""
-        ls -la $GITHUB_WORKSPACE/Qt/6.4.2
+        ls -la $GITHUB_WORKSPACE/Qt/6.6.1
         echo ""
-        echo "$GITHUB_WORKSPACE/Qt/6.4.2/gcc_64/bin" >> $GITHUB_PATH
-        echo "Qt6_DIR=$GITHUB_WORKSPACE/Qt/6.4.2/gcc_64" >> $GITHUB_ENV
+        echo "$GITHUB_WORKSPACE/Qt/6.6.1/gcc_64/bin" >> $GITHUB_PATH
+        echo "Qt6_DIR=$GITHUB_WORKSPACE/Qt/6.6.1/gcc_64" >> $GITHUB_ENV
     
     - name: Verify Qt installation
       run: |
@@ -97,7 +97,7 @@ jobs:
     - name: Upload artifacts
       uses: actions/upload-artifact@v6
       with:
-        name: OpenXilEnv-Linux-Qt6_4_2
+        name: OpenXilEnv-Linux-Qt6_6_1
         path: ${{ github.workspace }}/tools/OpenXilEnv/**
 
   windows-build:
@@ -140,27 +140,79 @@ jobs:
         where ninja
         ninja --version
     
-    - name: Install Qt
-      uses: jurplel/install-qt-action@v4.3.1
-      with:
-        version: '6.4.2'
-        host: 'windows'
-        target: 'desktop'
-        arch: 'win64_mingw'
+    - name: Download Qt 6.6.1 source
+      shell: cmd
+      run: |
+        cd D:\a\_temp\
+        git clone --depth 1 --branch v6.6.1 https://github.com/qt/qtbase.git qtbase-6.6.1
+        git clone --depth 1 --branch v6.6.1 https://github.com/qt/qtsvg.git qtsvg-6.6.1
+
+    - name: Create Qt build directory
+      shell: cmd
+      run: |
+        mkdir D:\a\_temp\Qt-build
+
+    - name: Configure Qt 6.6.1
+      shell: cmd
+      run: |
+        set PATH=D:\a\_temp\mingw\mingw64\bin;%PATH%
+        cd D:\a\_temp\Qt-build
+        D:\a\_temp\qtbase-6.6.1\configure.bat -release -opensource -confirm-license -no-feature-sql-psql -prefix D:\a\_temp\Qt6_6_1
+
+    - name: Build Qt 6.6.1
+      shell: cmd
+      run: |
+        set PATH=D:\a\_temp\mingw\mingw64\bin;%PATH%
+        cd D:\a\_temp\Qt-build
+        cmake --build . --parallel
+
+    - name: Install Qt 6.6.1
+      shell: cmd
+      run: |
+        cd D:\a\_temp\Qt-build
+        cmake --install . --config Release
+
+    - name: Configure qtsvg 6.6.1 against Qt 6.6.1
+      shell: cmd
+      run: |
+        mkdir D:\a\_temp\qtsvg-build
+        cd D:\a\_temp\qtsvg-build
+        set PATH=D:\a\_temp\mingw\mingw64\bin;D:\a\_temp\Qt6_6_1\bin;%PATH%
+        cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=D:\a\_temp\Qt6_6_1 -DQt6_DIR=D:\a\_temp\Qt6_6_1\lib\cmake\Qt6 D:\a\_temp\qtsvg-6.6.1
+
+    - name: Build qtsvg 6.6.1
+      shell: cmd
+      run: |
+        cd D:\a\_temp\qtsvg-build
+        set PATH=D:\a\_temp\mingw\mingw64\bin;D:\a\_temp\Qt6_6_1\bin;%PATH%
+        cmake --build . --parallel
+
+    - name: Install qtsvg 6.6.1
+      shell: cmd
+      run: |
+        cd D:\a\_temp\qtsvg-build
+        cmake --install . --config Release
+
+    - name: Add Qt to PATH
+      shell: bash
+      run: |
+        echo "D:/a/_temp/Qt6_6_1/bin" >> $GITHUB_PATH
+        echo "Qt6_DIR=D:/a/_temp/Qt6_6_1" >> $GITHUB_ENV
 
     - name: Prepare OpenXilEnv Build
       shell: cmd 
       run: |
+        set PATH=D:\a\_temp\Qt6_6_1\bin;%PATH%
         cd D:\a\openxilenv\openxilenv
         mkdir openxilenv-build
         cd openxilenv-build
-        cmake -G Ninja -DCMAKE_INSTALL_PREFIX=D:\a\tools\OpenXilEnv ..\openxilenv
+        cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=D:\a\tools\OpenXilEnv -DQt6_DIR=D:\a\_temp\Qt6_6_1\lib\cmake\Qt6 ..\openxilenv
 
     - name: Build OpenXilEnv
       shell: cmd 
       run: |
         cd D:\a\openxilenv\openxilenv\openxilenv-build
-        cmake --build .
+        cmake --build . --parallel
 
     - name: Install OpenXilEnv 
       shell: cmd
@@ -172,7 +224,7 @@ jobs:
       shell: pwsh
       run: |
         cd D:\a\tools\OpenXilEnv
-        windeployqt.exe XilEnvGui.exe
+        windeployqt.exe --release XilEnvGui.exe
 
     - name: Test OpenXilEnv installation 
       shell: pwsh
@@ -189,5 +241,5 @@ jobs:
     - name: Upload artifacts
       uses: actions/upload-artifact@v6
       with:
-        name: OpenXilEnv-Windows-Qt6_4_2
+        name: OpenXilEnv-Windows-Qt6_6_1
         path: D:/a/tools/OpenXilEnv/**
