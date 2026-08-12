@@ -140,22 +140,53 @@ jobs:
         where ninja
         ninja --version
     
-    - name: Install Qt
-      uses: jurplel/install-qt-action@v4.3.1
-      with:
-        version: '6.6.1'
-        host: 'windows'
-        target: 'desktop'
-        arch: 'win64_mingw'
-        aqtversion: '==3.3.0'
+    - name: Download Qt 6.6.1 source with SVG submodule
+      shell: cmd
+      run: |
+        cd D:\a\_temp\
+        git clone --depth 1 --branch v6.6.1 https://github.com/qt/qtbase.git qtbase-6.6.1
+        cd qtbase-6.6.1
+        git submodule update --init qtsvg
+
+    - name: Create Qt build directory
+      shell: cmd
+      run: |
+        mkdir D:\a\_temp\Qt-build
+
+    - name: Configure Qt 6.6.1
+      shell: cmd
+      run: |
+        set PATH=D:\a\_temp\mingw\mingw64\bin;%PATH%
+        cd D:\a\_temp\Qt-build
+        D:\a\_temp\qtbase-6.6.1\configure.bat -release -opensource -confirm-license -prefix D:\a\_temp\Qt6_6_1
+
+    - name: Build Qt 6.6.1
+      shell: cmd
+      run: |
+        set PATH=D:\a\_temp\mingw\mingw64\bin;%PATH%
+        cd D:\a\_temp\Qt-build
+        cmake --build . --parallel
+
+    - name: Install Qt 6.6.1
+      shell: cmd
+      run: |
+        cd D:\a\_temp\Qt-build
+        cmake --install . --config Release
+
+    - name: Add Qt to PATH
+      shell: bash
+      run: |
+        echo "D:/a/_temp/Qt6_6_1/bin" >> $GITHUB_PATH
+        echo "Qt6_DIR=D:/a/_temp/Qt6_6_1" >> $GITHUB_ENV
 
     - name: Prepare OpenXilEnv Build
       shell: cmd 
       run: |
+        set PATH=D:\a\_temp\Qt6_6_1\bin;%PATH%
         cd D:\a\openxilenv\openxilenv
         mkdir openxilenv-build
         cd openxilenv-build
-        cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=D:\a\tools\OpenXilEnv ..\openxilenv
+        cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=D:\a\tools\OpenXilEnv -DQt6_DIR=D:\a\_temp\Qt6_6_1\lib\cmake\Qt6 ..\openxilenv
 
     - name: Build OpenXilEnv
       shell: cmd 
