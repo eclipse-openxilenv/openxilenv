@@ -139,8 +139,16 @@ jobs:
         cmake --version
         where ninja
         ninja --version
+
+    - name: Restore Qt 6.6.1 cache
+      id: cache-qt
+      uses: actions/cache@v4
+      with:
+        path: D:\a\_temp\Qt6_6_1
+        key: ${{ runner.os }}-qt-6.6.1-mingw14.2-v1
     
     - name: Download Qt 6.6.1 source
+      if: steps.cache-qt.outputs.cache-hit != 'true'
       shell: cmd
       run: |
         cd D:\a\_temp\
@@ -148,11 +156,13 @@ jobs:
         git clone --depth 1 --branch v6.6.1 https://github.com/qt/qtsvg.git qtsvg-6.6.1
 
     - name: Create Qt build directory
+      if: steps.cache-qt.outputs.cache-hit != 'true'
       shell: cmd
       run: |
         mkdir D:\a\_temp\Qt-build
 
     - name: Configure Qt 6.6.1
+      if: steps.cache-qt.outputs.cache-hit != 'true'
       shell: cmd
       run: |
         set PATH=D:\a\_temp\mingw\mingw64\bin;%PATH%
@@ -160,6 +170,7 @@ jobs:
         D:\a\_temp\qtbase-6.6.1\configure.bat -release -opensource -confirm-license -no-feature-sql-psql -prefix D:\a\_temp\Qt6_6_1
 
     - name: Build Qt 6.6.1
+      if: steps.cache-qt.outputs.cache-hit != 'true'
       shell: cmd
       run: |
         set PATH=D:\a\_temp\mingw\mingw64\bin;%PATH%
@@ -167,12 +178,14 @@ jobs:
         cmake --build . --parallel
 
     - name: Install Qt 6.6.1
+      if: steps.cache-qt.outputs.cache-hit != 'true'
       shell: cmd
       run: |
         cd D:\a\_temp\Qt-build
         cmake --install . --config Release
 
     - name: Configure qtsvg 6.6.1 against Qt 6.6.1
+      if: steps.cache-qt.outputs.cache-hit != 'true'
       shell: cmd
       run: |
         mkdir D:\a\_temp\qtsvg-build
@@ -181,6 +194,7 @@ jobs:
         cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=D:\a\_temp\Qt6_6_1 -DQt6_DIR=D:\a\_temp\Qt6_6_1\lib\cmake\Qt6 D:\a\_temp\qtsvg-6.6.1
 
     - name: Build qtsvg 6.6.1
+      if: steps.cache-qt.outputs.cache-hit != 'true'
       shell: cmd
       run: |
         cd D:\a\_temp\qtsvg-build
@@ -188,6 +202,7 @@ jobs:
         cmake --build . --parallel
 
     - name: Install qtsvg 6.6.1
+      if: steps.cache-qt.outputs.cache-hit != 'true'
       shell: cmd
       run: |
         cd D:\a\_temp\qtsvg-build
