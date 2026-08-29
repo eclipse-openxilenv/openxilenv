@@ -461,7 +461,7 @@ int ConvertRawToPhys(ASAP2_MODULE_DATA* Module, const char *par_ConvertName, int
             if ((par_Flags & A2L_GET_PHYS_FLAG) == A2L_GET_PHYS_FLAG) {
                 if (CheckIfFlagSetPos(CompuMethod->OptionalParameter.Flags, OPTPARAM_COMPU_METHOD_COEFFS_LINEAR)) {
                     double Value = (ConvertRawValueToDouble(par_Raw) - CompuMethod->OptionalParameter.Coeffs.b) /
-                                    CompuMethod->OptionalParameter.Coeffs.b;
+                                    CompuMethod->OptionalParameter.Coeffs.a;
                     ConvertDoubleToPhysValue(par_Raw->TargetType, Value, ret_Phys);
                     if ((par_Flags & A2L_GET_UNIT_FLAG) == A2L_GET_UNIT_FLAG) {
                         AddUnitToValue(ret_Phys, CompuMethod->Unit);
