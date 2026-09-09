@@ -460,13 +460,15 @@ int ConvertRawToPhys(ASAP2_MODULE_DATA* Module, const char *par_ConvertName, int
         case 1:  // LINEAR slope and offset
             if ((par_Flags & A2L_GET_PHYS_FLAG) == A2L_GET_PHYS_FLAG) {
                 if (CheckIfFlagSetPos(CompuMethod->OptionalParameter.Flags, OPTPARAM_COMPU_METHOD_COEFFS_LINEAR)) {
-                    double Value = (ConvertRawValueToDouble(par_Raw) - CompuMethod->OptionalParameter.Coeffs.b) /
-                                    CompuMethod->OptionalParameter.Coeffs.a;
-                    ConvertDoubleToPhysValue(par_Raw->TargetType, Value, ret_Phys);
-                    if ((par_Flags & A2L_GET_UNIT_FLAG) == A2L_GET_UNIT_FLAG) {
-                        AddUnitToValue(ret_Phys, CompuMethod->Unit);
+                    if (CompuMethod->OptionalParameter.Coeffs.a != 0.0) {
+                        double Value = (ConvertRawValueToDouble(par_Raw) - CompuMethod->OptionalParameter.Coeffs.b) /
+                                        CompuMethod->OptionalParameter.Coeffs.a;
+                        ConvertDoubleToPhysValue(par_Raw->TargetType, Value, ret_Phys);
+                        if ((par_Flags & A2L_GET_UNIT_FLAG) == A2L_GET_UNIT_FLAG) {
+                            AddUnitToValue(ret_Phys, CompuMethod->Unit);
+                        }
+                        Ret = 0;
                     }
-                    Ret = 0;
                 }
             } else {
                 ValueCopy(ret_Phys, par_Raw);
