@@ -864,8 +864,8 @@ int ParseCharacteristicMatrixDim (struct ASAP2_PARSER_STRUCT *Parser, void* Data
     CHECK_SET_FLAG_BIT_POS (Characteristic->OptionalParameter.Flags, 
                         OPTPARAM_CHARACTERISTIC_MATRIX_DIM);
     Characteristic->OptionalParameter.MatrixDim.x = ReadIntFromFile (Parser);
-    Characteristic->OptionalParameter.MatrixDim.y = TryReadIntFromFile (Parser, 0);  // sometime this is missing
-    Characteristic->OptionalParameter.MatrixDim.z = TryReadIntFromFile (Parser, 0);  // sometime this is missing
+    Characteristic->OptionalParameter.MatrixDim.y = TryReadIntFromFile (Parser, 1);  // sometimes this is missing; then use 1 as default
+    Characteristic->OptionalParameter.MatrixDim.z = TryReadIntFromFile (Parser, 1);  // sometimes this is missing; then use 1 as default
     return CheckParserError (Parser);
 }
 
@@ -1087,8 +1087,8 @@ int ParseMeasurementMatrixDim (struct ASAP2_PARSER_STRUCT *Parser, void* Data, s
     CHECK_SET_FLAG_BIT_POS (Measurement->OptionalParameter.Flags,
                         OPTPARAM_MEASUREMENT_MATRIX_DIM);
     Measurement->OptionalParameter.MatrixDim.x = ReadIntFromFile (Parser);
-    Measurement->OptionalParameter.MatrixDim.y = TryReadIntFromFile (Parser, 0);  // sometime this is missing
-    Measurement->OptionalParameter.MatrixDim.z = TryReadIntFromFile (Parser, 0);  // sometime this is missing
+    Measurement->OptionalParameter.MatrixDim.y = TryReadIntFromFile (Parser, 1);  // sometimes this is missing; then use 1 as default
+    Measurement->OptionalParameter.MatrixDim.z = TryReadIntFromFile (Parser, 1);  // sometimes this is missing; then use 1 as default
     return CheckParserError (Parser);
 }
 
