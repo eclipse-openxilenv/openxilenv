@@ -537,7 +537,7 @@ int A2LUpdate(ASAP2_DATABASE *Database, const char *par_OutA2LFile, const char *
             for (x = 0; x < Module->AxisPtsCounter; x++) {
                 uint64_t Address = 0;
                 ASAP2_AXIS_PTS *AxisPts = Module->AxisPtss[x];
-                if (CheckIfFlagSetPos(AxisPts->OptionalParameter.Flags, OPTPARAM_CHARACTERISTIC_SYMBOL_LINK)) {
+                if (CheckIfFlagSetPos(AxisPts->OptionalParameter.Flags, OPTPARAM_AXIS_PTS_SYMBOL_LINK)) {
                     Address = GetAddressByA2LLabel(SymFile, pappldata, AxisPts->OptionalParameter.SymbolLink, &NotUpdatedLabelFile);
                 } else {
                     if (AxisPts->OptionalParameter.IfDataCanapeExtCount == 0) {
