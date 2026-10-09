@@ -86,7 +86,7 @@ typedef struct {
     int Is64BitFormat;
     uint32_t pointer_size;   // 4 or 8
     uint32_t offset_size;    // 4 or 8
-    int32_t dwarf_version;  // -1, 2,3,4
+    int32_t dwarf_version;  // -1, 2,3,4,5
     int32_t HelpIdActiveFieldList;
 
     // Only internal for the DWarf reader temporary store DW_AT_declaration solved with DW_AT_specification
@@ -131,6 +131,8 @@ typedef struct {
         int8_t Specification;
         int8_t MIPSLinkageName;
         int8_t LinkageName;
+        int8_t BitSize;
+        int8_t DataBitOffset;
     } Flags;
     char *Name;
     int32_t Type;
@@ -145,6 +147,8 @@ typedef struct {
     int32_t Specification;
     char *MIPSLinkageName;
     char *LinkageName;
+    uint32_t BitSize;
+    uint32_t DataBitOffset;
 } ONE_DIE_ATTRIBUTES_DATA;
 
 
@@ -575,26 +579,26 @@ uint64_t byte_get_little_endian (unsigned char *field, uint32_t size)
     case 1:
         return *field;
     case 2:
-        return   ((uint64_t) (field[0]))
-               | (((uint64_t) (field[1])) << 8);
+        return    ((uint64_t)(field[0]))
+               | (((uint64_t)(field[1])) << 8);
     case 3:
-        return   ((uint64_t) (field[0]))
-               | (((uint64_t) (field[1])) << 8)
-               | (((uint64_t) (field[2])) << 16);
+        return    ((uint64_t)(field[0]))
+               | (((uint64_t)(field[1])) << 8)
+               | (((uint64_t)(field[2])) << 16);
     case 4:
-        return   ((uint64_t) (field[0]))
-               | (((uint64_t) (field[1])) << 8)
-               | (((uint64_t) (field[2])) << 16)
-               | (((uint64_t) (field[3])) << 24);
+        return   ((uint64_t)(field[0]))
+               | (((uint64_t)(field[1])) << 8)
+               | (((uint64_t)(field[2])) << 16)
+               | (((uint64_t)(field[3])) << 24);
     case 8:
-        return  ((uint64_t) (field[0]))
-              | (((uint64_t) (field[1])) << 8)
-              | (((uint64_t) (field[2])) << 16)
-              | (((uint64_t) (field[3])) << 24)
-              | (((uint64_t) (field[4])) << 32)
-              | (((uint64_t) (field[5])) << 40)
-              | (((uint64_t) (field[6])) << 48)
-              | (((uint64_t) (field[7])) << 56);
+        return  ((uint64_t)(field[0]))
+              | (((uint64_t)(field[1])) << 8)
+              | (((uint64_t)(field[2])) << 16)
+              | (((uint64_t)(field[3])) << 24)
+              | (((uint64_t)(field[4])) << 32)
+              | (((uint64_t)(field[5])) << 40)
+              | (((uint64_t)(field[6])) << 48)
+              | (((uint64_t)(field[7])) << 56);
     default:
         ThrowError (1, "Unhandled data length: %d", size);
         return 0;
@@ -607,25 +611,26 @@ uint64_t byte_get_big_endian (unsigned char *field, int32_t size)
         case 1:
         return *field;
     case 2:
-        return ((uint64_t) (field[1])) | (((uint64_t) (field[0])) << 8);
+        return    ((uint64_t)(field[1]))
+               | (((uint64_t)(field[0])) << 8);
     case 3:
-        return     ((uint64_t) (field[2]))
-               |   (((uint64_t) (field[1])) << 8)
-               |   (((uint64_t) (field[0])) << 16);
+        return    ((uint64_t)(field[2]))
+               | (((uint64_t)(field[1])) << 8)
+               | (((uint64_t)(field[0])) << 16);
     case 4:
-        return     ((uint64_t) (field[3]))
-               |   (((uint64_t) (field[2])) << 8)
-               |   (((uint64_t) (field[1])) << 16)
-               |   (((uint64_t) (field[0])) << 24);
+        return   ((uint64_t)(field[3]))
+               | (((uint64_t)(field[2])) << 8)
+               | (((uint64_t)(field[1])) << 16)
+               | (((uint64_t)(field[0])) << 24);
     case 8:
-        return ((uint64_t) (field[7]))
-               |   (((uint64_t) (field[6])) << 8)
-               |   (((uint64_t) (field[5])) << 16)
-               |   (((uint64_t) (field[4])) << 24)
-               |   (((uint64_t) (field[3])) << 32)
-               |   (((uint64_t) (field[2])) << 40)
-               |   (((uint64_t) (field[1])) << 48)
-               |   (((uint64_t) (field[0])) << 56);
+        return    ((uint64_t)(field[7]))
+               | (((uint64_t)(field[6])) << 8)
+               | (((uint64_t)(field[5])) << 16)
+               | (((uint64_t)(field[4])) << 24)
+               | (((uint64_t)(field[3])) << 32)
+               | (((uint64_t)(field[2])) << 40)
+               | (((uint64_t)(field[1])) << 48)
+               | (((uint64_t)(field[0])) << 56);
     default:
         ThrowError (1, "Unhandled data length: %d", size);
         return 0;
@@ -868,6 +873,7 @@ static char *ExtendWithCurrentCompilationUnit (char *Name, DEBUG_SECTIONS *ds)
     return ds->CurrentCompilationUnitName;
 }
 
+// This will only demangle name spaces, no templates, ...
 char *GetDemangledSymbolName (char *Name, DEBUG_SECTIONS *ds)
 {
     char *p = Name;
@@ -898,10 +904,8 @@ char *GetDemangledSymbolName (char *Name, DEBUG_SECTIONS *ds)
         }
     }
 __NOT_DEMANGLED:
-    //ThrowError (1, "symbol \"%s\" are not demageled", Name);
     return Name;
 }
-
 
 static int32_t AddStructDeclaration (int32_t TypeNr, int32_t FieldTypeNr, char *Name, DEBUG_SECTIONS *ds)
 {
@@ -1575,7 +1579,8 @@ typedef struct {
 } ABBREV_CODE_TABLE_ENTRY;
 
 ABBREV_CODE_TABLE_ENTRY *ParseAbbrevForOneCompileUnit (DEBUG_SECTIONS *ds,
-                                                       uint32_t AbbrevOffset, ABBREV_CODE_TABLE_ENTRY *Old)
+                                                       uint32_t AbbrevOffset,
+                                                      ABBREV_CODE_TABLE_ENTRY *Old)
 {
     ABBREV_CODE_TABLE_ENTRY *Ret;
     uint32_t AttribNum, EntryNum;
@@ -1772,6 +1777,14 @@ static unsigned char *ParseOneTagAndHisAtributes (DEBUG_SECTIONS *ds,
                     ret_DieAttributes->Flags.LinkageName = 1;
                     ret_DieAttributes->LinkageName = (char*)AttribValue;
                     break;
+                case DW_AT_bit_size:
+                    ret_DieAttributes->Flags.BitSize = 1;
+                    ret_DieAttributes->BitSize = (uint32_t)AttribValue;
+                    break;
+                case DW_AT_data_bit_offset:
+                    ret_DieAttributes->Flags.DataBitOffset = 1;
+                    ret_DieAttributes->DataBitOffset = (uint32_t)AttribValue;
+                    break;
                 case DW_AT_GNU_macros:
                     break;
                 }
@@ -1784,17 +1797,16 @@ static unsigned char *ParseOneTagAndHisAtributes (DEBUG_SECTIONS *ds,
     return Ptr;
 }
 
-
-unsigned char *ParseOneDie (DEBUG_SECTIONS *ds,
-                            unsigned char *Ptr,
-                            uint32_t AbbrevCode,
-                            uint32_t CompileUnitOffset,
-                            int32_t CompileUnit,
-                            ABBREV_CODE_TABLE_ENTRY *AbbrevCodeTable,
-                            int32_t *ret_TreeDepth,
-                            int32_t *ret_HasChildren,
-                            unsigned char *StartEntryPtr,
-                            int32_t AddVariableAllowed);
+static unsigned char *ParseOneDie (DEBUG_SECTIONS *ds,
+                                   unsigned char *Ptr,
+                                   uint32_t AbbrevCode,
+                                   uint32_t CompileUnitOffset,
+                                   int32_t CompileUnit,
+                                   ABBREV_CODE_TABLE_ENTRY *AbbrevCodeTable,
+                                   int32_t *ret_TreeDepth,
+                                   int32_t *ret_HasChildren,
+                                   unsigned char *StartEntryPtr,
+                                   int32_t AddVariableAllowed);
 
 static unsigned char *ParseUnknownTags (DEBUG_SECTIONS *ds,
                                         unsigned char *Ptr,
@@ -1919,14 +1931,266 @@ static unsigned char *ParseArraySubRangeTags (DEBUG_SECTIONS *ds,
     return Ptr;
 }
 
-unsigned char *ParseDiesOfOneNameSpace (DEBUG_SECTIONS *ds,
-                                        unsigned char *Ptr,
-                                        unsigned char *NameSpaceEnd,
-                                        int32_t *ret_TreeDepth,
-                                        uint32_t CompileUnitOffset,
-                                        int32_t CompileUnit,
-                                        ABBREV_CODE_TABLE_ENTRY *AbbrevCodeTable);
 
+static unsigned char *ParseStructMemberTags (DEBUG_SECTIONS *ds,
+                                            unsigned char *Ptr,
+                                            uint32_t CompileUnitOffset,
+                                            int32_t CompileUnit,
+                                            ABBREV_CODE_TABLE_ENTRY *AbbrevCodeTable,
+                                            int32_t *ret_TreeDepth,
+                                            int32_t ParentTypeNr,
+                                            int32_t ParentIsAUnion,
+                                            int32_t AddVariableAllowed);
+
+static int ParseMemberOrDie (DEBUG_SECTIONS *ds,
+                             unsigned char **Ptr,
+                             uint32_t CompileUnitOffset,
+                             int32_t CompileUnit,
+                             ABBREV_CODE_TABLE_ENTRY *AbbrevCodeTable,
+                             int32_t *ret_TreeDepth,
+                             unsigned char *StartEntryPtr,
+                             uint32_t TagType,
+                             ONE_DIE_ATTRIBUTES_DATA *DieAttributes,
+                             int HasChildren,
+                             int32_t AddVariableAllowed)
+{
+    switch (TagType) {
+    case DW_TAG_variable:
+        if (AddVariableAllowed) {
+            if ((DieAttributes->Flags.Specification && DieAttributes->Flags.Location)) {
+                char *Name;
+                int32_t TypeNr;
+                if (search_label_no_addr_by_typenr (DieAttributes->Specification + TYPEID_OFFSET, &Name, &TypeNr, ds->pappldata) == 0) {
+                    char *ExtendedName;
+                    if (DieAttributes->Flags.MIPSLinkageName) {
+                        ExtendedName = GetDemangledSymbolName (DieAttributes->MIPSLinkageName, ds);
+                    } else if (DieAttributes->Flags.LinkageName) {
+                        ExtendedName = GetDemangledSymbolName (DieAttributes->LinkageName, ds);
+                    } else {
+                        ExtendedName = _alloca(strlen (Name) + 1);  // Why copy this on the stack?
+                        StringCopyMaxCharTruncate (ExtendedName, Name, sizeof(ExtendedName));
+                    }
+                    if (DieAttributes->Flags.Type) {  // if a type is defined inside the specifcation use this and not the type of the declaration (array size can be missing inside the declation)
+                        TypeNr = DieAttributes->Type + TYPEID_OFFSET;
+                    }
+                    insert_label (ExtendedName, TypeNr,
+                                 DieAttributes->Location - ds->BaseAddr,
+                                 ds->pappldata);
+                }
+            } else if (DieAttributes->Flags.Name && DieAttributes->Flags.Type) {
+                char *ExtendedName;
+
+                if (DieAttributes->Flags.MIPSLinkageName) {
+                    ExtendedName = GetDemangledSymbolName (DieAttributes->MIPSLinkageName, ds);
+                } else if (DieAttributes->Flags.LinkageName) {
+                    ExtendedName = GetDemangledSymbolName (DieAttributes->LinkageName, ds);
+                } else {
+                    ExtendedName = ExtendWithNameSpace (DieAttributes->Name, ds);
+                }
+                if (s_main_ini_val.ViewStaticSymbols || (DieAttributes->Flags.External && DieAttributes->External)) {
+                    if (s_main_ini_val.ExtendStaticLabelsWithFilename &&
+                        (!DieAttributes->Flags.External || !DieAttributes->External)) {
+                        ExtendedName = ExtendWithCurrentCompilationUnit (ExtendedName, ds);
+                    }
+                    if (DieAttributes->Flags.Location) {
+                        insert_label (ExtendedName, DieAttributes->Type + TYPEID_OFFSET,
+                                     DieAttributes->Location - ds->BaseAddr,
+                                     ds->pappldata);
+                    } else {
+                        insert_label_no_address (ExtendedName, DieAttributes->Type + TYPEID_OFFSET,
+                                                (int32_t)(StartEntryPtr - (unsigned char*)ds->debug_info) + TYPEID_OFFSET, ds->pappldata);
+                    }
+                }
+            } else {
+                // ??
+            }
+        }
+        break;
+    case DW_TAG_base_type:
+        insert_struct (MODIFIER_ELEM, (int32_t)(StartEntryPtr - (unsigned char*)ds->debug_info) + TYPEID_OFFSET,
+                      "", 0L, 0L,  get_basetype (DieAttributes->Size, DieAttributes->Encoding),
+                      0L, 0L, 0L, ds->pappldata);
+        break;
+    case DW_TAG_unspecified_type:
+        insert_struct (TYPEDEF_ELEM, (int32_t)(StartEntryPtr - (unsigned char*)ds->debug_info) + TYPEID_OFFSET,
+                      "void", 0L, 0L, 33,  // 33 -> "void"
+                      0L, 0L, 0L, ds->pappldata);
+        break;
+    case DW_TAG_enumeration_type:
+        insert_struct (MODIFIER_ELEM, (int32_t)(StartEntryPtr - (unsigned char*)ds->debug_info) + TYPEID_OFFSET,
+                      "enum", 0L, 0L,  get_basetype (DieAttributes->Size, 2),
+                      0L, 0L, 0L, ds->pappldata);
+        if (HasChildren) {
+            *Ptr = ParseUnknownTags (ds,
+                                   *Ptr,
+                                   CompileUnitOffset,
+                                   CompileUnit,
+                                   AbbrevCodeTable,
+                                   ret_TreeDepth,
+                                   DieAttributes->Sibling);
+        }
+        break;
+    case DW_TAG_typedef:
+        if (!DieAttributes->Flags.Name) {
+            DieAttributes->Name = "";  // Structure without a name
+        } else {
+            AddClassName (DieAttributes->Name, ds);
+        }
+        if (DieAttributes->Flags.Type) {
+            char *ExtendedName = "";
+            ExtendedName = ExtendWithNameSpace (DieAttributes->Name, ds);
+            insert_struct (TYPEDEF_ELEM, (int32_t)(StartEntryPtr - (unsigned char*)ds->debug_info) + TYPEID_OFFSET,
+                          ExtendedName, 0L, 0L, DieAttributes->Type + TYPEID_OFFSET,
+                          0L, 0L, 0L, ds->pappldata);
+        }
+        if (DieAttributes->Flags.Name) {
+            RemoveClassName (ds);
+        }
+        break;
+    case DW_TAG_const_type:
+        if (DieAttributes->Flags.Type) {
+            insert_struct (MODIFIER_ELEM, (int32_t)(StartEntryPtr - (unsigned char*)ds->debug_info) + TYPEID_OFFSET,
+                          "const", 0L, 0L, DieAttributes->Type + TYPEID_OFFSET,
+                          0L, 0L, 0L, ds->pappldata);
+        }
+        break;
+    case DW_TAG_volatile_type:
+        if (DieAttributes->Flags.Type) {
+            insert_struct (MODIFIER_ELEM, (int32_t)(StartEntryPtr - (unsigned char*)ds->debug_info) + TYPEID_OFFSET,
+                          "volatile", 0L, 0L, DieAttributes->Type + TYPEID_OFFSET,
+                          0L, 0L, 0L, ds->pappldata);
+        }
+        break;
+    case DW_TAG_ptr_to_member_type:
+        // Pointer to member are offsets inside the structure/class. We will use a *void type so you cannot follow this pointers.
+        insert_struct (POINTER_ELEM, (int32_t)(StartEntryPtr - (unsigned char*)ds->debug_info) + TYPEID_OFFSET,
+                      "", 0L, 0L, 33,   // 33 -> "void", 133 -> "*void"
+                      0L, 0L, 0L, ds->pappldata);
+        break;
+    case DW_TAG_pointer_type:
+    case DW_TAG_reference_type:
+        insert_struct (POINTER_ELEM, (int32_t)(StartEntryPtr - (unsigned char*)ds->debug_info) + TYPEID_OFFSET,
+                      "", 0L, 0L, (DieAttributes->Flags.Type) ? DieAttributes->Type + TYPEID_OFFSET : 33,   // 33 -> "void", 133 -> "*void"
+                      0L, 0L, 0L, ds->pappldata);
+        break;
+    case DW_TAG_array_type:
+        if (1) {
+            char Help[32];
+            int32_t ArrayDims[10];  // max. 10 dimensions
+            int32_t x, DimCount = 0;
+            int32_t ArrayOfTypeId, ArrayTypeId;
+            *Ptr = ParseArraySubRangeTags (ds,
+                                           *Ptr,
+                                           CompileUnitOffset,
+                                           CompileUnit,
+                                           AbbrevCodeTable,
+                                           ret_TreeDepth,
+                                           DieAttributes->Sibling, ArrayDims, &DimCount, 10);
+            if (DimCount == 1) {
+                ArrayTypeId = (int32_t)(StartEntryPtr - (unsigned char*)ds->debug_info) + TYPEID_OFFSET;
+                ArrayOfTypeId = DieAttributes->Type + TYPEID_OFFSET;
+            } else {
+                ArrayTypeId = (int32_t)(StartEntryPtr - (unsigned char*)ds->debug_info) + TYPEID_OFFSET;
+                ArrayOfTypeId = ds->HelpIdActiveFieldList + TYPEID_OFFSET;
+                ds->HelpIdActiveFieldList++;
+            }
+            PrintFormatToString (Help, sizeof(Help), "[%i]", ArrayDims[0]);
+            insert_struct (ARRAY_ELEM, ArrayTypeId, Help, 0L, 0L, ArrayOfTypeId,
+                          ArrayDims[0], ArrayOfTypeId, (DWORD)0, ds->pappldata);
+
+            for (x = 1; x < DimCount; x++) {
+                PrintFormatToString (Help, sizeof(Help), "[%i]", ArrayDims[x]);
+                ArrayTypeId = ArrayOfTypeId;
+                if (x < (DimCount-1)) {
+                    ArrayOfTypeId = ds->HelpIdActiveFieldList + TYPEID_OFFSET;
+                    ds->HelpIdActiveFieldList++;
+                } else {
+                    ArrayOfTypeId = DieAttributes->Type + TYPEID_OFFSET;
+                }
+                insert_struct (ARRAY_ELEM, ArrayTypeId, Help, 0L, 0L, ArrayOfTypeId,
+                              ArrayDims[x], ArrayOfTypeId, (DWORD)0, ds->pappldata);
+            }
+        }
+        break;
+    case DW_TAG_union_type:
+    case DW_TAG_class_type:
+    case DW_TAG_structure_type:
+        if (!DieAttributes->Flags.Name) {
+            DieAttributes->Name = "";  // Structure without namen
+        } else {
+            AddClassName (DieAttributes->Name, ds);
+        }
+        {
+            int32_t StructSizeInBytes;
+            char *ExtendedName = "";
+            int32_t HelpTypeNr;
+
+            // If it is a spezification of a previous decleration
+            if (DieAttributes->Flags.Specification && (DieAttributes->Specification != 0)) {
+                HelpTypeNr = SpecificationOfStruct (DieAttributes->Specification + TYPEID_OFFSET, &ExtendedName, ds);
+                if (HelpTypeNr > 0) {
+                    if (SetDeclarationToSpecification (DieAttributes->Specification + TYPEID_OFFSET, ds->pappldata)) {
+                        ThrowError (1, "Internal error: %s (%i)", __FILE__, __LINE__);
+                    }
+                }
+            } else {
+                HelpTypeNr = ds->pappldata->unique_fieldnr_generator;
+                ds->pappldata->unique_fieldnr_generator++;
+                ExtendedName = ExtendWithNameSpace (DieAttributes->Name, ds);
+                insert_field (HelpTypeNr, ds->pappldata);
+            }
+            if (DieAttributes->Flags.Size) StructSizeInBytes = DieAttributes->Size;
+            else StructSizeInBytes = 0;
+
+            if ((DieAttributes->Flags.Declaration) && (DieAttributes->Declaration)) {
+                insert_struct (PRE_DEC_STRUCT, (int32_t)(StartEntryPtr - (unsigned char*)ds->debug_info) + TYPEID_OFFSET,
+                              ExtendedName, 0L, HelpTypeNr, CompileUnit /*pointsto will be used as CompileUnit*/,
+                              0L, 0L, StructSizeInBytes, ds->pappldata);
+            } else {
+                insert_struct (STRUCT_ELEM, (int32_t)(StartEntryPtr - (unsigned char*)ds->debug_info) + TYPEID_OFFSET,
+                              ExtendedName, 0L, HelpTypeNr, CompileUnit /*pointsto will be used as CompileUnit*/,
+                              0L, 0L, StructSizeInBytes, ds->pappldata);
+            }
+
+            if (DieAttributes->Flags.Declaration && DieAttributes->Declaration) {   // Not a complete definition: there can be added something later
+                AddStructDeclaration ((int32_t)(StartEntryPtr - (unsigned char*)ds->debug_info) + TYPEID_OFFSET, HelpTypeNr, ExtendedName, ds);
+            }
+
+            if (HelpTypeNr != 0) {
+                if (HasChildren) {
+                    *Ptr = ParseStructMemberTags (ds,
+                                                *Ptr,
+                                                CompileUnitOffset,
+                                                CompileUnit,
+                                                AbbrevCodeTable,
+                                                ret_TreeDepth,
+                                                HelpTypeNr,
+                                                TagType == DW_TAG_union_type,
+                                                AddVariableAllowed);
+                } else {
+                    // this can happen inside classes without data
+                }
+            } else {
+                ThrowError (1, "Internal error: %s (%i)", __FILE__, __LINE__);
+            }
+        }
+        if (DieAttributes->Flags.Name) {
+            RemoveClassName (ds);
+        }
+        break;
+    default:
+        return 0;  // DW_TAG_xxxxx was not decoded
+    }
+    return 1; // DW_TAG_xxxxx was decoded
+}
+
+static unsigned char *ParseDiesOfOneNameSpace (DEBUG_SECTIONS *ds,
+                                               unsigned char *Ptr,
+                                               unsigned char *NameSpaceEnd,
+                                               int32_t *ret_TreeDepth,
+                                               uint32_t CompileUnitOffset,
+                                               int32_t CompileUnit,
+                                               ABBREV_CODE_TABLE_ENTRY *AbbrevCodeTable);
 
 static unsigned char *ParseStructMemberTags (DEBUG_SECTIONS *ds,
                                              unsigned char *Ptr,
@@ -1934,9 +2198,9 @@ static unsigned char *ParseStructMemberTags (DEBUG_SECTIONS *ds,
                                              int32_t CompileUnit,
                                              ABBREV_CODE_TABLE_ENTRY *AbbrevCodeTable,
                                              int32_t *ret_TreeDepth,
-                                             //uint32_t Sibling,
                                              int32_t ParentTypeNr,
-                                             int32_t ParentIsAUnion)
+                                             int32_t ParentIsAUnion,
+                                             int32_t AddVariableAllowed)
 {
     int32_t Num, MemberCount = 0;
     uint64_t Help64;
@@ -1971,6 +2235,18 @@ static unsigned char *ParseStructMemberTags (DEBUG_SECTIONS *ds,
                                           &DieAttributes);
         if (Ptr == NULL) return NULL;
 
+        if (!ParseMemberOrDie (ds,
+                               &Ptr,
+                               CompileUnitOffset,
+                               CompileUnit,
+                               AbbrevCodeTable,
+                               ret_TreeDepth,
+                         // new
+                               StartEntryPtr,
+                               TagType,
+                               &DieAttributes,
+                               HasChildren,
+                               AddVariableAllowed))
         switch (TagType) {
         case DW_TAG_inheritance:
             insert_struct_field (ParentTypeNr, DieAttributes.Type + TYPEID_OFFSET,
@@ -1978,7 +2254,8 @@ static unsigned char *ParseStructMemberTags (DEBUG_SECTIONS *ds,
             MemberCount++;
             break;
         case DW_TAG_member:
-            if (DieAttributes.Flags.Name) {
+            if (DieAttributes.Flags.Name &&
+                !DieAttributes.Flags.BitSize && !DieAttributes.Flags.DataBitOffset) {    // ignore bit fields
                 if (ParentIsAUnion) {
                     // Member of a union have always the offset 0
                     insert_struct_field (ParentTypeNr, DieAttributes.Type + TYPEID_OFFSET,
@@ -2001,183 +2278,6 @@ static unsigned char *ParseStructMemberTags (DEBUG_SECTIONS *ds,
                 MemberCount++;
             }
             break;
-// Begin that should be merged
-    case DW_TAG_base_type:
-        insert_struct (MODIFIER_ELEM, (int32_t)(StartEntryPtr - (unsigned char*)ds->debug_info) + TYPEID_OFFSET,
-                       "", 0L, 0L,  get_basetype (DieAttributes.Size, DieAttributes.Encoding),
-                       0L, 0L, 0L, ds->pappldata);
-        break;
-    case DW_TAG_unspecified_type:
-        insert_struct (TYPEDEF_ELEM, (int32_t)(StartEntryPtr - (unsigned char*)ds->debug_info) + TYPEID_OFFSET,
-                       "void", 0L, 0L, 33,  // 33 -> "void"
-                       0L, 0L, 0L, ds->pappldata);
-        break;
-    case DW_TAG_enumeration_type:
-        // enum class!
-        insert_struct (MODIFIER_ELEM, (int32_t)(StartEntryPtr - (unsigned char*)ds->debug_info) + TYPEID_OFFSET,
-                       "enum", 0L, 0L,  get_basetype (DieAttributes.Size, 2),
-                       0L, 0L, 0L, ds->pappldata);
-        if (HasChildren) {
-            Ptr = ParseUnknownTags (ds,
-                                    Ptr,
-                                    CompileUnitOffset,
-                                    CompileUnit,
-                                    AbbrevCodeTable,
-                                    ret_TreeDepth,
-                                    DieAttributes.Sibling);
-        }
-        break;
-    case DW_TAG_typedef:
-        if (!DieAttributes.Flags.Name) {
-            DieAttributes.Name = "";  // Structure without a namen
-        } else {
-            AddClassName (DieAttributes.Name, ds);
-        }
-        if (DieAttributes.Flags.Type) {
-            char *ExtendedName = "";
-            ExtendedName = ExtendWithNameSpace (DieAttributes.Name, ds);
-            insert_struct (TYPEDEF_ELEM, (int32_t)(StartEntryPtr - (unsigned char*)ds->debug_info) + TYPEID_OFFSET,
-                           ExtendedName, 0L, 0L, DieAttributes.Type + TYPEID_OFFSET,
-                           0L, 0L, 0L, ds->pappldata);
-        }
-        if (DieAttributes.Flags.Name) {
-            RemoveClassName (ds);
-        }
-        break;
-    case DW_TAG_const_type:
-        if (DieAttributes.Flags.Type) {
-            insert_struct (MODIFIER_ELEM, (int32_t)(StartEntryPtr - (unsigned char*)ds->debug_info) + TYPEID_OFFSET,
-                           "const", 0L, 0L, DieAttributes.Type + TYPEID_OFFSET,
-                           0L, 0L, 0L, ds->pappldata);
-        }
-        break;
-    case DW_TAG_volatile_type:
-        if (DieAttributes.Flags.Type) {
-            insert_struct (MODIFIER_ELEM, (int32_t)(StartEntryPtr - (unsigned char*)ds->debug_info) + TYPEID_OFFSET,
-                           "volatile", 0L, 0L, DieAttributes.Type + TYPEID_OFFSET,
-                           0L, 0L, 0L, ds->pappldata);
-        }
-        break;
-    case DW_TAG_ptr_to_member_type:
-        // Pointer to member are offsets inside the structure/class. We will use a *void type so you cannot follow this pointers.
-        insert_struct (POINTER_ELEM, (int32_t)(StartEntryPtr - (unsigned char*)ds->debug_info) + TYPEID_OFFSET,
-                      "", 0L, 0L, 33,   // 33 -> "void", 133 -> "*void"
-                      0L, 0L, 0L, ds->pappldata);
-        break;
-    case DW_TAG_pointer_type:
-    case DW_TAG_reference_type:
-        insert_struct (POINTER_ELEM, (int32_t)(StartEntryPtr - (unsigned char*)ds->debug_info) + TYPEID_OFFSET,
-                       "", 0L, 0L, (DieAttributes.Flags.Type) ? DieAttributes.Type + TYPEID_OFFSET : 33,   // 33 -> "void", 133 -> "*void"
-                       0L, 0L, 0L, ds->pappldata);
-        break;
-    case DW_TAG_array_type:
-        if (1) {
-            char Help[32];
-            int32_t ArrayDims[10];  // max. 10 dimensions
-            int32_t x, DimCount;
-            int32_t ArrayOfTypeId, ArrayTypeId;
-
-            Ptr = ParseArraySubRangeTags (ds,
-                                          Ptr,
-                                          CompileUnitOffset,
-                                          CompileUnit,
-                                          AbbrevCodeTable,
-                                          ret_TreeDepth,
-                                          DieAttributes.Sibling, ArrayDims, &DimCount, 10);
-            if (DimCount == 1) {
-                ArrayTypeId = (int32_t)(StartEntryPtr - (unsigned char*)ds->debug_info) + TYPEID_OFFSET;
-                ArrayOfTypeId = DieAttributes.Type + TYPEID_OFFSET;
-            } else {
-                ArrayTypeId = (int32_t)(StartEntryPtr - (unsigned char*)ds->debug_info) + TYPEID_OFFSET;
-                ArrayOfTypeId = ds->HelpIdActiveFieldList + TYPEID_OFFSET;
-                ds->HelpIdActiveFieldList++;
-            }
-            PrintFormatToString (Help, sizeof(Help), "[%i]", ArrayDims[0]);
-            insert_struct (ARRAY_ELEM, ArrayTypeId, Help, 0L, 0L, ArrayOfTypeId,
-                           ArrayDims[0], ArrayOfTypeId, (DWORD)0, ds->pappldata);
-
-            for (x = 1; x < DimCount; x++) {
-                PrintFormatToString (Help, sizeof(Help), "[%u]", ArrayDims[x]);
-                ArrayTypeId = ArrayOfTypeId;
-                if (x < (DimCount-1)) {
-                    ArrayOfTypeId = ds->HelpIdActiveFieldList;
-                    ds->HelpIdActiveFieldList++;
-                } else {
-                    ArrayOfTypeId = DieAttributes.Type + TYPEID_OFFSET;
-                }
-                insert_struct (ARRAY_ELEM, ArrayTypeId, Help, 0L, 0L, ArrayOfTypeId,
-                               ArrayDims[x], ArrayOfTypeId, (DWORD)0, ds->pappldata);
-            }
-        }
-        break;
-    case DW_TAG_union_type:
-    case DW_TAG_class_type:
-    case DW_TAG_structure_type:
-        if (!DieAttributes.Flags.Name) {
-            DieAttributes.Name = "";  // Structure without namen
-        } else {
-            AddClassName (DieAttributes.Name, ds);
-        }
-        {
-            int32_t StructSizeInBytes;
-            char *ExtendedName = "";
-            int32_t HelpTypeNr;
-
-            // If it is a spezification of a previous decleration
-            if (DieAttributes.Flags.Specification && (DieAttributes.Specification != 0)) {
-                HelpTypeNr = SpecificationOfStruct (DieAttributes.Specification + TYPEID_OFFSET,&ExtendedName, ds);
-                if (HelpTypeNr > 0) {
-                    if (SetDeclarationToSpecification (DieAttributes.Specification + TYPEID_OFFSET, ds->pappldata)) {
-                        ThrowError (1, "Internal error: %s (%i)", __FILE__, __LINE__);
-                    }
-                }
-            } else {
-                HelpTypeNr = ds->pappldata->unique_fieldnr_generator;
-                ds->pappldata->unique_fieldnr_generator++;
-
-                ExtendedName = ExtendWithNameSpace (DieAttributes.Name, ds);
-
-                insert_field (HelpTypeNr, ds->pappldata);
-            }
-            if (DieAttributes.Flags.Size) StructSizeInBytes = DieAttributes.Size;
-            else StructSizeInBytes = 0;
-
-            if ((DieAttributes.Flags.Declaration) && (DieAttributes.Declaration)) {
-                insert_struct (PRE_DEC_STRUCT, (int32_t)(StartEntryPtr - (unsigned char*)ds->debug_info) + TYPEID_OFFSET,
-                               ExtendedName, 0L, HelpTypeNr, CompileUnit /*pointsto will be used as CompileUnit*/,
-                               0L, 0L, StructSizeInBytes, ds->pappldata);
-            } else {
-                insert_struct (STRUCT_ELEM, (int32_t)(StartEntryPtr - (unsigned char*)ds->debug_info) + TYPEID_OFFSET,
-                               ExtendedName, 0L, HelpTypeNr, CompileUnit /*pointsto will be used as CompileUnit*/,
-                               0L, 0L, StructSizeInBytes, ds->pappldata);
-            }
-
-            if (DieAttributes.Flags.Declaration && DieAttributes.Declaration) {   // Not a complete definition: there can be added something later
-                AddStructDeclaration ((int32_t)(StartEntryPtr - (unsigned char*)ds->debug_info) + TYPEID_OFFSET, HelpTypeNr, ExtendedName, ds);
-            }
-
-            if (HelpTypeNr != 0) {
-                if (HasChildren) {
-                    Ptr = ParseStructMemberTags (ds,
-                                                 Ptr,
-                                                 CompileUnitOffset,
-                                                 CompileUnit,
-                                                 AbbrevCodeTable,
-                                                 ret_TreeDepth,
-                                                 HelpTypeNr,
-                                                 TagType == DW_TAG_union_type);
-                } else {
-                    // this cann happen with classes without data
-                }
-            } else {
-                ThrowError (1, "Internal error: %s (%i)", __FILE__, __LINE__);
-            }
-        }
-        if (DieAttributes.Flags.Name) {
-            RemoveClassName (ds);
-        }
-        break;
-// End that should be merged
         default:
             if (HasChildren) {
                 Ptr = ParseUnknownTags (ds,
@@ -2194,16 +2294,16 @@ static unsigned char *ParseStructMemberTags (DEBUG_SECTIONS *ds,
     return Ptr;
 }
 
-unsigned char *ParseOneDie (DEBUG_SECTIONS *ds,
-                            unsigned char *Ptr,
-                            uint32_t AbbrevCode,
-                            uint32_t CompileUnitOffset,
-                            int32_t CompileUnit,
-                            ABBREV_CODE_TABLE_ENTRY *AbbrevCodeTable,
-                            int32_t *ret_TreeDepth,
-                            int32_t *ret_HasChildren,
-                            unsigned char *StartEntryPtr,
-                            int32_t AddVariableAllowed)
+static unsigned char *ParseOneDie (DEBUG_SECTIONS *ds,
+                                   unsigned char *Ptr,
+                                   uint32_t AbbrevCode,
+                                   uint32_t CompileUnitOffset,
+                                   int32_t CompileUnit,
+                                   ABBREV_CODE_TABLE_ENTRY *AbbrevCodeTable,
+                                   int32_t *ret_TreeDepth,
+                                   int32_t *ret_HasChildren,
+                                   unsigned char *StartEntryPtr,
+                                   int32_t AddVariableAllowed)
 {
     ONE_DIE_ATTRIBUTES_DATA DieAttributes;
     uint32_t TagType;
@@ -2221,226 +2321,19 @@ unsigned char *ParseOneDie (DEBUG_SECTIONS *ds,
                                       &DieAttributes);
     if (Ptr == NULL) return NULL;
 
+    if (!ParseMemberOrDie (ds,
+                           &Ptr,
+                           CompileUnitOffset,
+                           CompileUnit,
+                           AbbrevCodeTable,
+                           ret_TreeDepth,
+                           StartEntryPtr,
+                           TagType,
+                           &DieAttributes,
+                           *ret_HasChildren,
+                           AddVariableAllowed))
+
     switch (TagType) {
-    case DW_TAG_variable:
-        if (AddVariableAllowed) {
-            if ((DieAttributes.Flags.Specification && DieAttributes.Flags.Location)) {
-                char *Name;
-                int32_t TypeNr;
-                if (search_label_no_addr_by_typenr (DieAttributes.Specification + TYPEID_OFFSET, &Name, &TypeNr, ds->pappldata) == 0) {
-                    char *ExtendedName;
-                    if (DieAttributes.Flags.MIPSLinkageName) {
-                        ExtendedName = GetDemangledSymbolName (DieAttributes.MIPSLinkageName, ds);
-                    } else if (DieAttributes.Flags.LinkageName) {
-                        ExtendedName = GetDemangledSymbolName (DieAttributes.LinkageName, ds);
-                    } else {
-                        ExtendedName = _alloca(strlen (Name) + 1);  // Why copy this on the stack?
-                        StringCopyMaxCharTruncate (ExtendedName, Name, sizeof(ExtendedName));
-                    }
-                    insert_label (ExtendedName, TypeNr,
-                                  DieAttributes.Location - ds->BaseAddr,
-                                  ds->pappldata);
-                }
-            } else if (DieAttributes.Flags.Name && DieAttributes.Flags.Type) {
-                char *ExtendedName;
-
-                if (DieAttributes.Flags.MIPSLinkageName) {
-                    ExtendedName = GetDemangledSymbolName (DieAttributes.MIPSLinkageName, ds);
-                } else {
-                    ExtendedName = ExtendWithNameSpace (DieAttributes.Name, ds);
-                }
-                if (s_main_ini_val.ViewStaticSymbols || (DieAttributes.Flags.External && DieAttributes.External)) {
-                    if (s_main_ini_val.ExtendStaticLabelsWithFilename &&
-                        (!DieAttributes.Flags.External || !DieAttributes.External)) {
-                        ExtendedName = ExtendWithCurrentCompilationUnit (ExtendedName, ds);
-                    }
-                    if (DieAttributes.Flags.Location) {
-                        insert_label (ExtendedName, DieAttributes.Type + TYPEID_OFFSET,
-                                      DieAttributes.Location - ds->BaseAddr,
-                                      ds->pappldata);
-                    } else {
-                        insert_label_no_address (ExtendedName, DieAttributes.Type + TYPEID_OFFSET,
-                                                (int32_t)(StartEntryPtr - (unsigned char*)ds->debug_info) + TYPEID_OFFSET, ds->pappldata);
-                    }
-                }
-            } else {
-                // ??
-            }
-        }
-        break;
-    case DW_TAG_base_type:
-        insert_struct (MODIFIER_ELEM, (int32_t)(StartEntryPtr - (unsigned char*)ds->debug_info) + TYPEID_OFFSET,
-                       "", 0L, 0L,  get_basetype (DieAttributes.Size, DieAttributes.Encoding),
-                       0L, 0L, 0L, ds->pappldata);
-        break;
-    case DW_TAG_unspecified_type:
-        insert_struct (TYPEDEF_ELEM, (int32_t)(StartEntryPtr - (unsigned char*)ds->debug_info) + TYPEID_OFFSET,
-                       "void", 0L, 0L, 33,  // 33 -> "void"
-                       0L, 0L, 0L, ds->pappldata);
-        break;
-    case DW_TAG_enumeration_type:
-        insert_struct (MODIFIER_ELEM, (int32_t)(StartEntryPtr - (unsigned char*)ds->debug_info) + TYPEID_OFFSET,
-                       "enum", 0L, 0L,  get_basetype (DieAttributes.Size, 2),
-                       0L, 0L, 0L, ds->pappldata);
-        if (*ret_HasChildren) {
-            Ptr = ParseUnknownTags (ds,
-                                    Ptr,
-                                    CompileUnitOffset,
-                                    CompileUnit,
-                                    AbbrevCodeTable,
-                                    ret_TreeDepth,
-                                    DieAttributes.Sibling);
-        }
-        break;
-    case DW_TAG_typedef:
-        if (!DieAttributes.Flags.Name) {
-            DieAttributes.Name = "";  // Structure without namen
-        } else {
-            AddClassName (DieAttributes.Name, ds);
-        }
-        if (DieAttributes.Flags.Type) {
-            char *ExtendedName = "";
-            ExtendedName = ExtendWithNameSpace (DieAttributes.Name, ds);
-            insert_struct (TYPEDEF_ELEM, (int32_t)(StartEntryPtr - (unsigned char*)ds->debug_info) + TYPEID_OFFSET,
-                           ExtendedName, 0L, 0L, DieAttributes.Type + TYPEID_OFFSET,
-                           0L, 0L, 0L, ds->pappldata);
-        }
-        if (DieAttributes.Flags.Name) {
-            RemoveClassName (ds);
-        }
-        break;
-    case DW_TAG_const_type:
-        if (DieAttributes.Flags.Type) {
-            insert_struct (MODIFIER_ELEM, (int32_t)(StartEntryPtr - (unsigned char*)ds->debug_info) + TYPEID_OFFSET,
-                           "const", 0L, 0L, DieAttributes.Type + TYPEID_OFFSET,
-                           0L, 0L, 0L, ds->pappldata);
-        }
-        break;
-    case DW_TAG_volatile_type:
-        if (DieAttributes.Flags.Type) {
-            insert_struct (MODIFIER_ELEM, (int32_t)(StartEntryPtr - (unsigned char*)ds->debug_info) + TYPEID_OFFSET,
-                           "volatile", 0L, 0L, DieAttributes.Type + TYPEID_OFFSET,
-                           0L, 0L, 0L, ds->pappldata);
-        }
-        break;
-    case DW_TAG_ptr_to_member_type:
-        // Pointer to member are offsets inside the structure/class. We will use a *void type so you cannot follow this pointers.
-        insert_struct (POINTER_ELEM, (int32_t)(StartEntryPtr - (unsigned char*)ds->debug_info) + TYPEID_OFFSET,
-                      "", 0L, 0L, 33,   // 33 -> "void", 133 -> "*void"
-                      0L, 0L, 0L, ds->pappldata);
-        break;
-    case DW_TAG_pointer_type:
-    case DW_TAG_reference_type:
-        insert_struct (POINTER_ELEM, (int32_t)(StartEntryPtr - (unsigned char*)ds->debug_info) + TYPEID_OFFSET,
-                       "", 0L, 0L, (DieAttributes.Flags.Type) ? DieAttributes.Type + TYPEID_OFFSET : 33,   // 33 -> "void", 133 -> "*void"
-                       0L, 0L, 0L, ds->pappldata);
-        break;
-    case DW_TAG_array_type:
-        if (1) {
-            char Help[32];
-            int32_t ArrayDims[10];  // max. 10 dimensions
-            int32_t x, DimCount;
-            int32_t ArrayOfTypeId, ArrayTypeId;
-
-            Ptr = ParseArraySubRangeTags (ds,
-                                          Ptr,
-                                          CompileUnitOffset,
-                                          CompileUnit,
-                                          AbbrevCodeTable,
-                                          ret_TreeDepth,
-                                          DieAttributes.Sibling, ArrayDims, &DimCount, 10);
-            if (DimCount == 1) {
-                ArrayTypeId = (int32_t)(StartEntryPtr - (unsigned char*)ds->debug_info) + TYPEID_OFFSET;
-                ArrayOfTypeId = DieAttributes.Type + TYPEID_OFFSET;
-            } else {
-                ArrayTypeId = (int32_t)(StartEntryPtr - (unsigned char*)ds->debug_info) + TYPEID_OFFSET;
-                ArrayOfTypeId = ds->HelpIdActiveFieldList + TYPEID_OFFSET;
-                ds->HelpIdActiveFieldList++;
-            }
-            PrintFormatToString (Help, sizeof(Help), "[%u]", ArrayDims[0]);
-            insert_struct (ARRAY_ELEM, ArrayTypeId, Help, 0L, 0L, ArrayOfTypeId,
-                           ArrayDims[0], ArrayOfTypeId, (DWORD)0, ds->pappldata);
-
-            for (x = 1; x < DimCount; x++) {
-                PrintFormatToString (Help, sizeof(Help), "[%u]", ArrayDims[x]);
-                ArrayTypeId = ArrayOfTypeId;
-                if (x < (DimCount-1)) {
-                    ArrayOfTypeId = ds->HelpIdActiveFieldList + TYPEID_OFFSET;
-                    ds->HelpIdActiveFieldList++;
-                } else {
-                    ArrayOfTypeId = DieAttributes.Type + TYPEID_OFFSET;
-                }
-                insert_struct (ARRAY_ELEM, ArrayTypeId, Help, 0L, 0L, ArrayOfTypeId,
-                               ArrayDims[x], ArrayOfTypeId, (DWORD)0, ds->pappldata);
-            }
-        }
-        break;
-    case DW_TAG_union_type:
-    case DW_TAG_class_type:
-    case DW_TAG_structure_type:
-        if (!DieAttributes.Flags.Name) {
-            DieAttributes.Name = "";  // Structure without namen
-        } else {
-            AddClassName (DieAttributes.Name, ds);
-        }
-        {
-            int32_t StructSizeInBytes;
-            char *ExtendedName = "";
-            int32_t HelpTypeNr;
-
-            // If it is a spezification of a previous decleration
-            if (DieAttributes.Flags.Specification && (DieAttributes.Specification != 0)) {
-                HelpTypeNr = SpecificationOfStruct (DieAttributes.Specification + TYPEID_OFFSET, &ExtendedName, ds);
-                if (HelpTypeNr > 0) {
-                    if (SetDeclarationToSpecification (DieAttributes.Specification + TYPEID_OFFSET, ds->pappldata)) {
-                        ThrowError (1, "Internal error: %s (%i)", __FILE__, __LINE__);
-                    }
-                }
-            } else {
-                HelpTypeNr = ds->pappldata->unique_fieldnr_generator;
-                ds->pappldata->unique_fieldnr_generator++;
-                ExtendedName = ExtendWithNameSpace (DieAttributes.Name, ds);
-                insert_field (HelpTypeNr, ds->pappldata);
-            }
-            if (DieAttributes.Flags.Size) StructSizeInBytes = DieAttributes.Size;
-            else StructSizeInBytes = 0;
-
-            if ((DieAttributes.Flags.Declaration) && (DieAttributes.Declaration)) {
-                insert_struct (PRE_DEC_STRUCT, (int32_t)(StartEntryPtr - (unsigned char*)ds->debug_info) + TYPEID_OFFSET,
-                               ExtendedName, 0L, HelpTypeNr, CompileUnit /*pointsto will be used as CompileUnit*/,
-                               0L, 0L, StructSizeInBytes, ds->pappldata);
-            } else {
-                insert_struct (STRUCT_ELEM, (int32_t)(StartEntryPtr - (unsigned char*)ds->debug_info) + TYPEID_OFFSET,
-                               ExtendedName, 0L, HelpTypeNr, CompileUnit /*pointsto will be used as CompileUnit*/,
-                               0L, 0L, StructSizeInBytes, ds->pappldata);
-            }
-
-            if (DieAttributes.Flags.Declaration && DieAttributes.Declaration) {   // Not a complete definition: there can be added something later
-                AddStructDeclaration ((int32_t)(StartEntryPtr - (unsigned char*)ds->debug_info) + TYPEID_OFFSET, HelpTypeNr, ExtendedName, ds);
-            }
-
-            if (HelpTypeNr != 0) {
-                if (*ret_HasChildren) {
-                    Ptr = ParseStructMemberTags (ds,
-                                                 Ptr,
-                                                 CompileUnitOffset,
-                                                 CompileUnit,
-                                                 AbbrevCodeTable,
-                                                 ret_TreeDepth,
-                                                 HelpTypeNr,
-                                                 TagType == DW_TAG_union_type);
-                } else {
-                    // this can happen: class without data
-                }
-            } else {
-                ThrowError (1, "Internal error: %s (%i)", __FILE__, __LINE__);
-            }
-        }
-
-        if (DieAttributes.Flags.Name) {
-            RemoveClassName (ds);
-        }
-        break;
     case DW_TAG_namespace:
         if (DieAttributes.Flags.Sibling) {
             if (DieAttributes.Flags.Name) {
@@ -2480,17 +2373,16 @@ unsigned char *ParseOneDie (DEBUG_SECTIONS *ds,
         }
         break;
     }
-
     return Ptr;
 }
 
-unsigned char *ParseDiesOfOneNameSpace (DEBUG_SECTIONS *ds,
-                                        unsigned char *Ptr,
-                                        unsigned char *NameSpaceEnd,
-                                        int32_t *ret_TreeDepth,
-                                        uint32_t CompileUnitOffset,
-                                        int32_t CompileUnit,
-                                        ABBREV_CODE_TABLE_ENTRY *AbbrevCodeTable)
+static unsigned char *ParseDiesOfOneNameSpace (DEBUG_SECTIONS *ds,
+                                               unsigned char *Ptr,
+                                               unsigned char *NameSpaceEnd,
+                                               int32_t *ret_TreeDepth,
+                                               uint32_t CompileUnitOffset,
+                                               int32_t CompileUnit,
+                                               ABBREV_CODE_TABLE_ENTRY *AbbrevCodeTable)
 {
     unsigned char *StartEntryPtr;
     uint32_t DiesNum;
@@ -2672,96 +2564,6 @@ int32_t ParseCompileUnits (DEBUG_SECTIONS *ds)
     return num_units;
 }
 
-#if 1
-// only for debug
-int32_t ParsePubTypesOfCompileUnits (DEBUG_SECTIONS *ds)
-{
-    unsigned char *section_begin, *this_section_begin, *section_end, *ptr;
-    int32_t num_units = 0;
-    uint32_t Offset, length;
-    uint32_t CompileUnitOffset, CompileUnitLength;
-    uint16_t Version;
-    int32_t Is64BitFormat = 0;
-    int32_t NumOfPupTypes;
-
-    section_end = (unsigned char*)ds->debug_pubtypes + ds->debug_pubtypes_len;
-
-    for (section_begin = (unsigned char*)ds->debug_pubtypes, num_units = 0; section_begin < section_end;
-         num_units++) {
-        this_section_begin = section_begin;
-        Offset = (uint32_t)(section_begin - (unsigned char*)ds->debug_pubtypes);
-        /* Read the first 4 bytes.  For a 32-bit DWARF section, this
-           will be the length.  For a 64-bit DWARF section, it will be
-           the escape code 0xffffffff followed by an 8 byte length.  */
-        length = byte_get (section_begin, 4);
-
-        if (length == 0xffffffff) {
-            length = byte_get (section_begin + 4, 8);
-            ptr = section_begin + 12;
-            section_begin += length + 12;
-            Is64BitFormat = 1;
-        } else if (length >= 0xfffffff0 && length < 0xffffffff) {
-            ThrowError (1, "Reserved length value found in section\n");
-            return 0;
-        } else {
-            ptr = section_begin + 4;
-            section_begin += length + 4;
-            Is64BitFormat = 0;
-        }
-
-        /* Negative values are illegal, they may even cause infinite
-           looping.  This can happen if we can't accurately apply
-           relocations to an object file.  */
-        if ((int32_t) length <= 0) {
-            ThrowError (1, "Corrupt unit length found in section\n");
-            return 0;
-        }
-        Version = (uint16_t)byte_get (ptr, 2);
-        ptr += 2;
-        if (Is64BitFormat) {
-            CompileUnitOffset = byte_get (ptr, 8);
-            ptr += 8;
-            CompileUnitLength = byte_get (ptr, 8);
-            ptr += 8;
-         } else {
-            CompileUnitOffset = byte_get (ptr, 4);
-            ptr += 4;
-            CompileUnitLength =  byte_get (ptr, 4);
-            ptr += 4;
-        }
-        DEBUGFPRINTF0 (DebugOut, "\n");
-        DEBUGFPRINTF (DebugOut, "Compilation Unit (%i) @ offset 0x%X:\n", num_units+1, Offset);
-        DEBUGFPRINTF (DebugOut, "Length:        0x%X (32-bit)\n", length);
-        DEBUGFPRINTF (DebugOut, "Version:       %i\n", (int32_t)Version);
-        DEBUGFPRINTF (DebugOut, "Compile Unit Offset in .debug_info: %u\n", CompileUnitOffset);
-        DEBUGFPRINTF (DebugOut, "Compile Unit Size in .debug_info: %u\n", CompileUnitLength);
-
-        DEBUGFPRINTF0 (DebugOut, "\n\npublic types:\n");
-
-        for (NumOfPupTypes = 0; ptr < (this_section_begin + length); NumOfPupTypes++) {
-            uint32_t OffsetInCompileUnit;
-            if (Is64BitFormat) {
-                OffsetInCompileUnit = byte_get (ptr, 8);
-                ptr += 8;
-            } else {
-                OffsetInCompileUnit = byte_get (ptr, 4);
-                ptr += 4;
-            }
-            DEBUGFPRINTF (DebugOut, "  %X   %s\n", OffsetInCompileUnit, ptr);
-            ptr += strlen ((char*)ptr) + 1;
-        }
-        DEBUGFPRINTF0 (DebugOut, "\n");
-    }
-
-    if (num_units == 0) {
-        ThrowError (1, "No comp units in section");
-        return 0;
-    }
-
-    return num_units;
-}
-#endif
-
 int32_t SearchPubTypesOrName (DEBUG_SECTIONS *ds, int32_t CompileUnit, const char *Name, int32_t NameOrTypeFlag, uint32_t *ret_OffsetInDebugInfo)
 {
     unsigned char *section_begin, *this_section_begin, *section_end, *ptr;
@@ -2892,21 +2694,28 @@ int32_t parse_dwarf_from_exe_file (char *par_ExeFileName, DEBUG_INFOS_DATA *papp
         ThrowError (1, "out of memmory");
         Ret = -1;
     } else {
+        char *PosLastPoint = NULL;
         MEMSET (DebugSections, 0, sizeof (DEBUG_SECTIONS));
 
         // Are the debug infos inside an own *.dbg file?
         DebugInfoFile = par_ExeFileName;
-        p =  par_ExeFileName;
-        while (*p != 0) p++;
-        if (((p - par_ExeFileName) > 4) &&
-             !strcmpi (p-4, ".exe")) {
+        p = par_ExeFileName;
+        while (*p != 0) {
+            if (*p == '.') {
+                PosLastPoint = p;
+            }
+            p++;
+        }
+        if ((PosLastPoint != NULL) && ((p - par_ExeFileName) > 4) && ((p - par_ExeFileName) < (sizeof(ExtractedDebugInfoFile) - 1)) &&
 #ifdef _WIN32
+            (!strcmpi (PosLastPoint, ".exe") || !strcmpi (PosLastPoint, ".dll"))) {
             HANDLE hFile;
 #else
+            (!strcmpi (PosLastPoint, ".exe") || !strcmpi (PosLastPoint, ".so"))) {
             int fh;
 #endif
-            MEMCPY (ExtractedDebugInfoFile, par_ExeFileName, (size_t)((p - par_ExeFileName) - 3));
-            StringCopyMaxCharTruncate (ExtractedDebugInfoFile + (p - par_ExeFileName) - 3, "dbg", 4);
+            MEMCPY (ExtractedDebugInfoFile, par_ExeFileName, (size_t)((PosLastPoint - par_ExeFileName)));
+            StringCopyMaxCharTruncate (ExtractedDebugInfoFile + ((PosLastPoint - par_ExeFileName)), ".dbg", 5);
 #ifdef WIN32
             hFile = CreateFile (ExtractedDebugInfoFile,
                                 GENERIC_READ,
