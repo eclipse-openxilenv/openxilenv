@@ -2706,7 +2706,7 @@ int32_t parse_dwarf_from_exe_file (char *par_ExeFileName, DEBUG_INFOS_DATA *papp
             }
             p++;
         }
-        if ((PosLastPoint != NULL) && ((p - par_ExeFileName) > 4) && ((p - par_ExeFileName) < sizeof(ExtractedDebugInfoFile)) &&
+        if ((PosLastPoint != NULL) && ((p - par_ExeFileName) > 4) && ((p - par_ExeFileName) < (sizeof(ExtractedDebugInfoFile) - 1)) &&
 #ifdef _WIN32
             (!strcmpi (PosLastPoint, ".exe") || !strcmpi (PosLastPoint, ".dll"))) {
             HANDLE hFile;
