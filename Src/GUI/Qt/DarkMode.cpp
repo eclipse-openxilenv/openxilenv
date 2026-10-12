@@ -37,6 +37,31 @@ static void ApplyDarkPalette(QApplication *App)
     App->setPalette(DarkPalette);
 }
 
+// Fusion's standardPalette() follows the system color scheme, so a light palette must be set explicitly.
+static void ApplyLightPalette(QApplication *App)
+{
+    QPalette LightPalette(QColor(239, 239, 239));
+    QColor DisabledColor(120, 120, 120);
+
+    LightPalette.setColor(QPalette::Window,          QColor(239, 239, 239));
+    LightPalette.setColor(QPalette::WindowText,      Qt::black);
+    LightPalette.setColor(QPalette::Base,            Qt::white);
+    LightPalette.setColor(QPalette::AlternateBase,   QColor(247, 247, 247));
+    LightPalette.setColor(QPalette::ToolTipBase,     QColor(255, 255, 220));
+    LightPalette.setColor(QPalette::ToolTipText,     Qt::black);
+    LightPalette.setColor(QPalette::Text,            Qt::black);
+    LightPalette.setColor(QPalette::Button,          QColor(239, 239, 239));
+    LightPalette.setColor(QPalette::ButtonText,      Qt::black);
+    LightPalette.setColor(QPalette::BrightText,      Qt::white);
+    LightPalette.setColor(QPalette::Link,            QColor(0, 0, 255));
+    LightPalette.setColor(QPalette::Highlight,       QColor(48, 140, 198));
+    LightPalette.setColor(QPalette::HighlightedText, Qt::white);
+    LightPalette.setColor(QPalette::Disabled, QPalette::Text,       DisabledColor);
+    LightPalette.setColor(QPalette::Disabled, QPalette::ButtonText, DisabledColor);
+    LightPalette.setColor(QPalette::Disabled, QPalette::WindowText, DisabledColor);
+    App->setPalette(LightPalette);
+}
+
 bool IsDarkModeActive()
 {
 #if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
@@ -71,17 +96,11 @@ void SetDarkMode(bool par_DarkMode)
     }
 #else
     // Qt < 6.8 has no public setColorScheme(): emulate it with the Fusion style and an explicit palette.
-    static const QString OriginalStyleName = App->style()->objectName();
-    static const QPalette OriginalPalette = App->palette();
+    App->setStyle(QStyleFactory::create("Fusion"));
     if (par_DarkMode) {
-        App->setStyle(QStyleFactory::create("Fusion"));
         ApplyDarkPalette(App);
     } else {
-        QStyle *OriginalStyle = QStyleFactory::create(OriginalStyleName);
-        if (OriginalStyle != nullptr) {
-            App->setStyle(OriginalStyle);
-        }
-        App->setPalette(OriginalPalette);
+        ApplyLightPalette(App);
     }
 #endif
 }
