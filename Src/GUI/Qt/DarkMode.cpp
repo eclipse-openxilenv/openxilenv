@@ -52,7 +52,7 @@ static void ApplyLightPalette(QApplication *App)
     LightPalette.setColor(QPalette::Text,            Qt::black);
     LightPalette.setColor(QPalette::Button,          QColor(239, 239, 239));
     LightPalette.setColor(QPalette::ButtonText,      Qt::black);
-    LightPalette.setColor(QPalette::BrightText,      Qt::white);
+    LightPalette.setColor(QPalette::BrightText,      Qt::red);
     LightPalette.setColor(QPalette::Link,            QColor(0, 0, 255));
     LightPalette.setColor(QPalette::Highlight,       QColor(48, 140, 198));
     LightPalette.setColor(QPalette::HighlightedText, Qt::white);
