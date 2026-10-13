@@ -140,79 +140,27 @@ jobs:
         where ninja
         ninja --version
     
-    - name: Download Qt 6.4.2 source
-      shell: cmd
-      run: |
-        cd D:\a\_temp\
-        git clone --depth 1 --branch v6.4.2 https://github.com/qt/qtbase.git qtbase-6.4.2
-        git clone --depth 1 --branch v6.4.2 https://github.com/qt/qtsvg.git qtsvg-6.4.2
-
-    - name: Create Qt build directory
-      shell: cmd
-      run: |
-        mkdir D:\a\_temp\Qt-build
-
-    - name: Configure Qt 6.4.2
-      shell: cmd
-      run: |
-        set PATH=D:\a\_temp\mingw\mingw64\bin;%PATH%
-        cd D:\a\_temp\Qt-build
-        D:\a\_temp\qtbase-6.4.2\configure.bat -release -opensource -confirm-license -no-feature-sql-psql -prefix D:\a\_temp\Qt6_4_2
-
-    - name: Build Qt 6.4.2
-      shell: cmd
-      run: |
-        set PATH=D:\a\_temp\mingw\mingw64\bin;%PATH%
-        cd D:\a\_temp\Qt-build
-        cmake --build . --parallel
-
-    - name: Install Qt 6.4.2
-      shell: cmd
-      run: |
-        cd D:\a\_temp\Qt-build
-        cmake --install . --config Release
-
-    - name: Configure qtsvg 6.4.2 against Qt 6.4.2
-      shell: cmd
-      run: |
-        mkdir D:\a\_temp\qtsvg-build
-        cd D:\a\_temp\qtsvg-build
-        set PATH=D:\a\_temp\mingw\mingw64\bin;D:\a\_temp\Qt6_4_2\bin;%PATH%
-        cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=D:\a\_temp\Qt6_4_2 -DQt6_DIR=D:\a\_temp\Qt6_4_2\lib\cmake\Qt6 D:\a\_temp\qtsvg-6.4.2
-
-    - name: Build qtsvg 6.4.2
-      shell: cmd
-      run: |
-        cd D:\a\_temp\qtsvg-build
-        set PATH=D:\a\_temp\mingw\mingw64\bin;D:\a\_temp\Qt6_4_2\bin;%PATH%
-        cmake --build . --parallel
-
-    - name: Install qtsvg 6.4.2
-      shell: cmd
-      run: |
-        cd D:\a\_temp\qtsvg-build
-        cmake --install . --config Release
-
-    - name: Add Qt to PATH
-      shell: bash
-      run: |
-        echo "D:/a/_temp/Qt6_4_2/bin" >> $GITHUB_PATH
-        echo "Qt6_DIR=D:/a/_temp/Qt6_4_2" >> $GITHUB_ENV
+    - name: Install Qt
+      uses: jurplel/install-qt-action@v4.3.1
+      with:
+        version: '6.4.2'
+        host: 'windows'
+        target: 'desktop'
+        arch: 'win64_mingw'
 
     - name: Prepare OpenXilEnv Build
       shell: cmd 
       run: |
-        set PATH=D:\a\_temp\Qt6_4_2\bin;%PATH%
         cd D:\a\openxilenv\openxilenv
         mkdir openxilenv-build
         cd openxilenv-build
-        cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=D:\a\tools\OpenXilEnv -DQt6_DIR=D:\a\_temp\Qt6_4_2\lib\cmake\Qt6 ..\openxilenv
+        cmake -G Ninja -DCMAKE_INSTALL_PREFIX=D:\a\tools\OpenXilEnv ..\openxilenv
 
     - name: Build OpenXilEnv
       shell: cmd 
       run: |
         cd D:\a\openxilenv\openxilenv\openxilenv-build
-        cmake --build . --parallel
+        cmake --build .
 
     - name: Install OpenXilEnv 
       shell: cmd
@@ -224,7 +172,7 @@ jobs:
       shell: pwsh
       run: |
         cd D:\a\tools\OpenXilEnv
-        windeployqt.exe --release XilEnvGui.exe
+        windeployqt.exe XilEnvGui.exe
 
     - name: Test OpenXilEnv installation 
       shell: pwsh
