@@ -1,0 +1,245 @@
+name: Build OpenXilEnv (Qt 6.4.2)
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:  # Allow manual triggers
+
+jobs:
+  linux-build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v5
+      with:
+        path: openxilenv
+    
+    - name: Setup Python
+      uses: actions/setup-python@v6
+      with:
+        python-version: '3.11'
+        
+    - name: Install build dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential cmake ninja-build gcc g++
+        sudo apt install libglx-dev libgl1-mesa-dev
+        
+    - name: Display GITHUB_WORKSPACE
+      run: |
+        echo "=== GITHUB_WORKSPACE ==="
+        echo $GITHUB_WORKSPACE
+        echo ""
+        echo "=== Contents of GITHUB_WORKSPACE ==="
+        ls -la $GITHUB_WORKSPACE
+        echo ""
+        
+    - name: Install aqtinstall
+      run: pip install aqtinstall==3.3.0
+  
+    - name: Install Qt 6.4.2
+      run: |
+        aqt install-qt linux desktop 6.4.2 gcc_64 -O $GITHUB_WORKSPACE/Qt
+        echo ""
+        ls -la $GITHUB_WORKSPACE/Qt/6.4.2
+        echo ""
+        echo "$GITHUB_WORKSPACE/Qt/6.4.2/gcc_64/bin" >> $GITHUB_PATH
+        echo "Qt6_DIR=$GITHUB_WORKSPACE/Qt/6.4.2/gcc_64" >> $GITHUB_ENV
+    
+    - name: Verify Qt installation
+      run: |
+        echo "=== Qt Installation Location ==="
+        echo "Qt6_DIR: $Qt6_DIR"
+        echo ""
+        echo "=== Qt Directory Contents ==="
+        ls -la $Qt6_DIR
+        echo ""
+        echo "=== Qt bin Directory ==="
+        ls -la $Qt6_DIR/bin
+        echo ""
+        echo "=== Qt CMake Files ==="
+        find $Qt6_DIR -name "Qt6Config.cmake" 2>/dev/null || echo "Qt6Config.cmake not found"
+        echo ""
+        echo "=== Qt Environment Variables ==="
+        env | grep -i qt || echo "No Qt variables set"
+        
+    - name: Prepare OpenXilEnv Build
+      run: |
+        cd $GITHUB_WORKSPACE
+        mkdir openxilenv-build
+        cd openxilenv-build
+        cmake -G Ninja -DCMAKE_INSTALL_PREFIX=$GITHUB_WORKSPACE/tools/OpenXilEnv ../openxilenv
+
+    - name: Build OpenXilEnv
+      run: |
+        cd $GITHUB_WORKSPACE/openxilenv-build
+        cmake --build .
+
+    - name: Install OpenXilEnv 
+      run: |
+        cd $GITHUB_WORKSPACE/openxilenv-build
+        cmake --install .
+
+    - name: Test OpenXilEnv installation
+      run: |
+        cd $GITHUB_WORKSPACE/openxilenv
+        export OPENXILENV_INSTALLATION_PATH=$GITHUB_WORKSPACE/tools/OpenXilEnv
+        python3 -m venv .venv
+        source .venv/bin/activate
+        python3 -m pip install --upgrade pip
+        python3 -m pip install -r ./requirements.txt
+        python3 -m pip install ./python-api
+        pytest -vv
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v6
+      with:
+        name: OpenXilEnv-Linux-Qt6_4_2
+        path: ${{ github.workspace }}/tools/OpenXilEnv/**
+
+  windows-build:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v5
+      with:
+        path: openxilenv
+    
+    - name: Setup Python
+      uses: actions/setup-python@v6
+      with:
+        python-version: '3.11'
+    
+    - name: Download niXman MinGW-w64 GCC 14.2.0
+      run: |
+        cd D:/a/_temp/
+        curl -L -o D:/a/_temp/mingw.7z https://github.com/niXman/mingw-builds-binaries/releases/download/14.2.0-rt_v12-rev2/x86_64-14.2.0-release-win32-seh-ucrt-rt_v12-rev2.7z
+
+    - name: Extract & add to PATH
+      run: |
+        7z x D:/a/_temp/mingw.7z -oD:/a/_temp/mingw -y
+    
+    - name: Add MinGW to PATH
+      shell: bash
+      run: |
+        echo "D:/a/_temp/mingw/mingw64/bin" >> $GITHUB_PATH
+    
+    - name: Verify MinGW installation
+      shell: cmd
+      run: |
+        where gcc
+        gcc --version
+        where g++
+        g++ --version
+        where cmake
+        cmake --version
+        where ninja
+        ninja --version
+    
+    - name: Download Qt 6.4.2 source
+      shell: cmd
+      run: |
+        cd D:\a\_temp\
+        git clone --depth 1 --branch v6.4.2 https://github.com/qt/qtbase.git qtbase-6.4.2
+        git clone --depth 1 --branch v6.4.2 https://github.com/qt/qtsvg.git qtsvg-6.4.2
+
+    - name: Create Qt build directory
+      shell: cmd
+      run: |
+        mkdir D:\a\_temp\Qt-build
+
+    - name: Configure Qt 6.4.2
+      shell: cmd
+      run: |
+        set PATH=D:\a\_temp\mingw\mingw64\bin;%PATH%
+        cd D:\a\_temp\Qt-build
+        D:\a\_temp\qtbase-6.4.2\configure.bat -release -opensource -confirm-license -no-feature-sql-psql -prefix D:\a\_temp\Qt6_4_2
+
+    - name: Build Qt 6.4.2
+      shell: cmd
+      run: |
+        set PATH=D:\a\_temp\mingw\mingw64\bin;%PATH%
+        cd D:\a\_temp\Qt-build
+        cmake --build . --parallel
+
+    - name: Install Qt 6.4.2
+      shell: cmd
+      run: |
+        cd D:\a\_temp\Qt-build
+        cmake --install . --config Release
+
+    - name: Configure qtsvg 6.4.2 against Qt 6.4.2
+      shell: cmd
+      run: |
+        mkdir D:\a\_temp\qtsvg-build
+        cd D:\a\_temp\qtsvg-build
+        set PATH=D:\a\_temp\mingw\mingw64\bin;D:\a\_temp\Qt6_4_2\bin;%PATH%
+        cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=D:\a\_temp\Qt6_4_2 -DQt6_DIR=D:\a\_temp\Qt6_4_2\lib\cmake\Qt6 D:\a\_temp\qtsvg-6.4.2
+
+    - name: Build qtsvg 6.4.2
+      shell: cmd
+      run: |
+        cd D:\a\_temp\qtsvg-build
+        set PATH=D:\a\_temp\mingw\mingw64\bin;D:\a\_temp\Qt6_4_2\bin;%PATH%
+        cmake --build . --parallel
+
+    - name: Install qtsvg 6.4.2
+      shell: cmd
+      run: |
+        cd D:\a\_temp\qtsvg-build
+        cmake --install . --config Release
+
+    - name: Add Qt to PATH
+      shell: bash
+      run: |
+        echo "D:/a/_temp/Qt6_4_2/bin" >> $GITHUB_PATH
+        echo "Qt6_DIR=D:/a/_temp/Qt6_4_2" >> $GITHUB_ENV
+
+    - name: Prepare OpenXilEnv Build
+      shell: cmd 
+      run: |
+        set PATH=D:\a\_temp\Qt6_4_2\bin;%PATH%
+        cd D:\a\openxilenv\openxilenv
+        mkdir openxilenv-build
+        cd openxilenv-build
+        cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=D:\a\tools\OpenXilEnv -DQt6_DIR=D:\a\_temp\Qt6_4_2\lib\cmake\Qt6 ..\openxilenv
+
+    - name: Build OpenXilEnv
+      shell: cmd 
+      run: |
+        cd D:\a\openxilenv\openxilenv\openxilenv-build
+        cmake --build . --parallel
+
+    - name: Install OpenXilEnv 
+      shell: cmd
+      run: |
+        cd D:\a\openxilenv\openxilenv\openxilenv-build
+        cmake --install .
+
+    - name: Deploy Qt DLLs with windeployqt
+      shell: pwsh
+      run: |
+        cd D:\a\tools\OpenXilEnv
+        windeployqt.exe --release XilEnvGui.exe
+
+    - name: Test OpenXilEnv installation 
+      shell: pwsh
+      run: |
+        cd D:\a\openxilenv\openxilenv\openxilenv
+        $env:OPENXILENV_INSTALLATION_PATH = "D:\a\tools\OpenXilEnv"
+        python -m venv .venv
+        .\.venv\Scripts\Activate.ps1
+        python -m pip install --upgrade pip
+        python -m pip install -r ./requirements.txt
+        python -m pip install ./python-api
+        pytest -vv
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v6
+      with:
+        name: OpenXilEnv-Windows-Qt6_4_2
+        path: D:/a/tools/OpenXilEnv/**
