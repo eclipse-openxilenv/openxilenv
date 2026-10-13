@@ -64,12 +64,7 @@ static void ApplyLightPalette(QApplication *App)
 
 bool IsDarkModeActive()
 {
-#if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
-    Qt::ColorScheme Scheme = QGuiApplication::styleHints()->colorScheme();
-    return Scheme == Qt::ColorScheme::Dark;
-#else
     return QGuiApplication::palette().color(QPalette::Window).value() < 128;
-#endif
 }
 
 void SetDarkMode(bool par_DarkMode)
@@ -83,24 +78,15 @@ void SetDarkMode(bool par_DarkMode)
 
     App->setStyle(QStyleFactory::create("Fusion"));
     App->setPalette(App->style()->standardPalette());
+#endif
 
-    if (par_DarkMode) {
-        // Check whether the platform generated an actual dark palette.
-        // On Linux/xcb the platform has no dark colors to provide, so the
-        // palette stays light even after setColorScheme(Dark); apply one
-        // explicitly in that case.
-        const bool PaletteIsDark = App->palette().color(QPalette::Window).value() < 128;
-        if (!PaletteIsDark) {
-            ApplyDarkPalette(App);
-        }
-    }
-#else
-    // Qt < 6.8 has no public setColorScheme(): emulate it with the Fusion style and an explicit palette.
-    App->setStyle(QStyleFactory::create("Fusion"));
-    if (par_DarkMode) {
+    // Check whether the platform generated an actual dark palette.
+    // On Linux/xcb the platform has no dark colors to provide, so the
+    // palette stays light even after setColorScheme(Dark); apply one
+    // explicitly in that case.
+    if (par_DarkMode && !IsDarkModeActive()) {
         ApplyDarkPalette(App);
-    } else {
+    } else if (!par_DarkMode && IsDarkModeActive()) {
         ApplyLightPalette(App);
     }
-#endif
 }
