@@ -64,12 +64,8 @@ static void ApplyLightPalette(QApplication *App)
 
 bool IsDarkModeActive()
 {
-#if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
-    Qt::ColorScheme Scheme = QGuiApplication::styleHints()->colorScheme();
-    return Scheme == Qt::ColorScheme::Dark;
-#else
-    return QGuiApplication::palette().color(QPalette::Window).value() < 128;
-#endif
+    bool isDarkMode = QGuiApplication::palette().color(QPalette::Window).value() < 128;
+    return isDarkMode;
 }
 
 void SetDarkMode(bool par_DarkMode)
@@ -85,9 +81,9 @@ void SetDarkMode(bool par_DarkMode)
     // The native styles (e.g. on Windows) ignore the palette, and Fusion's standardPalette()
     // follows the system color scheme. Use Fusion with an explicit palette for a reliable result.
     App->setStyle(QStyleFactory::create("Fusion"));
-    if (par_DarkMode) {
+    if (par_DarkMode && !IsDarkModeActive()) {
         ApplyDarkPalette(App);
-    } else {
+    } else if (!par_DarkMode && IsDarkModeActive()) {
         ApplyLightPalette(App);
     }
 }
