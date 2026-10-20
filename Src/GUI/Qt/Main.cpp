@@ -66,13 +66,9 @@ int main(int argc, char *argv[])
 
     StartBlackboardObserver();
 
-#if QT_VERSION < QT_VERSION_CHECK(6, 8, 0)
-    s_main_ini_val.DarkMode = 0;
-#else
     if (!s_main_ini_val.DarkModeWasSetByUser) {  // Dark mode was not set before?
         s_main_ini_val.DarkMode = s_main_ini_val.ShouldUseDarkModeIni || s_main_ini_val.SystemDarkMode;
     }
-#endif
 
     SetDarkMode(s_main_ini_val.DarkMode);
 
