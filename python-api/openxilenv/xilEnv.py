@@ -942,18 +942,6 @@ class XilEnv:
 		return self.__lib.XilEnv_GetAPIVersion()
 
 
-	def GetAPIAlternativeVersion(self) -> int:
-		"""
-		Get the alternative API version of the loaded openXilEnv library.
-
-		Returns
-		-------
-		int
-			Alternative API version number.
-		"""
-		return self.__lib.XilEnv_GetAPIAlternativeVersion()
-
-
 	def GetAPIModulePath(self) -> bytes:
 		"""
 		Get the file system path to the loaded openXilEnv API module.

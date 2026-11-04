@@ -58,7 +58,6 @@ CFUNC SCRPCDLL_API int __STDCALL__ XilEnv_DisconnectAndClose(int SetErrorLevelFl
 CFUNC SCRPCDLL_API int __STDCALL__ XilEnv_IsConnectedTo(void);
 CFUNC SCRPCDLL_API int __STDCALL__ XilEnv_GetVersion(void);
 CFUNC SCRPCDLL_API int __STDCALL__ XilEnv_GetAPIVersion(void);
-CFUNC SCRPCDLL_API int __STDCALL__ XilEnv_GetAPIAlternativeVersion(void);
 
 CFUNC SCRPCDLL_API char * __STDCALL__ XilEnv_GetAPIModulePath(void);
 

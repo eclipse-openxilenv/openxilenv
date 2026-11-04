@@ -971,9 +971,6 @@ class XilEnvRpc:
     def GetAPIVersion(self):
         return self.__Dll.XilEnv_GetAPIVersion()
 
-    def GetAPIAlternativeVersion(self):
-        return self.__Dll.XilEnv_GetAPIAlternativeVersion()
-
     def GetAPIModulePath(self):
         return self.__Dll.XilEnv_GetAPIModulePath()
 
