@@ -110,30 +110,6 @@ None
 
 ---
 
-#### GetAPIAlternativeVersion
-
-##### Signature
-
-```python
-def GetAPIAlternativeVersion(self) -> int:
-```
-
-##### Description
-
-Get the alternative API version of the loaded openXilEnv library.
-
-##### Parameter
-
-None
-
-##### Return
-
-| Return Value | Description |
-|--------------|-------------|
-| int | Alternative API version number. |
-
----
-
 #### GetAPIModulePath
 
 ##### Signature
