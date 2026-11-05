@@ -2502,21 +2502,6 @@ class XilEnv:
 		else:
 			return -1
 
-	def ExportRobFile(self, RobFile: str) -> int:
-		"""
-		Export a ROB file.
-
-		Args:
-			RobFile (str): Path to the ROB file.
-
-		Returns:
-			int: 0 if successful, -1 otherwise.
-		"""
-		if self.__SuccessfulConnected == 1:
-			return self.__lib.XilEnv_ExportRobFile(self.c_str(RobFile))
-		else:
-			return -1
-
 	def GetVariConversionType(self, Vid: int) -> int:
 		"""
 		Get the conversion type of a variable by its ID.
