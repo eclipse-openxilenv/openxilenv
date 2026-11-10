@@ -220,7 +220,7 @@
          <item>
           <widget class="QRadioButton" name="DefaultModeRadioButton">
            <property name="text">
-            <string>Default mode</string>
+            <string>Default Mode (INI)</string>
            </property>
           </widget>
          </item>
@@ -234,7 +234,7 @@
          <item>
           <widget class="QRadioButton" name="NormalModeRadioButton">
            <property name="text">
-            <string>Normal mode</string>
+            <string>Light Mode</string>
            </property>
           </widget>
          </item>
@@ -248,7 +248,7 @@
          <item>
           <widget class="QRadioButton" name="DarkModeRadioButton">
            <property name="text">
-            <string>Dark mode</string>
+            <string>Dark Mode</string>
            </property>
           </widget>
          </item>
