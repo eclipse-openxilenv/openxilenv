@@ -1423,12 +1423,6 @@ class XilEnvRpc:
         else:
             return -1
 
-    def ExportRobFile(self, RobFile):
-        if (self.__SuccessfulConnected == 1):
-            return self.__Dll.XilEnv_ExportRobFile(self.c_str(RobFile))
-        else:
-            return -1
-
     def GetVariConversionType(self, Vid):
         if (self.__SuccessfulConnected == 1):
             return self.__Dll.XilEnv_GetVariConversionType(Vid)
