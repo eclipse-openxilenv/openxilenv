@@ -189,11 +189,7 @@ BasicSettingsDialog::BasicSettingsDialog(QWidget *parent) : Dialog(parent),
 
     ui->SyncWithFlexrayCheckBox->setChecked(s_main_ini_val.SyncWithFlexray);
 
-#if QT_VERSION < QT_VERSION_CHECK(6, 8, 0)
-    ui->DarkModeCheckBox->setVisible(false);
-#else
     ui->DarkModeCheckBox->setChecked(s_main_ini_val.ShouldUseDarkModeIni);
-#endif
 }
 
 BasicSettingsDialog::~BasicSettingsDialog()
