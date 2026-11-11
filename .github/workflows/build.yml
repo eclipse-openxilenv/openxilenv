@@ -92,7 +92,7 @@ jobs:
         python3 -m pip install --upgrade pip
         python3 -m pip install -r ./requirements.txt
         python3 -m pip install ./python-api
-        pytest -vv
+        pytest -vv -n 1
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v6
