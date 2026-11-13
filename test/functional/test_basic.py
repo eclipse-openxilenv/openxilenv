@@ -38,7 +38,7 @@ def test_StartWithoutGui_and_disconnectAndCloseXil(xilEnv_installation_path: Pat
         xil = XilEnv(xilEnv_installation_path)
     except Exception as e:
         pytest.skip(f"XilEnv initialization failed: {e}")
-    xil.startWithoutGui(ini_file_path)
+    xil.startWithoutGui(ini_file_path, Instance="my_instance")
     assert xil.isConnected()
     xil.disconnectAndCloseXil()
     assert not xil.isConnected()
