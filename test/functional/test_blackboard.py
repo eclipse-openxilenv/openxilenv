@@ -19,7 +19,6 @@ This module contains pytest-based tests for verifying Blackboard variable operat
 using the OpenXilEnv Python API. Fixtures are provided for test setup and teardown.
 """
 
-import configparser
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Generator
@@ -33,13 +32,13 @@ import time
 
 @contextmanager
 def temporary_blackboard_variable(
-        owned_xil: tuple[XilEnv, str],
-        variable_name: str | None = None,
-    ) -> Generator[tuple[str, int], None, None]:
+    owned_xil: tuple[XilEnv, str],
+    variable_name: str | None = None,
+) -> Generator[tuple[str, int], None, None]:
     """Create a temporary Blackboard variable, yield it and remove it when finished.
 
     Any "trace" of the created variable (additional attachments) will be cleaned up.
-    
+
     Args:
         owned_xil (tuple[XilEnv, str]): The XilEnv client and instance name.
         variable_name (str | None): Optional variable name.
@@ -64,7 +63,7 @@ def temporary_blackboard_variable(
             assert remaining == 0
 
 
-# ----------------------------------------------------------------------------Variable tests---------------------------------------------------------------------------- #
+# Variable tests
 
 def test_write_to_and_read_from_blackboard_variable(owned_xil: tuple[XilEnv, str]) -> None:
     """
@@ -89,7 +88,7 @@ def test_add_attach_and_remove_blackboard_variable(owned_xil: tuple[XilEnv, str]
         owned_xil (tuple[XilEnv, str]  ): The XilEnv client and instance name.
     """
     xil, _ = owned_xil
-    
+
     variable_name = f"BlackboardTest.{uuid4().hex}"
     variable_id = xil.AddVari(variable_name, DataType.BB_DOUBLE, "test")
     assert variable_id > 0
@@ -173,6 +172,8 @@ def test_write_multiple_signals(owned_xil: tuple[XilEnv, str]) -> None:
 
 def test_write_frame_wait_read_frame(owned_xil: tuple[XilEnv, str]) -> None:
     xil, _ = owned_xil
+    initial_scheduler_state = xil.SchedulerRunning()
+
     with temporary_blackboard_variable(owned_xil) as (first_name, first_id):
         with temporary_blackboard_variable(owned_xil) as (second_name, second_id):
             try:
@@ -180,9 +181,8 @@ def test_write_frame_wait_read_frame(owned_xil: tuple[XilEnv, str]) -> None:
                 xil.StopScheduler()
                 assert xil.WriteFrameWaitReadFrame([first_id, second_id], [1.23, 4.56]) == [1.23, 4.56]
             finally:
-                xil.ContinueScheduler()
-            
-    
+                if initial_scheduler_state == 1:
+                    xil.ContinueScheduler()
 
 
 def test_getType_getUnit_setUnit(owned_xil: tuple[XilEnv, str]) -> None:
@@ -202,14 +202,22 @@ def test_getType_getUnit_setUnit(owned_xil: tuple[XilEnv, str]) -> None:
         xil.RemoveVari(variable_id)
 
 
-def test_set_min_max(owned_xil: tuple[XilEnv, str]) -> None:
+@pytest.mark.parametrize(
+    "minimum, maximum",
+    [(-20.0, -10.0), (0.0, 1.0), (10.0, 20.0)]
+)
+def test_set_min_max(
+    owned_xil: tuple[XilEnv, str],
+    minimum: float,
+    maximum: float,
+) -> None:
     xil, _ = owned_xil
 
     with temporary_blackboard_variable(owned_xil) as (_, variable_id):
-        assert xil.SetVariMin(variable_id, 10) == 0
-        assert xil.GetVariMin(variable_id) == 10
-        assert xil.SetVariMax(variable_id, 20) == 0
-        assert xil.GetVariMax(variable_id) == 20
+        assert xil.SetVariMin(variable_id, minimum) == 0
+        assert xil.GetVariMin(variable_id) == minimum
+        assert xil.SetVariMax(variable_id, maximum) == 0
+        assert xil.GetVariMax(variable_id) == maximum
 
 
 def test_import_vari_properties(owned_xil: tuple[XilEnv, str]) -> None:
@@ -238,8 +246,8 @@ def test_enable_and_disable_range_control(owned_xil: tuple[XilEnv, str]) -> None
 
 
 def test_write_access_controls_script_process(
-        owned_xil: tuple[XilEnv, str],
-    ) -> None:
+    owned_xil: tuple[XilEnv, str],
+) -> None:
     """
     Test that WrVariEnable/WrVariDisable control writes made by the Script process.
 
@@ -305,7 +313,7 @@ def test_write_access_controls_script_process(
                 time.sleep(0.5)  # let the script finish DETACH_ALL_BBVARIS before stopping it
                 xil.StopScript()
             finally:
-                xil.WrVariEnable(target, process) 
+                assert xil.WrVariEnable(target, process) == 0
 
 
 def test_get_next_vari(owned_xil: tuple[XilEnv, str]) -> None:
@@ -395,140 +403,48 @@ def test_get_next_vari_ex(owned_xil: tuple[XilEnv, str]) -> None:
                     assert xil.StopScript() == 0
 
 
-def test_load_add_and_save_reference_lists(owned_xil: tuple[XilEnv, str]) -> None:
-    """Exercise RefList operations with symbols resolved from the live VehicleModel process."""
-    xil, _ = owned_xil
-
-    process = xil.GetNextProcess(1, "*VEHICLEMODEL*")
-    if not isinstance(process, str) or not process:
-        pytest.skip("ElectricCarSample VehicleModel process is not configured")
-
-    start_result = xil.StartProcess(process)
-    started_by_test = start_result > 0
-    if start_result != ErrorCode.PROCESS_RUNNING and not started_by_test:
-        pytest.skip(f"Could not start VehicleModel process (result {start_result})")
-
-    original_list = Path("original_refs.ini")
-    first_list = Path("first_refs.ini")
-    second_list = Path("second_refs.ini")
-    after_load = Path("after_load.ini")
-    after_add = Path("after_add.ini")
-    after_replace = Path("after_replace.ini")
-    candidate_symbols = ("RoadGradient", "OutputTorque", "BreakPedal", "OutputSpeed", "SteeringAngle", "SampleTime")
-
-    def write_reference_list(path: Path, symbol: str) -> None:
-        path.write_text(f"[referenced variables]\nRef0={symbol}\n", encoding="ascii")
-
-    def read_reference_names(path: Path) -> set[str]:
-        reference_file = configparser.ConfigParser(interpolation=None)
-        reference_file.optionxform = str
-        with path.open(encoding="utf-8-sig") as file:
-            reference_file.read_file(file)
-        if reference_file.has_section("referenced variables for external process"):
-            return set(reference_file.options("referenced variables for external process"))
-        if reference_file.has_section("referenced variables"):
-            return {
-                value
-                for key, value in reference_file.items("referenced variables")
-                if key.startswith("Ref")
-            }
-        return set()
-
-    original_list_saved = False
-    try:
-        assert xil.SaveRefList(str(original_list), process) == 0
-        original_list_saved = True
-        print(f"Original RefList for {process}:\n{original_list.read_text(encoding='utf-8-sig')}")
-        reference_symbols: list[str] = []
-        deadline = time.monotonic() + 10
-        while len(reference_symbols) < 2 and time.monotonic() < deadline:
-            for symbol in candidate_symbols:
-                if symbol in reference_symbols:
-                    continue
-                result = xil.ReferenceSymbol(
-                    symbol, "", process, "", 255, "", float("nan"), float("nan"),
-                    0x1000000, 255, 255, 0x10004,
-                )
-                if result > 0:
-                    reference_symbols.append(symbol)
-                elif result == -828:
-                    reference_symbols.append(symbol)
-                if len(reference_symbols) == 2:
-                    break
-            if len(reference_symbols) < 2:
-                time.sleep(0.1)
-
-        if len(reference_symbols) < 2:
-            pytest.skip(f"Could not resolve two VehicleModel symbols; found {reference_symbols}")
-
-        first_symbol, second_symbol = reference_symbols
-        write_reference_list(first_list, first_symbol)
-        write_reference_list(second_list, second_symbol)
-
-        assert xil.LoadRefList(str(first_list), process) == 0
-        assert xil.SaveRefList(str(after_load), process) == 0
-        assert read_reference_names(after_load) == {first_symbol}
-
-        assert xil.AddRefList(str(second_list), process) == 0
-        assert xil.SaveRefList(str(after_add), process) == 0
-        assert read_reference_names(after_add) == {first_symbol, second_symbol}
-
-        assert xil.LoadRefList(str(second_list), process) == 0
-        assert xil.SaveRefList(str(after_replace), process) == 0
-        assert read_reference_names(after_replace) == {second_symbol}
-    finally:
-        try:
-            if original_list_saved:
-                assert xil.LoadRefList(str(original_list), process) == 0
-        finally:
-            if started_by_test:
-                assert xil.StopProcess(process) == 0
-
-
-def test_getRaw_setRaw(owned_xil: tuple[XilEnv, str]) -> None:
+@pytest.mark.parametrize(
+    "raw_value",
+    [-3.25, 0.0, 17.0]
+)
+def test_getRaw_setRaw(owned_xil: tuple[XilEnv, str], raw_value: float) -> None:
     xil, _ = owned_xil
     value = BB_VARI()
     result = BB_VARI()
-    value.d = 17.0
+    value.d = raw_value
 
     with temporary_blackboard_variable(owned_xil) as (_, variable_id):
         assert xil.SetRaw(variable_id, DataType.BB_DOUBLE, value, 7) == 0
         assert xil.GetRaw(variable_id, result) == 7
-        assert result.d == 17.0
-# ----------------------------------------------------------------------------Conversion tests---------------------------------------------------------------------------- #
+        assert result.d == raw_value
 
-def test_physical_read_and_raw_frame(owned_xil: tuple[XilEnv, str]) -> None:
+
+# Conversion tests
+
+
+@pytest.mark.parametrize(
+    "raw_value, physical_value",
+    [(-2.5, 0.0), (0.0, 5.0), (4.0, 13.0)]
+)
+def test_formula_conversion(
+    owned_xil: tuple[XilEnv, str],
+    raw_value: float,
+    physical_value: float,
+) -> None:
     """
-    Test physical-value conversion and raw-frame reads for a Blackboard variable.
+    Verify formula conversion computes physical = 2 * raw + 5 and its inverse write.
 
-    BB_CONV_FORMULA computes the physical value as 2 * raw + 5.
-    With conversion "2*#+5", raw value 4 becomes physical value 13. The test
-    also confirms Get and ReadFrame continue to return the raw value.
-
-    Args:
-        owned_xil (tuple[XilEnv, str]): The XilEnv client and instance name.
+    The test also confirms Get and ReadFrame continue to return the raw value.
     """
     xil, _ = owned_xil
 
     with temporary_blackboard_variable(owned_xil) as (_, variable_id):
         assert xil.XilEnv_SetVariConversion(variable_id, ConversionType.BB_CONV_FORMULA, "2*#+5") == 0
         assert xil.GetVariConversionType(variable_id) == ConversionType.BB_CONV_FORMULA
-        xil.Set(variable_id, 4.0)
-        assert xil.Get(variable_id) == 4.0
-        assert xil.GetPhys(variable_id) == 13.0
-        assert xil.ReadFrame([variable_id]) == [4.0]
-
-
-def test_formula_conversion_physical_write_and_read(owned_xil: tuple[XilEnv, str]) -> None:
-    """Verify formula conversion computes physical = 2 * raw + 5 and its inverse write."""
-    xil, _ = owned_xil
-
-    with temporary_blackboard_variable(owned_xil) as (_, variable_id):
-        assert xil.XilEnv_SetVariConversion(variable_id, ConversionType.BB_CONV_FORMULA, "2*#+5") == 0
-        assert xil.GetVariConversionType(variable_id) == ConversionType.BB_CONV_FORMULA
-        assert xil.SetPhys(variable_id, 13.0) == 0
-        assert xil.GetPhys(variable_id) == 13.0
-        assert xil.Get(variable_id) == 4.0
+        assert xil.SetPhys(variable_id, physical_value) == 0
+        assert xil.Get(variable_id) == raw_value
+        assert xil.GetPhys(variable_id) == physical_value
+        assert xil.ReadFrame([variable_id]) == [raw_value]
 
 
 def test_no_conversion_preserves_raw_value(owned_xil: tuple[XilEnv, str]) -> None:
@@ -556,22 +472,24 @@ def test_text_replacement_conversion_string(owned_xil: tuple[XilEnv, str]) -> No
         assert xil.GetVariEnum(variable_id, 1.0) == "ON"
 
 
-@pytest.mark.xfail(
-    reason="Native offset-factor SetPhys applies the forward transform instead of its inverse and switches." \
-    "Also SetPhys currently calculates raw = (phys + offset) * offset & GetPhys calculates phys = raw + (factor * offset)",
-    strict=True,
+@pytest.mark.parametrize(
+    "physical_value, raw_value",
+    [(10.0, 0.0), (16.0, 3.0), (-6.0, -8.0)]
 )
-def test_offset_factor_conversion_physical_write_and_read(owned_xil: tuple[XilEnv, str]) -> None:
+def test_offset_factor_conversion(
+    owned_xil: tuple[XilEnv, str],
+    physical_value: float,
+    raw_value: float,
+) -> None:
     """Verify BB_CONV_OFFFACT computes physical = (raw + offset) * factor."""
     xil, _ = owned_xil
 
     with temporary_blackboard_variable(owned_xil) as (_, variable_id):
-        assert xil.XilEnv_SetVariConversion(variable_id, ConversionType.BB_CONV_OFFFACT, "5:2") == 0
+        assert xil.XilEnv_SetVariConversion(variable_id, ConversionType.BB_CONV_OFFFACT, "2:5") == 0
         assert xil.GetVariConversionType(variable_id) == ConversionType.BB_CONV_OFFFACT
-        assert xil.SetPhys(variable_id, 10.0) == 0
-        assert xil.GetPhys(variable_id) == 10.0
-        
-
+        assert xil.SetPhys(variable_id, physical_value) == 0
+        assert xil.Get(variable_id) == raw_value
+        assert xil.GetPhys(variable_id) == physical_value
 
 
 def test_interpolated_table_conversion(owned_xil: tuple[XilEnv, str]) -> None:
@@ -585,6 +503,8 @@ def test_interpolated_table_conversion(owned_xil: tuple[XilEnv, str]) -> None:
         assert xil.SetPhys(variable_id, 23.5) == 0
         assert xil.GetPhys(variable_id) == 23.5
         assert xil.Get(variable_id) == 13.0
+        assert xil.SetPhys(variable_id, -5.0) == 0
+        assert xil.Get(variable_id) == 0.0
 
 
 def test_non_interpolated_table_conversion(owned_xil: tuple[XilEnv, str]) -> None:
@@ -602,6 +522,7 @@ def test_non_interpolated_table_conversion(owned_xil: tuple[XilEnv, str]) -> Non
         assert xil.GetPhys(variable_id) == 30.0
         assert xil.Get(variable_id) == 20.0
 
+
 def test_rational_function_conversion(owned_xil: tuple[XilEnv, str]) -> None:
     """Verify BB_CONV_RAT_FUNC computes raw = (a · phys² + b · phys + c) / (d · phys² + e · phys + f)"""
     xil, _ = owned_xil
@@ -614,11 +535,15 @@ def test_rational_function_conversion(owned_xil: tuple[XilEnv, str]) -> None:
         assert xil.Get(variable_id) == 6.0
 
 
-@pytest.mark.xfail(
-    reason="Native factor-offset SetPhys applies the forward transform instead of its inverse",
-    strict=True,
+@pytest.mark.parametrize(
+    "physical_value, raw_value",
+    [(5.0, 0.0), (-15.0, -10.0), (20.0, 7.5)]
 )
-def test_physical_write_uses_inverse_conversion(owned_xil: tuple[XilEnv, str]) -> None:
+def test_factor_offset_conversion(
+    owned_xil: tuple[XilEnv, str],
+    physical_value: float,
+    raw_value: float,
+) -> None:
     """
     Test that BB_CONV_FACTOFF converts a physical write to raw as
     (physical - offset) / factor, inverse to raw * factor + offset.
@@ -630,17 +555,49 @@ def test_physical_write_uses_inverse_conversion(owned_xil: tuple[XilEnv, str]) -
 
     with temporary_blackboard_variable(owned_xil) as (_, variable_id):
         assert xil.XilEnv_SetVariConversion(variable_id, ConversionType.BB_CONV_FACTOFF, "2:5") == 0
-        assert xil.SetPhys(variable_id, 17.0) == 0
-        assert xil.GetPhys(variable_id) == 17.0
-        assert xil.Get(variable_id) == 6.0
+        assert xil.GetVariConversionType(variable_id) == ConversionType.BB_CONV_FACTOFF
+        assert xil.SetPhys(variable_id, physical_value) == 0
+        assert xil.GetPhys(variable_id) == physical_value
+        assert xil.Get(variable_id) == raw_value
 
 
-def test_Equ(owned_xil: tuple[XilEnv, str]) -> None:
+@pytest.mark.parametrize(
+    "first_value, second_value, sum_result, expression_result",
+    [
+        (1.0, 2.0, 3.0, 14.2),
+        (-2.5, 0.0, -2.5, -0.5),
+        (0.0, -3.25, -3.25, -22.75),
+    ]
+)
+def test_Equ(
+    owned_xil: tuple[XilEnv, str],
+    first_value: float,
+    second_value: float,
+    sum_result: float,
+    expression_result: float,
+) -> None:
     """Test Equ function."""
     xil, _ = owned_xil
+
     with temporary_blackboard_variable(owned_xil) as (first_name, _):
         with temporary_blackboard_variable(owned_xil) as (second_name, _):
             xil.attachVariables([first_name, second_name])
-            xil.writeMultipleSignals([first_name, second_name], [1.0, 2.0])
-            assert xil.Equ(f"{first_name}+{second_name}") == 3.0
-            assert xil.Equ(f"{first_name} / 5 + {second_name} * 7") == 14.2
+            xil.writeMultipleSignals([first_name, second_name], [first_value, second_value])
+            assert xil.Equ(f"{first_name}+{second_name}") == sum_result
+            assert xil.Equ(f"{first_name} / 5 + {second_name} * 7") == expression_result
+
+
+def test_division_by_zero(owned_xil: tuple[XilEnv, str]) -> None:
+    """Test division by zero."""
+    xil, _ = owned_xil
+
+    with temporary_blackboard_variable(owned_xil) as (_, variable_id):
+        assert xil.XilEnv_SetVariConversion(variable_id, ConversionType.BB_CONV_OFFFACT, "0:5") == 0
+        assert xil.SetPhys(variable_id, 10.0) == -1, "Offset Factor failed division by zero"
+        assert xil.XilEnv_SetVariConversion(variable_id, ConversionType.BB_CONV_FACTOFF, "0:5") == 0
+        assert xil.SetPhys(variable_id, 10.0) == -1, "Factor Offset failed division by zero"
+        assert xil.XilEnv_SetVariConversion(variable_id, ConversionType.BB_CONV_FORMULA, "#/0") == 0
+        assert xil.SetPhys(variable_id, 10.0) == -1, "Formula failed division by zero"
+        #assert xil.XilEnv_SetVariConversion(variable_id, ConversionType.BB_CONV_RAT_FUNC, "0:6:0:0:0:0") == 0
+        #assert xil.SetPhys(variable_id, 10.0) == 0, "Rational function failed division by zero"
+

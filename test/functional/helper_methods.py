@@ -27,9 +27,12 @@ def ensure_process_stopped(process: Optional[subprocess.Popen], timeout: float =
     """
     if process is None or process.poll() is not None:
         return
-    process.terminate()
     try:
         process.wait(timeout=timeout)
     except subprocess.TimeoutExpired:
-        process.kill()
-        process.wait()
+        process.terminate()
+        try:
+            process.wait(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            process.wait()

@@ -22,21 +22,27 @@ import pytest
 
 def test_stop_and_resume_scheduler(owned_xil: tuple[XilEnv, str]) -> None:
     xil, _ = owned_xil
+    initial_scheduler_state = xil.SchedulerRunning()
 
+    if initial_scheduler_state == 0:
+        xil.ContinueScheduler()
     assert xil.SchedulerRunning() == 1
     try:
         xil.StopScheduler()
         assert xil.SchedulerRunning() == 0
     finally:
-        xil.ContinueScheduler()
-    assert xil.SchedulerRunning() == 1
+        if initial_scheduler_state == 1:
+            xil.ContinueScheduler()
+        assert xil.SchedulerRunning() == initial_scheduler_state
 
 
 def test_advance_exact_number_of_cycles(owned_xil: tuple[XilEnv, str]) -> None:
     xil, _ = owned_xil
+    initial_scheduler_state = xil.SchedulerRunning()
 
     try:
-        xil.StopScheduler()
+        if initial_scheduler_state == 1:
+            xil.StopScheduler()
         assert xil.SchedulerRunning() == 0
         before = xil.readSignal("XilEnv.CycleCounter")
         xil.DoNextCyclesAndWait(3)
@@ -44,4 +50,5 @@ def test_advance_exact_number_of_cycles(owned_xil: tuple[XilEnv, str]) -> None:
         assert after - before == 3
         assert xil.SchedulerRunning() == 0
     finally:
-        xil.ContinueScheduler()
+        if initial_scheduler_state == 1:
+            xil.ContinueScheduler()

@@ -121,7 +121,7 @@ def owned_xil(
     ini_file_path: Path,
 ) -> Generator[tuple[XilEnv, str], None, None]:
     """
-    Pytest fixture to provide a connected OpenXilEnv instance for the duration of a test module.
+    Pytest fixture to provide a connected OpenXilEnv instance without gui for the duration of a test module.
 
     Args:
         xilEnv_installation_path (Path): Path to the openXilEnv installation directory.
@@ -141,7 +141,46 @@ def owned_xil(
             xil = XilEnv(xilEnv_installation_path)
         except Exception as e:
             raise RuntimeError("XilEnv initialization failed") from e
-        xil.startWithoutGui(test_ini_path, name)
+        xil.startWithoutGui(test_ini_path, Instance=name)
+        if not xil.isConnected():
+            raise RuntimeError("Failed to connect to OpenXilEnv")
+        yield xil, name
+    finally:
+        try:
+            if xil is not None:
+                xil.disconnectAndCloseXil()
+        finally:
+            if xil is not None:
+                ensure_process_stopped(getattr(xil, "_XilEnv__xilEnvProcess", None))
+
+
+@pytest.fixture(scope="module")
+def owned_xil_with_gui(
+    xilEnv_installation_path: Path,
+    ini_file_path: Path,
+) -> Generator[tuple[XilEnv, str], None, None]:
+    """
+    Pytest fixture to provide a connected OpenXilEnv instance with gui for the duration of a test module.
+
+    Args:
+        xilEnv_installation_path (Path): Path to the openXilEnv installation directory.
+        ini_file_path (Path): Path to the configuration INI file.
+
+    Yields:
+        tuple: The connected XilEnv client and the instance name.
+
+    Handles setup and teardown of the OpenXilEnv connection.
+    """
+    name = f"pytest_{uuid.uuid4().hex}"
+    test_ini_path = Path.cwd() / f"Test_{uuid.uuid4().hex}.ini"
+    xil = None
+    try:
+        copyfile(ini_file_path, test_ini_path)
+        try:
+            xil = XilEnv(xilEnv_installation_path)
+        except Exception as e:
+            raise RuntimeError("XilEnv initialization failed") from e
+        xil.startWithGui(test_ini_path, Instance=name)
         if not xil.isConnected():
             raise RuntimeError("Failed to connect to OpenXilEnv")
         yield xil, name
