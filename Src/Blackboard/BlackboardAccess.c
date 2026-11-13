@@ -71,7 +71,7 @@ static int convert_physical_internal(int vid_index, double raw_value, double *re
                           blackboard[vid_index].pAdditionalInfos->Conversion.Conv.FactorOffset.Offset;
         return 0;
     case BB_CONV_OFFFACT:
-        *ret_phys_value = raw_value + (blackboard[vid_index].pAdditionalInfos->Conversion.Conv.FactorOffset.Offset) *
+        *ret_phys_value = (raw_value + blackboard[vid_index].pAdditionalInfos->Conversion.Conv.FactorOffset.Offset) *
                           blackboard[vid_index].pAdditionalInfos->Conversion.Conv.FactorOffset.Factor;
         return 0;
     case BB_CONV_TAB_INTP:
