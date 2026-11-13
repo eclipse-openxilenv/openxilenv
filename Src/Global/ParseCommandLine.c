@@ -80,6 +80,7 @@ static int NoGuiFlag =
 #endif
 
 static int NoXcpFlag;
+static int ExitIfScriptFinishedFlag;
 static int SchedulerStopByRpc;
 static int SchedulerStopByUser;
 
@@ -96,6 +97,11 @@ int OpenWithNoGui (void)
 int GetNoXcp (void)
 {
     return NoXcpFlag;
+}
+
+int GetExitIfScriptFinished (void)
+{
+    return ExitIfScriptFinishedFlag;
 }
 
 int GetSchedulerStopByRpc (void)
@@ -241,6 +247,10 @@ int ParseCommandLine (char *ret_IniFile, unsigned int par_MaxCharsIniFile,
 
         if (stricmp(szToken, "-scripterrexit") == 0) {
             SetScriptErrExit (TERMINATE_XILENV_ON_SCRIPT_EXECUTION_ERROR | TERMINATE_XILENV_ON_SCRIPT_SYNTAX_ERROR);
+        }
+
+        if (stricmp(szToken, "-exit_if_script_finished") == 0) {
+            ExitIfScriptFinishedFlag = 1;
         }
 
         if (stricmp(szToken, "-err2msg") == 0) {
@@ -431,4 +441,3 @@ int ParseCommandLine (char *ret_IniFile, unsigned int par_MaxCharsIniFile,
     }
     return 0;
 }
-
