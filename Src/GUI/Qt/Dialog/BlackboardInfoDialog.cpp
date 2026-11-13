@@ -113,15 +113,11 @@ void BlackboardInfoDialog::NewVariableSelected (QString VariableName)
             case BB_CONV_TEXTREP:
                 New.ConversionString = QString (AdditionalInfos.Conversion.Conv.TextReplace.EnumString);
                 break;
+            case BB_CONV_OFFFACT:
             case BB_CONV_FACTOFF:
                 New.ConversionString = QString().number(AdditionalInfos.Conversion.Conv.FactorOffset.Factor);
                 New.ConversionString.append(":");
                 New.ConversionString.append(QString().number(AdditionalInfos.Conversion.Conv.FactorOffset.Offset));
-                break;
-            case BB_CONV_OFFFACT:
-                New.ConversionString = QString().number(AdditionalInfos.Conversion.Conv.FactorOffset.Offset);
-                New.ConversionString.append(":");
-                New.ConversionString.append(QString().number(AdditionalInfos.Conversion.Conv.FactorOffset.Factor));
                 break;
             case BB_CONV_RAT_FUNC:
                 New.ConversionString = QString().number(AdditionalInfos.Conversion.Conv.RatFunc.a);
