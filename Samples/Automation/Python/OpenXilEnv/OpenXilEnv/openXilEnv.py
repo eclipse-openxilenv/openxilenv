@@ -8,7 +8,9 @@ from OpenXilEnv.XilEnvRpc import *
 
 class OpenXilEnv:
 
-    def __init__(self, xilEnvPath):
+    def __init__(self, xilEnvPath, timeout=5):
+        """Set the default connection and RPC readiness timeout in seconds."""
+        self.__timeout = timeout
         self.__xilEnvDllPath = os.path.join(xilEnvPath, "XilEnvRpc.dll")
         self.__xilEnvGuiExePath = os.path.join(xilEnvPath, "XilEnvGui.exe")
 
@@ -47,15 +49,20 @@ class OpenXilEnv:
                 print(f"Could not attach variable {variableName}")
 
     def __connectToXilEnv(self, timeoutInSec):
-        connectionStatus = -1
-        while timeoutInSec:
-            connectionStatus = self.__xilEnv.ConnectTo("")
-            if connectionStatus == 0 or timeoutInSec == 0:
-                return connectionStatus
-            timeoutInSec -= 1
-            time.sleep(1)
-
-        return connectionStatus
+        deadline = time.monotonic() + max(timeoutInSec, 0)
+        connected = False
+        while True:
+            if not connected:
+                connected = self.__xilEnv.ConnectTo("") == 0
+            # RPC_Control supplies the process ID used for blackboard access.
+            if connected and self.__xilEnv.GetProcessState("RPC_Control") == 0:
+                return 0
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                if connected:
+                    self.disconnectAndCloseXil()
+                return -1
+            time.sleep(min(0.1 if connected else 1, remaining))
 
     def __start(self, iniFilePath, startWithGUI, timeoutInSec):
         try:
@@ -70,7 +77,6 @@ class OpenXilEnv:
 
             if connectionStatus == 0:
                 print("Python has been successfully connected to XilEnv")
-                self.__waitUntilApplicationIsReady()
                 self.__attachDefaultXilEnvVariables()
                 return
             else:
@@ -88,9 +94,6 @@ class OpenXilEnv:
     def __translateSecondsToCycleCounts(self, seconds):
         sampleFrequency = self.readSignal("XilEnv.SampleFrequency")
         return int(seconds * sampleFrequency)
-
-    def __waitUntilApplicationIsReady(self):
-        time.sleep(1)
 
     def isConncted(self) -> bool:
         return self.__xilEnv.IsConnectedTo()
@@ -110,7 +113,9 @@ class OpenXilEnv:
         if self.__xilEnvProcess:
             self.__removeVariables()
 
-            self.__xilEnv.DisconnectAndClose(0, 0)
+            if self.__xilEnv.DisconnectAndClose(0, 0) == 0:
+                self.__xilEnvProcess.wait(timeout=5)
+                self.__xilEnvProcess = None
 
     def enableRealTimeFactorSwitch(self):
         self.__switchRealTimeFactor("Yes")
@@ -129,6 +134,7 @@ class OpenXilEnv:
     def __removeVariables(self):
         for signalName, variableId in self.__attachedVar.items():
             self.__xilEnv.RemoveVari(variableId)
+        self.__attachedVar.clear()
 
     def waitSeconds(self, waitTimeInSec):
         cycles = self.__translateSecondsToCycleCounts(waitTimeInSec)
@@ -139,10 +145,16 @@ class OpenXilEnv:
 
         return waitTimeInSec
 
-    def startWithGui(self, iniFilePath, timeoutInSec=5):
+    def startWithGui(self, iniFilePath, timeoutInSec=None):
+        """Start with a per-call timeout, or use the constructor default."""
+        if timeoutInSec is None:
+            timeoutInSec = self.__timeout
         self.__start(iniFilePath, True, timeoutInSec)
 
-    def startWithoutGui(self, iniFilePath, timeoutInSec=5):
+    def startWithoutGui(self, iniFilePath, timeoutInSec=None):
+        """Start with a per-call timeout, or use the constructor default."""
+        if timeoutInSec is None:
+            timeoutInSec = self.__timeout
         self.__start(iniFilePath, False, timeoutInSec)
 
     def writeMultipleSignals(self, signalNames, signalValues):
