@@ -45,7 +45,7 @@ def xil(xilEnv_installation_path: Path, ini_file_path: Path) -> Generator[XilEnv
         xil = XilEnv(xilEnv_installation_path)
     except Exception as e:
         pytest.skip(f"XilEnv initialization failed: {e}")
-    xil.startWithoutGui(ini_file_path)
+    xil.startWithoutGui(ini_file_path, Instance="my_instance")
     if not xil.isConnected():
         pytest.skip("Failed to connect to OpenXilEnv")
     yield xil
