@@ -98,7 +98,7 @@ def test_DisconnectAndClose_sets_process_exit_code(
     finally:
         ensure_process_stopped(process)
 
-
+@pytest.mark.skip("GUI currently not working on the virtual machine")
 def test_StartWithGui(
     xilEnv_installation_path: Path,
     ini_file_path: Path,
