@@ -1,4 +1,4 @@
-if(${MY_CMAKE_SIZEOF_VOID_P} GREATER 4)
+if(NOT BUILD_32BIT)
     add_subdirectory("A2lParser")
     add_subdirectory("CanDataBase")
     add_subdirectory("Equations")

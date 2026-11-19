@@ -19,13 +19,7 @@
 #include <stdio.h>
 #include <time.h>
 
-uint64_t Get_RDTSC(void)
-{
-    unsigned int hi, lo;
-    __asm__ volatile("rdtsc" : "=a" (lo), "=d" (hi));
-    return ((uint64_t)hi << 32) | lo;
-}
-
+#include "Get_RDTSC.h"
 
 uint64_t GetSystemTime(void)
 {

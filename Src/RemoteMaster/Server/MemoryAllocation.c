@@ -19,6 +19,7 @@
 #include <malloc.h>
 #include "ThrowError.h"
 #include "StringMaxChar.h"
+#include "Get_RDTSC.h"
 #include "MemoryAllocation.h"
 
 // only for debugging
@@ -265,15 +266,6 @@ int InitMemoryAllocator(int SizeOfMemory)
     } else {
         return -1;
     }
-}
-
-
-
-static uint64_t Get_RDTSC(void)
-{
-    unsigned int hi, lo;
-    __asm__ volatile("rdtsc" : "=a" (lo), "=d" (hi));
-    return ((uint64_t)hi << 32) | lo;
 }
 
 static uint64_t malloc_start_time;

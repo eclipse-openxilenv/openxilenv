@@ -11,7 +11,7 @@ target_sources(${XilEnvExtProcTargetName} PRIVATE
     StringMaxChar.c)
 
 
-if(${MY_CMAKE_SIZEOF_VOID_P} GREATER 4)
+if(NOT BUILD_32BIT)
 
     target_sources(XilEnvRpc PRIVATE
         StringMaxChar.c
@@ -25,6 +25,5 @@ if(${MY_CMAKE_SIZEOF_VOID_P} GREATER 4)
     )
 
     target_sources(XilEnv  PRIVATE ${CommonFileList})
-
-    target_sources(XilEnvGui PRIVATE ${CommonFileList})
+    target_sources_if_target_exist(XilEnvGui "${CommonFileList}")
 endif()

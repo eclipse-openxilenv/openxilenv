@@ -4,7 +4,7 @@ target_link_libraries(RemoteStartServer PRIVATE pthread)
 target_sources(RemoteStartServer
     PRIVATE RemoteStartServer.c) 
 
-if(${MY_CMAKE_SIZEOF_VOID_P} GREATER 4)
+if(NOT BUILD_32BIT)
     install(TARGETS RemoteStartServer
         RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/rt_linux
     )

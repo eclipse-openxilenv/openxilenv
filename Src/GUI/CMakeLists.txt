@@ -1,2 +1,4 @@
-add_subdirectory("Qt")
+if(TARGET XilEnvGui)
+    add_subdirectory("Qt")
+endif()
 add_subdirectory("Console")

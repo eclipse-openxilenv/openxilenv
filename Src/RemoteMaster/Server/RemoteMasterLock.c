@@ -23,15 +23,11 @@
 #include <sys/syscall.h>
 #include <sys/types.h>
 
+#include "Get_RDTSC.h"
+
 #include "RemoteMasterLock.h"
 
 #define gettid() syscall(__NR_gettid)
-
-static uint64_t my_rdtsc(void) {
-	uint64_t a, d;
-	__asm__ volatile ("rdtsc" : "=a" (a), "=d" (d));
-	return (d << 32) | a;
-}
 
 void RemoteMasterLock(REMOTE_MASTER_LOCK *Lock, int LineNr, const char *File)
 {
@@ -42,13 +38,13 @@ void RemoteMasterLock(REMOTE_MASTER_LOCK *Lock, int LineNr, const char *File)
 
     ThreadId = gettid();
 	CpuNr = sched_getcpu();
-	start = my_rdtsc();
+    start = Get_RDTSC();
     pthread_mutex_lock(&(Lock->Mutex));
 	if (Lock->LockCounter != 0) {
 		printf("LockCounter = %i\n", Lock->LockCounter);
 	}
 	Lock->LockCounter++;
-	diff = my_rdtsc() - start;
+    diff = Get_RDTSC() - start;
 	if (diff > Lock->MaxWaitTime) {
 		Lock->MaxWaitTime = diff;
 		if (diff > 30000) {

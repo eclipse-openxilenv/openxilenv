@@ -1,7 +1,7 @@
 if(UNIX) 
     target_sources(${XilEnvExtProcTargetName}
         PRIVATE Platform.c)
-    if(${MY_CMAKE_SIZEOF_VOID_P} GREATER 4)
+    if(NOT BUILD_32BIT)
         target_sources(LinuxRemoteMasterCore PRIVATE
             Platform.c
             Compare2DoubleEqual.c
@@ -19,7 +19,7 @@ if(UNIX)
     endif()
 endif()
 
-if(${MY_CMAKE_SIZEOF_VOID_P} GREATER 4)
+if(NOT BUILD_32BIT)
 
     set(CmmonFileList
         CheckIfAlreadyRunning.c
@@ -50,6 +50,5 @@ if(${MY_CMAKE_SIZEOF_VOID_P} GREATER 4)
         WindowIniHelper.c)
 
     target_sources(XilEnv PRIVATE ${CmmonFileList})
-
-    target_sources(XilEnvGui PRIVATE ${CmmonFileList})
+    target_sources_if_target_exist(XilEnvGui "${CmmonFileList}")
 endif()
