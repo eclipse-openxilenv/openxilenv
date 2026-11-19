@@ -1022,6 +1022,7 @@ SCRPCDLL_API int __STDCALL__ XilEnv_AddBeforeProcessEquationFromFile(int Nr, con
     Size = sizeof(*Req) + LenProcessName + LenEquFile;
     Req = (RPC_API_ADD_BEFORE_PROCESS_EQUATION_FROM_FILE_MESSAGE*)RemoteProcedureGetTransmitBuffer(Size);
     MEMSET(Req, 0, Size);
+    Req->Nr = Nr;
     Req->OffsetProcessName = (int32_t)sizeof(*Req) - 1;
     MEMCPY ((char*)Req + Req->OffsetProcessName, ProcessName, LenProcessName);
     Req->OffsetEquationFile = Req->OffsetProcessName + LenProcessName;
@@ -1047,6 +1048,7 @@ SCRPCDLL_API int __STDCALL__ XilEnv_AddBehindProcessEquationFromFile(int Nr, con
     Size = sizeof(*Req) + LenProcessName + LenEquFile;
     Req = (RPC_API_ADD_BEHIND_PROCESS_EQUATION_FROM_FILE_MESSAGE*)RemoteProcedureGetTransmitBuffer(Size);
     MEMSET(Req, 0, Size);
+    Req->Nr = Nr;
     Req->OffsetProcessName = (int32_t)sizeof(*Req) - 1;
     MEMCPY ((char*)Req + Req->OffsetProcessName, ProcessName, LenProcessName);
     Req->OffsetEquationFile = Req->OffsetProcessName + LenProcessName;
@@ -1071,6 +1073,7 @@ SCRPCDLL_API void __STDCALL__ XilEnv_DelBeforeProcessEquations(int Nr, const cha
     Size = sizeof(*Req) + LenProcessName;
     Req = (RPC_API_DEL_BEFORE_PROCESS_EQUATIONS_MESSAGE*)RemoteProcedureGetTransmitBuffer(Size);
     MEMSET(Req, 0, Size);
+    Req->Nr = Nr;
     Req->OffsetProcessName = (int32_t)sizeof(*Req) - 1;
     MEMCPY ((char*)Req + Req->OffsetProcessName, ProcessName, LenProcessName);
 
@@ -1089,6 +1092,7 @@ SCRPCDLL_API void __STDCALL__ XilEnv_DelBehindProcessEquations(int Nr, const cha
     Size = sizeof(*Req) + LenProcessName;
     Req = (RPC_API_DEL_BEHIND_PROCESS_EQUATIONS_MESSAGE*)RemoteProcedureGetTransmitBuffer(Size);
     MEMSET(Req, 0, Size);
+    Req->Nr = Nr;
     Req->OffsetProcessName = (int32_t)sizeof(*Req) - 1;
     MEMCPY ((char*)Req + Req->OffsetProcessName, ProcessName, LenProcessName);
 
