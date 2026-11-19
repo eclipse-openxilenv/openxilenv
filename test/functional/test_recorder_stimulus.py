@@ -20,38 +20,9 @@ This module contains pytest-based tests for verifying the recording and replayin
 in different file formats (dat, mdf, mf4) using the OpenXilEnv Python API.
 """
 
+from openxilenv.xilEnv import XilEnv
+
 import pytest
-from pathlib import Path
-from typing import Generator
-
-from openxilenv import XilEnv
-
-
-@pytest.fixture(scope="module")
-def xil(xilEnv_installation_path: Path, ini_file_path: Path) -> Generator[XilEnv, None, None]:
-    """
-    Pytest fixture to provide a connected OpenXilEnv instance for the duration of a test module.
-
-    Args:
-        xilEnv_installation_path (Path): Path to the openXilEnv installation directory.
-        ini_file_path (Path): Path to the configuration INI file.
-
-    Yields:
-        OpenXilEnv: Connected OpenXilEnv instance.
-
-    Handles setup and teardown of the OpenXilEnv connection.
-    """
-    # setup
-    try:
-        xil = XilEnv(xilEnv_installation_path)
-    except Exception as e:
-        pytest.skip(f"XilEnv initialization failed: {e}")
-    xil.startWithoutGui(ini_file_path, Instance="my_instance")
-    if not xil.isConnected():
-        pytest.skip("Failed to connect to OpenXilEnv")
-    yield xil
-    # teardown
-    xil.disconnectAndCloseXil()
 
 
 def compare_one_format(xil: XilEnv, Format: str) -> None:
@@ -65,9 +36,9 @@ def compare_one_format(xil: XilEnv, Format: str) -> None:
     xil.SetEnvironVar("RECORDER_FILE_EXTENSION", Format)
     # replay the recording in one selected format and compare it
     # create a stimulus configuration file
-    xil.CreateFileWithContent("%TEMP%\\stimulus.cfg",
+    xil.CreateFileWithContent("stimulus.cfg",
                              "HDPLAYER_CONFIG_FILE\n"
-                             "HDPLAYER_FILE %TEMP%\\recorder.%RECORDER_FILE_EXTENSION%\n"
+                             "HDPLAYER_FILE recorder.%RECORDER_FILE_EXTENSION%\n"
                              "TRIGGER StimulusTriggerEvent > 1.0\n"
                              "STARTVARLIST\n"
                              "  VARIABLE TestSignal1\n"
@@ -75,25 +46,24 @@ def compare_one_format(xil: XilEnv, Format: str) -> None:
                              "  VARIABLE TestSignal3\n"
                              "ENDVARLIST\n")
     # create a second generator configuration file with other signal names
-    xil.CreateFileWithContent("%TEMP%\\compare_ramps.gen",
+    xil.CreateFileWithContent("compare_ramps.gen",
                              "RAMPE StimulusTriggerEvent 2/0 0/0\n"
                              "RAMPE CompareSignal1 0/0 1000/10 0/20\n"
                              "RAMPE CompareSignal2 0/0 0/10 100/10 50/20 0/20\n"
                              "RAMPE CompareSignal3 0/0 123456789/10 0/20\n")
     # create an equation file for error counting if recorder signals are different than the generated signals
-    xil.CreateFileWithContent("%TEMP%\\compare_equation.equ",
+    xil.CreateFileWithContent("compare_equation.equ",
                              "ErrorCounter = ErrorCounter + (CompareSignal1 != TestSignal1) + (CompareSignal2 != TestSignal2) + (CompareSignal3 != TestSignal3);\n")
-    xil.StartPlayer("%TEMP%\\stimulus.cfg")
+    xil.StartPlayer("stimulus.cfg")
     # wait till the stimulus player is in trigger state
     xil.WaitUntil("XilEnv.StimulusPlayer == enum(XilEnv.StimulusPlayer@Trigger)", 100)
     # start the generator, the stimulus player will be triggered by the generator, so they will be started simultaneously
-    xil.StartGenerator("%TEMP%\\compare_ramps.gen")
+    xil.StartGenerator("compare_ramps.gen")
     xil.WaitUntil("XilEnv.StimulusPlayer == enum(XilEnv.StimulusPlayer@Play)", 10000)  # wait till stimulus player is running
     xil.WaitUntil("XilEnv.StimulusPlayer == enum(XilEnv.StimulusPlayer@Sleep)", 10000)  # wait till stimulus player is finished
 
 
-@pytest.mark.skip(reason="Sometimes fails on first run. Needs investigation.")
-def test_record_and_run_stimuli_with_dat_mdf_mf4(xil: XilEnv) -> None:
+def test_record_and_run_stimuli_with_dat_mdf_mf4(owned_xil: tuple[XilEnv, str],) -> None:
     """
     Test recording and replaying signals in dat, mdf, and mf4 formats.
 
@@ -101,11 +71,12 @@ def test_record_and_run_stimuli_with_dat_mdf_mf4(xil: XilEnv) -> None:
     It asserts that no errors are found and the sum of all signals matches the expected value.
 
     Args:
-        xil (OpenXilEnv): Connected OpenXilEnv instance provided by fixture.
+        owned_xil (tuple[XilEnv, str]): Connected OpenXilEnv instance provided by fixture.
     """
+    xil, _ = owned_xil
     xil.ChangeSettings("NOT_FASTER_THAN_REALTIME", "No")
     xil.AddVari("ErrorCounter", 5, "")
-    xil.AddVari("SumOfAllSignals", 7, "")
+    sum_of_all_signals_id = xil.AddVari("SumOfAllSignals", 7, "")
     xil.AddVari("RecorderTriggerEvent", 5, "")
     xil.AddVari("StimulusTriggerEvent", 5, "")
     # add 3 test and compare signals
@@ -118,9 +89,9 @@ def test_record_and_run_stimuli_with_dat_mdf_mf4(xil: XilEnv) -> None:
 
     # first we will do a recording of our own generated signals
     # create a recorder configuration file (recording simultaneously into all 3 supported file formats)
-    xil.CreateFileWithContent("%TEMP%\\recorder.cfg",
+    xil.CreateFileWithContent("recorder.cfg",
                              "HDRECORDER_CONFIG_FILE\n"
-                             "HDRECORDER_FILE %TEMP%\\recorder.mf4\n"
+                             "HDRECORDER_FILE recorder.mf4\n"
                              "HDRECORDER_SAMPLERATE = 1\n"
                              "HDRECORDER_SAMPLELENGTH = 100000\n"
                              "TRIGGER RecorderTriggerEvent > 1.0\n"
@@ -132,15 +103,17 @@ def test_record_and_run_stimuli_with_dat_mdf_mf4(xil: XilEnv) -> None:
                              "  VARIABLE TestSignal2\n"
                              "  VARIABLE TestSignal3\n"
                              "ENDVARLIST\n")
-    xil.StartRecorder("%TEMP%\\recorder.cfg")
-    xil.WaitUntil("XilEnv.TraceRecorderRecorder == enum(XilEnv.TraceRecorder@Trigger)", 100)
+    xil.StartRecorder("recorder.cfg")
+    recorder_trigger = "XilEnv.TraceRecorder == enum(XilEnv.TraceRecorder@Trigger)"
+    xil.WaitUntil(recorder_trigger, 100)
+    assert xil.Equ(recorder_trigger) == 1
     # create a generator configuration file
-    xil.CreateFileWithContent("%TEMP%\\ramps.gen",
+    xil.CreateFileWithContent("ramps.gen",
                              "RAMPE RecorderTriggerEvent 0/0 2/0\n"
                              "RAMPE TestSignal1 0/0 1000/10 0/20\n"
                              "RAMPE TestSignal2 0/0 0/10 100/10 50/20 0/20\n"
                              "RAMPE TestSignal3 0/0 123456789/10 0/20\n")
-    xil.StartGenerator("%TEMP%\\ramps.gen")
+    xil.StartGenerator("ramps.gen")
     # wait till the generator is finished
     xil.WaitUntil("XilEnv.Generator == enum(XilEnv.Generator@Play)", 10000)  # wait till generator is running
     xil.WaitUntil("XilEnv.Generator == enum(XilEnv.Generator@Sleep)", 10000)  # wait till generator is finished
@@ -150,10 +123,13 @@ def test_record_and_run_stimuli_with_dat_mdf_mf4(xil: XilEnv) -> None:
     xil.WaitUntil("XilEnv.TraceRecorder ==  enum(XilEnv.TraceRecorder@Sleep)", 10000)  # wait till recorder is stopped
 
     # create an equation file for error counting, if recorded signals are different than the generated signals
-    xil.CreateFileWithContent("%TEMP%\\compare_equation.equ",
+    xil.CreateFileWithContent("compare_equation.equ",
                              "ErrorCounter = ErrorCounter + (CompareSignal1 != TestSignal1) + (CompareSignal2 != TestSignal2) + (CompareSignal3 != TestSignal3);\n"
                              "SumOfAllSignals = SumOfAllSignals + TestSignal1 + TestSignal2 + TestSignal3;")
-    xil.StartEquations("%TEMP%\\compare_equation.equ")
+    xil.StartEquations("compare_equation.equ")
+    equations_active = "XilEnv.EquationCalculator == enum(XilEnv.EquationCalculator@Active)"
+    xil.WaitUntil(equations_active, 1000)
+    assert xil.Equ(equations_active) == 1
 
     # now we replay the recording and compare it (all 3 formats)
     compare_one_format(xil, "dat")
@@ -162,5 +138,5 @@ def test_record_and_run_stimuli_with_dat_mdf_mf4(xil: XilEnv) -> None:
 
     # if the "ErrorCounter" is equal to zero no differences exist
     assert xil.Equ("ErrorCounter") == 0
-    assert xil.Equ("equal(SumOfAllSignals, 370373591625.14996, 0.1)") > 0
-
+    sum_of_all_signals = xil.Get(sum_of_all_signals_id)
+    assert xil.Equ("equal(SumOfAllSignals, 370373591625.14996, 0.1)") > 0, sum_of_all_signals
