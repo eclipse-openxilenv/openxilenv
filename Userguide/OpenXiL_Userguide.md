@@ -268,11 +268,12 @@ Attention: Full compability to lower OpenXiLEnv-versions is not given in all par
 		* 11.1.5. [--ScriptErrExit](#ScriptErrExit)
 		* 11.1.6. [--exit_on_script_syntax_error](#exit_on_script_syntax_error)
 		* 11.1.7. [--exit_on_script_execution_error](#exit_on_script_execution_error)
-		* 11.1.8. [-icon](#icon)
-		* 11.1.9. [-nogui](#nogui)
-		* 11.1.10. [-Port](#Port)
-		* 11.1.11. [-sys (remote master only)](#sysremotemasteronly)
-		* 11.1.12. [Transfer parameter of an external process](#Transferparameterofanexternalprocess)
+		* 11.1.8. [-exit_if_script_finished](#exit_if_script_finished)
+		* 11.1.9. [-icon](#icon)
+		* 11.1.10. [-nogui](#nogui)
+		* 11.1.11. [-Port](#Port)
+		* 11.1.12. [-sys (remote master only)](#sysremotemasteronly)
+		* 11.1.13. [Transfer parameter of an external process](#Transferparameterofanexternalprocess)
 	* 11.2. [Environment variables](#Environmentvariables)
 		* 11.2.1. [ExternalProcess_CallFrom](#ExternalProcess_CallFrom)
 		* 11.2.2. [ExternalProcess_Instance](#ExternalProcess_Instance)
@@ -6542,23 +6543,27 @@ OpenXilEnv will be closed immediately if a script-file has a syntax-error. The e
 
 OpenXilEnv will be closed immediately if a runtime error occure inside a script-file. The exit code of XilEnv_32.exe will be 1 independed of the blackboard variable XilEnv.xitCode. This paramter is not neccessary for XilEnv.exe this is the default.
 
-####  11.1.8. <a name='icon'></a>-icon
+####  11.1.8. <a name='exit_if_script_finished'></a>-exit_if_script_finished
+
+OpenXilEnv will be closed immediately after a script-file finishes successfully.
+
+####  11.1.9. <a name='icon'></a>-icon
 
 Start OpenXilEnv as icon
 
-####  11.1.9. <a name='nogui'></a>-nogui
+####  11.1.10. <a name='nogui'></a>-nogui
 
 When the transfer parameter -nogui is specified, OpenXilEnv is running as icon permanently.
 
-####  11.1.10. <a name='Port'></a>-Port
+####  11.1.11. <a name='Port'></a>-Port
 
 When the transfer parameter -Port is specified, OpenXilEnv accepts external process login over sockets. You have to define a port number (for example 1800). This will overwrite the settings from the INI file.
 
-####  11.1.11. <a name='sysremotemasteronly'></a>-sys (remote master only)
+####  11.1.12. <a name='sysremotemasteronly'></a>-sys (remote master only)
 
 The transfer parameter -sys is required when you want to transfer an executable to th remote master (linux realtime PC)
 
-####  11.1.12. <a name='Transferparameterofanexternalprocess'></a>Transfer parameter of an external process
+####  11.1.13. <a name='Transferparameterofanexternalprocess'></a>Transfer parameter of an external process
 
 An external process is able to start OpenXilEnv automatically. It requires two additional parameters:
 

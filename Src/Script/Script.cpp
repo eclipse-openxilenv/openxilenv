@@ -36,11 +36,13 @@ extern "C" {
 #include "ScriptList.h"
 #include "ScriptChangeSettings.h"
 #include "MainValues.h"
+#include "ParseCommandLine.h"
 }
 #include "InterfaceToScript.h"
 #include "Script.h"
 #include "ScriptDebuggingDialog.h"
 #include "MainWinowSyncWithOtherThreads.h"
+#include "MainWindow.h"
 
 #define UNUSED(x) (void)(x)
 
@@ -185,6 +187,9 @@ int cScript::Cyclic (int par_script_status_flag)
             case 0xE0F:   // End of the main script file
                 CleanUpEndOfScriptReached ();
                 State = SCRIPT_STATE_READY; 
+                if (GetExitIfScriptFinished()) {
+                    CloseFromOtherThread (0, 0);
+                }
                 break;
             case -1:   // Error!!
                 CleanUpEndOfScriptReached ();

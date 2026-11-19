@@ -25,6 +25,8 @@ int OpenWithNoGui (void);
 
 int GetNoXcp (void);
 
+int GetExitIfScriptFinished (void);
+
 int GetSchedulerStopByRpc (void);
 
 int GetSchedulerStopByUser (void);
@@ -39,4 +41,3 @@ int SaveCommandArgs(int argc, char *argv[]);
 #endif
 
 #endif // PARSECOMMANDLINE
-
