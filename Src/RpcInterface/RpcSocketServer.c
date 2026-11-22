@@ -1103,6 +1103,10 @@ void* RemoteProcedureServerLoginThread (void* lpParam)
         }
 
         if ((strlen(Name) + 1) > sizeof(serv_addr.sun_path)) {
+            // ThrowError's message queue is only drained by the GUI event loop, so
+            // in -nogui mode this error is otherwise never seen; print it directly.
+            fprintf(stderr, "the unix domain socket file name \"%s\" is %i chars long there are only %i chars allowed\n",
+                   Name, (int)strlen(Name), (int)sizeof(serv_addr.sun_path));
             ThrowError (1, "the unix domain socket file name \"%s\" are %i chars long there are only %i chars allowed",
                    Name, (int)strlen(Name), (int)sizeof(serv_addr.sun_path));
             return NULL;
