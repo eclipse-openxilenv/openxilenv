@@ -1142,6 +1142,20 @@ class XilEnv:
 		"""
 		return bool(self.__lib.XilEnv_IsConnectedTo())
 
+	def GetVersion(self) -> int:
+		"""
+		Get the version of the connected XilEnv instance.
+
+		Returns
+		-------
+		int
+			XilEnv version number, or -1 if not connected.
+		"""
+		if (self.__SuccessfulConnected == 1):
+			return self.__lib.XilEnv_GetVersion()
+		else:
+			return -1
+
 	def DisconnectFrom(self) -> int:
 		"""
 		Disconnect from the current XilEnv instance.

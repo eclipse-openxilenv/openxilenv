@@ -168,7 +168,12 @@ int CopyFile(const char *lpExistingFileName, const char *lpNewFileName, int bFai
 void GetXilEnvHomeDirectory(char *ret_Directory, int par_Maxc)
 {
     char *HomeDir;
-    HomeDir = getenv("HOME");
+    // XILENV_HOME overrides where XilEnv keeps its per-instance runtime state
+    // (~/.XilEnv/<instance>/...), without changing HOME for anything else.
+    HomeDir = getenv("XILENV_HOME");
+    if (HomeDir == NULL) {
+        HomeDir = getenv("HOME");
+    }
     if (HomeDir == NULL) {
         HomeDir = getpwuid(getuid())->pw_dir;
     }
