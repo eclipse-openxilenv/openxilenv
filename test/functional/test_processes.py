@@ -28,14 +28,20 @@ def _running_simple_process(
     xil: XilEnv,
     xilEnv_installation_path: Path,
 ) -> Generator[tuple[str, Path], None, None]:
-    """Start ExtProc_Simple for a test and stop only the process it started."""
+    """
+    Start ExtProc_Simple for a test and stop only the process it started.
+
+    Args:
+        xil (XilEnv): The XilEnv client.
+        xilEnv_installation_path (Path): Path to the XilEnv installation.
+    """
 
     sample_folder = "Samples64" if sys.maxsize > 2**32 else "Samples32"
     executable = (
         xilEnv_installation_path
         / sample_folder
         / "ExtProc_Simple"
-        / "ExtProc_Simple.exe"
+        / ("ExtProc_Simple.exe" if sys.platform == "win32" else "ExtProc_Simple.EXE")
     )
     assert executable.is_file(), f"ExtProc_Simple executable not found: {executable}"
 
@@ -53,13 +59,13 @@ def _running_simple_process(
         deadline = time.monotonic() + 10
         process_state = xil.GetProcessState(process_name)
         while (
-            process_state == ErrorCode.UNKNOWN_PROCESS
+            process_state not in (0, 1, 2)
             and time.monotonic() < deadline
         ):
             time.sleep(0.05)
             process_state = xil.GetProcessState(process_name)
 
-        assert process_state in (0, 1, 2, 3), (
+        assert process_state in (0, 1, 2), (
             f"ExtProc_Simple did not log in; process state was {process_state}"
         )
         yield process_name, executable
@@ -92,7 +98,17 @@ def _verify_process_equation_add_and_delete(
     delete_equations: Callable[[int, str], None],
     side: str,
 ) -> None:
-    """Verify observable equation execution, selective deletion, and delete-all."""
+    """
+    Verify observable equation execution, selective deletion, and delete-all.
+
+    Args:
+        xil (XilEnv): The XilEnv client.
+        tmp_path (Path): Temporary path for equations.
+        xilEnv_installation_path (Path): Path to XilEnv installation.
+        add_equation (Callable[[int, str, str], int]): Function to add an equation.
+        delete_equations (Callable[[int, str], None]): Function to delete equations.
+        side (str): Side identifier.
+    """
     test_id = uuid4().hex
     first_variable = f"ProcessEquationTest.{test_id}.First"
     second_variable = f"ProcessEquationTest.{test_id}.Second"
@@ -162,7 +178,9 @@ def _verify_process_equation_add_and_delete(
                         for variable_id in variable_ids:
                             remaining = xil.RemoveVari(variable_id)
                             while remaining > 0:
-                                remaining = xil.RemoveVari(variable_id)
+                                next_remaining = xil.RemoveVari(variable_id)
+                                assert 0 <= next_remaining < remaining
+                                remaining = next_remaining
     finally:
         for equation_file in (first_equation, second_equation):
             if equation_file.exists():
@@ -173,7 +191,13 @@ def test_start_stop_ex_process(
     owned_xil: tuple[XilEnv, str],
     xilEnv_installation_path: Path,
 ) -> None:
-    """Test starting and stopping an external process."""
+    """
+    Test starting and stopping an external process.
+
+    Args:
+        owned_xil (tuple[XilEnv, str]): The XilEnv client and instance name.
+        xilEnv_installation_path (Path): Path to the XilEnv installation.
+    """
     xil, _ = owned_xil
 
     sample_folder = "Samples64" if sys.maxsize > 2**32 else "Samples32"
@@ -181,7 +205,7 @@ def test_start_stop_ex_process(
         xilEnv_installation_path
         / sample_folder
         / "ExtProc_Simple"
-        / "ExtProc_Simple.exe"
+        / ("ExtProc_Simple.exe" if sys.platform == "win32" else "ExtProc_Simple.EXE")
     )
     assert executable.is_file(), f"ExtProc_Simple executable not found: {executable}"
 
@@ -211,13 +235,13 @@ def test_start_stop_ex_process(
         deadline = time.monotonic() + 10
         process_state = xil.GetProcessState(process_name)
         while (
-            process_state == ErrorCode.UNKNOWN_PROCESS
+            process_state not in (0, 1, 2)
             and time.monotonic() < deadline
         ):
             time.sleep(0.05)
             process_state = xil.GetProcessState(process_name)
 
-        assert process_state in (0, 1, 2, 3), (
+        assert process_state in (0, 1, 2), (
             f"ExtProc_Simple did not log in; process state was {process_state}"
         )
     finally:
@@ -244,7 +268,13 @@ def test_start_stop_and_list_process(
     owned_xil: tuple[XilEnv, str],
     xilEnv_installation_path: Path,
 ) -> None:
-    """Test starting, stopping and listing a process with StartProcess."""
+    """
+    Test starting, stopping and listing a process with StartProcess.
+
+    Args:
+        owned_xil (tuple[XilEnv, str]): The XilEnv client and instance name.
+        xilEnv_installation_path (Path): Path to the XilEnv installation.
+    """
     xil, _ = owned_xil
 
     with _running_simple_process(xil, xilEnv_installation_path) as (_, executable):
@@ -266,7 +296,13 @@ def test_duplicate_start_process_returns_running_error_and_lists_process(
     owned_xil: tuple[XilEnv, str],
     xilEnv_installation_path: Path,
 ) -> None:
-    """Verify a running external process cannot be started twice and is listed."""
+    """
+    Verify a running external process cannot be started twice and is listed.
+
+    Args:
+        owned_xil (tuple[XilEnv, str]): The XilEnv client and instance name.
+        xilEnv_installation_path (Path): Path to the XilEnv installation.
+    """
     xil, _ = owned_xil
 
     with _running_simple_process(xil, xilEnv_installation_path) as (running_name, _):
@@ -276,7 +312,12 @@ def test_duplicate_start_process_returns_running_error_and_lists_process(
 def test_method_returns_unknown_for_missing_process(
     owned_xil: tuple[XilEnv, str],
 ) -> None:
-    """Verify StopProcess reports an unknown process as absent."""
+    """
+    Verify StopProcess reports an unknown process as absent.
+
+    Args:
+        owned_xil (tuple[XilEnv, str]): The XilEnv client and instance name.
+    """
     xil, _ = owned_xil
 
     process_name = "__pytest_process_not_started_for_stop__"
@@ -289,7 +330,14 @@ def test_add_and_delete_before_process_equations(
     xilEnv_installation_path: Path,
     tmp_path: Path,
 ) -> None:
-    """Verify before-process equations execute and can be selectively or fully deleted."""
+    """
+    Verify before-process equations execute and can be selectively or fully deleted.
+
+    Args:
+        owned_xil (tuple[XilEnv, str]): The XilEnv client and instance name.
+        xilEnv_installation_path (Path): Path to the XilEnv installation.
+        tmp_path (Path): Temporary path for test files.
+    """
     xil, _ = owned_xil
 
     _verify_process_equation_add_and_delete(
@@ -307,7 +355,14 @@ def test_add_and_delete_behind_process_equations(
     xilEnv_installation_path: Path,
     tmp_path: Path,
 ) -> None:
-    """Verify behind-process equations execute and can be selectively or fully deleted."""
+    """
+    Verify behind-process equations execute and can be selectively or fully deleted.
+
+    Args:
+        owned_xil (tuple[XilEnv, str]): The XilEnv client and instance name.
+        xilEnv_installation_path (Path): Path to the XilEnv installation.
+        tmp_path (Path): Temporary path for test files.
+    """
     xil, _ = owned_xil
 
     _verify_process_equation_add_and_delete(

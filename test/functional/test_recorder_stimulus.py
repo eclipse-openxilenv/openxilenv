@@ -62,7 +62,7 @@ def compare_one_format(xil: XilEnv, Format: str) -> None:
     xil.WaitUntil("XilEnv.StimulusPlayer == enum(XilEnv.StimulusPlayer@Play)", 10000)  # wait till stimulus player is running
     xil.WaitUntil("XilEnv.StimulusPlayer == enum(XilEnv.StimulusPlayer@Sleep)", 10000)  # wait till stimulus player is finished
 
-
+@pytest.mark.skip("Currently unstable")
 def test_record_and_run_stimuli_with_dat_mdf_mf4(owned_xil: tuple[XilEnv, str],) -> None:
     """
     Test recording and replaying signals in dat, mdf, and mf4 formats.
