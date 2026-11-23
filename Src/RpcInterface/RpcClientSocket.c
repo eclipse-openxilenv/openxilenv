@@ -92,8 +92,18 @@ static void InitMutex()
         RpcMutexInitFlag = 1;
 #ifdef _WIN32
         RpcMutex = CreateMutex(NULL, 0, NULL);
-#else \
-    // nothing todo
+#else
+        // A Win32 mutex is reentrant for its owning thread, which
+        // RemoteProcedureCallTransactDynBuf() relies on (it locks RpcMutex,
+        // then calls into RemoteProcedureGetReceiveBuffer() -> GetThreadReceiveBufferNo(),
+        // which locks it again). Re-init as recursive here to match, since
+        // PTHREAD_MUTEX_INITIALIZER gives a non-recursive mutex that would
+        // self-deadlock on that second lock.
+        pthread_mutexattr_t Attr;
+        pthread_mutexattr_init(&Attr);
+        pthread_mutexattr_settype(&Attr, PTHREAD_MUTEX_RECURSIVE);
+        pthread_mutex_init(&RpcMutex, &Attr);
+        pthread_mutexattr_destroy(&Attr);
 #endif
     }
 }
@@ -327,6 +337,8 @@ HANDLE UnixDomainSocketConnectToRemoteProcedureCallServer(const char *par_Server
     struct sockaddr_un address;
     int iResult;
     char Name[MAX_PATH + 100];
+
+    InitMutex();
 
     MEMSET(&address, 0, sizeof(address));
     address.sun_family = AF_UNIX;
