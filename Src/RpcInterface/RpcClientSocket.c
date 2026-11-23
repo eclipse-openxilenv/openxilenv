@@ -91,13 +91,10 @@ static pthread_once_t RpcMutexOnceControl = PTHREAD_ONCE_INIT;
 
 static void InitRpcMutexOnce(void)
 {
-    // A Win32 mutex is reentrant for its owning thread, which
-    // RemoteProcedureCallTransactDynBuf() relies on (it locks RpcMutex,
-    // then calls into RemoteProcedureGetReceiveBuffer() -> GetThreadReceiveBufferNo(),
-    // which locks it again). Make it recursive to match. pthread_once()
-    // guarantees this runs exactly once and that every caller of
-    // LockMutex() - even concurrently on first use - waits for it to
-    // finish before locking, instead of racing a plain init-flag check.
+    // A Win32 mutex is reentrant for its owning thread. Make the pthread mutex
+    // recursive to match. pthread_once() guarantees this runs exactly once and
+    // that every caller of LockMutex() - even concurrently on first use -
+    // waits for it to finish before locking, instead of racing a plain init-flag check.
     pthread_mutexattr_t Attr;
     pthread_mutexattr_init(&Attr);
     pthread_mutexattr_settype(&Attr, PTHREAD_MUTEX_RECURSIVE);
@@ -139,12 +136,14 @@ static void UnlockMutex()
 #endif
 }
 
-static int GetThreadReceiveBufferNo(void)
+static int GetThreadReceiveOrTransmitBufferNo(int par_LockMutex)
 {
     int x;
     int Ret = -1;
     unsigned int ThreadId = GetCurrentThreadId();
-    LockMutex();
+    if (par_LockMutex) {
+        LockMutex();
+    }
     for (x = 0; x < RpcThreadBuffersPos; x++) {
         if(RpcThreadBuffers[x].ThreadId == ThreadId) {
             Ret = x;
@@ -188,7 +187,9 @@ static int GetThreadReceiveBufferNo(void)
         goto __OUT;
     }
 __OUT:
-    UnlockMutex();
+    if (par_LockMutex) {
+        UnlockMutex();
+    }
     return Ret;
 }
 
@@ -486,7 +487,7 @@ int RemoteProcedureCallTransact (int par_SocketOrNamedPipe, HANDLE par_Socket, u
 
 void *RemoteProcedureGetReceiveBuffer(int par_NeededSize)
 {
-    int BufferNo = GetThreadReceiveBufferNo();
+    int BufferNo = GetThreadReceiveOrTransmitBufferNo(0);
     if (BufferNo < 0) return NULL;
     if (par_NeededSize > RpcThreadBuffers[BufferNo].ReceiveBufferSize) {
         RpcThreadBuffers[BufferNo].ReceiveBufferSize = par_NeededSize;
@@ -500,7 +501,7 @@ void *RemoteProcedureGetReceiveBuffer(int par_NeededSize)
 
 void *RemoteProcedureGetTransmitBuffer(int par_NeededSize)
 {
-    int BufferNo = GetThreadReceiveBufferNo();
+    int BufferNo = GetThreadReceiveOrTransmitBufferNo(1);
     if (BufferNo < 0) return NULL;
     if (par_NeededSize > RpcThreadBuffers[BufferNo].TransmitBufferSize) {
         RpcThreadBuffers[BufferNo].TransmitBufferSize = par_NeededSize;

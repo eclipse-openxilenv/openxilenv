@@ -819,7 +819,7 @@ void ConvertRawMemoryToUnion(enum BB_DATA_TYPES Type,
     }
 }
 
-void write_bbvari_minmax_check_pid (PID pid, VID vid, double v)
+void write_bbvari_minmax_check_pid_cs (PID pid, VID vid, double v, int cs)
 {
     int vid_index;
     int pid_index;
@@ -841,7 +841,7 @@ void write_bbvari_minmax_check_pid (PID pid, VID vid, double v)
     if ((pid_index = get_process_index(pid)) == -1) {
         return;
     }
-    EnterBlackboardCriticalSection();
+    if (cs) EnterBlackboardCriticalSection();
     // Takeover value only if the process have access rights
     if (blackboard[vid_index].AccessFlags &
         blackboard[vid_index].WrEnableFlags & (1ULL << pid_index)) {
@@ -900,12 +900,12 @@ void write_bbvari_minmax_check_pid (PID pid, VID vid, double v)
             break;
         }
     }
-    LeaveBlackboardCriticalSection();
+    if (cs) LeaveBlackboardCriticalSection();
 }
 
 void write_bbvari_minmax_check (VID vid, double v)
 {
-    write_bbvari_minmax_check_pid (GET_PID(), vid, v);
+    write_bbvari_minmax_check_pid_cs (GET_PID(), vid, v, 1);
 }
 
 int write_bbvari_convert_to (PID pid, VID vid, int convert_from_type, void *ret_Ptr)
@@ -3003,7 +3003,7 @@ int write_bbvari_frame_pid (PID pid, VID *Vids, int8_t *PhysOrRaw, double *Frame
     for (x = 0; x < Size; x++) {
         if ((PhysOrRaw == NULL) ||  // all raw value
             (PhysOrRaw[x] == 0)) {   // this value read as raw
-            write_bbvari_minmax_check_pid(pid, Vids[x], FrameValues[x]);
+            write_bbvari_minmax_check_pid_cs(pid, Vids[x], FrameValues[x], 0);
         } else {
             if (write_bbvari_phys_minmax_check_pid_cs (pid, Vids[x], FrameValues[x], 0)) {
                 Ret--;

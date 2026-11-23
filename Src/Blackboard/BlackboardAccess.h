@@ -84,7 +84,7 @@ void write_bbvari_union (VID vid, union BB_VARI v);
 void write_bbvari_union_x (PID pid, VID vid, union BB_VARI v);
 void write_bbvari_union_pid (int Pid, VID vid, int DataType, union BB_VARI v);
 void write_bbvari_minmax_check (VID vid, double v);
-void write_bbvari_minmax_check_pid (PID pid, VID vid, double v);
+void write_bbvari_minmax_check_pid_cs (PID pid, VID vid, double v, int cs);
 int write_bbvari_phys_minmax_check (VID vid, double new_phys_value);
 int write_bbvari_phys_minmax_check_cs (VID vid, double new_phys_value, int cs);
 int write_bbvari_phys_minmax_check_pid (PID pid, VID vid, double new_phys_value);
