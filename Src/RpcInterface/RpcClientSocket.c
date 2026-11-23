@@ -82,7 +82,25 @@ static int RpcThreadBuffersPos;
 #ifdef _WIN32
 static HANDLE RpcMutex;
 #else
-static pthread_mutex_t RpcMutex = PTHREAD_MUTEX_INITIALIZER;
+// Left uninitialized here: a static pthread_mutex_t initialized with
+// PTHREAD_MUTEX_INITIALIZER must not be passed to pthread_mutex_init()
+// again (that is undefined behavior), so the one-time recursive-mutex
+// setup below is the only initialization it ever gets.
+static pthread_mutex_t RpcMutex;
+static pthread_once_t RpcMutexOnceControl = PTHREAD_ONCE_INIT;
+
+static void InitRpcMutexOnce(void)
+{
+    // A Win32 mutex is reentrant for its owning thread. Make the pthread mutex
+    // recursive to match. pthread_once() guarantees this runs exactly once and
+    // that every caller of LockMutex() - even concurrently on first use -
+    // waits for it to finish before locking, instead of racing a plain init-flag check.
+    pthread_mutexattr_t Attr;
+    pthread_mutexattr_init(&Attr);
+    pthread_mutexattr_settype(&Attr, PTHREAD_MUTEX_RECURSIVE);
+    pthread_mutex_init(&RpcMutex, &Attr);
+    pthread_mutexattr_destroy(&Attr);
+}
 #endif
 static int RpcMutexInitFlag;
 
@@ -92,9 +110,9 @@ static void InitMutex()
         RpcMutexInitFlag = 1;
 #ifdef _WIN32
         RpcMutex = CreateMutex(NULL, 0, NULL);
-#else \
-    // nothing todo
 #endif
+        // Non-Windows: nothing to do here, RpcMutex is initialized lazily
+        // and exactly once by LockMutex() via pthread_once().
     }
 }
 
@@ -104,6 +122,7 @@ static void LockMutex()
     DWORD WaitResult = WaitForSingleObject (RpcMutex,    // handle to mutex
                                            INFINITE);    // no time-out interval
 #else
+    pthread_once(&RpcMutexOnceControl, InitRpcMutexOnce);
     pthread_mutex_lock(&RpcMutex);
 #endif
 }
@@ -117,12 +136,14 @@ static void UnlockMutex()
 #endif
 }
 
-static int GetThreadReceiveBufferNo(void)
+static int GetThreadReceiveOrTransmitBufferNo(int par_LockMutex)
 {
     int x;
     int Ret = -1;
     unsigned int ThreadId = GetCurrentThreadId();
-    LockMutex();
+    if (par_LockMutex) {
+        LockMutex();
+    }
     for (x = 0; x < RpcThreadBuffersPos; x++) {
         if(RpcThreadBuffers[x].ThreadId == ThreadId) {
             Ret = x;
@@ -166,7 +187,9 @@ static int GetThreadReceiveBufferNo(void)
         goto __OUT;
     }
 __OUT:
-    UnlockMutex();
+    if (par_LockMutex) {
+        UnlockMutex();
+    }
     return Ret;
 }
 
@@ -328,6 +351,8 @@ HANDLE UnixDomainSocketConnectToRemoteProcedureCallServer(const char *par_Server
     int iResult;
     char Name[MAX_PATH + 100];
 
+    InitMutex();
+
     MEMSET(&address, 0, sizeof(address));
     address.sun_family = AF_UNIX;
 
@@ -462,7 +487,7 @@ int RemoteProcedureCallTransact (int par_SocketOrNamedPipe, HANDLE par_Socket, u
 
 void *RemoteProcedureGetReceiveBuffer(int par_NeededSize)
 {
-    int BufferNo = GetThreadReceiveBufferNo();
+    int BufferNo = GetThreadReceiveOrTransmitBufferNo(0);
     if (BufferNo < 0) return NULL;
     if (par_NeededSize > RpcThreadBuffers[BufferNo].ReceiveBufferSize) {
         RpcThreadBuffers[BufferNo].ReceiveBufferSize = par_NeededSize;
@@ -476,7 +501,7 @@ void *RemoteProcedureGetReceiveBuffer(int par_NeededSize)
 
 void *RemoteProcedureGetTransmitBuffer(int par_NeededSize)
 {
-    int BufferNo = GetThreadReceiveBufferNo();
+    int BufferNo = GetThreadReceiveOrTransmitBufferNo(1);
     if (BufferNo < 0) return NULL;
     if (par_NeededSize > RpcThreadBuffers[BufferNo].TransmitBufferSize) {
         RpcThreadBuffers[BufferNo].TransmitBufferSize = par_NeededSize;

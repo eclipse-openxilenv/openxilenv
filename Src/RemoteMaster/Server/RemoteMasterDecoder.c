@@ -894,7 +894,7 @@ static uint32_t Func_write_bbvari_minmax_check(RM_PACKAGE_HEADER *par_Req, RM_PA
 {
     UNUSED(par_Ack);
     RM_BLACKBOARD_WRITE_BBVARI_MIN_MAX_CHECK_REQ *Req = (RM_BLACKBOARD_WRITE_BBVARI_MIN_MAX_CHECK_REQ*)par_Req;
-    write_bbvari_minmax_check_pid((PID)Req->Pid, Req->Vid, Req->Value);
+    write_bbvari_minmax_check_pid_cs((PID)Req->Pid, Req->Vid, Req->Value, 1);
     return 0;
 }
 

@@ -124,7 +124,21 @@ typedef struct {
 #define EnterCriticalSection(s) pthread_mutex_lock(s)
 #define TryEnterCriticalSection(s)  pthread_mutex_trylock(s)
 #define LeaveCriticalSection(s) pthread_mutex_unlock(s)
-#define InitializeCriticalSection(s) pthread_mutex_init(s, NULL)
+// Win32's CRITICAL_SECTION is always recursive/reentrant for its owning
+// thread, and code throughout this codebase relies on that (nesting
+// Enter/LeaveCriticalSection calls on the same thread). A plain
+// pthread_mutex_t is not recursive by default, so match Win32 semantics
+// here instead of leaving every call site to self-deadlock on Linux.
+static inline int InitializeCriticalSection(pthread_mutex_t *cs)
+{
+    pthread_mutexattr_t Attr;
+    int Ret;
+    pthread_mutexattr_init(&Attr);
+    pthread_mutexattr_settype(&Attr, PTHREAD_MUTEX_RECURSIVE);
+    Ret = pthread_mutex_init(cs, &Attr);
+    pthread_mutexattr_destroy(&Attr);
+    return Ret;
+}
 #define DeleteCriticalSection(s) pthread_mutex_destroy(s)
 #define InitializeConditionVariable(v) pthread_cond_init(v, NULL)
 #define SleepConditionVariableCS_INFINITE(v,s) pthread_cond_wait(v,s)

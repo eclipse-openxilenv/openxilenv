@@ -119,7 +119,7 @@ static int RPCFunc_Set(RPC_CONNECTION *par_Connection, RPC_API_BASE_MESSAGE *par
     MEMSET (Out, 0, sizeof (RPC_API_SET_MESSAGE_ACK));
     Out->Header.StructSize = sizeof(RPC_API_SET_MESSAGE_ACK);
 
-    write_bbvari_minmax_check_pid (GetRPCControlPid(), In->Vid, In->Value);
+    write_bbvari_minmax_check_pid_cs (GetRPCControlPid(), In->Vid, In->Value, 1);
     Out->Header.ReturnValue = 0;
 
     return Out->Header.StructSize;
