@@ -14,31 +14,77 @@
 # SPDX-License-Identifier: Apache-2.0
 
 """
-Functional test for basic OpenXilEnv startup and shutdown.
+Functional tests for basic OpenXilEnv API calls on a shared instance.
 
-This module contains a pytest-based test for verifying that OpenXilEnv can be started
-without a GUI and properly disconnected, using the Python API.
+Tests that start and close their own instance live in test_standalone_instance.py.
 """
 
-import pytest
+import os
+import sys
+import time
+from uuid import uuid4
 from pathlib import Path
+from openxilenv.xilEnv import XilEnv
 
-from openxilenv import XilEnv
 
-
-def test_StartWithoutGui_and_disconnectAndCloseXil(xilEnv_installation_path: Path, ini_file_path: Path) -> None:
+def test_disconnect_and_reconnect(owned_xil: tuple[XilEnv, str]) -> None:
     """
-    Test starting OpenXilEnv without GUI and disconnecting.
+    Test disconnect and reconnect.
+    
+    Args:
+        owned_xil (tuple[XilEnv, str]): Owned XilEnv and instance.
+    """
+
+    xil, instance = owned_xil
+    assert xil.isConnected()
+    xil.DisconnectFrom()
+    assert not xil.isConnected()
+    xil.ConnectToInstance("", instance)
+    assert xil.isConnected()
+
+
+def test_GetAPIVersion(xilEnv_installation_path: Path) -> None:
+    """Test getting API version.
 
     Args:
-        xilEnv_installation_path (Path): Path to the openXilEnv installation directory.
-        ini_file_path (Path): Path to the configuration INI file.
+        xilEnv_installation_path (Path): Installation path.
     """
-    try:
-        xil = XilEnv(xilEnv_installation_path)
-    except Exception as e:
-        pytest.skip(f"XilEnv initialization failed: {e}")
-    xil.startWithoutGui(ini_file_path, Instance="my_instance")
-    assert xil.isConnected()
-    xil.disconnectAndCloseXil()
-    assert not xil.isConnected()
+
+    xil = XilEnv(xilEnv_installation_path)
+    api_version = xil.GetAPIVersion()
+
+    assert isinstance(api_version, int)
+    assert api_version >= 0
+
+
+def test_GetAPIModulePath(xilEnv_installation_path: Path) -> None:
+    """Test getting API module path.
+
+    Args:
+        xilEnv_installation_path (Path): Installation path.
+    """
+
+    xil = XilEnv(xilEnv_installation_path)
+    api_module_path = xil.GetAPIModulePath()
+
+    assert isinstance(api_module_path, bytes)
+    assert api_module_path
+    if sys.platform == "win32":
+        assert Path(os.fsdecode(api_module_path)).resolve() == (
+            xilEnv_installation_path / "XilEnvRpc.dll"
+        ).resolve()
+
+
+def test_environment_variables(owned_xil: tuple[XilEnv, str]) -> None:
+    """Test setting and getting environment variables.
+
+    Args:
+        owned_xil (tuple[XilEnv, str]): Owned XilEnv and instance.
+    """
+
+    xil, _ = owned_xil
+
+    variable_name = f"BlackboardTest.{uuid4().hex}"
+    assert xil.SetEnvironVar(variable_name, "10.0") == 0
+    assert xil.GetEnvironVar(variable_name) == "10.0"
+

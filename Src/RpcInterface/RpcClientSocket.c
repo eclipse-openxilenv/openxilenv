@@ -82,7 +82,28 @@ static int RpcThreadBuffersPos;
 #ifdef _WIN32
 static HANDLE RpcMutex;
 #else
-static pthread_mutex_t RpcMutex = PTHREAD_MUTEX_INITIALIZER;
+// Left uninitialized here: a static pthread_mutex_t initialized with
+// PTHREAD_MUTEX_INITIALIZER must not be passed to pthread_mutex_init()
+// again (that is undefined behavior), so the one-time recursive-mutex
+// setup below is the only initialization it ever gets.
+static pthread_mutex_t RpcMutex;
+static pthread_once_t RpcMutexOnceControl = PTHREAD_ONCE_INIT;
+
+static void InitRpcMutexOnce(void)
+{
+    // A Win32 mutex is reentrant for its owning thread, which
+    // RemoteProcedureCallTransactDynBuf() relies on (it locks RpcMutex,
+    // then calls into RemoteProcedureGetReceiveBuffer() -> GetThreadReceiveBufferNo(),
+    // which locks it again). Make it recursive to match. pthread_once()
+    // guarantees this runs exactly once and that every caller of
+    // LockMutex() - even concurrently on first use - waits for it to
+    // finish before locking, instead of racing a plain init-flag check.
+    pthread_mutexattr_t Attr;
+    pthread_mutexattr_init(&Attr);
+    pthread_mutexattr_settype(&Attr, PTHREAD_MUTEX_RECURSIVE);
+    pthread_mutex_init(&RpcMutex, &Attr);
+    pthread_mutexattr_destroy(&Attr);
+}
 #endif
 static int RpcMutexInitFlag;
 
@@ -92,9 +113,9 @@ static void InitMutex()
         RpcMutexInitFlag = 1;
 #ifdef _WIN32
         RpcMutex = CreateMutex(NULL, 0, NULL);
-#else \
-    // nothing todo
 #endif
+        // Non-Windows: nothing to do here, RpcMutex is initialized lazily
+        // and exactly once by LockMutex() via pthread_once().
     }
 }
 
@@ -104,6 +125,7 @@ static void LockMutex()
     DWORD WaitResult = WaitForSingleObject (RpcMutex,    // handle to mutex
                                            INFINITE);    // no time-out interval
 #else
+    pthread_once(&RpcMutexOnceControl, InitRpcMutexOnce);
     pthread_mutex_lock(&RpcMutex);
 #endif
 }
@@ -327,6 +349,8 @@ HANDLE UnixDomainSocketConnectToRemoteProcedureCallServer(const char *par_Server
     struct sockaddr_un address;
     int iResult;
     char Name[MAX_PATH + 100];
+
+    InitMutex();
 
     MEMSET(&address, 0, sizeof(address));
     address.sun_family = AF_UNIX;
