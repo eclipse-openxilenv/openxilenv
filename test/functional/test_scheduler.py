@@ -21,6 +21,12 @@ import pytest
 
 
 def test_stop_and_resume_scheduler(owned_xil: tuple[XilEnv, str]) -> None:
+    """
+    Test stopping and resuming the scheduler.
+
+    Args:
+        owned_xil (tuple[XilEnv, str]): The XilEnv client and instance name.
+    """
     xil, _ = owned_xil
     initial_scheduler_state = xil.SchedulerRunning()
 
@@ -37,6 +43,12 @@ def test_stop_and_resume_scheduler(owned_xil: tuple[XilEnv, str]) -> None:
 
 
 def test_advance_exact_number_of_cycles(owned_xil: tuple[XilEnv, str]) -> None:
+    """
+    Test advancing exact cycles.
+
+    Args:
+        owned_xil (tuple[XilEnv, str]): The XilEnv client and instance name.
+    """
     xil, _ = owned_xil
     initial_scheduler_state = xil.SchedulerRunning()
 

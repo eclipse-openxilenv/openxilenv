@@ -15,6 +15,7 @@
 """Helpers for stopping XilEnv processes before temporary directories are removed."""
 
 import subprocess
+import time
 from typing import Optional
 
 
@@ -36,3 +37,20 @@ def ensure_process_stopped(process: Optional[subprocess.Popen], timeout: float =
         except subprocess.TimeoutExpired:
             process.kill()
             process.wait()
+
+
+def wait_for_variable(xil, variable_id: int, value: float, description: str,
+                      timeout: float = 10.0) -> None:
+    """Poll a blackboard variable until it has the expected value.
+
+    Args:
+        xil: The XilEnv client.
+        variable_id: Id of the variable to poll.
+        value: Value to wait for.
+        description: What is being waited for, used in the timeout message.
+        timeout: Seconds to wait before failing.
+    """
+    deadline = time.monotonic() + timeout
+    while xil.Get(variable_id) != value:
+        assert time.monotonic() < deadline, f"Timeout waiting for {description}"
+        time.sleep(0.01)

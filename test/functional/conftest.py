@@ -22,7 +22,7 @@ This module provides session-scoped fixtures for test configuration, such as pat
 
 
 from tempfile import TemporaryDirectory
-import uuid
+from uuid import uuid4
 import pytest
 import os
 from typing import Generator
@@ -70,7 +70,7 @@ def xilEnv_installation_path(xilEnv_source_path: Path) -> Path:
         xilEnv_installation_path = Path(xilEnv_installation)
     else:
         # assume installation folder structure as in README
-        xilEnv_installation_path = xilEnv_source_path.parent.parent.joinpath("tools", "openXilEnv")
+        xilEnv_installation_path = xilEnv_source_path.parent.parent.joinpath("tools", "openxilenv")
 
     if not xilEnv_installation_path.is_dir():
         raise FileNotFoundError(
@@ -132,8 +132,8 @@ def owned_xil(
 
     Handles setup and teardown of the OpenXilEnv connection.
     """
-    name = f"pytest_{uuid.uuid4().hex}"
-    test_ini_path = Path.cwd() / f"Test_{uuid.uuid4().hex}.ini"
+    name = f"pytest_{uuid4().hex}"
+    test_ini_path = Path.cwd() / f"Test_{uuid4().hex}.ini"
     xil = None
     try:
         copyfile(ini_file_path, test_ini_path)
@@ -151,7 +151,7 @@ def owned_xil(
                 xil.disconnectAndCloseXil()
         finally:
             if xil is not None:
-                ensure_process_stopped(getattr(xil, "_XilEnv__xilEnvProcess", None))
+                ensure_process_stopped(xil.getProcess())
 
 
 @pytest.fixture(scope="module")
@@ -171,8 +171,8 @@ def owned_xil_with_gui(
 
     Handles setup and teardown of the OpenXilEnv connection.
     """
-    name = f"pytest_{uuid.uuid4().hex}"
-    test_ini_path = Path.cwd() / f"Test_{uuid.uuid4().hex}.ini"
+    name = f"pytest_{uuid4().hex}"
+    test_ini_path = Path.cwd() / f"Test_{uuid4().hex}.ini"
     xil = None
     try:
         copyfile(ini_file_path, test_ini_path)
@@ -190,4 +190,4 @@ def owned_xil_with_gui(
                 xil.disconnectAndCloseXil()
         finally:
             if xil is not None:
-                ensure_process_stopped(getattr(xil, "_XilEnv__xilEnvProcess", None))
+                ensure_process_stopped(xil.getProcess())

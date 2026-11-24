@@ -25,6 +25,7 @@ from typing import Generator
 from uuid import uuid4
 from openxilenv.xilEnv import BB_VARI, XilEnv
 from test.functional.enums import ErrorCode, DataType, ConversionType
+from test.functional.helper_methods import wait_for_variable
 
 import pytest
 import time
@@ -171,6 +172,12 @@ def test_write_multiple_signals(owned_xil: tuple[XilEnv, str]) -> None:
 
 
 def test_write_frame_wait_read_frame(owned_xil: tuple[XilEnv, str]) -> None:
+    """
+    Test writing and reading a frame.
+
+    Args:
+        owned_xil (tuple[XilEnv, str]): The XilEnv client and instance name.
+    """
     xil, _ = owned_xil
     initial_scheduler_state = xil.SchedulerRunning()
 
@@ -186,6 +193,12 @@ def test_write_frame_wait_read_frame(owned_xil: tuple[XilEnv, str]) -> None:
 
 
 def test_getType_getUnit_setUnit(owned_xil: tuple[XilEnv, str]) -> None:
+    """
+    Test getting and setting unit.
+
+    Args:
+        owned_xil (tuple[XilEnv, str]): The XilEnv client and instance name.
+    """
     xil, _ = owned_xil
 
     datatype = DataType.BB_DOUBLE
@@ -211,6 +224,14 @@ def test_set_min_max(
     minimum: float,
     maximum: float,
 ) -> None:
+    """
+    Test setting min and max.
+
+    Args:
+        owned_xil (tuple[XilEnv, str]): The XilEnv client and instance name.
+        minimum (float): Minimum value.
+        maximum (float): Maximum value.
+    """
     xil, _ = owned_xil
 
     with temporary_blackboard_variable(owned_xil) as (_, variable_id):
@@ -221,6 +242,12 @@ def test_set_min_max(
 
 
 def test_import_vari_properties(owned_xil: tuple[XilEnv, str]) -> None:
+    """
+    Test importing variable properties.
+
+    Args:
+        owned_xil (tuple[XilEnv, str]): The XilEnv client and instance name.
+    """
     xil, _ = owned_xil
     with temporary_blackboard_variable(owned_xil) as (variable_name, variable_id):
         properties_path = Path("variable_properties.ini")
@@ -238,6 +265,12 @@ def test_import_vari_properties(owned_xil: tuple[XilEnv, str]) -> None:
 
 # Pretty useless but doesn´t hurt to test anyway
 def test_enable_and_disable_range_control(owned_xil: tuple[XilEnv, str]) -> None:
+    """
+    Test range control toggling.
+
+    Args:
+        owned_xil (tuple[XilEnv, str]): The XilEnv client and instance name.
+    """
     xil, _ = owned_xil
     variable_filter = f"BlackboardTest.RangeControl.{uuid4().hex}"
 
@@ -263,10 +296,7 @@ def test_write_access_controls_script_process(
     baseline, blocked_probe, enabled_probe = 10.0, 20.0, 30.0
 
     def wait_for(variable_id: int, value: float, description: str) -> None:
-        deadline = time.monotonic() + 10
-        while xil.Get(variable_id) != value:
-            assert time.monotonic() < deadline, f"Timeout waiting for {description}"
-            time.sleep(0.01)
+        wait_for_variable(xil, variable_id, value, description)
 
     with temporary_blackboard_variable(owned_xil) as (target, target_id), \
             temporary_blackboard_variable(owned_xil) as (ready, ready_id), \
@@ -317,7 +347,11 @@ def test_write_access_controls_script_process(
 
 
 def test_get_next_vari(owned_xil: tuple[XilEnv, str]) -> None:
-    """Verify GetNextVari iterates matching names, exhausts, and restarts."""
+    """Verify GetNextVari iterates matching names, exhausts, and restarts.
+
+    Args:
+        owned_xil (tuple[XilEnv, str]): The XilEnv client and instance name.
+    """
     xil, _ = owned_xil
 
     prefix = f"BlackboardTest.GetNextVari.{uuid4().hex}"
@@ -336,7 +370,11 @@ def test_get_next_vari(owned_xil: tuple[XilEnv, str]) -> None:
 
 
 def test_get_next_vari_ex(owned_xil: tuple[XilEnv, str]) -> None:
-    """Verify GetNextVariEx filters iteration by process attachment and access."""
+    """Verify GetNextVariEx filters iteration by process attachment and access.
+
+    Args:
+        owned_xil (tuple[XilEnv, str]): The XilEnv client and instance name.
+    """
     xil, _ = owned_xil
     process = "Script"
     prefix = f"BlackboardTest.GetNextVariEx.{uuid4().hex}"
@@ -352,10 +390,7 @@ def test_get_next_vari_ex(owned_xil: tuple[XilEnv, str]) -> None:
             xil.Set(variable_id, 0.0)
 
         def wait_for(variable_id: int, value: float, description: str) -> None:
-            deadline = time.monotonic() + 10
-            while xil.Get(variable_id) != value:
-                assert time.monotonic() < deadline, f"Timeout waiting for {description}"
-                time.sleep(0.01)
+            wait_for_variable(xil, variable_id, value, description)
 
         script_path = Path("attach_variables.scr")
         script_started = False
@@ -408,6 +443,12 @@ def test_get_next_vari_ex(owned_xil: tuple[XilEnv, str]) -> None:
     [-3.25, 0.0, 17.0]
 )
 def test_getRaw_setRaw(owned_xil: tuple[XilEnv, str], raw_value: float) -> None:
+    """Test raw get/set.
+
+    Args:
+        owned_xil (tuple[XilEnv, str]): The XilEnv client and instance name.
+        raw_value (float): The raw value to set.
+    """
     xil, _ = owned_xil
     value = BB_VARI()
     result = BB_VARI()
@@ -433,8 +474,12 @@ def test_formula_conversion(
 ) -> None:
     """
     Verify formula conversion computes physical = 2 * raw + 5 and its inverse write.
-
     The test also confirms Get and ReadFrame continue to return the raw value.
+
+    Args:
+        owned_xil (tuple[XilEnv, str]): The XilEnv client and instance name.
+        raw_value (float): The raw value to test.
+        physical_value (float): The expected physical value.
     """
     xil, _ = owned_xil
 
@@ -448,7 +493,12 @@ def test_formula_conversion(
 
 
 def test_no_conversion_preserves_raw_value(owned_xil: tuple[XilEnv, str]) -> None:
-    """Verify BB_CONV_NONE applies no raw-to-physical transform and rejects physical writes."""
+    """
+    Verify BB_CONV_NONE applies no raw-to-physical transform and rejects physical writes.
+    
+    Args:
+        owned_xil (tuple[XilEnv, str]): The XilEnv client and instance name.
+    """
     xil, _ = owned_xil
 
     with temporary_blackboard_variable(owned_xil) as (_, variable_id):
@@ -460,7 +510,12 @@ def test_no_conversion_preserves_raw_value(owned_xil: tuple[XilEnv, str]) -> Non
 
 
 def test_text_replacement_conversion_string(owned_xil: tuple[XilEnv, str]) -> None:
-    """Verify BB_CONV_TEXTREP maps exact raw values 0 and 1 to the labels OFF and ON."""
+    """
+    Verify BB_CONV_TEXTREP maps exact raw values 0 and 1 to the labels OFF and ON.
+
+    Args:
+        owned_xil (tuple[XilEnv, str]): The XilEnv client and instance name.
+    """
     xil, _ = owned_xil
     conversion = '0 0 "OFF";1 1 "ON"'
 
@@ -481,7 +536,14 @@ def test_offset_factor_conversion(
     physical_value: float,
     raw_value: float,
 ) -> None:
-    """Verify BB_CONV_OFFFACT computes physical = (raw + offset) * factor."""
+    """
+    Verify BB_CONV_OFFFACT computes physical = (raw + offset) * factor.
+
+    Args:
+        owned_xil (tuple[XilEnv, str]): The XilEnv client and instance name.
+        physical_value (float): The physical value to set.
+        raw_value (float): The expected raw value.
+    """
     xil, _ = owned_xil
 
     with temporary_blackboard_variable(owned_xil) as (_, variable_id):
@@ -493,7 +555,12 @@ def test_offset_factor_conversion(
 
 
 def test_interpolated_table_conversion(owned_xil: tuple[XilEnv, str]) -> None:
-    """Verify BB_CONV_TAB_INTP linearly interpolates physical values between raw table points."""
+    """
+    Verify BB_CONV_TAB_INTP linearly interpolates physical values between raw table points.
+    
+    Args:
+        owned_xil (tuple[XilEnv, str]): The XilEnv client and instance name.
+    """
     xil, _ = owned_xil
 
     with temporary_blackboard_variable(owned_xil) as (_, variable_id):
@@ -508,7 +575,12 @@ def test_interpolated_table_conversion(owned_xil: tuple[XilEnv, str]) -> None:
 
 
 def test_non_interpolated_table_conversion(owned_xil: tuple[XilEnv, str]) -> None:
-    """Verify BB_CONV_TAB_NOINTP selects a table point without interpolating between points."""
+    """
+    Verify BB_CONV_TAB_NOINTP selects a table point without interpolating between points.
+
+    Args:
+        owned_xil (tuple[XilEnv, str]): The XilEnv client and instance name.
+    """
     xil, _ = owned_xil
 
     with temporary_blackboard_variable(owned_xil) as (_, variable_id):
@@ -524,7 +596,12 @@ def test_non_interpolated_table_conversion(owned_xil: tuple[XilEnv, str]) -> Non
 
 
 def test_rational_function_conversion(owned_xil: tuple[XilEnv, str]) -> None:
-    """Verify BB_CONV_RAT_FUNC computes raw = (a · phys² + b · phys + c) / (d · phys² + e · phys + f)"""
+    """
+    Verify BB_CONV_RAT_FUNC computes raw = (a · phys² + b · phys + c) / (d · phys² + e · phys + f)
+
+    Args:
+        owned_xil (tuple[XilEnv, str]): The XilEnv client and instance name.
+    """
     xil, _ = owned_xil
 
     with temporary_blackboard_variable(owned_xil) as (_, variable_id):
@@ -549,7 +626,10 @@ def test_factor_offset_conversion(
     (physical - offset) / factor, inverse to raw * factor + offset.
 
     Args:
+    Args:
         owned_xil (tuple[XilEnv, str]): The XilEnv client and instance name.
+        physical_value (float): The physical value to set.
+        raw_value (float): The expected raw value.
     """
     xil, _ = owned_xil
 
@@ -588,7 +668,12 @@ def test_Equ(
 
 
 def test_division_by_zero(owned_xil: tuple[XilEnv, str]) -> None:
-    """Test division by zero."""
+    """
+    Test division by zero.
+
+    Args:
+        owned_xil (tuple[XilEnv, str]): The XilEnv client and instance name.
+    """
     xil, _ = owned_xil
 
     with temporary_blackboard_variable(owned_xil) as (_, variable_id):
@@ -598,6 +683,3 @@ def test_division_by_zero(owned_xil: tuple[XilEnv, str]) -> None:
         assert xil.SetPhys(variable_id, 10.0) == -1, "Factor Offset failed division by zero"
         assert xil.XilEnv_SetVariConversion(variable_id, ConversionType.BB_CONV_FORMULA, "#/0") == 0
         assert xil.SetPhys(variable_id, 10.0) == -1, "Formula failed division by zero"
-        #assert xil.XilEnv_SetVariConversion(variable_id, ConversionType.BB_CONV_RAT_FUNC, "0:6:0:0:0:0") == 0
-        #assert xil.SetPhys(variable_id, 10.0) == 0, "Rational function failed division by zero"
-

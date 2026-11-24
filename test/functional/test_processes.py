@@ -285,7 +285,6 @@ def test_start_stop_and_list_process(
             process_names.append(listed_process)
             listed_process = xil.GetNextProcess(0, "*")
 
-        print("Running processes:", process_names)
         assert any(
             Path(name).name.casefold() == executable.name.casefold()
             for name in process_names

@@ -997,6 +997,17 @@ class XilEnv:
 		"""
 		self.__start(iniFilePath, False, timeoutInSec, Instance=Instance)
 
+	def getProcess(self) -> subprocess.Popen|None:
+		"""
+		Get the handle of the XilEnv process started by this instance.
+
+		Returns
+		-------
+		subprocess.Popen | None
+			The process handle, or None if no process was started by this instance.
+		"""
+		return self.__xilEnvProcess
+
 	def disconnectAndCloseXil(self) -> None:
 		"""
 		Disconnect from openXilEnv and close the process, cleaning up attached variables.

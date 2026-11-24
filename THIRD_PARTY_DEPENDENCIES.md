@@ -9,6 +9,7 @@ This file lists third-party C/C++ dependencies verified in the repository. Evide
 | FMI Standard (headers) | v2.0.4 and v3.0.1 (referenced in docs as required for FMU support) | https://github.com/modelica/fmi-standard (releases) | BSD-2-Clause (project headers, per upstream repo) | External headers; CMake expects -DFMI2_SOURCE_PATH / -DFMI3_SOURCE_PATH to point to FMI headers |
 | esmini | v2.31.1 | https://github.com/esmini/esmini | Mozilla Public License 2.0 (third_party/esmini/LICENSE.txt) | Optional sample integration: sample links to external esmini library via ESMINI_LIBRARY_PATH; repository includes vendored LICENSE but not source |
 | pytest | 9.1.1 | https://github.com/pytest-dev/pytest | MIT (upstream LICENSE) | Test dependency: pinned in requirements.txt (pytest==9.1.1); used by CI to run tests (pytest -vv) |
+| pytest-timeout | 2.4.0 | https://github.com/pytest-dev/pytest-timeout | MIT | Test dependency: pinned in requirements.txt (pytest-timeout==2.4.0); configures a 30-second per-test timeout in pytest.ini |
 | aqtinstall | 3.3.0 | https://github.com/miurahr/aqtinstall | MIT (upstream project states MIT) | CI helper: pinned in CI workflow (pip install aqtinstall==3.3.0) to fetch/install Qt for CI builds |
 
 ## License copies present in repo (indicative of vendoring/licensing notes)
