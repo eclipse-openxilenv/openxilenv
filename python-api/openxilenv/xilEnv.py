@@ -19,6 +19,7 @@ It enables function calls to a running openXilEnv instance from Python code.
 """
 
 import ctypes as ct
+import os
 import platform
 import subprocess
 import sys
@@ -384,7 +385,7 @@ class XilEnv:
 		self.__lib.XilEnv_GetNextVariEx.argtypes = [ct.c_int, ct.c_char_p, ct.c_char_p, ct.c_int]
 
 		self.__lib.XilEnv_GetVariEnum.restype = ct.c_char_p
-		self.__lib.XilEnv_GetVariEnum.argtypes = [ct.c_int, ct.c_char_p, ct.c_double]
+		self.__lib.XilEnv_GetVariEnum.argtypes = [ct.c_int, ct.c_double]
 
 		self.__lib.XilEnv_GetVariDisplayFormatWidth.restype = ct.c_int
 		self.__lib.XilEnv_GetVariDisplayFormatWidth.argtypes = [ct.c_int]
@@ -405,13 +406,13 @@ class XilEnv:
 		self.__lib.XilEnv_DisableRangeControl.argtypes = [ct.c_char_p, ct.c_char_p]
 
 		self.__lib.XilEnv_WriteFrame.restype = ct.c_int
-		self.__lib.XilEnv_WriteFrame.argtypes = [ct.POINTER(ct.c_int),ct.POINTER(ct.c_double),ct.c_int]
+		self.__lib.XilEnv_WriteFrame.argtypes = [ct.POINTER(ct.c_int),ct.POINTER(ct.c_byte),ct.POINTER(ct.c_double),ct.c_int]
 
 		self.__lib.XilEnv_GetFrame.restype = ct.c_int
-		self.__lib.XilEnv_GetFrame.argtypes = [ct.POINTER(ct.c_int),ct.POINTER(ct.c_double),ct.c_int]
+		self.__lib.XilEnv_GetFrame.argtypes = [ct.POINTER(ct.c_int),ct.POINTER(ct.c_byte),ct.POINTER(ct.c_double),ct.c_int]
 
 		self.__lib.XilEnv_WriteFrameWaitReadFrame.restype = ct.c_int
-		self.__lib.XilEnv_WriteFrameWaitReadFrame.argtypes = [ct.POINTER(ct.c_int),ct.POINTER(ct.c_double),ct.c_int,ct.POINTER(ct.c_int),ct.POINTER(ct.c_double),ct.c_int]
+		self.__lib.XilEnv_WriteFrameWaitReadFrame.argtypes = [ct.POINTER(ct.c_int),ct.POINTER(ct.c_byte),ct.POINTER(ct.c_double),ct.c_int,ct.POINTER(ct.c_int),ct.POINTER(ct.c_byte),ct.POINTER(ct.c_double),ct.c_int]
 
 		self.__lib.XilEnv_ReferenceSymbol.restype = ct.c_int
 		self.__lib.XilEnv_ReferenceSymbol.argtypes = [ct.c_char_p, ct.c_char_p, ct.c_char_p, ct.c_char_p, ct.c_int, ct.c_char_p, ct.c_double, ct.c_double, ct.c_int, ct.c_int, ct.c_int, ct.c_int]
@@ -957,7 +958,7 @@ class XilEnv:
 # Connect
 
 
-	def startWithGui(self, iniFilePath: str, timeoutInSec: int = 5) -> None:
+	def startWithGui(self, iniFilePath: str, timeoutInSec: int = 5, *, Instance: str = "") -> None:
 		"""
 		Start openXilEnv with the GUI using the specified INI file.
 
@@ -967,15 +968,17 @@ class XilEnv:
 			Path to the INI configuration file.
 		timeoutInSec : int, optional
 			Number of seconds to wait for connection (default is 5).
+		Instance : str, optional
+			Name of the XilEnv instance. Defaults to the XilEnv_Instance environment variable or the default instance.
 
 		Returns
 		-------
 		None
 		"""
-		self.__start(iniFilePath, True, timeoutInSec)
+		self.__start(iniFilePath, True, timeoutInSec, Instance=Instance)
 
 
-	def startWithoutGui(self, iniFilePath: str, timeoutInSec: int = 5) -> None:
+	def startWithoutGui(self, iniFilePath: str, timeoutInSec: int = 5, *, Instance: str = "") -> None:
 		"""
 		Start openXilEnv without the GUI using the specified INI file.
 
@@ -985,12 +988,14 @@ class XilEnv:
 			Path to the INI configuration file.
 		timeoutInSec : int, optional
 			Number of seconds to wait for connection (default is 5).
+		Instance : str, optional
+			Name of the XilEnv instance. Defaults to the XilEnv_Instance environment variable or the default instance.
 
 		Returns
 		-------
 		None
 		"""
-		self.__start(iniFilePath, False, timeoutInSec)
+		self.__start(iniFilePath, False, timeoutInSec, Instance=Instance)
 
 	def disconnectAndCloseXil(self) -> None:
 		"""
@@ -1002,9 +1007,12 @@ class XilEnv:
 		"""
 		if self.__xilEnvProcess:
 			self.__removeVariables()
-			self.DisconnectAndClose(0, 0)
+			result = self.DisconnectAndClose(0, 0)
+			if result != 0:
+				raise RuntimeError("Failed to disconnect and close XilEnv")
+			self.__xilEnvProcess.communicate(timeout=30)
 
-	def __connectToXilEnv(self, timeoutInSec: int) -> int:
+	def __connectToXilEnv(self, timeoutInSec: int, *, Instance: str = "") -> int:
 		"""
 		Attempt to connect to openXilEnv within a timeout period.
 
@@ -1012,6 +1020,8 @@ class XilEnv:
 		----------
 		timeoutInSec : int
 			Number of seconds to wait for connection.
+		Instance : str, optional
+			Name of the XilEnv instance. Defaults to the XilEnv_Instance environment variable or the default instance.
 
 		Returns
 		-------
@@ -1020,14 +1030,14 @@ class XilEnv:
 		"""
 		connectionStatus = -1
 		while timeoutInSec:
-			connectionStatus = self.ConnectTo("")
+			connectionStatus = self.ConnectToInstance("", Instance)
 			if connectionStatus == 0 or timeoutInSec == 0:
 				return connectionStatus
 			timeoutInSec -= 1
 			time.sleep(1)
 		return connectionStatus
 
-	def __start(self, iniFilePath: str, startWithGUI: bool, timeoutInSec: int) -> None:
+	def __start(self, iniFilePath: str, startWithGUI: bool, timeoutInSec: int, *, Instance: str = "") -> None:
 		"""
 		Start the openXilEnv process and connect to it.
 
@@ -1039,6 +1049,8 @@ class XilEnv:
 			If True, start with GUI; otherwise, start without GUI.
 		timeoutInSec : int
 			Number of seconds to wait for connection.
+		Instance : str, optional
+			Name of the XilEnv instance. Defaults to the XilEnv_Instance environment variable or the default instance.
 
 		Returns
 		-------
@@ -1050,14 +1062,18 @@ class XilEnv:
 			If connection to openXilEnv fails or an exception occurs.
 		"""
 		try:
+			instanceName = Instance or os.environ.get("XilEnv_Instance", "")
+			command = [self.__xilEnvGuiExePath if startWithGUI else self.__xilEnvExePath]
+			if Instance:
+				command.extend(["-Instance", Instance])
+			command.extend(["-ini", iniFilePath])
 			if startWithGUI:
-				self.__xilEnvProcess = subprocess.Popen([self.__xilEnvGuiExePath, "-ini", iniFilePath],
-														stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+				self.__xilEnvProcess = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 			else:
-				self.__xilEnvProcess = subprocess.Popen([self.__xilEnvExePath, "-ini", iniFilePath, "-nogui"],
-														stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+				command.append("-nogui")
+				self.__xilEnvProcess = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
-			connectionStatus = self.__connectToXilEnv(timeoutInSec)
+			connectionStatus = self.__connectToXilEnv(timeoutInSec, Instance=instanceName)
 
 			if connectionStatus == 0:
 				print("Python has been successfully connected to XilEnv")
@@ -2258,7 +2274,8 @@ class XilEnv:
 			Unit (str): Unit of the variable.
 
 		Returns:
-			int: Variable ID if successful, -1 otherwise.
+			int: Positive variable ID if added successfully while connected; negative error code if adding fails;
+			-1 if not connected.
 		"""
 		if self.__SuccessfulConnected == 1:
 			return self.__lib.XilEnv_AddVari(self.c_str(Label), Type, self.c_str(Unit))
@@ -2273,7 +2290,8 @@ class XilEnv:
 			Vid (int): Variable ID.
 
 		Returns:
-			int: 0 if successful, -1 otherwise.
+			int: Remaining attach count if removed successfully while connected; negative error code if removal fails;
+			-1 if not connected.
 		"""
 		if self.__SuccessfulConnected == 1:
 			return self.__lib.XilEnv_RemoveVari(Vid)
@@ -2288,7 +2306,8 @@ class XilEnv:
 			Label (str): Name of the variable to attach.
 
 		Returns:
-			int: Variable ID if successful, -1 otherwise.
+			int: Positive variable ID if attachment succeeds while connected; negative error code if it fails;
+			-1 if not connected.
 		"""
 		if self.__SuccessfulConnected == 1:
 			return self.__lib.XilEnv_AttachVari(self.c_str(Label))
@@ -2367,7 +2386,7 @@ class XilEnv:
 			listSize = len(vidList)
 			vidArray = (ct.c_int * listSize)(*vidList)
 			valueArray = (ct.c_double * listSize)(*valueList)
-			self.__lib.XilEnv_WriteFrame(vidArray, valueArray, listSize)
+			self.__lib.XilEnv_WriteFrame(vidArray, None, valueArray, listSize)
 			return 0
 		else:
 			return -1
@@ -2386,7 +2405,35 @@ class XilEnv:
 			listSize = len(vidList)
 			vidArray = (ct.c_int * listSize)(*vidList)
 			valueArrayToReturn = (ct.c_double * listSize)()
-			self.__lib.XilEnv_GetFrame(vidArray, valueArrayToReturn, listSize)
+			self.__lib.XilEnv_GetFrame(vidArray, None, valueArrayToReturn, listSize)
+			return list(valueArrayToReturn)
+		else:
+			return -1
+
+
+	def WriteFrameWaitReadFrame(self, vidList: list[int], valueList: list[float]) -> list[float] | int:
+		"""
+		Write then read a frame.
+
+		The scheduler must be stopped before calling this method.
+
+		Args:
+			vidList (list[int]): Variable IDs.
+			valueList (list[float]): Values to write.
+
+		Returns:
+			list[float]: List of variable values; -1 if not connected, input lengths differ, or the operation fails.
+		"""
+		if (self.__SuccessfulConnected == 1) and len(vidList) == len(valueList):
+			listSize = len(vidList)
+			vidArray = (ct.c_int * listSize)(*vidList)
+			valueArray = (ct.c_double * listSize)(*valueList)
+			valueArrayToReturn = (ct.c_double * listSize)()
+			result = self.__lib.XilEnv_WriteFrameWaitReadFrame(
+				vidArray, None, valueArray, listSize, vidArray, None, valueArrayToReturn, listSize
+			)
+			if result != 0:
+				return -1
 			return list(valueArrayToReturn)
 		else:
 			return -1
@@ -2691,12 +2738,11 @@ class XilEnv:
 		else:
 			return ""
 
-	def GetVariEnum(self, Flag: int, Vid: int, Value: float) -> str:
+	def GetVariEnum(self, Vid: int, Value: float) -> str:
 		"""
 		Get the enumeration string for a variable value.
 
 		Args:
-			Flag (int): Enumeration flag.
 			Vid (int): Variable ID.
 			Value (float): Value to enumerate.
 
@@ -2704,7 +2750,7 @@ class XilEnv:
 			str: Enumeration string if found, empty string otherwise.
 		"""
 		if self.__SuccessfulConnected == 1:
-			return self.str_c(self.__lib.XilEnv_GetVariEnum(Flag, Vid, Value))
+			return self.str_c(self.__lib.XilEnv_GetVariEnum(Vid, Value))
 		else:
 			return ""
 
@@ -2855,7 +2901,7 @@ class XilEnv:
 			RetValue (BB_VARI): BB_VARI structure to receive the value.
 
 		Returns:
-			int: 0 if successful, -1 otherwise.
+			int: Type code if successful, -1 otherwise.
 		"""
 		if self.__SuccessfulConnected == 1:
 			return self.__lib.XilEnv_GetRaw(Vid, RetValue)

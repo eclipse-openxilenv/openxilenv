@@ -105,15 +105,6 @@ IniFileDosNotExist::IniFileDosNotExist(char *par_SelectedIniFile, QWidget *paren
 {
     ui->setupUi(this);
 
-#if QT_VERSION < QT_VERSION_CHECK(6, 8, 0)
-    ui->DefaultModeRadioButton->setVisible(false);
-    ui->NormalModeRadioButton->setVisible(false);
-    ui->DarkModeRadioButton->setVisible(false);
-    ui->DarkModeLabel->setVisible(false);
-    ui->NormalModeLabel->setVisible(false);
-    ui->DefaultModeLabel->setVisible(false);
-#endif
-
     m_DarkModeHasChanged = false;
     m_DarkMode = DEFAULT_MODE;
 

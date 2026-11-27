@@ -383,14 +383,10 @@ int write_varinfos_to_ini (BB_VARIABLE *sp_vari_elem,
         }
         break;
     case BB_CONV_FACTOFF:
+    case BB_CONV_OFFFACT:
         len_convertion = PrintFormatToString (tmp_var_str + len_first_part, sizeof(stack_buffer) - len_first_part, "%.18g:%.18g",
                                   sp_vari_elem->pAdditionalInfos->Conversion.Conv.FactorOffset.Factor,
                                   sp_vari_elem->pAdditionalInfos->Conversion.Conv.FactorOffset.Offset);
-        break;
-    case BB_CONV_OFFFACT:
-        len_convertion = PrintFormatToString (tmp_var_str + len_first_part, sizeof(stack_buffer) - len_first_part, "%.18g:%.18g",
-                                 sp_vari_elem->pAdditionalInfos->Conversion.Conv.FactorOffset.Offset,
-                                 sp_vari_elem->pAdditionalInfos->Conversion.Conv.FactorOffset.Factor);
         break;
     case BB_CONV_TAB_INTP:
     case BB_CONV_TAB_NOINTP:

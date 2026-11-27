@@ -816,7 +816,9 @@ void OscilloscopeDrawArea::createActions(void)
 
     MetafileToClipboardAct = new QAction(tr("&metafile to clipboard"), this);
     MetafileToClipboardAct->setStatusTip(tr("copy the oscilloscope to the clipboard you can paste this to an other application"));
+#ifdef QT_SVG_LIB
     connect(MetafileToClipboardAct, SIGNAL(triggered()), this, SLOT(MetafileToClipboardSlot()));
+#endif
 
     SaveToFileAct = new QAction(tr("Save to file"), this);
     SaveToFileAct->setStatusTip(tr("save the oscilloscope buffer to a data file"));
