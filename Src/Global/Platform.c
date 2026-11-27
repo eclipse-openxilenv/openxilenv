@@ -83,19 +83,6 @@ int SetEnvironmentVariable(const char *EnvVarName,
     return !setenv(EnvVarName, EnvVarValue, 1);
 }
 
-int sc_pthread_cond_timedwait(pthread_cond_t *cond, pthread_mutex_t *mutex, int time_ms)
-{
-    struct timespec abstime;
-    double help;
-
-    clock_gettime(CLOCK_MONOTONIC, &abstime);
-    help = (double)abstime.tv_sec + (double)abstime.tv_nsec * 0.000000001;
-    help += (double)time_ms * 1000.0;
-    abstime.tv_sec = (time_t)help;
-    abstime.tv_nsec = (time_t)(help - (double)abstime.tv_sec);
-    return pthread_cond_timedwait(cond, mutex, &abstime);
-}
-
 HANDLE CreateFile(const char *Filename, DWORD dwDesiredAccess, DWORD dwSharedMode, void *lpSecurityAttributes, DWORD dwCreatoionDisposition,
                   DWORD dwFlagsAndAttributes, HANDLE hTemplateFile)
 {

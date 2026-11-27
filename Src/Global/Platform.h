@@ -109,6 +109,9 @@ typedef struct {
 #define TRUE 1
 #define FALSE 0
 
+#define INVALID_HANDLE_VALUE   (-1)
+#define INFINITE               0xFFFFFFFF
+
 // access() mode parameter
 #define SW_SHOW   R_OK
 
@@ -124,16 +127,51 @@ typedef struct {
 #define EnterCriticalSection(s) pthread_mutex_lock(s)
 #define TryEnterCriticalSection(s)  pthread_mutex_trylock(s)
 #define LeaveCriticalSection(s) pthread_mutex_unlock(s)
-#define InitializeCriticalSection(s) pthread_mutex_init(s, NULL)
+// Win32's CRITICAL_SECTION is always recursive/reentrant for its owning
+// thread, and code throughout this codebase relies on that (nesting
+// Enter/LeaveCriticalSection calls on the same thread). A plain
+// pthread_mutex_t is not recursive by default, so match Win32 semantics
+// here instead of leaving every call site to self-deadlock on Linux.
+static inline int InitializeCriticalSection(pthread_mutex_t *cs)
+{
+    pthread_mutexattr_t Attr;
+    int Ret;
+    pthread_mutexattr_init(&Attr);
+    pthread_mutexattr_settype(&Attr, PTHREAD_MUTEX_RECURSIVE);
+    Ret = pthread_mutex_init(cs, &Attr);
+    pthread_mutexattr_destroy(&Attr);
+    return Ret;
+}
 #define DeleteCriticalSection(s) pthread_mutex_destroy(s)
-#define InitializeConditionVariable(v) pthread_cond_init(v, NULL)
+static inline int InitializeConditionVariable(pthread_cond_t *cv)
+{
+    pthread_condattr_t Attr;
+    int Ret;
+    pthread_condattr_init(&Attr);
+    pthread_condattr_setclock(&Attr, CLOCK_MONOTONIC);
+    Ret = pthread_cond_init(cv, &Attr);
+    pthread_condattr_destroy(&Attr);
+    return Ret;
+}
 #define SleepConditionVariableCS_INFINITE(v,s) pthread_cond_wait(v,s)
-#define SleepConditionVariableCS(v,s,t) sc_pthread_cond_timedwait(v,s,t)
-#define WakeAllConditionVariable(v) pthread_cond_signal(v)
+static inline int SleepConditionVariableCS(pthread_cond_t *cond, pthread_mutex_t *mutex, int time_ms)
+{
+    struct timespec abstime;
 
-//#define INVALID_HANDLE_VALUE   ((void*)(unsigned long long)-1)
-#define INVALID_HANDLE_VALUE   (-1)
-#define INFINITE               0xFFFFFFFF
+    if ((unsigned int)time_ms == INFINITE) {
+        return pthread_cond_wait(cond, mutex) == 0;
+    }
+    clock_gettime(CLOCK_MONOTONIC, &abstime);
+    abstime.tv_sec  += time_ms / 1000;
+    abstime.tv_nsec += (long)(time_ms % 1000) * 1000000L;
+    if (abstime.tv_nsec >= 1000000000L) {
+        abstime.tv_sec  += 1;
+        abstime.tv_nsec -= 1000000000L;
+    }
+    return pthread_cond_timedwait(cond, mutex, &abstime) == 0;  // Win32 semantics: != 0 on success
+}
+
+#define WakeAllConditionVariable(v) pthread_cond_broadcast(v)
 
 #define THREAD_PRIORITY_NORMAL          0
 #define THREAD_PRIORITY_LOWEST         -2
@@ -178,10 +216,6 @@ int GetEnvironmentVariable(const char *EnvVarName,
                            int SizeofEnvVarValue);
 int SetEnvironmentVariable(const char *EnvVarName,
                            const char *EnvVarValue);
-
-
-int sc_pthread_cond_timedwait(pthread_cond_t *cond, pthread_mutex_t *mutex, int time_ms);
-
 
 HANDLE CreateFile(const char *Filename, DWORD dwDesiredAccess, DWORD dwSharedMode, void *lpSecurityAttributes, DWORD dwCreatoionDisposition,
                   DWORD dwFlagsAndAttributes, HANDLE hTemplateFile);
